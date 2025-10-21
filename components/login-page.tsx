@@ -3,6 +3,7 @@
 import type React from "react"
 
 import { useState } from "react"
+import { signIn } from "../lib/auth"
 import { Eye, EyeOff, ArrowLeft } from "lucide-react"
 
 interface LoginPageProps {
@@ -38,10 +39,21 @@ export function LoginPage({ onLoginSuccess, onBackToLanding, onToggleSignUp }: L
     }
 
     setIsLoading(true)
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500))
+
+    const { data, error } = await signIn(email, password)
+
     setIsLoading(false)
 
+    if (error) {
+      console.error("login-page signIn error:", error)
+      // Supabase sometimes returns a string; attempt to read message
+      const friendly = (error && (error.message ?? error.error_description ?? String(error))) || "Error signing in"
+      setError(friendly)
+      return
+    }
+
+    // Success — optionally log response for debugging
+    console.debug("login success data:", data)
     onLoginSuccess(email)
   }
 

@@ -3,6 +3,7 @@
 import type React from "react"
 
 import { useState } from "react"
+import { signUp } from "../lib/auth"
 import { Eye, EyeOff, ArrowLeft, Check } from "lucide-react"
 
 interface SignUpPageProps {
@@ -66,10 +67,18 @@ export function SignUpPage({ onSignUpSuccess, onBackToLanding, onToggleLogin }: 
     }
 
     setIsLoading(true)
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500))
+
+    const { data, error } = await signUp(formData.email, formData.password)
+
     setIsLoading(false)
 
+    if (error) {
+      // Supabase error may be a string or an Error object
+      setError((error as any).message ?? "Error creating account")
+      return
+    }
+
+    // Success: notify parent (email may be in data.user.email)
     onSignUpSuccess(formData.email)
   }
 
