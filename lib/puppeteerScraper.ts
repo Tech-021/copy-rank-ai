@@ -20,7 +20,7 @@ function safeParseJSON(text: string | null | undefined): unknown | null {
 
 export async function scrapeWithPuppeteer(url: string): Promise<ScrapeResult> {
   const executablePath = await (chromium as any).executablePath();
-
+  console.log("Chromium path:", executablePath);
   // Launch puppeteer with chromium settings (using `as any` to bypass TS gaps)
   const browser = await puppeteer.launch({
     args: (chromium as any).args,
