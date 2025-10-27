@@ -38,7 +38,7 @@ export function AnalyzeTab() {
 
   const analyzeWebsite = async (url: string): Promise<{ topic: string }> => {
     try {
-      const response = await fetch('/api/scraper', {
+      const response = await fetch('https://v0-topic-detection-app-tedt-bgis50sz0.vercel.app/api/scraper', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
