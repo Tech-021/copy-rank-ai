@@ -1,6 +1,16 @@
-import puppeteer from "puppeteer";
-import type { ScrapeResult } from "./types.js";
-function safeParseJSON(text: string): unknown | null {
+// lib/scrapeWithPuppeteer.ts
+import puppeteer from "puppeteer-core";
+import chromium from "@sparticuz/chromium";
+import type { ScrapeResult } from "./types";
+
+// Ensures this runs in Node runtime when used in Next.js
+export const config = {
+  runtime: "nodejs20",
+};
+
+// Helper to safely parse JSON inside schema nodes
+function safeParseJSON(text: string | null | undefined): unknown | null {
+  if (!text) return null;
   try {
     return JSON.parse(text);
   } catch {
@@ -9,70 +19,77 @@ function safeParseJSON(text: string): unknown | null {
 }
 
 export async function scrapeWithPuppeteer(url: string): Promise<ScrapeResult> {
+  const executablePath = await (chromium as any).executablePath();
+
+  // Launch puppeteer with chromium settings (using `as any` to bypass TS gaps)
   const browser = await puppeteer.launch({
+    args: (chromium as any).args,
+    executablePath,
     headless: true,
-    args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    defaultViewport: (chromium as any).defaultViewport ?? {
+      width: 1280,
+      height: 720,
+    },
   });
+
   try {
     const page = await browser.newPage();
+
     await page.setUserAgent(
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36"
     );
-    const responseObj = await page.goto(url, {
-      waitUntil: "networkidle2",
-      timeout: 30000,
-    });
-    const status = responseObj?.status() ?? null;
 
-    const result = await page.evaluate(() => {
+    const response = await page.goto(url, {
+      waitUntil: "domcontentloaded",
+      timeout: 60000,
+    });
+
+    const status = response?.status() ?? null;
+
+    const result: any = await page.evaluate(() => {
       function removeAndGetText(selectors: string[]) {
         const body = document.body.cloneNode(true) as HTMLElement;
-        selectors.forEach((sel) => {
-          body.querySelectorAll(sel).forEach((el) => el.remove());
-        });
+        selectors.forEach((sel) =>
+          body.querySelectorAll(sel).forEach((el) => el.remove())
+        );
         return (body.innerText || "").replace(/\s+/g, " ").trim();
       }
 
       const title =
         (document.querySelector("title")?.innerText ?? "").trim() ||
-        (
-          document.querySelector(
-            'meta[property="og:title"]'
-          ) as HTMLMetaElement | null
-        )?.getAttribute("content") ||
-        (
-          document.querySelector(
-            'meta[name="twitter:title"]'
-          ) as HTMLMetaElement | null
-        )?.getAttribute("content") ||
-        "";
+        (document
+          .querySelector('meta[property="og:title"]')
+          ?.getAttribute("content") ??
+          "") ||
+        (document
+          .querySelector('meta[name="twitter:title"]')
+          ?.getAttribute("content") ??
+          "");
 
       const metaDescription =
-        (
-          document.querySelector(
-            'meta[name="description"]'
-          ) as HTMLMetaElement | null
-        )?.content ||
-        (
-          document.querySelector(
-            'meta[property="og:description"]'
-          ) as HTMLMetaElement | null
-        )?.getAttribute("content") ||
-        (
-          document.querySelector(
-            'meta[name="twitter:description"]'
-          ) as HTMLMetaElement | null
-        )?.getAttribute("content") ||
-        "";
+        (document
+          .querySelector('meta[name="description"]')
+          ?.getAttribute("content") ??
+          "") ||
+        (document
+          .querySelector('meta[property="og:description"]')
+          ?.getAttribute("content") ??
+          "") ||
+        (document
+          .querySelector('meta[name="twitter:description"]')
+          ?.getAttribute("content") ??
+          "");
 
       const headings = Array.from(document.querySelectorAll("h1, h2"))
         .map((h) => h.textContent?.trim() ?? "")
         .filter(Boolean)
         .join(" | ");
+
       const navLinks = Array.from(document.querySelectorAll("nav a"))
         .map((a) => a.textContent?.trim() ?? "")
         .filter(Boolean)
         .join(", ");
+
       const mainText = removeAndGetText([
         "script",
         "style",
@@ -108,32 +125,25 @@ export async function scrapeWithPuppeteer(url: string): Promise<ScrapeResult> {
             'link[rel="canonical"]'
           ) as HTMLLinkElement | null
         )?.href || "";
+
       const lang = document.documentElement.lang || "";
       const charset =
-        (
-          document.querySelector("meta[charset]") as HTMLMetaElement | null
-        )?.getAttribute("charset") ||
-        (
-          document.querySelector(
-            'meta[http-equiv="Content-Type"]'
-          ) as HTMLMetaElement | null
-        )
+        document.querySelector("meta[charset]")?.getAttribute("charset") ||
+        document
+          .querySelector('meta[http-equiv="Content-Type"]')
           ?.getAttribute("content")
           ?.match(/charset=([^;]+)/)?.[1] ||
         "";
 
       const author =
-        (
-          document.querySelector(
-            'meta[name="author"]'
-          ) as HTMLMetaElement | null
-        )?.content || "";
+        document
+          .querySelector('meta[name="author"]')
+          ?.getAttribute("content") || "";
+
       const robots =
-        (
-          document.querySelector(
-            'meta[name="robots"]'
-          ) as HTMLMetaElement | null
-        )?.content || "";
+        document
+          .querySelector('meta[name="robots"]')
+          ?.getAttribute("content") || "";
 
       const links = Array.from(document.querySelectorAll("a[href]"))
         .map((a) => ({
@@ -141,6 +151,7 @@ export async function scrapeWithPuppeteer(url: string): Promise<ScrapeResult> {
           href: (a.getAttribute("href") || "").trim(),
         }))
         .slice(0, 500);
+
       const images = Array.from(document.querySelectorAll("img[src]"))
         .map((img) => ({
           src: (img.getAttribute("src") || "").trim(),
@@ -167,12 +178,11 @@ export async function scrapeWithPuppeteer(url: string): Promise<ScrapeResult> {
       };
     });
 
+    // Schema parsing
     const schemaData: unknown[] = [];
     for (const txt of result.schemaNodes) {
-      if (txt) {
-        const parsed = safeParseJSON(txt);
-        if (parsed !== null) schemaData.push(parsed);
-      }
+      const parsed = safeParseJSON(txt);
+      if (parsed !== null) schemaData.push(parsed);
     }
 
     const mainText = (result.mainText ?? "").slice(0, 4000);
@@ -180,7 +190,7 @@ export async function scrapeWithPuppeteer(url: string): Promise<ScrapeResult> {
       ? mainText.split(/\s+/).filter(Boolean).length
       : 0;
 
-    return {
+    const finalResult: ScrapeResult = {
       title: result.title,
       metaDescription: result.metaDescription,
       headings: result.headings,
@@ -188,7 +198,7 @@ export async function scrapeWithPuppeteer(url: string): Promise<ScrapeResult> {
       mainText,
       schemaData,
       wordCount,
-      source: "puppeteer",
+      source: "puppeteer", // ✅ ensure type matches your union
       status,
       canonical: result.canonical,
       lang: result.lang,
@@ -200,6 +210,8 @@ export async function scrapeWithPuppeteer(url: string): Promise<ScrapeResult> {
       links: result.links,
       images: result.images,
     };
+
+    return finalResult;
   } finally {
     await browser.close();
   }

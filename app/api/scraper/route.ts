@@ -1,11 +1,14 @@
-// ...existing code...
+// ✅ Force Node.js runtime (no Edge limitations)
+export const runtime = "nodejs";
+export const maxDuration = 60;
+
 import { NextResponse } from "next/server";
 import { analyzeWithQwen } from "@/lib/qwen";
 import { scrapeWithCheerio } from "@/lib/cheerioScraper";
 import { scrapeWithPuppeteer } from "@/lib/puppeteerScraper";
 import type { ScrapeResult } from "@/lib/types";
-// ...existing code...
 
+// Unified scraper
 export async function hybridScraper(url: string): Promise<ScrapeResult | null> {
   console.log(`🔍 Scraping: ${url}`);
   let result = await scrapeWithCheerio(url);
@@ -20,11 +23,7 @@ export async function hybridScraper(url: string): Promise<ScrapeResult | null> {
   return result;
 }
 
-/**
- * Route Handlers for Next.js app directory
- * GET ?url=...
- * POST { "url": "..." }
- */
+// Internal handler
 async function handleRequest(urlCandidate: string | null) {
   if (!urlCandidate) {
     return NextResponse.json(
@@ -48,25 +47,24 @@ async function handleRequest(urlCandidate: string | null) {
       );
     }
 
-    // -- QWEN configuration check --
+    // Qwen API credentials
     const qwenUrl = process.env.QWEN_API_URL;
     const qwenKey = process.env.QWEN_API_KEY;
     if (!qwenUrl || !qwenKey) {
-      // don't include scraped data on errors
       return NextResponse.json(
         {
           ok: false,
           error: {
             code: "QWEN_NOT_CONFIGURED",
             message:
-              "Qwen API not configured on server. Set QWEN_API_URL and QWEN_API_KEY (or activate the API key).",
+              "Qwen API not configured. Please set QWEN_API_URL and QWEN_API_KEY in environment variables.",
           },
         },
         { status: 500 }
       );
     }
 
-    // call Qwen to classify niche
+    // Analyze with Qwen
     let nicheResult = null;
     try {
       nicheResult = await analyzeWithQwen(data);
@@ -77,7 +75,6 @@ async function handleRequest(urlCandidate: string | null) {
       const statusCode = anyErr?.status ?? anyErr?.response?.status;
       const upstreamBody = anyErr?.body ?? anyErr?.response?.data;
 
-      // Auth / activation errors from Qwen
       if (statusCode === 401 || statusCode === 403) {
         return NextResponse.json(
           {
@@ -85,7 +82,7 @@ async function handleRequest(urlCandidate: string | null) {
             error: {
               code: "QWEN_AUTH_ERROR",
               message:
-                "Qwen API key invalid or not activated. Received authentication error from Qwen.",
+                "Qwen API key invalid or not activated. Authentication error received.",
               details: { status: statusCode, body: upstreamBody },
             },
           },
@@ -93,7 +90,6 @@ async function handleRequest(urlCandidate: string | null) {
         );
       }
 
-      // Bad request -> surface upstream validation message
       if (statusCode === 400) {
         return NextResponse.json(
           {
@@ -108,7 +104,6 @@ async function handleRequest(urlCandidate: string | null) {
         );
       }
 
-      // Generic LLM/remote failure
       return NextResponse.json(
         {
           ok: false,
@@ -122,7 +117,7 @@ async function handleRequest(urlCandidate: string | null) {
       );
     }
 
-    // success: include scraped data and niche result
+    // Success
     return NextResponse.json({ ok: true, niche: nicheResult });
   } catch (err) {
     console.error(
@@ -136,6 +131,7 @@ async function handleRequest(urlCandidate: string | null) {
   }
 }
 
+// Route handlers
 export async function GET(request: Request) {
   const url = new URL(request.url).searchParams.get("url");
   return handleRequest(url);
@@ -146,7 +142,7 @@ export async function POST(request: Request) {
   try {
     body = await request.json();
   } catch {
-    // ignore parse errors; handled below
+    // ignore parse errors
   }
   const url =
     typeof body === "object" &&
@@ -156,4 +152,3 @@ export async function POST(request: Request) {
       : null;
   return handleRequest(url);
 }
-// ...existing code...
