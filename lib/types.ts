@@ -1,4 +1,4 @@
-export type Source = "cheerio" | "puppeteer";
+export type Source = "cheerio" | "puppeteer" | "puppeteer-core";
 
 export interface ScrapeResult {
   title: string;
