@@ -1,11 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Loader2, Trash2 } from "lucide-react"
 import { supabase } from "@/lib/client"
+import { useToast } from "@/components/ui/toast"
 
 interface Website {
   id: string
@@ -35,6 +36,67 @@ export function AnalyzeTab() {
   const [websites, setWebsites] = useState<Website[]>([])
   const [urlInput, setUrlInput] = useState("")
   const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [urlError, setUrlError] = useState("")
+  const toast = useToast()
+
+  // URL validation and formatting
+  const validateAndFormatUrl = (input: string): { isValid: boolean; formattedUrl: string; error?: string } => {
+    let url = input.trim()
+    
+    // Remove any extra spaces
+    url = url.replace(/\s+/g, '')
+    
+    // Check if empty
+    if (!url) {
+      return { isValid: false, formattedUrl: "", error: "URL is required" }
+    }
+
+    // Add protocol if missing
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      url = 'https://' + url
+    }
+
+    // Add .com if no TLD is present
+    if (!url.includes('.') && !url.includes('localhost')) {
+      const lastSlashIndex = url.lastIndexOf('/')
+      const domainPart = lastSlashIndex > 6 ? url.substring(8, lastSlashIndex) : url.substring(8)
+      
+      if (!domainPart.includes('.')) {
+        url = url.replace(/\/$/, '') + '.com/'
+      }
+    }
+
+    try {
+      const urlObj = new URL(url)
+      
+      // Validate protocol
+      if (urlObj.protocol !== 'http:' && urlObj.protocol !== 'https:') {
+        return { isValid: false, formattedUrl: url, error: "URL must start with http:// or https://" }
+      }
+
+      // Validate hostname
+      if (!urlObj.hostname) {
+        return { isValid: false, formattedUrl: url, error: "Invalid domain name" }
+      }
+
+      return { isValid: true, formattedUrl: urlObj.toString() }
+
+    } catch (error) {
+      return { 
+        isValid: false, 
+        formattedUrl: url, 
+        error: "Please enter a valid URL (e.g., example.com or https://example.com)" 
+      }
+    }
+  }
+
+  const handleUrlInputChange = (value: string) => {
+    setUrlInput(value)
+    // Clear error when user starts typing
+    if (urlError && value.trim()) {
+      setUrlError("")
+    }
+  }
 
   const analyzeWebsite = async (url: string): Promise<{ topic: string }> => {
     try {
@@ -135,7 +197,15 @@ export function AnalyzeTab() {
   }
 
   const handleAddWebsite = async () => {
-    if (!urlInput.trim()) return
+    // Validate URL first
+    const validation = validateAndFormatUrl(urlInput)
+    
+    if (!validation.isValid) {
+      setUrlError(validation.error || "Invalid URL")
+      return
+    }
+
+    const formattedUrl = validation.formattedUrl
 
     setIsAnalyzing(true)
     const tempId = Math.random().toString()
@@ -143,7 +213,7 @@ export function AnalyzeTab() {
     // Add website with analyzing state
     const newWebsite: Website = {
       id: tempId,
-      url: urlInput,
+      url: formattedUrl,
       topic: "Detecting...",
       keywords: 0,
       isAnalyzing: true,
@@ -153,11 +223,11 @@ export function AnalyzeTab() {
 
     try {
       // Call the actual API
-      const { topic } = await analyzeWebsite(urlInput)
+      const { topic } = await analyzeWebsite(formattedUrl)
 
       // Save to database
       const dbId = await saveWebsiteToDB({
-        url: urlInput,
+        url: formattedUrl,
         topic: topic,
         keywords: Math.floor(Math.random() * 50) + 10, // Generate keyword count
         isAnalyzing: false,
@@ -176,24 +246,31 @@ export function AnalyzeTab() {
             : site,
         ),
       )
+
+      // Show success toast
+      toast.showToast({
+        title: "Analysis Complete",
+        description: `Successfully analyzed ${formattedUrl}`,
+        type: "success"
+      })
+
     } catch (error) {
       console.error("Error analyzing website:", error)
       
       // Show error message to user
       const errorMessage = error instanceof Error ? error.message : "Analysis failed"
       
-      setWebsites((prev) =>
-        prev.map((site) =>
-          site.id === tempId
-            ? {
-                ...site,
-                topic: `Error: ${errorMessage}`,
-                keywords: 0,
-                isAnalyzing: false,
-              }
-            : site,
-        ),
-      )
+      // Remove the failed website from UI after a short delay
+      setTimeout(() => {
+        setWebsites((prev) => prev.filter((site) => site.id !== tempId))
+      }, 500)
+
+      // Show error toast
+      toast.showToast({
+        title: "Analysis Failed",
+        description: `Failed to analyze ${formattedUrl}: ${errorMessage}`,
+        type: "error"
+      })
     } finally {
       setIsAnalyzing(false)
     }
@@ -206,16 +283,30 @@ export function AnalyzeTab() {
       
       // Remove from local state
       setWebsites(websites.filter((site) => site.id !== id))
+
+      // Show success toast
+      toast.showToast({
+        title: "Website Removed",
+        description: "Website has been removed from your list",
+        type: "success"
+      })
+
     } catch (error) {
       console.error('Error deleting website:', error)
-      alert('Failed to delete website. Please try again.')
+      
+      // Show error toast
+      toast.showToast({
+        title: "Delete Failed",
+        description: "Failed to remove website. Please try again.",
+        type: "error"
+      })
     }
   }
 
   // Load websites on component mount
-  useState(() => {
+  useEffect(() => {
     loadUserWebsites()
-  })
+  }, [])
 
   return (
     <div className="space-y-6">
@@ -227,9 +318,9 @@ export function AnalyzeTab() {
         <CardContent className="space-y-4">
           <div className="flex gap-2">
             <Input
-              placeholder="https://example.com"
+              placeholder="example.com or https://example.com"
               value={urlInput}
-              onChange={(e) => setUrlInput(e.target.value)}
+              onChange={(e) => handleUrlInputChange(e.target.value)}
               onKeyPress={(e) => e.key === "Enter" && !isAnalyzing && handleAddWebsite()}
               className="bg-input border-border/40"
               disabled={isAnalyzing}
@@ -249,6 +340,9 @@ export function AnalyzeTab() {
               )}
             </Button>
           </div>
+          {urlError && (
+            <p className="text-sm text-destructive">{urlError}</p>
+          )}
         </CardContent>
       </Card>
 
