@@ -5,7 +5,7 @@ import type React from "react"
 import { useState } from "react"
 import { signUp, signUpWithGoogle } from "../lib/auth"
 import { useToast } from "./ui/toast"
-import { Eye, EyeOff, ArrowLeft, Check } from "lucide-react"
+import { Eye, EyeOff, ArrowLeft, Check, Info } from "lucide-react" // Added Info icon
 
 interface SignUpPageProps {
   onSignUpSuccess: (email: string) => void
@@ -25,6 +25,7 @@ export function SignUpPage({ onSignUpSuccess, onBackToLanding, onToggleLogin }: 
   const [isLoading, setIsLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
   const [error, setError] = useState("")
+  const [message, setMessage] = useState("") // Add separate state for info/success messages
   const [agreedToTerms, setAgreedToTerms] = useState(false)
   const toast = useToast()
 
@@ -38,11 +39,15 @@ export function SignUpPage({ onSignUpSuccess, onBackToLanding, onToggleLogin }: 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
+    // Clear messages when user starts typing
+    setError("")
+    setMessage("")
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
+    setMessage("") // Clear previous messages
 
     if (!formData.name || !formData.email || !formData.password || !formData.confirmPassword) {
       setError("Please fill in all fields")
@@ -92,12 +97,13 @@ export function SignUpPage({ onSignUpSuccess, onBackToLanding, onToggleLogin }: 
 
     if (!session) {
       const msg = "Please check your email to confirm your account before signing in."
+      setMessage(msg) // Use message state instead of error for info messages
       try {
         toast.showToast({ title: "Confirm your email", description: msg, type: "info" })
       } catch {
         /* ignore */
       }
-      setError(msg)
+      // Don't set this as an error - it's a success that requires email confirmation
       return
     }
 
@@ -114,6 +120,7 @@ export function SignUpPage({ onSignUpSuccess, onBackToLanding, onToggleLogin }: 
   const handleGoogleSignUp = async () => {
     setGoogleLoading(true)
     setError("")
+    setMessage("") // Clear messages
 
     const { data, error } = await signUpWithGoogle()
 
@@ -162,6 +169,16 @@ export function SignUpPage({ onSignUpSuccess, onBackToLanding, onToggleLogin }: 
           {error && (
             <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-lg">
               <p className="text-red-400 text-sm">{error}</p>
+            </div>
+          )}
+
+          {/* Info/Success message */}
+          {message && (
+            <div className="mb-6 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+              <div className="flex items-center gap-2">
+                <Info className="w-4 h-4 text-blue-400" />
+                <p className="text-blue-400 text-sm">{message}</p>
+              </div>
             </div>
           )}
 
@@ -242,6 +259,7 @@ export function SignUpPage({ onSignUpSuccess, onBackToLanding, onToggleLogin }: 
               </div>
             </div>
 
+            {/* Rest of your component remains the same... */}
             {/* Confirm password field */}
             <div>
               <label htmlFor="confirmPassword" className="block text-sm font-medium text-slate-200 mb-2">
@@ -350,4 +368,4 @@ export function SignUpPage({ onSignUpSuccess, onBackToLanding, onToggleLogin }: 
       </div>
     </div>
   )
-};
+}
