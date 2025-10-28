@@ -262,16 +262,21 @@ export function SignUpPage({
             {/* Name field */}
             <div>
               {/* Link to Sign In */}
-              <p className="text-center text-gray-500 text-sm mt-4">
-                Already have an account?{" "}
-                <button
-                  type="button"
-                  onClick={onToggleLogin}
-                  className="text-blue-500 hover:text-blue-600 font-medium"
-                >
-                  Sign In
-                </button>
-              </p>
+              <div className="flex flex-col gap-4 mb-4 justify-start items-start text-center">
+                <h2 className="text-2xl font-bold text-gray-900">
+                  Create an Account
+                </h2>
+                <p className="text-gray-600 ">
+                  Already have an account?{" "}
+                  <button
+                    type="button"
+                    onClick={onToggleLogin}
+                    className="text-blue-500 hover:text-blue-600 font-medium"
+                  >
+                    Sign In
+                  </button>
+                </p>
+              </div>
               {error && <p className="text-red-500">{error}</p>}
               <p>Full Name</p>
               <input
