@@ -5,11 +5,22 @@ export const maxDuration = 60;
 import { NextResponse } from "next/server";
 import { analyzeWithQwen } from "@/lib/qwen";
 import { scrapeWithCheerio } from "@/lib/cheerioScraper";
-import { scrapeWithPuppeteer } from "@/lib/puppeteerScraper";
 import type { ScrapeResult } from "@/lib/types";
 
 // ✅ Global startup log (shows at cold start)
 console.log("🚀 Scraper route initialized.");
+
+// Helper: choose dev vs prod puppeteer implementation
+async function loadPuppeteerScraper() {
+  const isProd =
+    process.env.NODE_ENV === "production" ||
+    process.env.VERCEL_ENV === "production";
+  if (isProd) {
+    return (await import("@/lib/puppeteerScraper_prod")).scrapeWithPuppeteer;
+  } else {
+    return (await import("@/lib/puppeteerScraper_dev")).scrapeWithPuppeteer;
+  }
+}
 
 // Unified scraper
 export async function hybridScraper(url: string): Promise<ScrapeResult | null> {
@@ -20,6 +31,7 @@ export async function hybridScraper(url: string): Promise<ScrapeResult | null> {
 
   if (!result || result.wordCount < 50) {
     console.log("⚠️ Low content (<50 words), switching to Puppeteer...");
+    const scrapeWithPuppeteer = await loadPuppeteerScraper();
     result = await scrapeWithPuppeteer(url);
   } else {
     console.log("✅ Cheerio scrape successful, skipping Puppeteer.");
