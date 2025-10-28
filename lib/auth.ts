@@ -35,9 +35,26 @@ export async function signOut(): Promise<AuthReturn> {
 export async function getUser(): Promise<AuthReturn> {
   try {
     const res: any = await supabase.auth.getUser()
-    return { data: res.data ?? res.user ?? null, error: res.error ?? null }
+    // normalize to return the actual user object or null
+    const user = res?.data?.user ?? res?.user ?? null
+    return { data: user, error: res.error ?? null }
   } catch (err) {
     console.error("lib/auth.getUser error:", err)
+    return { data: null, error: err }
+  }
+}
+
+export async function signUpWithGoogle(): Promise<AuthReturn> {
+  try {
+    const res: any = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`
+      }
+    })
+    return { data: res.data ?? null, error: res.error ?? null }
+  } catch (err) {
+    console.error("lib/auth.signUpWithGoogle error:", err)
     return { data: null, error: err }
   }
 }
