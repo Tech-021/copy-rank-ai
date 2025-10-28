@@ -190,7 +190,7 @@ export function SignUpPage({ onSignUpSuccess, onBackToLanding, onToggleLogin }: 
       {/* Right Side - SignUp Form */}
       <div className="w-full lg:w-1/2 flex flex-col justify-between p-8 lg:p-16">
         <div>
-          <div className="mb-12">
+          {/* <div className="mb-12">
             <div className="flex items-center justify-center gap-2 mb-8">
               <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold text-lg">⚡</span>
@@ -200,7 +200,7 @@ export function SignUpPage({ onSignUpSuccess, onBackToLanding, onToggleLogin }: 
             <h1 className="text-lg font-bold text-gray-900 mb-4">
               Join Salestable and start your journey with a winning sales team
             </h1>
-          </div>
+          </div> */}
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <h2 className="text-2xl font-bold text-gray-900">Sign Up</h2>
@@ -343,14 +343,14 @@ export function SignUpPage({ onSignUpSuccess, onBackToLanding, onToggleLogin }: 
         </div>
 
         {/* Footer */}
-        <div className="text-center text-gray-500 text-sm space-y-1 mt-8">
+        {/* <div className="text-center text-gray-500 text-sm space-y-1 mt-8">
           <p>© 2025 Salestable Inc. All rights reserved.</p>
           <div className="flex items-center justify-center gap-2">
             <a href="#" className="text-blue-500 hover:text-blue-600">Terms & Conditions</a>
             <span>and</span>
             <a href="#" className="text-blue-500 hover:text-blue-600">Privacy Policy</a>
           </div>
-        </div>
+        </div> */}
       </div>
     </div>
   )
