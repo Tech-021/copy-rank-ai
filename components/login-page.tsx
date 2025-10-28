@@ -117,30 +117,30 @@ export function LoginPage({ onLoginSuccess, onBackToLanding, onToggleSignUp }: L
   return (
     <div className="min-h-screen bg-white flex">
       {/* Left Side - Testimonials */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-blue-500 to-blue-600 rounded-3xl m-4 p-12 flex-col justify-between relative overflow-hidden">
+      <div className="hidden lg:flex lg:w-1/2 bg-[#2469fe] rounded-3xl m-4 p-12 flex-col justify-between relative overflow-hidden">
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-0 right-0 w-96 h-96 bg-white rounded-full blur-3xl"></div>
         </div>
         <div className="relative z-10">
           <div className="flex justify-center"> 
-            <h2 className="text-white text-3xl font-semibold mb-12">What Our Clients Say</h2>
+            <h2 className="text-white text-3xl font-semibold mb-12"></h2>
           </div>
           <div className="space-y-6 text-center">
-            <div className="text-white text-5xl">"</div>
-            <p className="text-white text-lg leading-relaxed font-light">{testimonial.quote}</p>
+            <div className="text-white text-5xl"></div>
+            <p className="text-white text-lg leading-relaxed font-light"></p>
             <div className="flex justify-center gap-1">
               {[...Array(testimonial.rating)].map((_, i) => (
-                <span key={i} className="text-yellow-300 text-xl">★</span>
+                <span key={i} className="text-yellow-300 text-xl"></span>
               ))}
             </div>
             <div className="flex flex-col items-center justify-center">
-              <p className="text-white font-semibold text-lg">{testimonial.author}</p>
-              <p className="text-blue-100 text-sm">{testimonial.title}</p>
+              <p className="text-white font-semibold text-lg"></p>
+              <p className="text-blue-100 text-sm"></p>
             </div>
           </div>
         </div>
         <div className="relative z-10 flex items-center justify-center gap-2 mt-12">
-          <button onClick={handlePrevTestimonial} className="text-white hover:text-blue-100 transition">◀</button>
+          {/* <button onClick={handlePrevTestimonial} className="text-white hover:text-blue-100 transition">◀</button>
           {testimonials.map((_, index) => (
             <button
               key={index}
@@ -148,7 +148,7 @@ export function LoginPage({ onLoginSuccess, onBackToLanding, onToggleSignUp }: L
               className={`h-1 rounded-full transition-all ${index === currentTestimonial ? "bg-white w-8" : "bg-blue-300 w-2"}`}
             />
           ))}
-          <button onClick={handleNextTestimonial} className="text-white hover:text-blue-100 transition">▶</button>
+          <button onClick={handleNextTestimonial} className="text-white hover:text-blue-100 transition">▶</button> */}
         </div>
       </div>
 
@@ -157,14 +157,14 @@ export function LoginPage({ onLoginSuccess, onBackToLanding, onToggleSignUp }: L
         <div>
           <div className="mb-12">
             <div className="flex items-center justify-center gap-2 mb-8">
-              <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-lg">⚡</span>
-              </div>
-              <span className="text-2xl font-bold text-gray-900">salestable</span>
+              {/* <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
+                {/* <span className="text-white font-bold text-lg">⚡</span> */}
+              {/* </div>  */}
+              {/* <span className="text-2xl font-bold text-gray-900">salestable</span> */}
             </div>
-            <h1 className="text-lg font-bold text-gray-900 mb-4">
+            {/* <h1 className="text-lg font-bold text-gray-900 mb-4">
               Embark on success with Salestable and join a community of hundreds of winning sales team
-            </h1>
+            </h1> */}
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -187,10 +187,10 @@ export function LoginPage({ onLoginSuccess, onBackToLanding, onToggleSignUp }: L
                <Image src='/google.png' height={30} width={30} alt="icon" />
                 <span className="text-gray-700 font-medium">Google</span>
               </button>
-              <button className="border border-gray-300 rounded-lg py-3 w-full flex items-center justify-center gap-2 hover:bg-gray-50 transition">
+              {/* <button className="border border-gray-300 rounded-lg py-3 w-full flex items-center justify-center gap-2 hover:bg-gray-50 transition">
                <Image src='/linked.png' height={30} width={30} alt="icon" />
                 <span className="text-gray-700 font-medium">LinkedIn</span>
-              </button>
+              </button> */}
             </div>
 
             {/* Divider */}
@@ -258,14 +258,14 @@ export function LoginPage({ onLoginSuccess, onBackToLanding, onToggleSignUp }: L
         </div>
 
         {/* Footer */}
-        <div className="text-center text-gray-500 text-sm space-y-1 mt-8">
+        {/* <div className="text-center text-gray-500 text-sm space-y-1 mt-8">
           <p>© 2025 Salestable Inc. All rights reserved.</p>
           <div className="flex items-center justify-center gap-2">
             <a href="#" className="text-blue-500 hover:text-blue-600">Terms & Conditions</a>
             <span>and</span>
             <a href="#" className="text-blue-500 hover:text-blue-600">Privacy Policy</a>
           </div>
-        </div>
+        </div> */}
       </div>
     </div>
   )
