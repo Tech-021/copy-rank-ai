@@ -358,7 +358,7 @@ export function SignUpPage({
             <div>
               <label
                 htmlFor="confirmPassword"
-                className="block text-sm font-medium text-slate-200 mb-2"
+                className="block text-sm font-medium text-black mb-2"
               >
                 Confirm Password
               </label>
