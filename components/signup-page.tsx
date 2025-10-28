@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { signUp, signUpWithGoogle } from "../lib/auth"
 import { useToast } from "./ui/toast"
-import { Eye, EyeOff, Check } from "lucide-react"
+import { Eye, EyeOff, Check, Info } from "lucide-react" // Added Info icon
 import Image from "next/image"
 
 interface SignUpPageProps {
@@ -43,6 +43,7 @@ export function SignUpPage({ onSignUpSuccess, onBackToLanding, onToggleLogin }: 
   const [isLoading, setIsLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
   const [error, setError] = useState("")
+  const [message, setMessage] = useState("") // Add separate state for info/success messages
   const [agreedToTerms, setAgreedToTerms] = useState(false)
   const [currentTestimonial, setCurrentTestimonial] = useState(0)
   const toast = useToast()
@@ -73,11 +74,15 @@ export function SignUpPage({ onSignUpSuccess, onBackToLanding, onToggleLogin }: 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
+    // Clear messages when user starts typing
+    setError("")
+    setMessage("")
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
+    setMessage("") // Clear previous messages
 
     if (!formData.name || !formData.email || !formData.password || !formData.confirmPassword) {
       setError("Please fill in all fields")
@@ -120,10 +125,13 @@ export function SignUpPage({ onSignUpSuccess, onBackToLanding, onToggleLogin }: 
     const session = (data as any)?.session ?? null
     if (!session) {
       const msg = "Please check your email to confirm your account before signing in."
-      setError(msg)
+      setMessage(msg) // Use message state instead of error for info messages
       try {
         toast.showToast({ title: "Confirm your email", description: msg, type: "info" })
-      } catch {}
+      } catch {
+        /* ignore */
+      }
+      // Don't set this as an error - it's a success that requires email confirmation
       return
     }
 
@@ -137,6 +145,8 @@ export function SignUpPage({ onSignUpSuccess, onBackToLanding, onToggleLogin }: 
   const handleGoogleSignUp = async () => {
     setGoogleLoading(true)
     setError("")
+    setMessage("") // Clear messages
+
     const { data, error } = await signUpWithGoogle()
     setGoogleLoading(false)
 
@@ -197,21 +207,21 @@ export function SignUpPage({ onSignUpSuccess, onBackToLanding, onToggleLogin }: 
               </div>
               <span className="text-2xl font-bold text-gray-900">salestable</span>
             </div>
-            <h1 className="text-lg font-bold text-gray-900 mb-4">
-              Join Salestable and start your journey with a winning sales team
-            </h1>
-          </div> */}
+          )}
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <h2 className="text-2xl font-bold text-gray-900">Sign Up</h2>
-            <p className="text-gray-600">
-              Already have an account?{" "}
-              <button type="button" onClick={onToggleLogin} className="text-blue-500 hover:text-blue-600 font-medium">
-                Sign In
-              </button>
-            </p>
+          {/* Info/Success message */}
+          {message && (
+            <div className="mb-6 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+              <div className="flex items-center gap-2">
+                <Info className="w-4 h-4 text-blue-400" />
+                <p className="text-blue-400 text-sm">{message}</p>
+              </div>
+            </div>
+          )}
 
-            {/* Name */}
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Name field */}
             <div>
               {error && <p className="text-red-500">{error}</p>}
               <p>Full Name</p>
@@ -274,24 +284,30 @@ export function SignUpPage({ onSignUpSuccess, onBackToLanding, onToggleLogin }: 
               </div>
             </div>
 
-            {/* Confirm Password */}
-            <div className="relative">
-              <p>Confirm Password</p>
-              <input
-                type={showConfirmPassword ? "text" : "password"}
-                name="confirmPassword"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                placeholder="••••••••"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400"
-              />
-              <button
-                type="button"
-                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                {showConfirmPassword ? <EyeOff className="mt-6" size={20} /> : <Eye className="mt-6" size={20} />}
-              </button>
+            {/* Rest of your component remains the same... */}
+            {/* Confirm password field */}
+            <div>
+              <label htmlFor="confirmPassword" className="block text-sm font-medium text-slate-200 mb-2">
+                Confirm Password
+              </label>
+              <div className="relative">
+                <input
+                  id="confirmPassword"
+                  type={showConfirmPassword ? "text" : "password"}
+                  name="confirmPassword"
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  placeholder="••••••••"
+                  className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition-colors"
+                >
+                  {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
             </div>
 
             {/* Terms */}
