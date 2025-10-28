@@ -1,15 +1,15 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { signUp, signUpWithGoogle } from "../lib/auth"
-import { useToast } from "./ui/toast"
-import { Eye, EyeOff, Check, Info } from "lucide-react" // Added Info icon
-import Image from "next/image"
+import { useState, useEffect } from "react";
+import { signUp, signUpWithGoogle } from "../lib/auth";
+import { useToast } from "./ui/toast";
+import { Eye, EyeOff, Check, Info } from "lucide-react"; // Added Info icon
+import Image from "next/image";
 
 interface SignUpPageProps {
-  onSignUpSuccess: (email: string) => void
-  onBackToLanding: () => void
-  onToggleLogin: () => void
+  onSignUpSuccess: (email: string) => void;
+  onBackToLanding: () => void;
+  onToggleLogin: () => void;
 }
 
 const testimonials = [
@@ -29,142 +29,180 @@ const testimonials = [
     title: "Co-founder - ContentBacon",
     rating: 5,
   },
-]
+];
 
-export function SignUpPage({ onSignUpSuccess, onBackToLanding, onToggleLogin }: SignUpPageProps) {
+export function SignUpPage({
+  onSignUpSuccess,
+  onBackToLanding,
+  onToggleLogin,
+}: SignUpPageProps) {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     password: "",
     confirmPassword: "",
-  })
-  const [showPassword, setShowPassword] = useState(false)
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const [googleLoading, setGoogleLoading] = useState(false)
-  const [error, setError] = useState("")
-  const [message, setMessage] = useState("") // Add separate state for info/success messages
-  const [agreedToTerms, setAgreedToTerms] = useState(false)
-  const [currentTestimonial, setCurrentTestimonial] = useState(0)
-  const toast = useToast()
+  });
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState(""); // Add separate state for info/success messages
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [currentTestimonial, setCurrentTestimonial] = useState(0);
+  const toast = useToast();
 
   // Auto-cycle testimonials every 5 seconds
   useEffect(() => {
     const interval = setInterval(() => {
-      setCurrentTestimonial((prev) => (prev + 1) % testimonials.length)
-    }, 5000)
-    return () => clearInterval(interval)
-  }, [])
+      setCurrentTestimonial((prev) => (prev + 1) % testimonials.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleNextTestimonial = () => {
-    setCurrentTestimonial((prev) => (prev + 1) % testimonials.length)
-  }
+    setCurrentTestimonial((prev) => (prev + 1) % testimonials.length);
+  };
 
   const handlePrevTestimonial = () => {
-    setCurrentTestimonial((prev) => (prev - 1 + testimonials.length) % testimonials.length)
-  }
+    setCurrentTestimonial(
+      (prev) => (prev - 1 + testimonials.length) % testimonials.length
+    );
+  };
 
   const passwordRequirements = [
     { label: "At least 8 characters", met: formData.password.length >= 8 },
-    { label: "Contains uppercase letter", met: /[A-Z]/.test(formData.password) },
-    { label: "Contains lowercase letter", met: /[a-z]/.test(formData.password) },
+    {
+      label: "Contains uppercase letter",
+      met: /[A-Z]/.test(formData.password),
+    },
+    {
+      label: "Contains lowercase letter",
+      met: /[a-z]/.test(formData.password),
+    },
     { label: "Contains number", met: /\d/.test(formData.password) },
-  ]
+  ];
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
     // Clear messages when user starts typing
-    setError("")
-    setMessage("")
-  }
+    setError("");
+    setMessage("");
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError("")
-    setMessage("") // Clear previous messages
+    e.preventDefault();
+    setError("");
+    setMessage(""); // Clear previous messages
 
-    if (!formData.name || !formData.email || !formData.password || !formData.confirmPassword) {
-      setError("Please fill in all fields")
-      return
+    if (
+      !formData.name ||
+      !formData.email ||
+      !formData.password ||
+      !formData.confirmPassword
+    ) {
+      setError("Please fill in all fields");
+      return;
     }
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      setError("Please enter a valid email address")
-      return
+      setError("Please enter a valid email address");
+      return;
     }
 
     if (formData.password.length < 8) {
-      setError("Password must be at least 8 characters")
-      return
+      setError("Password must be at least 8 characters");
+      return;
     }
 
     if (formData.password !== formData.confirmPassword) {
-      setError("Passwords do not match")
-      return
+      setError("Passwords do not match");
+      return;
     }
 
     if (!agreedToTerms) {
-      setError("Please agree to the terms and conditions")
-      return
+      setError("Please agree to the terms and conditions");
+      return;
     }
 
-    setIsLoading(true)
-    const { data, error } = await signUp(formData.email, formData.password)
-    setIsLoading(false)
+    setIsLoading(true);
+    const { data, error } = await signUp(formData.email, formData.password);
+    setIsLoading(false);
 
     if (error) {
-      const msg = (error as any).message ?? String(error) ?? "Error creating account"
-      setError(msg)
+      const msg =
+        (error as any).message ?? String(error) ?? "Error creating account";
+      setError(msg);
       try {
-        toast.showToast({ title: "Sign up failed", description: msg, type: "error" })
+        toast.showToast({
+          title: "Sign up failed",
+          description: msg,
+          type: "error",
+        });
       } catch {}
-      return
+      return;
     }
 
-    const session = (data as any)?.session ?? null
+    const session = (data as any)?.session ?? null;
     if (!session) {
-      const msg = "Please check your email to confirm your account before signing in."
-      setMessage(msg) // Use message state instead of error for info messages
+      const msg =
+        "Please check your email to confirm your account before signing in.";
+      setMessage(msg); // Use message state instead of error for info messages
       try {
-        toast.showToast({ title: "Confirm your email", description: msg, type: "info" })
+        toast.showToast({
+          title: "Confirm your email",
+          description: msg,
+          type: "info",
+        });
       } catch {
         /* ignore */
       }
       // Don't set this as an error - it's a success that requires email confirmation
-      return
+      return;
     }
 
     try {
-      toast.showToast({ title: "Account created", description: "Welcome! You are now signed in.", type: "success" })
+      toast.showToast({
+        title: "Account created",
+        description: "Welcome! You are now signed in.",
+        type: "success",
+      });
     } catch {}
 
-    onSignUpSuccess(formData.email)
-  }
+    onSignUpSuccess(formData.email);
+  };
 
   const handleGoogleSignUp = async () => {
-    setGoogleLoading(true)
-    setError("")
-    setMessage("") // Clear messages
+    setGoogleLoading(true);
+    setError("");
+    setMessage(""); // Clear messages
 
-    const { data, error } = await signUpWithGoogle()
-    setGoogleLoading(false)
+    const { data, error } = await signUpWithGoogle();
+    setGoogleLoading(false);
 
     if (error) {
-      const msg = (error as any).message ?? String(error) ?? "Error signing up with Google"
-      setError(msg)
+      const msg =
+        (error as any).message ??
+        String(error) ??
+        "Error signing up with Google";
+      setError(msg);
       try {
-        toast.showToast({ title: "Google sign up failed", description: msg, type: "error" })
+        toast.showToast({
+          title: "Google sign up failed",
+          description: msg,
+          type: "error",
+        });
       } catch {}
     }
-  }
+  };
 
   // const testimonial = testimonials[currentTestimonial]
 
   return (
     <div className="min-h-screen bg-white flex">
       {/* Left Side - Testimonials */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-blue-500 to-blue-600 rounded-3xl m-4 p-12 flex-col justify-between relative overflow-hidden">
+      <div className="hidden lg:flex lg:w-1/2 bg-[#2469fe] rounded-3xl m-4 p-12 flex-col justify-between relative overflow-hidden">
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-0 right-0 w-96 h-96 bg-white rounded-full blur-3xl"></div>
         </div>
@@ -223,6 +261,17 @@ export function SignUpPage({ onSignUpSuccess, onBackToLanding, onToggleLogin }: 
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Name field */}
             <div>
+              {/* Link to Sign In */}
+              <p className="text-center text-gray-500 text-sm mt-4">
+                Already have an account?{" "}
+                <button
+                  type="button"
+                  onClick={onToggleLogin}
+                  className="text-blue-500 hover:text-blue-600 font-medium"
+                >
+                  Sign In
+                </button>
+              </p>
               {error && <p className="text-red-500">{error}</p>}
               <p>Full Name</p>
               <input
@@ -264,21 +313,36 @@ export function SignUpPage({ onSignUpSuccess, onBackToLanding, onToggleLogin }: 
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
               >
-                {showPassword ? <EyeOff className="mb-15" size={20} /> : <Eye className="mb-15" size={20} />}
+                {showPassword ? (
+                  <EyeOff className="mb-15" size={20} />
+                ) : (
+                  <Eye className="mb-15" size={20} />
+                )}
               </button>
 
               {/* Password requirements */}
               <div className="mt-2 space-y-1">
                 {passwordRequirements.map((req) => (
-                  <div key={req.label} className="flex items-center gap-2 text-xs">
+                  <div
+                    key={req.label}
+                    className="flex items-center gap-2 text-xs"
+                  >
                     <div
                       className={`w-4 h-4 rounded-full flex items-center justify-center ${
-                        req.met ? "bg-green-500/20 border border-green-500/50" : "bg-gray-200/30 border border-gray-300"
+                        req.met
+                          ? "bg-green-500/20 border border-green-500/50"
+                          : "bg-gray-200/30 border border-gray-300"
                       }`}
                     >
-                      {req.met && <Check size={12} className="text-green-400" />}
+                      {req.met && (
+                        <Check size={12} className="text-green-400" />
+                      )}
                     </div>
-                    <span className={req.met ? "text-green-400" : "text-gray-400"}>{req.label}</span>
+                    <span
+                      className={req.met ? "text-green-400" : "text-gray-400"}
+                    >
+                      {req.label}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -287,7 +351,10 @@ export function SignUpPage({ onSignUpSuccess, onBackToLanding, onToggleLogin }: 
             {/* Rest of your component remains the same... */}
             {/* Confirm password field */}
             <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-slate-200 mb-2">
+              <label
+                htmlFor="confirmPassword"
+                className="block text-sm font-medium text-slate-200 mb-2"
+              >
                 Confirm Password
               </label>
               <div className="relative">
@@ -305,7 +372,11 @@ export function SignUpPage({ onSignUpSuccess, onBackToLanding, onToggleLogin }: 
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition-colors"
                 >
-                  {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  {showConfirmPassword ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
                 </button>
               </div>
             </div>
@@ -369,5 +440,5 @@ export function SignUpPage({ onSignUpSuccess, onBackToLanding, onToggleLogin }: 
         </div> */}
       </div>
     </div>
-  )
+  );
 }
