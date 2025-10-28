@@ -446,4 +446,4 @@ export function SignUpPage({
       </div>
     </div>
   );
-}
+};
