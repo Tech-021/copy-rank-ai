@@ -254,7 +254,7 @@ export function SignUpPage({ onSignUpSuccess, onBackToLanding, onToggleLogin }: 
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
               >
-                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                {showPassword ? <EyeOff className="mb-15" size={20} /> : <Eye className="mb-15" size={20} />}
               </button>
 
               {/* Password requirements */}
@@ -290,7 +290,7 @@ export function SignUpPage({ onSignUpSuccess, onBackToLanding, onToggleLogin }: 
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
               >
-                {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                {showConfirmPassword ? <EyeOff className="mt-6" size={20} /> : <Eye className="mt-6" size={20} />}
               </button>
             </div>
 
