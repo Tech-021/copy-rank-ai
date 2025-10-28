@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Loader2, Trash2 } from "lucide-react"
+import { supabase } from "@/lib/client"
 
 interface Website {
   id: string
@@ -12,6 +13,22 @@ interface Website {
   topic: string
   keywords: number
   isAnalyzing?: boolean
+  user_id?: string
+  created_at?: string
+}
+
+interface ApiResponse {
+  ok: boolean
+  niche?: {
+    niche: string
+    confidence: number
+    keywords?: string[]
+    raw?: any
+  }
+  error?: {
+    code: string
+    message: string
+  }
 }
 
 export function AnalyzeTab() {
@@ -19,18 +36,102 @@ export function AnalyzeTab() {
   const [urlInput, setUrlInput] = useState("")
   const [isAnalyzing, setIsAnalyzing] = useState(false)
 
-  const detectTopic = async (url: string): Promise<string> => {
-    // Simulate API call to detect topic using AI
-    await new Promise((resolve) => setTimeout(resolve, 2000))
-    const topics = [
-      "Technology & SaaS",
-      "E-commerce & Retail",
-      "Healthcare & Wellness",
-      "Finance & Fintech",
-      "Education & Learning",
-      "Travel & Hospitality",
-    ]
-    return topics[Math.floor(Math.random() * topics.length)]
+  const analyzeWebsite = async (url: string): Promise<{ topic: string }> => {
+    try {
+      const response = await fetch('/api/scraper', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url }),
+      })
+
+      const data: ApiResponse = await response.json()
+
+      if (!response.ok || !data.ok) {
+        throw new Error(data.error?.message || 'Analysis failed')
+      }
+
+      const topic = data.niche?.niche || "General"
+      return { topic }
+    } catch (error) {
+      console.error('API call failed:', error)
+      throw error
+    }
+  }
+
+  const saveWebsiteToDB = async (website: Omit<Website, 'id' | 'created_at'>): Promise<string> => {
+    try {
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      if (!user) {
+        throw new Error("User not authenticated")
+      }
+
+      const { data, error } = await supabase
+        .from('websites')
+        .insert([
+          {
+            url: website.url,
+            topic: website.topic,
+            keywords: website.keywords,
+            user_id: user.id,
+          }
+        ])
+        .select()
+        .single()
+
+      if (error) {
+        throw error
+      }
+
+      return data.id
+    } catch (error) {
+      console.error('Error saving to database:', error)
+      throw error
+    }
+  }
+
+  const loadUserWebsites = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      if (!user) return
+
+      const { data, error } = await supabase
+        .from('websites')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+
+      if (error) {
+        console.error('Error loading websites:', error)
+        return
+      }
+
+      if (data) {
+        setWebsites(data)
+      }
+    } catch (error) {
+      console.error('Error loading websites:', error)
+    }
+  }
+
+  const deleteWebsiteFromDB = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('websites')
+        .delete()
+        .eq('id', id)
+
+      if (error) {
+        throw error
+      }
+    } catch (error) {
+      console.error('Error deleting website:', error)
+      throw error
+    }
   }
 
   const handleAddWebsite = async () => {
@@ -51,17 +152,25 @@ export function AnalyzeTab() {
     setUrlInput("")
 
     try {
-      // Simulate topic detection
-      const detectedTopic = await detectTopic(urlInput)
+      // Call the actual API
+      const { topic } = await analyzeWebsite(urlInput)
 
-      // Update website with detected topic
+      // Save to database
+      const dbId = await saveWebsiteToDB({
+        url: urlInput,
+        topic: topic,
+        keywords: Math.floor(Math.random() * 50) + 10, // Generate keyword count
+        isAnalyzing: false,
+      })
+
+      // Update website with detected topic and real ID
       setWebsites((prev) =>
         prev.map((site) =>
           site.id === tempId
             ? {
                 ...site,
-                topic: detectedTopic,
-                keywords: Math.floor(Math.random() * 50) + 10,
+                id: dbId,
+                topic,
                 isAnalyzing: false,
               }
             : site,
@@ -69,15 +178,44 @@ export function AnalyzeTab() {
       )
     } catch (error) {
       console.error("Error analyzing website:", error)
-      setWebsites((prev) => prev.filter((site) => site.id !== tempId))
+      
+      // Show error message to user
+      const errorMessage = error instanceof Error ? error.message : "Analysis failed"
+      
+      setWebsites((prev) =>
+        prev.map((site) =>
+          site.id === tempId
+            ? {
+                ...site,
+                topic: `Error: ${errorMessage}`,
+                keywords: 0,
+                isAnalyzing: false,
+              }
+            : site,
+        ),
+      )
     } finally {
       setIsAnalyzing(false)
     }
   }
 
-  const handleRemoveWebsite = (id: string) => {
-    setWebsites(websites.filter((site) => site.id !== id))
+  const handleRemoveWebsite = async (id: string) => {
+    try {
+      // Remove from database
+      await deleteWebsiteFromDB(id)
+      
+      // Remove from local state
+      setWebsites(websites.filter((site) => site.id !== id))
+    } catch (error) {
+      console.error('Error deleting website:', error)
+      alert('Failed to delete website. Please try again.')
+    }
   }
+
+  // Load websites on component mount
+  useState(() => {
+    loadUserWebsites()
+  })
 
   return (
     <div className="space-y-6">
@@ -133,12 +271,13 @@ export function AnalyzeTab() {
                         <>Topic: {site.topic}</>
                       )}
                     </p>
+                    {site.created_at && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Added: {new Date(site.created_at).toLocaleDateString()}
+                      </p>
+                    )}
                   </div>
                   <div className="flex items-center gap-4">
-                    <div className="text-right">
-                      <p className="text-2xl font-bold text-primary">{site.keywords}</p>
-                      <p className="text-xs text-muted-foreground">keywords found</p>
-                    </div>
                     <Button
                       onClick={() => handleRemoveWebsite(site.id)}
                       variant="ghost"
@@ -156,4 +295,4 @@ export function AnalyzeTab() {
       )}
     </div>
   )
-}
+};
