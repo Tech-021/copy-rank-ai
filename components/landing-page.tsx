@@ -22,10 +22,10 @@ export function LandingPage({ onSignIn, onSignUp }: LandingPageProps) {
             <span className="font-bold text-lg text-foreground">SEOFlow</span>
           </div>
           <div className="flex items-center gap-3">
-            <Button onClick={onSignIn} variant="ghost" className="text-foreground hover:bg-muted">
+            <Button onClick={onSignIn} variant="ghost" className="cursor-pointer text-foreground hover:bg-muted">
               Sign In
             </Button>
-            <Button onClick={onSignUp} className="bg-primary hover:bg-primary/90 text-primary-foreground">
+            <Button onClick={onSignUp} className="cursor-pointer bg-primary hover:bg-primary/90 text-primary-foreground">
               Sign Up
             </Button>
           </div>
@@ -42,7 +42,7 @@ export function LandingPage({ onSignIn, onSignUp }: LandingPageProps) {
             Analyze your website, discover low-competition keywords, and generate 30 SEO-optimized articles per month
             automatically.
           </p>
-          <Button onClick={onSignUp} size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2">
+          <Button onClick={onSignUp} size="lg" className="cursor-pointer bg-primary hover:bg-primary/90 text-primary-foreground gap-2">
             Get Started Free <ArrowRight className="w-4 h-4" />
           </Button>
         </div>

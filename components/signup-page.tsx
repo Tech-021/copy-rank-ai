@@ -271,7 +271,7 @@ export function SignUpPage({
                   <button
                     type="button"
                     onClick={onToggleLogin}
-                    className="text-blue-500 hover:text-blue-600 font-medium"
+                    className="cursor-pointer text-blue-500 hover:text-blue-600 font-medium"
                   >
                     Sign In
                   </button>
@@ -316,7 +316,7 @@ export function SignUpPage({
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                className="cursor-pointer absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
               >
                 {showPassword ? (
                   <EyeOff className="mb-15" size={20} />
@@ -375,7 +375,7 @@ export function SignUpPage({
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition-colors"
+                  className="cursor-pointer absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition-colors"
                 >
                   {showConfirmPassword ? (
                     <EyeOff className="w-5 h-5" />
@@ -410,7 +410,7 @@ export function SignUpPage({
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-4 rounded-lg transition"
+              className="cursor-pointer w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-4 rounded-lg transition"
             >
               {isLoading ? "Creating account..." : "Sign Up"}
             </button>
@@ -421,7 +421,7 @@ export function SignUpPage({
                 type="button"
                 onClick={handleGoogleSignUp}
                 disabled={googleLoading}
-                className="border border-gray-300 rounded-lg py-3 w-full flex items-center justify-center gap-2 hover:bg-gray-50 transition"
+                className="cursor-pointer border border-gray-300 rounded-lg py-3 w-full flex items-center justify-center gap-2 hover:bg-gray-50 transition"
               >
                 <Image src="/google.png" width={30} height={30} alt="Google" />
                 <span className="text-gray-700 font-medium">Google</span>

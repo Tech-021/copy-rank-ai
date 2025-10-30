@@ -25,20 +25,38 @@ export async function analyzeWithQwen(
   const mainText = (scrape.mainText || "").slice(0, 4000);
   const schemaSnippet = JSON.stringify(scrape.schemaData || []).slice(0, 1000);
 
-  const prompt = `Classify the niche of this site in one short label and optional confidence.
+  // CORRECTED PROMPT - Always DataForSEO compatible
+  const prompt = `Classify this website into EXACTLY ONE category from this list:
+"technology", "marketing", "business", "health", "fitness", "education", "finance", "web development", "software", "programming", "digital marketing", "ecommerce", "lifestyle", "travel", "cooking", "gaming"
+
+RULES:
+- Developers/Programmers/Engineers → "web development"
+- Designers → "technology"
+- Marketers/Agencies → "digital marketing"
+- Business/Startups/Entrepreneurs → "business"
+- Health/Fitness/Nutrition → "health" or "fitness"
+- Education/Teachers/Courses → "education"
+- Food/Recipes/Restaurants → "cooking"
+- Travel/Bloggers → "travel"
+- Games/Gaming → "gaming"
+- Everything else → "technology"
+
+CONTENT:
 Title: ${scrape.title || ""}
 Meta: ${scrape.metaDescription || ""}
 Headings: ${scrape.headings || ""}
 MainText: ${mainText}
-Schema: ${schemaSnippet}
-Return JSON: { "niche": "...", "confidence": 0-1 }`;
 
-  // Build OpenAI-compatible messages payload
+Return JSON: { "niche": "exact category from list", "confidence": 0.9 }`;
+
+  // CORRECTED SYSTEM PROMPT - More strict
   const messages = [
     {
       role: "system",
-      content:
-        'You are a concise classifier. Reply with JSON: {"niche": "...", "confidence": 0-1} only.',
+      content: `You are a strict classifier. ALWAYS return a category from this exact list: 
+technology, marketing, business, health, fitness, education, finance, web development, 
+software, programming, digital marketing, ecommerce, lifestyle, travel, cooking, gaming.
+NEVER use any other categories. Always return valid JSON.`,
     },
     { role: "user", content: prompt },
   ];
@@ -48,10 +66,11 @@ Return JSON: { "niche": "...", "confidence": 0-1 }`;
     messages,
     max_tokens: 256,
     temperature: 0.0,
+    response_format: { type: "json_object" } // Force JSON output
   };
 
   try {
-    console.log("QWEN->compatible-mode payload keys:", Object.keys(payload));
+    console.log("🔍 Analyzing niche with strict DataForSEO categories...");
     const resp = await axios.post(apiUrl, payload, {
       headers: {
         Authorization: `Bearer ${apiKey}`,
@@ -69,19 +88,37 @@ Return JSON: { "niche": "...", "confidence": 0-1 }`;
         null) as string | null;
     }
 
-    let niche = "unknown";
-    let confidence: number | null = null;
+    let niche = "technology"; // Default to technology (always works with DataForSEO)
+    let confidence: number | null = 0.9;
 
     if (rawText) {
       try {
         const parsed = JSON.parse(rawText);
-        niche = parsed.niche ?? niche;
+        const extractedNiche = parsed.niche?.toLowerCase().trim();
+        
+        // VALIDATE the niche is from our approved list
+        const validNiches = [
+          "technology", "marketing", "business", "health", "fitness", 
+          "education", "finance", "web development", "software", 
+          "programming", "digital marketing", "ecommerce", "lifestyle", 
+          "travel", "cooking", "gaming"
+        ];
+        
+        if (extractedNiche && validNiches.includes(extractedNiche)) {
+          niche = extractedNiche;
+          console.log(`✅ Valid niche: ${niche}`);
+        } else {
+          console.log(`⚠️ Invalid niche "${extractedNiche}", defaulting to "technology"`);
+          niche = "technology";
+        }
+        
         confidence =
           typeof parsed.confidence === "number"
             ? parsed.confidence
             : confidence;
       } catch {
-        niche = rawText.split("\n")[0].slice(0, 200) || niche;
+        console.log(`❌ Failed to parse response, defaulting to "technology"`);
+        niche = "technology";
       }
     } else if (body?.niche) {
       niche = String(body.niche);
@@ -89,6 +126,7 @@ Return JSON: { "niche": "...", "confidence": 0-1 }`;
         typeof body.confidence === "number" ? body.confidence : confidence;
     }
 
+    console.log(`🎯 Final niche for DataForSEO: "${niche}"`);
     return { niche, confidence, raw: body };
   } catch (err) {
     const anyErr = err as any;
@@ -103,4 +141,4 @@ Return JSON: { "niche": "...", "confidence": 0-1 }`;
     }
     throw err;
   }
-}
+};

@@ -4,9 +4,13 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Loader2, Trash2 } from "lucide-react"
+import { Loader2, Trash2, ExternalLink } from "lucide-react"
 import { supabase } from "@/lib/client"
 import { useToast } from "@/components/ui/toast"
+import Link from "next/link"
+interface AnalyzeTabProps {
+  onViewKeywords: (websiteId: string) => void;
+}
 
 interface Website {
   id: string
@@ -18,13 +22,11 @@ interface Website {
   created_at?: string
 }
 
-interface ApiResponse {
+interface ScraperResponse {
   ok: boolean
   niche?: {
     niche: string
     confidence: number
-    keywords?: string[]
-    raw?: any
   }
   error?: {
     code: string
@@ -32,14 +34,22 @@ interface ApiResponse {
   }
 }
 
-export function AnalyzeTab() {
+interface KeywordsResponse {
+  success: boolean
+  topic: string
+  keywords: any[]
+  totalKeywords: number
+  error?: string
+}
+
+export function AnalyzeTab({ onViewKeywords }: AnalyzeTabProps) {
   const [websites, setWebsites] = useState<Website[]>([])
   const [urlInput, setUrlInput] = useState("")
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [urlError, setUrlError] = useState("")
   const toast = useToast()
 
-  // URL validation and formatting
+  // URL validation and formatting (keep your existing function)
   const validateAndFormatUrl = (input: string): { isValid: boolean; formattedUrl: string; error?: string } => {
     let url = input.trim()
     
@@ -98,7 +108,8 @@ export function AnalyzeTab() {
     }
   }
 
-  const analyzeWebsite = async (url: string): Promise<{ topic: string }> => {
+  // STEP 1: Call scraper API to get topic/niche
+  const getWebsiteTopic = async (url: string): Promise<string> => {
     try {
       const response = await fetch('/api/scraper', {
         method: 'POST',
@@ -108,52 +119,80 @@ export function AnalyzeTab() {
         body: JSON.stringify({ url }),
       })
 
-      const data: ApiResponse = await response.json()
+      const data: ScraperResponse = await response.json()
 
       if (!response.ok || !data.ok) {
-        throw new Error(data.error?.message || 'Analysis failed')
+        throw new Error(data.error?.message || 'Scraping failed')
       }
 
       const topic = data.niche?.niche || "General"
-      return { topic }
+      return topic
     } catch (error) {
-      console.error('API call failed:', error)
+      console.error('Scraper API call failed:', error)
       throw error
     }
   }
 
-  const saveWebsiteToDB = async (website: Omit<Website, 'id' | 'created_at'>): Promise<string> => {
+  // STEP 2: Call keywords API with the topic
+  const getKeywordsForTopic = async (topic: string): Promise<any[]> => {
     try {
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser()
-      
-      if (!user) {
-        throw new Error("User not authenticated")
+      const response = await fetch('/api/keyword', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ topic }),
+      })
+
+      const data: KeywordsResponse = await response.json()
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Keywords API failed')
       }
 
-      const { data, error } = await supabase
-        .from('websites')
-        .insert([
-          {
-            url: website.url,
-            topic: website.topic,
-            keywords: website.keywords,
-            user_id: user.id,
-          }
-        ])
-        .select()
-        .single()
-
-      if (error) {
-        throw error
-      }
-
-      return data.id
+      return data.keywords || []
     } catch (error) {
-      console.error('Error saving to database:', error)
+      console.error('Keywords API call failed:', error)
       throw error
     }
   }
+
+  // Save website to database
+  const saveWebsiteToDB = async (url: string, topic: string, keywords: any[]): Promise<string> => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (!user) {
+      throw new Error("User not authenticated")
+    }
+
+    console.log(`💾 Saving ${keywords.length} keywords to database as array...`);
+
+    const { data, error } = await supabase
+      .from('websites')
+      .insert([
+        {
+          url: url,
+          topic: topic,
+          keywords: keywords, // Now storing the full array of keyword objects
+          user_id: user.id,
+        }
+      ])
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Supabase insert error:', error);
+      throw error
+    }
+
+    console.log('✅ Successfully saved website with full keyword data');
+    return data.id
+  } catch (error) {
+    console.error('Error saving to database:', error)
+    throw error
+  }
+}
 
   const loadUserWebsites = async () => {
     try {
@@ -196,6 +235,7 @@ export function AnalyzeTab() {
     }
   }
 
+  // MAIN FUNCTION: Chain both APIs properly
   const handleAddWebsite = async () => {
     // Validate URL first
     const validation = validateAndFormatUrl(urlInput)
@@ -214,7 +254,7 @@ export function AnalyzeTab() {
     const newWebsite: Website = {
       id: tempId,
       url: formattedUrl,
-      topic: "Detecting...",
+      topic: "Detecting topic...",
       keywords: 0,
       isAnalyzing: true,
     }
@@ -222,25 +262,36 @@ export function AnalyzeTab() {
     setUrlInput("")
 
     try {
-      // Call the actual API
-      const { topic } = await analyzeWebsite(formattedUrl)
+      // STEP 1: Get topic from scraper API
+      console.log("🔍 Step 1: Getting website topic...")
+      const topic = await getWebsiteTopic(formattedUrl)
+      
+      // Update UI with detected topic
+      setWebsites((prev) =>
+        prev.map((site) =>
+          site.id === tempId
+            ? { ...site, topic: `Getting keywords for: ${topic}` }
+            : site
+        )
+      )
 
-      // Save to database
-      const dbId = await saveWebsiteToDB({
-        url: formattedUrl,
-        topic: topic,
-        keywords: Math.floor(Math.random() * 50) + 10, // Generate keyword count
-        isAnalyzing: false,
-      })
+      // STEP 2: Get keywords for the detected topic
+      console.log("🔍 Step 2: Getting keywords for topic:", topic)
+      const keywords = await getKeywordsForTopic(topic)
 
-      // Update website with detected topic and real ID
+      // STEP 3: Save everything to database
+      console.log("💾 Step 3: Saving to database...")
+      const dbId = await saveWebsiteToDB(formattedUrl, topic, keywords)
+
+      // Final UI update with real data
       setWebsites((prev) =>
         prev.map((site) =>
           site.id === tempId
             ? {
                 ...site,
                 id: dbId,
-                topic,
+                topic: topic,
+                keywords: keywords.length,
                 isAnalyzing: false,
               }
             : site,
@@ -249,8 +300,8 @@ export function AnalyzeTab() {
 
       // Show success toast
       toast.showToast({
-        title: "Analysis Complete",
-        description: `Successfully analyzed ${formattedUrl}`,
+        title: "Analysis Complete!",
+        description: `Found ${keywords.length} keywords for "${topic}"`,
         type: "success"
       })
 
@@ -350,43 +401,57 @@ export function AnalyzeTab() {
         <div className="space-y-4">
           <h3 className="text-lg font-semibold text-foreground">Your Websites</h3>
           {websites.map((site) => (
-            <Card key={site.id} className="border-border/40 bg-card/50 backdrop-blur-sm">
-              <CardContent className="pt-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <p className="font-medium text-foreground">{site.url}</p>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {site.isAnalyzing ? (
-                        <span className="flex items-center gap-2">
-                          <Loader2 className="w-3 h-3 animate-spin" />
-                          Detecting topic...
-                        </span>
-                      ) : (
-                        <>Topic: {site.topic}</>
-                      )}
-                    </p>
-                    {site.created_at && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Added: {new Date(site.created_at).toLocaleDateString()}
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <Button
-                      onClick={() => handleRemoveWebsite(site.id)}
-                      variant="ghost"
-                      size="sm"
-                      className="text-muted-foreground hover:text-destructive"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+  <Card key={site.id} className="border-border/40 bg-card/50 backdrop-blur-sm">
+    <CardContent className="pt-6">
+      <div className="flex items-start justify-between">
+        <div className="flex-1">
+          <p className="font-medium text-foreground">{site.url}</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            {site.isAnalyzing ? (
+              <span className="flex items-center gap-2">
+                <Loader2 className="w-3 h-3 animate-spin" />
+                Detecting topic...
+              </span>
+            ) : (
+              <>Topic: {site.topic}</>
+            )}
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Keywords: {Array.isArray(site.keywords) ? site.keywords.length : site.keywords || 0} found
+          </p>
+          {site.created_at && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Added: {new Date(site.created_at).toLocaleDateString()}
+            </p>
+          )}
+        </div>
+        <div className="flex items-center gap-4">
+          {!site.isAnalyzing && (
+            <Button
+              onClick={() => onViewKeywords(site.id)}
+              variant="outline"
+              size="sm"
+              className="gap-2"
+            >
+              <ExternalLink className="w-4 h-4" />
+              View Keywords
+            </Button>
+          )}
+          <Button
+            onClick={() => handleRemoveWebsite(site.id)}
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground hover:text-destructive"
+          >
+            <Trash2 className="w-4 h-4" />
+          </Button>
+        </div>
+      </div>
+    </CardContent>
+  </Card>
+))}
         </div>
       )}
     </div>
   )
-};
+}

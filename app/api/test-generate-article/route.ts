@@ -1,7 +1,15 @@
 import { NextResponse } from "next/server";
+import { createClient } from '@supabase/supabase-js';
+
+// Initialize Supabase client
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 interface ArticleRequest {
   keyword: string;
+  websiteId?: string;
 }
 
 interface EnhancedArticle {
@@ -40,7 +48,7 @@ export async function POST(request: Request) {
   try {
     const body: ArticleRequest = await request.json();
     
-    const { keyword } = body;
+    const { keyword, websiteId } = body;
 
     if (!keyword) {
       return NextResponse.json(
@@ -115,7 +123,7 @@ OG_DESCRIPTION: [Social media description 120-130 chars]`;
           }
         ],
         temperature: 0.7,
-        max_tokens: 3000
+        max_tokens: 1500
       }),
     });
 
@@ -142,11 +150,63 @@ OG_DESCRIPTION: [Social media description 120-130 chars]`;
     // Generate enhanced metadata
     const enhancedArticle = generateEnhancedMetadata(parsedData, keyword);
 
-    console.log("✅ Enhanced article generated with complete metadata");
+    // Save to Supabase
+    const { data: savedArticle, error: dbError } = await supabase
+      .from('articles')
+      .insert({
+        title: enhancedArticle.title,
+        content: enhancedArticle.content,
+        keyword: keyword,
+        status: 'draft',
+        date: new Date().toISOString().split('T')[0],
+        preview: enhancedArticle.metaDescription || enhancedArticle.content.substring(0, 150) + '...',
+        
+        // SEO Metadata
+        meta_title: enhancedArticle.metaTitle,
+        meta_description: enhancedArticle.metaDescription,
+        slug: enhancedArticle.slug,
+        focus_keyword: enhancedArticle.focusKeyword,
+        
+        // Content Analysis
+        reading_time: enhancedArticle.readingTime,
+        word_count: enhancedArticle.wordCount,
+        content_score: enhancedArticle.contentScore,
+        keyword_density: enhancedArticle.keywordDensity,
+        
+        // Social Media
+        og_title: enhancedArticle.ogTitle,
+        og_description: enhancedArticle.ogDescription,
+        twitter_title: enhancedArticle.twitterTitle,
+        twitter_description: enhancedArticle.twitterDescription,
+        
+        // Internal Organization
+        tags: enhancedArticle.tags,
+        category: enhancedArticle.category,
+        
+        // Technical
+        estimated_traffic: enhancedArticle.estimatedTraffic,
+        
+        // Associate with website if provided
+        ...(websiteId && { website_id: websiteId })
+      })
+      .select()
+      .single();
+
+    if (dbError) {
+      console.error('Database error:', dbError);
+      throw new Error('Failed to save article to database');
+    }
+
+    console.log("✅ Enhanced article generated and saved to Supabase");
 
     return NextResponse.json({
       success: true,
-      article: enhancedArticle,
+      article: {
+        ...enhancedArticle,
+        id: savedArticle.id,
+        status: savedArticle.status,
+        date: savedArticle.date
+      },
       analysis: {
         seoReady: enhancedArticle.contentScore >= 70,
         immediatePublish: true,

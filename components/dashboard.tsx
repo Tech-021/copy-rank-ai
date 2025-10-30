@@ -15,6 +15,7 @@ interface DashboardProps {
 
 export function Dashboard({ onLogout, userEmail }: DashboardProps) {
   const [activeTab, setActiveTab] = useState<"analyze" | "keywords" | "articles" | "settings">("analyze")
+  const [selectedWebsiteId, setSelectedWebsiteId] = useState<string | null>(null)
 
   return (
     <div className="min-h-screen bg-background">
@@ -36,7 +37,7 @@ export function Dashboard({ onLogout, userEmail }: DashboardProps) {
                 <span className="text-sm text-muted-foreground hidden sm:inline">{userEmail}</span>
               </div>
             )}
-            <Button onClick={onLogout} variant="outline" className="border-border/40 bg-transparent gap-2">
+            <Button onClick={onLogout} variant="outline" className="cursor-pointer border-border/40 bg-transparent gap-2">
               <LogOut className="w-4 h-4" />
               <span className="hidden sm:inline">Sign Out</span>
             </Button>
@@ -50,7 +51,7 @@ export function Dashboard({ onLogout, userEmail }: DashboardProps) {
         <div className="flex gap-4 mb-8 border-b border-border/40 overflow-x-auto">
           <button
             onClick={() => setActiveTab("analyze")}
-            className={`px-4 py-2 font-medium transition-colors whitespace-nowrap ${
+            className={`cursor-pointer px-4 py-2 font-medium transition-colors whitespace-nowrap ${
               activeTab === "analyze"
                 ? "text-primary border-b-2 border-primary"
                 : "text-muted-foreground hover:text-foreground"
@@ -60,7 +61,7 @@ export function Dashboard({ onLogout, userEmail }: DashboardProps) {
           </button>
           <button
             onClick={() => setActiveTab("keywords")}
-            className={`px-4 py-2 font-medium transition-colors whitespace-nowrap ${
+            className={`cursor-pointer px-4 py-2 font-medium transition-colors whitespace-nowrap ${
               activeTab === "keywords"
                 ? "text-primary border-b-2 border-primary"
                 : "text-muted-foreground hover:text-foreground"
@@ -70,7 +71,7 @@ export function Dashboard({ onLogout, userEmail }: DashboardProps) {
           </button>
           <button
             onClick={() => setActiveTab("articles")}
-            className={`px-4 py-2 font-medium transition-colors whitespace-nowrap ${
+            className={`cursor-pointer px-4 py-2 font-medium transition-colors whitespace-nowrap ${
               activeTab === "articles"
                 ? "text-primary border-b-2 border-primary"
                 : "text-muted-foreground hover:text-foreground"
@@ -80,7 +81,7 @@ export function Dashboard({ onLogout, userEmail }: DashboardProps) {
           </button>
           <button
             onClick={() => setActiveTab("settings")}
-            className={`px-4 py-2 font-medium transition-colors whitespace-nowrap ${
+            className={`cursor-pointer px-4 py-2 font-medium transition-colors whitespace-nowrap ${
               activeTab === "settings"
                 ? "text-primary border-b-2 border-primary"
                 : "text-muted-foreground hover:text-foreground"
@@ -91,8 +92,17 @@ export function Dashboard({ onLogout, userEmail }: DashboardProps) {
         </div>
 
         {/* Tab Content */}
-        {activeTab === "analyze" && <AnalyzeTab />}
-        {activeTab === "keywords" && <KeywordsTab />}
+        {activeTab === "analyze" && (
+          <AnalyzeTab 
+            onViewKeywords={(websiteId) => {
+              setSelectedWebsiteId(websiteId)
+              setActiveTab("keywords")
+            }} 
+          />
+        )}
+        {activeTab === "keywords" && (
+          <KeywordsTab websiteId={selectedWebsiteId} />
+        )}
         {activeTab === "articles" && <ArticlesTab />}
         {activeTab === "settings" && <SettingsTab />}
       </main>

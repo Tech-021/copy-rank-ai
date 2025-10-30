@@ -171,7 +171,7 @@ export function LoginPage({ onLoginSuccess, onBackToLanding, onToggleSignUp }: L
             <h2 className="text-2xl font-bold text-gray-900">Sign In</h2>
             <p className="text-gray-600">
               Don't have an account yet?{" "}
-              <button type="button" onClick={onToggleSignUp} className="text-blue-500 hover:text-blue-600 font-medium">
+              <button type="button" onClick={onToggleSignUp} className="cursor-pointer text-blue-500 hover:text-blue-600 font-medium">
                 Sign Up
               </button>
             </p>
@@ -182,7 +182,7 @@ export function LoginPage({ onLoginSuccess, onBackToLanding, onToggleSignUp }: L
                 type="button"
                 onClick={handleGoogleSignIn}
                 disabled={googleLoading}
-                className="border border-gray-300 rounded-lg py-3 w-full flex items-center justify-center gap-2 hover:bg-gray-50 transition"
+                className="cursor-pointer border border-gray-300 rounded-lg py-3 w-full flex items-center justify-center gap-2 hover:bg-gray-50 transition"
               >
                <Image src='/google.png' height={30} width={30} alt="icon" />
                 <span className="text-gray-700 font-medium">Google</span>
@@ -224,7 +224,7 @@ export function LoginPage({ onLoginSuccess, onBackToLanding, onToggleSignUp }: L
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                className="cursor-pointer absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
               >
                 {showPassword ? <EyeOff className="mt-6" size={20} /> : <Eye className="mt-6" size={20} />}
               </button>
@@ -250,7 +250,7 @@ export function LoginPage({ onLoginSuccess, onBackToLanding, onToggleSignUp }: L
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-4 rounded-lg transition"
+              className="cursor-pointer w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-4 rounded-lg transition"
             >
               {isLoading ? "Signing in..." : "Sign In"}
             </button>
