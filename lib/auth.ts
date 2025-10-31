@@ -2,6 +2,16 @@ import { supabase } from "./client"
 
 type AuthReturn = { data: any; error: any }
 
+// Helper function to get the correct base URL for both development and production
+const getBaseUrl = () => {
+  if (typeof window !== 'undefined') {
+    // Client-side: use current origin
+    return window.location.origin
+  }
+  // Server-side: use environment variable or default to production URL
+  return process.env.NEXT_PUBLIC_SITE_URL || 'https://v0-topic-detection-app-ivory.vercel.app'
+}
+
 export async function signUp(email: string, password: string): Promise<AuthReturn> {
   try {
     const res: any = await supabase.auth.signUp({ email, password });
@@ -60,10 +70,11 @@ export async function getUser(): Promise<AuthReturn> {
 
 export async function signUpWithGoogle(): Promise<AuthReturn> {
   try {
+    const baseUrl = getBaseUrl()
     const res: any = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`
+        redirectTo: `${baseUrl}/auth/callback`
       }
     })
     return { data: res.data ?? null, error: res.error ?? null }
@@ -76,8 +87,9 @@ export async function signUpWithGoogle(): Promise<AuthReturn> {
 // Add forgot password function
 export async function resetPassword(email: string): Promise<AuthReturn> {
   try {
+    const baseUrl = getBaseUrl()
     const res: any = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/reset-password`,
+      redirectTo: `${baseUrl}/auth/reset-password`,
     })
     return { data: res.data, error: res.error }
   } catch (err) {

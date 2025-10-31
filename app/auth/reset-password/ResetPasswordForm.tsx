@@ -14,21 +14,50 @@ export default function ResetPasswordForm() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const [message, setMessage] = useState("")
-  const [isTokenValid, setIsTokenValid] = useState(false)
+  const [isTokenValid, setIsTokenValid] = useState<boolean | null>(null) // Start as null for loading
   const router = useRouter()
   const searchParams = useSearchParams()
   const toast = useToast()
 
   useEffect(() => {
-    // Check if we have a valid reset token in the URL
+    console.log("=== RESET PASSWORD DEBUG ===")
+    console.log("Full URL:", window.location.href)
+    console.log("Search params:", Object.fromEntries(searchParams.entries()))
+    console.log("Hash:", window.location.hash)
+
+    // Check search parameters first
     const token = searchParams.get('token')
     const type = searchParams.get('type')
     
     if (token && type === 'recovery') {
+      console.log("✅ Valid token found in search params")
       setIsTokenValid(true)
-    } else {
-      setError("Invalid or expired reset link. Please request a new password reset.")
+      return
     }
+
+    // Check hash parameters (Supabase often uses this format)
+    if (window.location.hash) {
+      const hashParams = new URLSearchParams(window.location.hash.substring(1))
+      const accessToken = hashParams.get('access_token')
+      const hashType = hashParams.get('type')
+      
+      console.log("Hash access_token:", accessToken)
+      console.log("Hash type:", hashType)
+
+      if (accessToken && hashType === 'recovery') {
+        console.log("✅ Valid token found in hash")
+        setIsTokenValid(true)
+        
+        // Convert hash to search params for better UX and to persist the token
+        const newUrl = `${window.location.pathname}?token=${accessToken}&type=recovery`
+        window.history.replaceState(null, '', newUrl)
+        return
+      }
+    }
+
+    console.log("❌ No valid token found")
+    setError("Invalid or expired reset link. Please request a new password reset.")
+    setIsTokenValid(false)
   }, [searchParams])
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -36,7 +65,11 @@ export default function ResetPasswordForm() {
     setError("")
     setMessage("")
 
-    if (!isTokenValid) {
+    // Get token from URL (it should now be in search params after our conversion)
+    const token = searchParams.get('token')
+    const type = searchParams.get('type')
+
+    if (!token || type !== 'recovery') {
       setError("Invalid reset token. Please request a new password reset.")
       return
     }
@@ -98,7 +131,26 @@ export default function ResetPasswordForm() {
     { label: "Contains number", met: /\d/.test(password) },
   ]
 
-  if (!isTokenValid && error) {
+  // Show loading state
+  if (isTokenValid === null) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-md w-full space-y-8">
+          <div>
+            <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+              Loading...
+            </h2>
+            <p className="mt-2 text-center text-sm text-gray-600">
+              Please wait while we verify your reset link.
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Show invalid token message
+  if (!isTokenValid) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-md w-full space-y-8">
@@ -108,6 +160,9 @@ export default function ResetPasswordForm() {
             </h2>
             <p className="mt-2 text-center text-sm text-red-600">
               {error}
+            </p>
+            <p className="mt-4 text-center text-sm text-gray-600">
+              The reset link may have expired or is invalid. Please request a new password reset.
             </p>
           </div>
           <div className="text-center">
@@ -209,7 +264,7 @@ export default function ResetPasswordForm() {
           <div>
             <button
               type="submit"
-              disabled={isLoading || !isTokenValid}
+              disabled={isLoading}
               className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? "Updating..." : "Update Password"}
