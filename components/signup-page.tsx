@@ -200,9 +200,9 @@ export function SignUpPage({
   // const testimonial = testimonials[currentTestimonial]
 
   return (
-    <div className="min-h-screen bg-white flex">
+    <div className="h-screen w-screen flex overflow-hidden bg-white">
       {/* Left Side - Testimonials */}
-      <div className="hidden lg:flex lg:w-1/2 bg-[#2469fe] rounded-3xl m-4 p-12 flex-col justify-between relative overflow-hidden">
+      <div className="hidden lg:flex lg:w-1/2 bg-[#2469fe] rounded-none p-12 flex-col justify-between relative overflow-hidden">
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-0 right-0 w-96 h-96 bg-white rounded-full blur-3xl"></div>
         </div>
@@ -211,42 +211,16 @@ export function SignUpPage({
           <div className="space-y-6">
             <div className="text-white text-5xl"></div>
             <p className="text-white text-lg leading-relaxed font-light"></p>
-            <div className="flex justify-center gap-1">
-              {/* {[...Array(testimonial.rating)].map((_, i) => (
-                <span key={i} className="text-yellow-300 text-xl">★</span>
-              ))} */}
-            </div>
-            <div className="flex flex-col items-center justify-center">
-              {/* <p className="text-white font-semibold text-lg">{testimonial.author}</p>
-              <p className="text-blue-100 text-sm">{testimonial.title}</p> */}
-            </div>
+            <div className="flex justify-center gap-1"></div>
+            <div className="flex flex-col items-center justify-center"></div>
           </div>
         </div>
-        <div className="relative z-10 flex items-center justify-center gap-2 mt-12">
-          {/* <button onClick={handlePrevTestimonial} className="text-white hover:text-blue-100 transition">◀</button>
-          {testimonials.map((_, index) => (
-            <button
-              key={index}
-              onClick={() => setCurrentTestimonial(index)}
-              className={`h-1 rounded-full transition-all ${index === currentTestimonial ? "bg-white w-8" : "bg-blue-300 w-2"}`}
-            />
-          ))} */}
-          {/* <button onClick={handleNextTestimonial} className="text-white hover:text-blue-100 transition">▶</button> */}
-        </div>
+        <div className="relative z-10 flex items-center justify-center gap-2 mt-12"></div>
       </div>
 
       {/* Right Side - SignUp Form */}
       <div className="w-full lg:w-1/2 flex flex-col justify-between p-8 lg:p-16">
         <div>
-          {/* <div className="mb-12">
-            <div className="flex items-center justify-center gap-2 mb-8">
-              <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-lg">⚡</span>
-              </div>
-              <span className="text-2xl font-bold text-gray-900">salestable</span>
-            </div>
-          )}
-
           {/* Info/Success message */}
           {message && (
             <div className="mb-6 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
@@ -353,8 +327,6 @@ export function SignUpPage({
               </div>
             </div>
 
-            {/* Rest of your component remains the same... */}
-            {/* Confirm password field */}
             <div>
               <label
                 htmlFor="confirmPassword"
@@ -426,24 +398,10 @@ export function SignUpPage({
                 <Image src="/google.png" width={30} height={30} alt="Google" />
                 <span className="text-gray-700 font-medium">Google</span>
               </button>
-              {/* <button className="border border-gray-300 rounded-lg py-3 w-full flex items-center justify-center gap-2 hover:bg-gray-50 transition">
-                <Image src="/linked.png" width={30} height={30} alt="LinkedIn" />
-                <span className="text-gray-700 font-medium">LinkedIn</span>
-              </button> */}
             </div>
           </form>
         </div>
-
-        {/* Footer */}
-        {/* <div className="text-center text-gray-500 text-sm space-y-1 mt-8">
-          <p>© 2025 Salestable Inc. All rights reserved.</p>
-          <div className="flex items-center justify-center gap-2">
-            <a href="#" className="text-blue-500 hover:text-blue-600">Terms & Conditions</a>
-            <span>and</span>
-            <a href="#" className="text-blue-500 hover:text-blue-600">Privacy Policy</a>
-          </div>
-        </div> */}
       </div>
     </div>
   );
-};
+}
