@@ -144,14 +144,14 @@ export function LoginPage({ onLoginSuccess, onBackToLanding, onToggleSignUp }: L
   const testimonial = testimonials[currentTestimonial]
 
   return (
-    <div className="min-h-screen bg-white flex">
+    <div className="h-screen w-screen flex overflow-hidden bg-white">
       {/* Left Side - Testimonials */}
-      <div className="hidden lg:flex lg:w-1/2 bg-[#2469fe] rounded-3xl m-4 p-12 flex-col justify-between relative overflow-hidden">
+      <div className="hidden lg:flex lg:w-1/2 bg-[#2469fe] rounded-none p-12 flex-col justify-between relative overflow-hidden">
         {/* ... your existing testimonial section */}
       </div>
 
       {/* Right Side - Login Form */}
-      <div className="w-full lg:w-1/2 flex flex-col justify-between p-8 lg:p-16">
+      <div className="w-full lg:w-1/2 flex flex-col justify-center p-8 lg:p-16 overflow-y-auto">
         <div>
           <div className="mb-12">
             <div className="flex items-center justify-center gap-2 mb-8">
