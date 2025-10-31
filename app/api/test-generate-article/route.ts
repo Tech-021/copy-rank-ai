@@ -10,6 +10,7 @@ const supabase = createClient(
 interface ArticleRequest {
   keyword: string;
   websiteId?: string;
+  userId: string; // Add this - make it required
 }
 
 interface EnhancedArticle {
@@ -48,11 +49,18 @@ export async function POST(request: Request) {
   try {
     const body: ArticleRequest = await request.json();
     
-    const { keyword, websiteId } = body;
+    const { keyword, websiteId, userId } = body; // Destructure userId
 
     if (!keyword) {
       return NextResponse.json(
         { error: "Keyword is required" },
+        { status: 400 }
+      );
+    }
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: "User ID is required" },
         { status: 400 }
       );
     }
@@ -66,6 +74,7 @@ export async function POST(request: Request) {
     }
 
     console.log("🚀 Generating enhanced article for:", keyword);
+    console.log("👤 For user ID:", userId);
 
     // Hardcoded wordCount
     const wordCount = 1200;
@@ -150,7 +159,7 @@ OG_DESCRIPTION: [Social media description 120-130 chars]`;
     // Generate enhanced metadata
     const enhancedArticle = generateEnhancedMetadata(parsedData, keyword);
 
-    // Save to Supabase
+    // Save to Supabase WITH user_id
     const { data: savedArticle, error: dbError } = await supabase
       .from('articles')
       .insert({
@@ -187,7 +196,10 @@ OG_DESCRIPTION: [Social media description 120-130 chars]`;
         estimated_traffic: enhancedArticle.estimatedTraffic,
         
         // Associate with website if provided
-        ...(websiteId && { website_id: websiteId })
+        ...(websiteId && { website_id: websiteId }),
+        
+        // CRITICAL: Associate with user
+        user_id: userId
       })
       .select()
       .single();
@@ -197,7 +209,7 @@ OG_DESCRIPTION: [Social media description 120-130 chars]`;
       throw new Error('Failed to save article to database');
     }
 
-    console.log("✅ Enhanced article generated and saved to Supabase");
+    console.log("✅ Enhanced article generated and saved to Supabase for user:", userId);
 
     return NextResponse.json({
       success: true,
@@ -223,6 +235,166 @@ OG_DESCRIPTION: [Social media description 120-130 chars]`;
       },
       { status: 500 }
     );
+  }
+}
+
+// GET endpoint to fetch articles with user filtering
+export async function GET(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const websiteId = searchParams.get('websiteId');
+    const userId = searchParams.get('userId'); // Add this
+    
+    if (!userId) {
+      return NextResponse.json(
+        { error: "User ID is required" },
+        { status: 400 }
+      );
+    }
+    
+    let query = supabase
+      .from('articles')
+      .select('*')
+      .eq('user_id', userId) // Filter by user ID
+      .order('created_at', { ascending: false });
+
+    if (websiteId) {
+      query = query.eq('website_id', websiteId);
+    }
+
+    const { data: articles, error } = await query;
+
+    if (error) {
+      throw error;
+    }
+
+    // Transform to camelCase for frontend
+    const transformedArticles = articles?.map(article => ({
+      id: article.id,
+      title: article.title,
+      content: article.content,
+      keyword: article.keyword,
+      status: article.status,
+      date: new Date(article.date).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      }),
+      preview: article.preview,
+      wordCount: article.word_count,
+      metaTitle: article.meta_title,
+      metaDescription: article.meta_description,
+      slug: article.slug,
+      focusKeyword: article.focus_keyword,
+      readingTime: article.reading_time,
+      contentScore: article.content_score,
+      keywordDensity: article.keyword_density,
+      ogTitle: article.og_title,
+      ogDescription: article.og_description,
+      twitterTitle: article.twitter_title,
+      twitterDescription: article.twitter_description,
+      tags: article.tags || [],
+      category: article.category,
+      estimatedTraffic: article.estimated_traffic,
+      generatedAt: article.created_at
+    })) || [];
+
+    return NextResponse.json({
+      success: true,
+      articles: transformedArticles
+    });
+
+  } catch (error) {
+    console.error('Error fetching articles:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch articles' },
+      { status: 500 }
+    );
+  }
+}
+
+// PATCH endpoint with user authorization
+export async function PATCH(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+    const userId = searchParams.get('userId'); // Add this
+    const body = await request.json();
+
+    if (!id || !userId) {
+      return NextResponse.json({ error: 'Article ID and User ID are required' }, { status: 400 });
+    }
+
+    // First verify the article belongs to the user
+    const { data: existingArticle, error: fetchError } = await supabase
+      .from('articles')
+      .select('user_id')
+      .eq('id', id)
+      .single();
+
+    if (fetchError || !existingArticle) {
+      return NextResponse.json({ error: 'Article not found' }, { status: 404 });
+    }
+
+    if (existingArticle.user_id !== userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    }
+
+    const { data, error } = await supabase
+      .from('articles')
+      .update(body)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return NextResponse.json({ success: true, article: data });
+
+  } catch (error) {
+    console.error('Error updating article:', error);
+    return NextResponse.json({ error: 'Failed to update article' }, { status: 500 });
+  }
+}
+
+// DELETE endpoint with user authorization
+export async function DELETE(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+    const userId = searchParams.get('userId'); // Add this
+
+    if (!id || !userId) {
+      return NextResponse.json({ error: 'Article ID and User ID are required' }, { status: 400 });
+    }
+
+    // First verify the article belongs to the user
+    const { data: existingArticle, error: fetchError } = await supabase
+      .from('articles')
+      .select('user_id')
+      .eq('id', id)
+      .single();
+
+    if (fetchError || !existingArticle) {
+      return NextResponse.json({ error: 'Article not found' }, { status: 404 });
+    }
+
+    if (existingArticle.user_id !== userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    }
+
+    const { error } = await supabase
+      .from('articles')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+
+    return NextResponse.json({ success: true });
+
+  } catch (error) {
+    console.error('Error deleting article:', error);
+    return NextResponse.json({ error: 'Failed to delete article' }, { status: 500 });
   }
 }
 

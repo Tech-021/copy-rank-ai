@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Search, Download, TrendingUp, BarChart3, Filter, Loader2, ExternalLink } from "lucide-react"
 import { useToast } from "../ui/toast"
-
+import { getUser } from "@/lib/auth" // Import your auth function
 interface KeywordsTabProps {
   websiteId?: string | null;
   onArticlesGenerated?: (articles: any[]) => void; // Add this prop
@@ -62,12 +62,31 @@ export function KeywordsTab({ websiteId, onArticlesGenerated }: KeywordsTabProps
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [generatingContent, setGeneratingContent] = useState(false)
-  
+   const [currentUser, setCurrentUser] = useState<any>(null) // Add current user state
   const [searchQuery, setSearchQuery] = useState("")
   const [difficultyFilter, setDifficultyFilter] = useState<string>("all")
   const [sortBy, setSortBy] = useState<string>("volume-desc")
   const [selectedKeywords, setSelectedKeywords] = useState<Set<number>>(new Set())
   const toast=useToast()
+
+  // Get current user on component mount
+useEffect(() => {
+  const fetchCurrentUser = async () => {
+    try {
+      const { data: user, error } = await getUser()
+      if (error) {
+        console.error("Error fetching current user:", error)
+        return
+      }
+      setCurrentUser(user)
+      console.log("👤 Current user:", user?.id)
+    } catch (err) {
+      console.error("Failed to get current user:", err)
+    }
+  }
+  
+  fetchCurrentUser()
+}, [])
   // Fetch keywords when websiteId changes
   useEffect(() => {
     console.log("🔍 KeywordsTab - websiteId:", websiteId);
@@ -117,90 +136,106 @@ export function KeywordsTab({ websiteId, onArticlesGenerated }: KeywordsTabProps
   }
 
   const generateContentFromKeywords = async () => {
-    if (selectedKeywords.size === 0) {
-      alert("Please select at least one keyword to generate content.")
-      return;
-    }
+  if (selectedKeywords.size === 0) {
+    alert("Please select at least one keyword to generate content.")
+    return;
+  }
 
-    try {
-      setGeneratingContent(true);
+  // Check if user is authenticated
+  if (!currentUser) {
+    alert("Please log in to generate content.")
+    return;
+  }
 
-      // Get the selected keyword texts
-      const selectedKeywordTexts = Array.from(selectedKeywords).map(
-        index => filteredAndSortedKeywords[index].keyword
-      );
+  try {
+    setGeneratingContent(true);
 
-      console.log("🚀 Generating content for keywords:", selectedKeywordTexts);
+    // Get the selected keyword texts
+    const selectedKeywordTexts = Array.from(selectedKeywords).map(
+      index => filteredAndSortedKeywords[index].keyword
+    );
 
-      const generatedArticles: Article[] = [];
+    console.log("🚀 Generating content for keywords:", selectedKeywordTexts);
+    console.log("👤 Current user ID:", currentUser.id);
 
-      // Generate articles for each selected keyword
-      for (const keyword of selectedKeywordTexts) {
-        const response = await fetch('/api/test-generate-article', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            keyword: keyword,
+    const generatedArticles: Article[] = [];
+
+    // Generate articles for each selected keyword
+    for (const keyword of selectedKeywordTexts) {
+      const response = await fetch('/api/test-generate-article', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          keyword: keyword,
+          userId: currentUser.id, // Use the actual user ID
+          websiteId: websiteId,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to generate article for: ${keyword}`);
+      }
+
+      const data = await response.json();
+      
+      if (data.success && data.article) {
+        // Use the actual article ID from the database response
+        const newArticle: Article = {
+          id: data.article.id, // Use the actual ID from database
+          title: data.article.title,
+          content: data.article.content,
+          keyword: keyword,
+          status: "Draft",
+          date: new Date().toLocaleDateString('en-US', { 
+            year: 'numeric', 
+            month: 'short', 
+            day: 'numeric' 
           }),
-        });
+          preview: data.article.metaDescription || data.article.content.substring(0, 150) + '...',
+          wordCount: data.article.wordCount,
+          metaTitle: data.article.metaTitle,
+          metaDescription: data.article.metaDescription,
+          readingTime: data.article.readingTime,
+          contentScore: data.article.contentScore,
+          keywordDensity: data.article.keywordDensity,
+          tags: data.article.tags,
+          category: data.article.category,
+          estimatedTraffic: data.article.estimatedTraffic
+        };
 
-        if (!response.ok) {
-          throw new Error(`Failed to generate article for: ${keyword}`);
-        }
-
-        const data = await response.json();
-        
-        if (data.success && data.article) {
-          // Transform API response to match Article interface
-          const newArticle: Article = {
-            id: `article-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-            title: data.article.title,
-            content: data.article.content,
-            keyword: keyword,
-            status: "Draft",
-            date: new Date().toLocaleDateString('en-US', { 
-              year: 'numeric', 
-              month: 'short', 
-              day: 'numeric' 
-            }),
-            preview: data.article.metaDescription || data.article.content.substring(0, 150) + '...',
-            wordCount: data.article.wordCount,
-            // Include additional SEO data
-            metaTitle: data.article.metaTitle,
-            metaDescription: data.article.metaDescription,
-            readingTime: data.article.readingTime,
-            contentScore: data.article.contentScore,
-            keywordDensity: data.article.keywordDensity,
-            tags: data.article.tags,
-            category: data.article.category,
-            estimatedTraffic: data.article.estimatedTraffic
-          };
-
-          generatedArticles.push(newArticle);
-        }
+        generatedArticles.push(newArticle);
       }
-
-      // Pass generated articles to parent component
-      if (onArticlesGenerated && generatedArticles.length > 0) {
-        onArticlesGenerated(generatedArticles);
-      }
-
-      console.log("✅ Generated articles:", generatedArticles);
-      
-      // Clear selection after generation
-      setSelectedKeywords(new Set());
-      
-      toast.showToast({title:`Successfully generated ${generatedArticles.length} articles! Check the Articles tab.`, type:"success", duration:5000});
-      
-    } catch (error) {
-      console.error('Error generating content:', error);
-      alert('Failed to generate content. Please try again.');
-    } finally {
-      setGeneratingContent(false);
     }
-  };
+
+    // Pass generated articles to parent component
+    if (onArticlesGenerated && generatedArticles.length > 0) {
+      onArticlesGenerated(generatedArticles);
+    }
+
+    console.log("✅ Generated articles:", generatedArticles);
+    
+    // Clear selection after generation
+    setSelectedKeywords(new Set());
+    
+    toast.showToast({
+      title: `Successfully generated ${generatedArticles.length} articles! Check the Articles tab.`, 
+      type: "success", 
+      duration: 5000
+    });
+    
+  } catch (error) {
+    console.error('Error generating content:', error);
+    toast.showToast({
+      title: "Failed to generate content",
+      description: "Please try again.",
+      type: "error"
+    });
+  } finally {
+    setGeneratingContent(false);
+  }
+};
 
   const filteredAndSortedKeywords = useMemo(() => {
     const filtered = keywords.filter((kw) => {

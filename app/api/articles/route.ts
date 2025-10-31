@@ -10,10 +10,22 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const websiteId = searchParams.get('websiteId');
+    const userId = searchParams.get('userId');
     
+    console.log('API Request - userId:', userId, 'websiteId:', websiteId);
+
+    if (!userId) {
+      console.log('No userId provided');
+      return NextResponse.json(
+        { error: 'User ID is required' },
+        { status: 400 }
+      );
+    }
+
     let query = supabase
       .from('articles')
       .select('*')
+      .eq('user_id', userId)
       .order('created_at', { ascending: false });
 
     if (websiteId) {
@@ -23,8 +35,11 @@ export async function GET(request: Request) {
     const { data: articles, error } = await query;
 
     if (error) {
+      console.error('Supabase error:', error);
       throw error;
     }
+
+    console.log(`Found ${articles?.length || 0} articles for user ${userId}`);
 
     // Transform to camelCase for frontend
     const transformedArticles = articles?.map(article => ({
@@ -54,7 +69,9 @@ export async function GET(request: Request) {
       tags: article.tags || [],
       category: article.category,
       estimatedTraffic: article.estimated_traffic,
-      generatedAt: article.created_at
+      generatedAt: article.created_at,
+      userId: article.user_id,
+      websiteId: article.website_id
     })) || [];
 
     return NextResponse.json({
@@ -71,30 +88,86 @@ export async function GET(request: Request) {
   }
 }
 
+export async function POST(request: Request) {
+  try {
+    const body = await request.json();
+    const { userId, ...articleData } = body;
+
+    if (!userId) {
+      return NextResponse.json({ 
+        error: 'User ID is required' 
+      }, { status: 400 });
+    }
+
+    const { data, error } = await supabase
+      .from('articles')
+      .insert({
+        ...articleData,
+        user_id: userId
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return NextResponse.json({ 
+      success: true, 
+      article: data 
+    }, { status: 201 });
+
+  } catch (error) {
+    console.error('Error creating article:', error);
+    return NextResponse.json({ 
+      error: 'Failed to create article' 
+    }, { status: 500 });
+  }
+}
+
 export async function PATCH(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     const body = await request.json();
+    const userId = body.userId;
 
     if (!id) {
-      return NextResponse.json({ error: 'Article ID is required' }, { status: 400 });
+      return NextResponse.json({ 
+        error: 'Article ID is required' 
+      }, { status: 400 });
+    }
+
+    if (!userId) {
+      return NextResponse.json({ 
+        error: 'User ID is required' 
+      }, { status: 400 });
     }
 
     const { data, error } = await supabase
       .from('articles')
       .update(body)
       .eq('id', id)
+      .eq('user_id', userId)
       .select()
       .single();
 
     if (error) throw error;
 
-    return NextResponse.json({ success: true, article: data });
+    if (!data) {
+      return NextResponse.json({ 
+        error: 'Article not found or access denied' 
+      }, { status: 404 });
+    }
+
+    return NextResponse.json({ 
+      success: true, 
+      article: data 
+    });
 
   } catch (error) {
     console.error('Error updating article:', error);
-    return NextResponse.json({ error: 'Failed to update article' }, { status: 500 });
+    return NextResponse.json({ 
+      error: 'Failed to update article' 
+    }, { status: 500 });
   }
 }
 
@@ -102,22 +175,37 @@ export async function DELETE(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
+    const userId = searchParams.get('userId');
 
     if (!id) {
-      return NextResponse.json({ error: 'Article ID is required' }, { status: 400 });
+      return NextResponse.json({ 
+        error: 'Article ID is required' 
+      }, { status: 400 });
+    }
+
+    if (!userId) {
+      return NextResponse.json({ 
+        error: 'User ID is required' 
+      }, { status: 400 });
     }
 
     const { error } = await supabase
       .from('articles')
       .delete()
-      .eq('id', id);
+      .eq('id', id)
+      .eq('user_id', userId);
 
     if (error) throw error;
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ 
+      success: true,
+      message: 'Article deleted successfully'
+    });
 
   } catch (error) {
     console.error('Error deleting article:', error);
-    return NextResponse.json({ error: 'Failed to delete article' }, { status: 500 });
+    return NextResponse.json({ 
+      error: 'Failed to delete article' 
+    }, { status: 500 });
   }
 }

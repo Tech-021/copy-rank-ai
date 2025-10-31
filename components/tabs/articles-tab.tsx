@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Loader2, Plus, Eye, Trash2, Edit2, BarChart3, Clock, Target, RefreshCw } from "lucide-react"
+import { getUser } from "@/lib/auth"
 
 interface Article {
   id: string
@@ -51,23 +52,47 @@ export function ArticlesTab({ generatedArticles, onArticlesUpdate, websiteId }: 
   const [newArticleKeyword, setNewArticleKeyword] = useState("")
   const [newArticleDate, setNewArticleDate] = useState("")
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null)
+  const [currentUser, setCurrentUser] = useState<any>(null)
+
+  // Get current user on component mount
+  useEffect(() => {
+    const getCurrentUser = async () => {
+      const { data: user } = await getUser()
+      setCurrentUser(user)
+    }
+    getCurrentUser()
+  }, [])
 
   // Fetch articles from database
   const fetchArticles = async () => {
     try {
       setLoading(true)
-      const url = websiteId ? `/api/articles?websiteId=${websiteId}` : '/api/articles'
+      
+      if (!currentUser) {
+        console.log('No current user found')
+        return
+      }
+      
+      const url = websiteId 
+        ? `/api/articles?websiteId=${websiteId}&userId=${currentUser.id}`
+        : `/api/articles?userId=${currentUser.id}`
+      
+      console.log('Fetching from URL:', url)
       
       const response = await fetch(url)
       
       if (!response.ok) {
-        throw new Error('Failed to fetch articles')
+        const errorText = await response.text()
+        console.error('Response error:', response.status, errorText)
+        throw new Error(`Failed to fetch articles: ${response.status}`)
       }
       
       const data = await response.json()
       
       if (data.success) {
         setArticles(data.articles || [])
+      } else {
+        throw new Error(data.error || 'Failed to fetch articles')
       }
     } catch (error) {
       console.error('Error fetching articles:', error)
@@ -76,10 +101,12 @@ export function ArticlesTab({ generatedArticles, onArticlesUpdate, websiteId }: 
     }
   }
 
-  // Load articles on component mount
+  // Load articles when currentUser is available
   useEffect(() => {
-    fetchArticles()
-  }, [websiteId])
+    if (currentUser) {
+      fetchArticles()
+    }
+  }, [currentUser, websiteId])
 
   // Update articles when new generated articles come in
   useEffect(() => {
@@ -92,7 +119,7 @@ export function ArticlesTab({ generatedArticles, onArticlesUpdate, websiteId }: 
   }, [generatedArticles, onArticlesUpdate])
 
   const handleGenerateArticle = async () => {
-    if (!newArticleKeyword.trim() || !newArticleDate) return
+    if (!newArticleKeyword.trim() || !newArticleDate || !currentUser) return
 
     setIsGenerating(true)
 
@@ -104,7 +131,8 @@ export function ArticlesTab({ generatedArticles, onArticlesUpdate, websiteId }: 
         },
         body: JSON.stringify({
           keyword: newArticleKeyword,
-          websiteId: websiteId
+          websiteId: websiteId,
+          userId: currentUser.id
         }),
       })
 
@@ -130,10 +158,10 @@ export function ArticlesTab({ generatedArticles, onArticlesUpdate, websiteId }: 
   }
 
   const handleDeleteArticle = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this article?')) return
+    if (!confirm('Are you sure you want to delete this article?') || !currentUser) return
 
     try {
-      const response = await fetch(`/api/articles?id=${id}`, {
+      const response = await fetch(`/api/articles?id=${id}&userId=${currentUser.id}`, {
         method: 'DELETE',
       })
 
@@ -150,6 +178,8 @@ export function ArticlesTab({ generatedArticles, onArticlesUpdate, websiteId }: 
   }
 
   const handleUpdateStatus = async (id: string, newStatus: "draft" | "scheduled" | "published") => {
+    if (!currentUser) return
+
     try {
       const response = await fetch(`/api/articles?id=${id}`, {
         method: 'PATCH',
@@ -157,7 +187,8 @@ export function ArticlesTab({ generatedArticles, onArticlesUpdate, websiteId }: 
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          status: newStatus
+          status: newStatus,
+          userId: currentUser.id
         }),
       })
 
@@ -177,6 +208,7 @@ export function ArticlesTab({ generatedArticles, onArticlesUpdate, websiteId }: 
     }
   }
 
+  // ... rest of your component code remains the same
   const getStatusStyles = (status: string) => {
     switch (status) {
       case "published":
