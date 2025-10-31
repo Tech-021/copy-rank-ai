@@ -442,7 +442,7 @@ export function SettingsTab() {
         </CardContent>
       </Card>
 
-      {/* Usage Statistics - MOCK */}
+      {/* Usage Statistics - MOCK
       <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
         <CardHeader>
           <CardTitle>Usage Statistics</CardTitle>
@@ -481,7 +481,7 @@ export function SettingsTab() {
             </div>
           </div>
         </CardContent>
-      </Card>
+      </Card> */}
 
       {/* Danger Zone - MOCK */}
       <Card className="border-red-200 bg-red-50">
