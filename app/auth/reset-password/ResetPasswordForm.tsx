@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { updatePassword } from "../../../lib/auth"
 import { useToast } from "../../../components/ui/toast"
 import { Eye, EyeOff, Check } from "lucide-react"
+import { supabase } from "../../../lib/client"
 
 export default function ResetPasswordForm() {
   const [password, setPassword] = useState("")
@@ -14,7 +14,11 @@ export default function ResetPasswordForm() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const [message, setMessage] = useState("")
-  const [isTokenValid, setIsTokenValid] = useState<boolean | null>(null) // Start as null for loading
+  const [isTokenValid, setIsTokenValid] = useState<boolean | null>(null)
+  const [hashTokens, setHashTokens] = useState<{access_token: string | null, refresh_token: string | null}>({
+    access_token: null,
+    refresh_token: null
+  })
   const router = useRouter()
   const searchParams = useSearchParams()
   const toast = useToast()
@@ -39,14 +43,22 @@ export default function ResetPasswordForm() {
     if (window.location.hash) {
       const hashParams = new URLSearchParams(window.location.hash.substring(1))
       const accessToken = hashParams.get('access_token')
+      const refreshToken = hashParams.get('refresh_token')
       const hashType = hashParams.get('type')
       
       console.log("Hash access_token:", accessToken)
+      console.log("Hash refresh_token:", refreshToken)
       console.log("Hash type:", hashType)
 
       if (accessToken && hashType === 'recovery') {
         console.log("✅ Valid token found in hash")
         setIsTokenValid(true)
+        
+        // Store the tokens in state so they're available when form is submitted
+        setHashTokens({
+          access_token: accessToken,
+          refresh_token: refreshToken
+        })
         
         // Convert hash to search params for better UX and to persist the token
         const newUrl = `${window.location.pathname}?token=${accessToken}&type=recovery`
@@ -65,57 +77,114 @@ export default function ResetPasswordForm() {
     setError("")
     setMessage("")
 
-    // Get token from URL (it should now be in search params after our conversion)
-    const token = searchParams.get('token')
-    const type = searchParams.get('type')
-
-    if (!token || type !== 'recovery') {
-      setError("Invalid reset token. Please request a new password reset.")
-      return
-    }
-
-    if (!password || !confirmPassword) {
-      setError("Please fill in all fields")
-      return
-    }
-
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters")
-      return
-    }
-
-    if (password !== confirmPassword) {
-      setError("Passwords do not match")
-      return
-    }
-
     setIsLoading(true)
-    const { data, error } = await updatePassword(password)
-    setIsLoading(false)
 
-    if (error) {
-      const msg = (error as any).message ?? String(error) ?? "Error updating password"
-      setError(msg)
-      try {
-        toast.showToast({ title: "Reset failed", description: msg, type: "error" })
-      } catch {}
-      return
-    }
-
-    const successMsg = "Your password has been updated successfully! Redirecting to login..."
-    setMessage(successMsg)
     try {
-      toast.showToast({ 
-        title: "Password updated", 
-        description: "Your password has been updated successfully!", 
-        type: "success" 
-      })
-    } catch {}
+      console.log("🔄 Starting password reset process...")
 
-    // Redirect to login after successful password reset
-    setTimeout(() => {
-      router.push('/login')
-    }, 3000)
+      // Use the tokens from state (from the original hash)
+      const { access_token, refresh_token } = hashTokens
+      const type = searchParams.get('type')
+
+      console.log("Using tokens from state:", {
+        access_token: access_token ? 'present' : 'missing',
+        refresh_token: refresh_token ? 'present' : 'missing',
+        type
+      })
+
+      if (!access_token || type !== 'recovery') {
+        throw new Error("Invalid reset token. Please request a new password reset.")
+      }
+
+      if (!password || !confirmPassword) {
+        throw new Error("Please fill in all fields")
+      }
+
+      if (password.length < 6) {
+        throw new Error("Password must be at least 6 characters")
+      }
+
+      if (password !== confirmPassword) {
+        throw new Error("Passwords do not match")
+      }
+
+      console.log("🔑 Setting up session with recovery tokens...")
+      
+      // Use setSession with BOTH access_token and refresh_token
+      const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+        access_token: access_token,
+        refresh_token: refresh_token || '' // Use empty string if refresh_token is null
+      })
+
+      if (sessionError) {
+        console.error("❌ Session setup failed:", sessionError)
+        
+        // If setSession fails, try a different approach - update user directly
+        console.log("🔄 Trying direct password update without session...")
+        const { data: updateData, error: updateError } = await supabase.auth.updateUser({
+          password: password
+        })
+
+        if (updateError) {
+          console.error("❌ Direct update also failed:", updateError)
+          throw new Error("This reset link has expired or has already been used. Please request a new password reset.")
+        }
+
+        console.log("✅ Password updated successfully via direct method")
+      } else {
+        console.log("✅ Session set successfully:", sessionData)
+
+        // Now update the password with the active session
+        console.log("🔐 Updating password...")
+        const { data, error: updateError } = await supabase.auth.updateUser({
+          password: password
+        })
+
+        if (updateError) {
+          console.error("❌ Password update error:", updateError)
+          throw updateError
+        }
+
+        console.log("✅ Password updated successfully")
+      }
+
+      const successMsg = "Your password has been updated successfully! Redirecting to login..."
+      setMessage(successMsg)
+      
+      try {
+        toast.showToast({ 
+          title: "Password updated", 
+          description: "Your password has been updated successfully!", 
+          type: "success" 
+        })
+      } catch {}
+
+      // Wait a moment then redirect to login
+      setTimeout(() => {
+        router.push('/login')
+      }, 2000)
+
+    } catch (err: any) {
+      console.error("❌ Reset password error:", err)
+      
+      // Provide more specific error messages
+      let errorMessage = err.message || "Error updating password"
+      
+      if (err.message?.includes('session_missing') || err.message?.includes('Auth session missing')) {
+        errorMessage = "The reset link has expired or is invalid. Please request a new password reset."
+      } else if (err.message?.includes('invalid_otp')) {
+        errorMessage = "Invalid reset token. Please use the link from your email."
+      } else if (err.message?.includes('exchange_code_for_session')) {
+        errorMessage = "This reset link has already been used or has expired. Please request a new password reset."
+      }
+      
+      setError(errorMessage)
+      try {
+        toast.showToast({ title: "Reset failed", description: errorMessage, type: "error" })
+      } catch {}
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const passwordRequirements = [
