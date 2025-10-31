@@ -4,11 +4,25 @@ type AuthReturn = { data: any; error: any }
 
 export async function signUp(email: string, password: string): Promise<AuthReturn> {
   try {
-    const res: any = await supabase.auth.signUp({ email, password })
-    return { data: res.data ?? res.user ?? null, error: res.error ?? null }
+    const res: any = await supabase.auth.signUp({ email, password });
+    
+    // Check if user already exists by looking at the response
+    if (res.data?.user && !res.data.session && !res.error) {
+      if (res.data.user.identities && res.data.user.identities.length === 0) {
+        return { 
+          data: null, 
+          error: { 
+            message: 'Email already exists',
+            code: 'EMAIL_EXISTS'
+          } 
+        };
+      }
+    }
+    
+    return { data: res.data ?? res.user ?? null, error: res.error ?? null };
   } catch (err) {
-    console.error("lib/auth.signUp error:", err)
-    return { data: null, error: err }
+    console.error("lib/auth.signUp error:", err);
+    return { data: null, error: err };
   }
 }
 
@@ -55,6 +69,32 @@ export async function signUpWithGoogle(): Promise<AuthReturn> {
     return { data: res.data ?? null, error: res.error ?? null }
   } catch (err) {
     console.error("lib/auth.signUpWithGoogle error:", err)
+    return { data: null, error: err }
+  }
+}
+
+// Add forgot password function
+export async function resetPassword(email: string): Promise<AuthReturn> {
+  try {
+    const res: any = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth/reset-password`,
+    })
+    return { data: res.data, error: res.error }
+  } catch (err) {
+    console.error("lib/auth.resetPassword error:", err)
+    return { data: null, error: err }
+  }
+}
+
+// Add update password function
+export async function updatePassword(newPassword: string): Promise<AuthReturn> {
+  try {
+    const res: any = await supabase.auth.updateUser({
+      password: newPassword
+    })
+    return { data: res.data, error: res.error }
+  } catch (err) {
+    console.error("lib/auth.updatePassword error:", err)
     return { data: null, error: err }
   }
 }
