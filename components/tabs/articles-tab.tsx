@@ -272,7 +272,7 @@ export function ArticlesTab({ generatedArticles, onArticlesUpdate, websiteId }: 
       <div className="flex gap-4">
         <Dialog>
           <DialogTrigger asChild>
-            <Button className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2">
+            <Button className="cursor-pointer bg-primary hover:bg-primary/90 text-primary-foreground gap-2">
               <Plus className="w-4 h-4" />
               Generate New Article
             </Button>
@@ -304,7 +304,7 @@ export function ArticlesTab({ generatedArticles, onArticlesUpdate, websiteId }: 
               <Button
                 onClick={handleGenerateArticle}
                 disabled={isGenerating || !newArticleKeyword.trim() || !newArticleDate}
-                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground gap-2"
+                className="cursor-pointer w-full bg-primary hover:bg-primary/90 text-primary-foreground gap-2"
               >
                 {isGenerating ? (
                   <>
@@ -322,7 +322,7 @@ export function ArticlesTab({ generatedArticles, onArticlesUpdate, websiteId }: 
         <Button 
           variant="outline" 
           onClick={fetchArticles}
-          className="gap-2"
+          className="cursor-pointer gap-2"
         >
           <RefreshCw className="w-4 h-4" />
           Refresh
@@ -416,7 +416,7 @@ export function ArticlesTab({ generatedArticles, onArticlesUpdate, websiteId }: 
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="text-muted-foreground hover:text-foreground gap-2"
+                          className="cursor-pointer text-muted-foreground hover:text-foreground gap-2"
                           onClick={() => setSelectedArticle(article)}
                         >
                           <Eye className="w-4 h-4" />
@@ -458,11 +458,11 @@ export function ArticlesTab({ generatedArticles, onArticlesUpdate, websiteId }: 
                           />
                           
                           <div className="flex gap-2 pt-4 border-t border-border/40">
-                            <Button variant="outline" className="border-border/40 bg-transparent flex-1">
+                            <Button variant="outline" className="cursor-pointer border-border/40 bg-transparent flex-1">
                               <Edit2 className="w-4 h-4 mr-2" />
                               Edit
                             </Button>
-                            <Button className="bg-primary hover:bg-primary/90 text-primary-foreground flex-1">
+                            <Button className="cursor-pointer bg-primary hover:bg-primary/90 text-primary-foreground flex-1">
                               Publish Now
                             </Button>
                           </div>
@@ -489,7 +489,7 @@ export function ArticlesTab({ generatedArticles, onArticlesUpdate, websiteId }: 
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="text-muted-foreground hover:text-destructive"
+                      className="cursor-pointer text-muted-foreground hover:text-destructive"
                       onClick={() => handleDeleteArticle(article.id)}
                     >
                       <Trash2 className="w-4 h-4" />

@@ -379,7 +379,7 @@ export function AnalyzeTab({ onViewKeywords }: AnalyzeTabProps) {
             <Button
               onClick={handleAddWebsite}
               disabled={isAnalyzing}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2"
+              className="cursor-pointer bg-primary hover:bg-primary/90 text-primary-foreground gap-2"
             >
               {isAnalyzing ? (
                 <>
@@ -431,7 +431,7 @@ export function AnalyzeTab({ onViewKeywords }: AnalyzeTabProps) {
               onClick={() => onViewKeywords(site.id)}
               variant="outline"
               size="sm"
-              className="gap-2"
+              className="cursor-pointer gap-2"
             >
               <ExternalLink className="w-4 h-4" />
               View Keywords
@@ -441,7 +441,7 @@ export function AnalyzeTab({ onViewKeywords }: AnalyzeTabProps) {
             onClick={() => handleRemoveWebsite(site.id)}
             variant="ghost"
             size="sm"
-            className="text-muted-foreground hover:text-destructive"
+            className="cursor-pointer text-muted-foreground hover:text-destructive"
           >
             <Trash2 className="w-4 h-4" />
           </Button>

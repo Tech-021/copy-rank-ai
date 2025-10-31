@@ -61,7 +61,7 @@ export function SettingsTab() {
           </div>
 
           <div className="pt-4 border-t border-border/40">
-            <Button variant="outline" className="border-border/40 bg-transparent">
+            <Button variant="outline" className="cursor-pointer border-border/40 bg-transparent">
               Change Password
             </Button>
           </div>
@@ -87,7 +87,7 @@ export function SettingsTab() {
               <Button
                 variant="outline"
                 size="sm"
-                className="border-border/40 bg-transparent"
+                className="cursor-pointer border-border/40 bg-transparent"
                 onClick={() => setShowApiKey(!showApiKey)}
               >
                 {showApiKey ? "Hide" : "Show"}
@@ -95,7 +95,7 @@ export function SettingsTab() {
               <Button
                 variant="outline"
                 size="sm"
-                className="border-border/40 bg-transparent gap-2"
+                className="cursor-pointer border-border/40 bg-transparent gap-2"
                 onClick={handleCopyApiKey}
               >
                 {copiedApiKey ? (
@@ -117,7 +117,7 @@ export function SettingsTab() {
           </div>
 
           <div className="pt-4 border-t border-border/40">
-            <Button variant="outline" className="border-border/40 bg-transparent">
+            <Button variant="outline" className="cursor-pointer border-border/40 bg-transparent">
               Regenerate API Key
             </Button>
           </div>
@@ -287,10 +287,10 @@ export function SettingsTab() {
           <CardDescription>Irreversible actions</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Button variant="outline" className="border-red-200 text-red-700 hover:bg-red-100 w-full bg-transparent">
+          <Button variant="outline" className="cursor-pointer border-red-200 text-red-700 hover:bg-red-100 w-full bg-transparent">
             Delete All Articles
           </Button>
-          <Button variant="outline" className="border-red-200 text-red-700 hover:bg-red-100 w-full bg-transparent">
+          <Button variant="outline" className="cursor-pointer border-red-200 text-red-700 hover:bg-red-100 w-full bg-transparent">
             Delete Account
           </Button>
         </CardContent>

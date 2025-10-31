@@ -378,7 +378,7 @@ export function KeywordsTab({ websiteId, onArticlesGenerated }: KeywordsTabProps
             </div>
             <Button 
               variant="outline" 
-              className="border-border/40 gap-2"
+              className="cursor-pointer border-border/40 gap-2"
               onClick={() => window.open(websiteData.website.url, '_blank')}
             >
               <ExternalLink className="w-4 h-4" />
@@ -488,7 +488,7 @@ export function KeywordsTab({ websiteId, onArticlesGenerated }: KeywordsTabProps
 
             <Button 
               variant="outline" 
-              className="border-border/40 gap-2 bg-transparent"
+              className="cursor-pointer border-border/40 gap-2 bg-transparent"
               onClick={exportKeywords}
             >
               <Download className="w-4 h-4" />
@@ -570,12 +570,12 @@ export function KeywordsTab({ websiteId, onArticlesGenerated }: KeywordsTabProps
                 {selectedKeywords.size} keyword{selectedKeywords.size !== 1 ? "s" : ""} selected
               </p>
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" className="border-border/40 bg-transparent">
+                <Button variant="outline" size="sm" className="cursor-pointer border-border/40 bg-transparent">
                   Add to Campaign
                 </Button>
                 <Button 
                   size="sm" 
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                  className="cursor-pointer bg-primary hover:bg-primary/90 text-primary-foreground"
                   onClick={generateContentFromKeywords}
                   disabled={generatingContent}
                 >
