@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { getUser, signOut } from "@/lib/auth"
 import { useToast } from "@/components/ui/toast"
 import { LandingPage } from "@/components/landing-page"
@@ -11,6 +12,7 @@ import { SignUpPage } from "@/components/signup-page"
 export default function Home() {
   const [authState, setAuthState] = useState<"landing" | "login" | "signup" | "dashboard">("landing")
   const [userEmail, setUserEmail] = useState("")
+  const router = useRouter()
 
   useEffect(() => {
     let mounted = true
@@ -35,11 +37,11 @@ export default function Home() {
   }, [])
 
   const handleSignIn = () => {
-    setAuthState("login")
+    router.push("/login")
   }
 
   const handleSignUp = () => {
-    setAuthState("signup")
+    router.push("/signup")
   }
 
   const handleLoginSuccess = (email: string) => {
@@ -76,11 +78,11 @@ export default function Home() {
   }
 
   const handleBackToLanding = () => {
-    setAuthState("landing")
+    router.push("/")
   }
 
   const handleToggleAuthMode = (mode: "login" | "signup") => {
-    setAuthState(mode)
+    router.push(mode === "login" ? "/login" : "/signup")
   }
 
   if (authState === "dashboard") {
