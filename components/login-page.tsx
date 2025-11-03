@@ -1,9 +1,321 @@
+// "use client"
+
+// import { useState, useEffect } from "react"
+// import { signIn, signUpWithGoogle, resetPassword } from "../lib/auth" // Import resetPassword
+// import { useToast } from "./ui/toast"
+// import { Eye, EyeOff, Check, ArrowLeft } from "lucide-react" // Added ArrowLeft
+// import Image from "next/image"
+
+// interface LoginPageProps {
+//   onLoginSuccess: (email: string) => void
+//   onBackToLanding: () => void
+//   onToggleSignUp: () => void
+// }
+
+// const testimonials = [
+//   // ... your existing testimonials
+// ]
+
+// export function LoginPage({ onLoginSuccess, onBackToLanding, onToggleSignUp }: LoginPageProps) {
+//   const [email, setEmail] = useState("")
+//   const [password, setPassword] = useState("")
+//   const [showPassword, setShowPassword] = useState(false)
+//   const [isLoading, setIsLoading] = useState(false)
+//   const [googleLoading, setGoogleLoading] = useState(false)
+//   const [error, setError] = useState("")
+//   const [message, setMessage] = useState("") // For success messages
+//   const [currentTestimonial, setCurrentTestimonial] = useState(0)
+//   const [rememberMe, setRememberMe] = useState(false)
+//   const [forgotPasswordMode, setForgotPasswordMode] = useState(false) // New state for forgot password mode
+//   const [resetLoading, setResetLoading] = useState(false) // Loading state for reset password
+//   const toast = useToast()
+
+//   // Auto-cycle testimonials every 5 seconds
+//   useEffect(() => {
+//     const interval = setInterval(() => {
+//       setCurrentTestimonial((prev) => (prev + 1) % testimonials.length)
+//     }, 5000)
+//     return () => clearInterval(interval)
+//   }, [])
+
+//   const handleNextTestimonial = () => {
+//     setCurrentTestimonial((prev) => (prev + 1) % testimonials.length)
+//   }
+
+//   const handlePrevTestimonial = () => {
+//     setCurrentTestimonial((prev) => (prev - 1 + testimonials.length) % testimonials.length)
+//   }
+
+//   const handleSubmit = async (e: React.FormEvent) => {
+//     e.preventDefault()
+//     setError("")
+//     setMessage("")
+
+//     if (!email || !password) {
+//       setError("Please fill in all fields")
+//       return
+//     }
+
+//     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+//       setError("Please enter a valid email address")
+//       return
+//     }
+
+//     if (password.length < 6) {
+//       setError("Password must be at least 6 characters")
+//       return
+//     }
+
+//     setIsLoading(true)
+//     const { data, error } = await signIn(email, password)
+//     setIsLoading(false)
+
+//     if (error) {
+//       const msg = (error as any).message ?? String(error) ?? "Error signing in"
+//       setError(msg)
+//       try {
+//         toast.showToast({ title: "Sign in failed", description: msg, type: "error" })
+//       } catch {}
+//       return
+//     }
+
+//     try {
+//       toast.showToast({ title: "Signed in", description: "Welcome back!", type: "success" })
+//     } catch {}
+//     onLoginSuccess(email)
+//   }
+
+//   // New function to handle forgot password
+//   const handleForgotPassword = async (e: React.FormEvent) => {
+//     e.preventDefault()
+//     setError("")
+//     setMessage("")
+
+//     if (!email) {
+//       setError("Please enter your email address")
+//       return
+//     }
+
+//     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+//       setError("Please enter a valid email address")
+//       return
+//     }
+
+//     setResetLoading(true)
+//     const { data, error } = await resetPassword(email)
+//     setResetLoading(false)
+
+//     if (error) {
+//       const msg = (error as any).message ?? String(error) ?? "Error sending reset email"
+//       setError(msg)
+//       try {
+//         toast.showToast({ title: "Reset failed", description: msg, type: "error" })
+//       } catch {}
+//       return
+//     }
+
+//     const successMsg = "Password reset instructions have been sent to your email"
+//     setMessage(successMsg)
+//     try {
+//       toast.showToast({ 
+//         title: "Check your email", 
+//         description: successMsg, 
+//         type: "success" 
+//       })
+//     } catch {}
+//   }
+
+//   const handleGoogleSignIn = async () => {
+//     setGoogleLoading(true)
+//     setError("")
+//     const { data, error } = await signUpWithGoogle()
+//     setGoogleLoading(false)
+
+//     if (error) {
+//       const msg = (error as any).message ?? String(error) ?? "Error signing in with Google"
+//       setError(msg)
+//       try {
+//         toast.showToast({ title: "Google sign in failed", description: msg, type: "error" })
+//       } catch {}
+//       return
+//     }
+//   }
+
+//   const testimonial = testimonials[currentTestimonial]
+
+//   return (
+//     <div className="h-screen w-screen flex overflow-hidden bg-white">
+//       {/* Left Side - Testimonials */}
+//       <div className="hidden lg:flex lg:w-1/2 bg-[#2469fe] rounded-none p-12 flex-col justify-between relative overflow-hidden">
+//         {/* ... your existing testimonial section */}
+//       </div>
+
+//       {/* Right Side - Login Form */}
+//       <div className="w-full lg:w-1/2 flex flex-col justify-center p-8 lg:p-16 overflow-y-auto">
+//         <div>
+//           <div className="mb-12">
+//             <div className="flex items-center justify-center gap-2 mb-8">
+//               {/* ... your existing logo */}
+//             </div>
+//           </div>
+
+//           {/* Back button for forgot password mode */}
+//           {forgotPasswordMode && (
+//             <button
+//               onClick={() => {
+//                 setForgotPasswordMode(false)
+//                 setError("")
+//                 setMessage("")
+//               }}
+//               className="flex items-center gap-2 text-gray-600 hover:text-gray-800 mb-4 cursor-pointer"
+//             >
+//               <ArrowLeft size={20} />
+//               Back to Sign In
+//             </button>
+//           )}
+
+//           <form onSubmit={forgotPasswordMode ? handleForgotPassword : handleSubmit} className="space-y-6">
+//             <h2 className="text-2xl font-bold text-gray-900">
+//               {forgotPasswordMode ? "Reset Your Password" : "Sign In"}
+//             </h2>
+            
+//             {!forgotPasswordMode ? (
+//               <p className="text-gray-600">
+//                 Don't have an account yet?{" "}
+//                 <button type="button" onClick={onToggleSignUp} className="cursor-pointer text-blue-500 hover:text-blue-600 font-medium">
+//                   Sign Up
+//                 </button>
+//               </p>
+//             ) : (
+//               <p className="text-gray-600">
+//                 Enter your email address and we'll send you instructions to reset your password.
+//               </p>
+//             )}
+
+//             {/* Social Buttons - Only show in sign in mode */}
+//             {!forgotPasswordMode && (
+//               <>
+//                 <div className="flex gap-5">
+//                   <button
+//                     type="button"
+//                     onClick={handleGoogleSignIn}
+//                     disabled={googleLoading}
+//                     className="cursor-pointer border border-gray-300 rounded-lg py-3 w-full flex items-center justify-center gap-2 hover:bg-gray-50 transition"
+//                   >
+//                    <Image src='/google.png' height={30} width={30} alt="icon" />
+//                     <span className="text-gray-700 font-medium">Google</span>
+//                   </button>
+//                 </div>
+
+//                 {/* Divider */}
+//                 <div className="flex items-center gap-4">
+//                   <div className="flex-1 h-px bg-gray-300"></div>
+//                   <span className="text-gray-400 text-sm">Sign in using email</span>
+//                   <div className="flex-1 h-px bg-gray-300"></div>
+//                 </div>
+//               </>
+//             )}
+
+//             {/* Success message */}
+//             {message && (
+//               <div className="p-4 bg-green-500/10 border border-green-500/30 rounded-lg">
+//                 <p className="text-green-400 text-sm">{message}</p>
+//               </div>
+//             )}
+
+//             {/* Error message */}
+//             {error && <p className="text-red-500">{error}</p>}
+
+//             {/* Email field */}
+//             <div>
+//               <p>{forgotPasswordMode ? "Email address" : "Work email address"}</p>
+//               <input
+//                 type="email"
+//                 value={email}
+//                 onChange={(e) => setEmail(e.target.value)}
+//                 placeholder="Enter your email address"
+//                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400"
+//               />
+//             </div>
+
+//             {/* Password field - Only show in sign in mode */}
+//             {!forgotPasswordMode && (
+//               <div className="relative">
+//                 <p>Enter password</p>
+//                 <input
+//                   type={showPassword ? "text" : "password"}
+//                   value={password}
+//                   onChange={(e) => setPassword(e.target.value)}
+//                   placeholder="••••••••"
+//                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400"
+//                 />
+//                 <button
+//                   type="button"
+//                   onClick={() => setShowPassword(!showPassword)}
+//                   className="cursor-pointer absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+//                 >
+//                   {showPassword ? <EyeOff className="mt-6" size={20} /> : <Eye className="mt-6" size={20} />}
+//                 </button>
+//               </div>
+//             )}
+
+//             {/* Remember & Forgot - Only show in sign in mode */}
+//             {!forgotPasswordMode && (
+//               <div className="flex items-center justify-between">
+//                 <label className="flex items-center gap-2 cursor-pointer">
+//                   <div className="relative">
+//                     <input
+//                       type="checkbox"
+//                       checked={rememberMe}
+//                       onChange={(e) => setRememberMe(e.target.checked)}
+//                       className="w-5 h-5 appearance-none border border-gray-300 rounded cursor-pointer checked:bg-blue-500 checked:border-blue-500 transition"
+//                     />
+//                     {rememberMe && <Check size={16} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-white pointer-events-none" />}
+//                   </div>
+//                   <span className="text-gray-600 text-sm">Remember me</span>
+//                 </label>
+//                 <button 
+//                   type="button"
+//                   onClick={() => setForgotPasswordMode(true)}
+//                   className="text-blue-500 hover:text-blue-600 text-sm font-medium cursor-pointer"
+//                 >
+//                   Forgot Password?
+//                 </button>
+//               </div>
+//             )}
+
+//             {/* Submit button */}
+//             <button
+//               type="submit"
+//               disabled={isLoading || resetLoading}
+//               className="cursor-pointer w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-4 rounded-lg transition disabled:opacity-50"
+//             >
+//               {forgotPasswordMode 
+//                 ? (resetLoading ? "Sending..." : "Send Reset Instructions") 
+//                 : (isLoading ? "Signing in..." : "Sign In")
+//               }
+//             </button>
+//           </form>
+//         </div>
+
+//         {/* Footer */}
+//         {/* ... your existing footer */}
+//       </div>
+//     </div>
+//   )
+// };
+
+
+
 "use client"
 
-import type React from "react"
-
-import { useState } from "react"
-import { Eye, EyeOff, ArrowLeft } from "lucide-react"
+import { useState, useEffect } from "react"
+import { signUpWithGoogle } from "../lib/auth"
+import { useToast } from "./ui/toast"
+import { ArrowLeft } from "lucide-react"
+import Image from "next/image"
+import { Button } from "./ui/button"
+import Link from "next/link"
 
 interface LoginPageProps {
   onLoginSuccess: (email: string) => void
@@ -11,181 +323,106 @@ interface LoginPageProps {
   onToggleSignUp: () => void
 }
 
+const testimonials = [
+  // ... your existing testimonials
+]
+
 export function LoginPage({ onLoginSuccess, onBackToLanding, onToggleSignUp }: LoginPageProps) {
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [showPassword, setShowPassword] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
+  const [googleLoading, setGoogleLoading] = useState(false)
   const [error, setError] = useState("")
+  const [message, setMessage] = useState("")
+  const [currentTestimonial, setCurrentTestimonial] = useState(0)
+  const toast = useToast()
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  // Auto-cycle testimonials every 5 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTestimonial((prev) => (prev + 1) % testimonials.length)
+    }, 5000)
+    return () => clearInterval(interval)
+  }, [])
+
+  const handleGoogleSignIn = async () => {
+    setGoogleLoading(true)
     setError("")
+    setMessage("")
+    
+    const { data, error } = await signUpWithGoogle()
+    setGoogleLoading(false)
 
-    if (!email || !password) {
-      setError("Please fill in all fields")
+    if (error) {
+      const msg = (error as any).message ?? String(error) ?? "Error signing in with Google"
+      setError(msg)
+      try {
+        toast.showToast({ title: "Google sign in failed", description: msg, type: "error" })
+      } catch {}
       return
     }
-
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setError("Please enter a valid email address")
-      return
-    }
-
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters")
-      return
-    }
-
-    setIsLoading(true)
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500))
-    setIsLoading(false)
-
-    onLoginSuccess(email)
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
-      {/* Background decorative elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 right-20 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-20 left-20 w-72 h-72 bg-amber-500/10 rounded-full blur-3xl"></div>
+    <div className="h-screen w-screen flex overflow-hidden bg-white">
+      {/* Left Side - Testimonials */}
+      <div className="hidden lg:flex lg:w-1/2 bg-[#2469fe] rounded-none p-12 flex-col justify-between relative overflow-hidden">
+        <div className="absolute bg-[url('/signinbgimg.png')] bg-repeat bg-[17.2px] opacity-[.01] top-0 left-0 z-10 w-full h-full"></div>
       </div>
 
-      <div className="relative w-full max-w-md">
-        {/* Back button */}
-        <button
-          onClick={onBackToLanding}
-          className="mb-8 flex items-center gap-2 text-slate-400 hover:text-slate-200 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span className="text-sm">Back</span>
-        </button>
-
-        {/* Login card */}
-        <div className="bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-8 shadow-2xl">
-          {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-white mb-2">Welcome Back</h1>
-            <p className="text-slate-400">Sign in to your SEOFlow account</p>
+      {/* Right Side - Login Form */}
+      <div className="w-full lg:w-1/2 pt-2.5 pl-5">
+        <div>
+          <Link href="/"><Button className="bg-white hover:bg-white text-black border border-[#dbdadd] rounded-full hover:text-[#838383] cursor-pointer"><ArrowLeft /> Go to Home</Button></Link>
+        </div>
+      <div className="w-full lg:w-full flex flex-col items-center justify-center p-8 lg:p-16 overflow-y-auto">
+        <div>
+          <div className="mb-12">
+            <div className="flex items-center justify-center gap-2 mb-8">
+              {/* ... your existing logo */}
+            </div>
           </div>
 
-          {/* Error message */}
-          {error && (
-            <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-lg">
-              <p className="text-red-400 text-sm">{error}</p>
-            </div>
-          )}
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold text-gray-900">Sign In</h2>
+            
+            <p className="text-gray-600">
+              Don't have an account yet?{" "}
+              <button type="button" onClick={onToggleSignUp} className="cursor-pointer text-blue-500 hover:text-blue-600 font-medium">
+                Sign Up
+              </button>
+            </p>
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Email field */}
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-slate-200 mb-2">
-                Email Address
-              </label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
-                className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all"
-              />
-            </div>
-
-            {/* Password field */}
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-slate-200 mb-2">
-                Password
-              </label>
-              <div className="relative">
-                <input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition-colors"
-                >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
+            {/* Success message */}
+            {message && (
+              <div className="p-4 bg-green-500/10 border border-green-500/30 rounded-lg">
+                <p className="text-green-400 text-sm">{message}</p>
               </div>
+            )}
+
+            {/* Error message */}
+            {error && <p className="text-red-500 text-center">{error}</p>}
+
+            {/* Google Sign In Button */}
+            <div className="flex flex-col items-center justify-center space-y-4 mt-8">
+              <button
+                onClick={handleGoogleSignIn}
+                disabled={googleLoading}
+                className="cursor-pointer border border-gray-300 rounded-lg py-4 px-8 w-full max-w-sm flex items-center justify-center gap-3 hover:bg-gray-50 transition shadow-sm"
+              >
+                <Image src="/google.png" width={24} height={24} alt="Google" />
+                <span className="text-gray-700 font-medium">
+                  {googleLoading ? "Signing in..." : "Sign in with Google"}
+                </span>
+              </button>
+              
+              <p className="text-gray-500 text-sm text-center max-w-sm">
+                By continuing, you agree to our Terms of Service and Privacy Policy
+              </p>
             </div>
-
-            {/* Remember me & Forgot password */}
-            <div className="flex items-center justify-between text-sm">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" className="w-4 h-4 rounded bg-slate-700/50 border-slate-600/50 cursor-pointer" />
-                <span className="text-slate-400">Remember me</span>
-              </label>
-              <a href="#" className="text-blue-400 hover:text-blue-300 transition-colors">
-                Forgot password?
-              </a>
-            </div>
-
-            {/* Submit button */}
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:from-slate-600 disabled:to-slate-700 text-white font-semibold rounded-lg transition-all duration-200 flex items-center justify-center gap-2"
-            >
-              {isLoading ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                  <span>Signing in...</span>
-                </>
-              ) : (
-                "Sign In"
-              )}
-            </button>
-          </form>
-
-          {/* Divider */}
-          <div className="my-6 flex items-center gap-4">
-            <div className="flex-1 h-px bg-slate-700/50"></div>
-            <span className="text-xs text-slate-500">OR</span>
-            <div className="flex-1 h-px bg-slate-700/50"></div>
           </div>
-
-          {/* Social login buttons */}
-          <div className="grid grid-cols-2 gap-3 mb-6">
-            <button className="py-2 px-4 bg-slate-700/30 hover:bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-300 text-sm font-medium transition-all">
-              Google
-            </button>
-            <button className="py-2 px-4 bg-slate-700/30 hover:bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-300 text-sm font-medium transition-all">
-              GitHub
-            </button>
-          </div>
-
-          {/* Sign up link */}
-          <p className="text-center text-slate-400 text-sm">
-            Don't have an account?{" "}
-            <button
-              onClick={onToggleSignUp}
-              className="text-blue-400 hover:text-blue-300 font-semibold transition-colors"
-            >
-              Sign up
-            </button>
-          </p>
         </div>
 
-        {/* Demo credentials hint */}
-        <div className="mt-6 p-4 bg-slate-800/30 border border-slate-700/30 rounded-lg">
-          <p className="text-xs text-slate-500 mb-2">Demo Credentials:</p>
-          <p className="text-xs text-slate-400">
-            Email: <span className="text-slate-300">demo@seoflow.com</span>
-          </p>
-          <p className="text-xs text-slate-400">
-            Password: <span className="text-slate-300">demo123456</span>
-          </p>
-        </div>
+        {/* Footer */}
+        {/* ... your existing footer */}
+      </div>
       </div>
     </div>
   )

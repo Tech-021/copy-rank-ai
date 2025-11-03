@@ -1,44 +1,253 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Search, Download, TrendingUp, BarChart3, Filter } from "lucide-react"
+import { Search, Download, TrendingUp, BarChart3, Filter, Loader2, ExternalLink } from "lucide-react"
+import { useToast } from "../ui/toast"
+import { getUser } from "@/lib/auth" // Import your auth function
+interface KeywordsTabProps {
+  websiteId?: string | null;
+  onArticlesGenerated?: (articles: any[]) => void; // Add this prop
+}
 
 interface Keyword {
-  id: string
+  id?: string
   keyword: string
-  volume: number
-  difficulty: "Low" | "Medium" | "High"
+  search_volume: number
+  difficulty: number
   cpc: number
-  trend: number
+  competition: number
   selected?: boolean
 }
 
-export function KeywordsTab() {
-  const [keywords, setKeywords] = useState<Keyword[]>([
-    { id: "1", keyword: "AI content generation", volume: 2400, difficulty: "Low", cpc: 2.5, trend: 12 },
-    { id: "2", keyword: "SEO automation tools", volume: 1800, difficulty: "Low", cpc: 3.2, trend: 8 },
-    { id: "3", keyword: "blog post generator", volume: 1200, difficulty: "Medium", cpc: 1.8, trend: 5 },
-    { id: "4", keyword: "keyword research API", volume: 890, difficulty: "Low", cpc: 4.1, trend: 15 },
-    { id: "5", keyword: "automated SEO writing", volume: 650, difficulty: "Low", cpc: 2.9, trend: 10 },
-    { id: "6", keyword: "content optimization software", volume: 540, difficulty: "Medium", cpc: 3.5, trend: 3 },
-    { id: "7", keyword: "AI writing assistant", volume: 3200, difficulty: "High", cpc: 2.1, trend: 20 },
-    { id: "8", keyword: "SEO content writer", volume: 1100, difficulty: "Medium", cpc: 2.7, trend: 7 },
-  ])
+interface WebsiteData {
+  website: {
+    id: string
+    url: string
+    topic: string
+  }
+  keywords: Keyword[]
+}
 
+// Add Article interface for generated content
+interface Article {
+  id: string
+  title: string
+  content: string
+  keyword: string
+  status: "Published" | "Scheduled" | "Draft"
+  date: string
+  preview: string
+  wordCount: number
+  metaTitle?: string
+  metaDescription?: string
+  slug?: string
+  focusKeyword?: string
+  readingTime?: string
+  contentScore?: number
+  keywordDensity?: number
+  tags?: string[]
+  category?: string
+  generatedAt?: string
+  estimatedTraffic?: number
+}
+
+export function KeywordsTab({ websiteId, onArticlesGenerated }: KeywordsTabProps) {
+  const [websiteData, setWebsiteData] = useState<WebsiteData | null>(null)
+  const [keywords, setKeywords] = useState<Keyword[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [generatingContent, setGeneratingContent] = useState(false)
+   const [currentUser, setCurrentUser] = useState<any>(null) // Add current user state
   const [searchQuery, setSearchQuery] = useState("")
   const [difficultyFilter, setDifficultyFilter] = useState<string>("all")
   const [sortBy, setSortBy] = useState<string>("volume-desc")
-  const [selectedKeywords, setSelectedKeywords] = useState<Set<string>>(new Set())
+  const [selectedKeywords, setSelectedKeywords] = useState<Set<number>>(new Set())
+  const toast=useToast()
+
+  // Get current user on component mount
+useEffect(() => {
+  const fetchCurrentUser = async () => {
+    try {
+      const { data: user, error } = await getUser()
+      if (error) {
+        console.error("Error fetching current user:", error)
+        return
+      }
+      setCurrentUser(user)
+      console.log("👤 Current user:", user?.id)
+    } catch (err) {
+      console.error("Failed to get current user:", err)
+    }
+  }
+  
+  fetchCurrentUser()
+}, [])
+  // Fetch keywords when websiteId changes
+  useEffect(() => {
+    console.log("🔍 KeywordsTab - websiteId:", websiteId);
+    
+    if (websiteId) {
+      fetchKeywords()
+    } else {
+      console.log("❌ No websiteId provided");
+      setLoading(false)
+      setError("No website selected. Please go back to Analyze tab and click 'View Keywords' on a website.")
+    }
+  }, [websiteId])
+
+  const fetchKeywords = async () => {
+    if (!websiteId) return;
+    
+    try {
+      setLoading(true)
+      setError(null)
+      console.log(`🔍 Fetching keywords for website: ${websiteId}`)
+      
+      const response = await fetch(`/api/keyword/${websiteId}`)
+      
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error("Website not found")
+        }
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      
+      const data = await response.json()
+      
+      if (!data.success) {
+        throw new Error(data.error || "Failed to fetch keywords")
+      }
+      
+      setWebsiteData(data)
+      setKeywords(data.keywords || [])
+      console.log(`✅ Loaded ${data.keywords?.length || 0} keywords`)
+      
+    } catch (err) {
+      console.error('Error fetching keywords:', err)
+      setError(err instanceof Error ? err.message : "Failed to load keywords")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const generateContentFromKeywords = async () => {
+  if (selectedKeywords.size === 0) {
+    alert("Please select at least one keyword to generate content.")
+    return;
+  }
+
+  // Check if user is authenticated
+  if (!currentUser) {
+    alert("Please log in to generate content.")
+    return;
+  }
+
+  try {
+    setGeneratingContent(true);
+
+    // Get the selected keyword texts
+    const selectedKeywordTexts = Array.from(selectedKeywords).map(
+      index => filteredAndSortedKeywords[index].keyword
+    );
+
+    console.log("🚀 Generating content for keywords:", selectedKeywordTexts);
+    console.log("👤 Current user ID:", currentUser.id);
+
+    const generatedArticles: Article[] = [];
+
+    // Generate articles for each selected keyword
+    for (const keyword of selectedKeywordTexts) {
+      const response = await fetch('/api/test-generate-article', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          keyword: keyword,
+          userId: currentUser.id, // Use the actual user ID
+          websiteId: websiteId,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to generate article for: ${keyword}`);
+      }
+
+      const data = await response.json();
+      
+      if (data.success && data.article) {
+        // Use the actual article ID from the database response
+        const newArticle: Article = {
+          id: data.article.id, // Use the actual ID from database
+          title: data.article.title,
+          content: data.article.content,
+          keyword: keyword,
+          status: "Draft",
+          date: new Date().toLocaleDateString('en-US', { 
+            year: 'numeric', 
+            month: 'short', 
+            day: 'numeric' 
+          }),
+          preview: data.article.metaDescription || data.article.content.substring(0, 150) + '...',
+          wordCount: data.article.wordCount,
+          metaTitle: data.article.metaTitle,
+          metaDescription: data.article.metaDescription,
+          readingTime: data.article.readingTime,
+          contentScore: data.article.contentScore,
+          keywordDensity: data.article.keywordDensity,
+          tags: data.article.tags,
+          category: data.article.category,
+          estimatedTraffic: data.article.estimatedTraffic
+        };
+
+        generatedArticles.push(newArticle);
+      }
+    }
+
+    // Pass generated articles to parent component
+    if (onArticlesGenerated && generatedArticles.length > 0) {
+      onArticlesGenerated(generatedArticles);
+    }
+
+    console.log("✅ Generated articles:", generatedArticles);
+    
+    // Clear selection after generation
+    setSelectedKeywords(new Set());
+    
+    toast.showToast({
+      title: `Successfully generated ${generatedArticles.length} articles! Check the Articles tab.`, 
+      type: "success", 
+      duration: 5000
+    });
+    
+  } catch (error) {
+    console.error('Error generating content:', error);
+    toast.showToast({
+      title: "Failed to generate content",
+      description: "Please try again.",
+      type: "error"
+    });
+  } finally {
+    setGeneratingContent(false);
+  }
+};
 
   const filteredAndSortedKeywords = useMemo(() => {
     const filtered = keywords.filter((kw) => {
       const matchesSearch = kw.keyword.toLowerCase().includes(searchQuery.toLowerCase())
-      const matchesDifficulty = difficultyFilter === "all" || kw.difficulty === difficultyFilter
+      
+      // Convert difficulty number to category for filtering
+      let difficultyCategory: "Low" | "Medium" | "High"
+      if (kw.difficulty <= 40) difficultyCategory = "Low"
+      else if (kw.difficulty <= 70) difficultyCategory = "Medium"
+      else difficultyCategory = "High"
+      
+      const matchesDifficulty = difficultyFilter === "all" || difficultyCategory === difficultyFilter
       return matchesSearch && matchesDifficulty
     })
 
@@ -46,16 +255,21 @@ export function KeywordsTab() {
     filtered.sort((a, b) => {
       switch (sortBy) {
         case "volume-desc":
-          return b.volume - a.volume
+          return b.search_volume - a.search_volume
         case "volume-asc":
-          return a.volume - b.volume
+          return a.search_volume - b.search_volume
         case "difficulty-asc":
-          const diffOrder = { Low: 0, Medium: 1, High: 2 }
-          return diffOrder[a.difficulty] - diffOrder[b.difficulty]
+          return a.difficulty - b.difficulty
+        case "difficulty-desc":
+          return b.difficulty - a.difficulty
         case "cpc-desc":
           return b.cpc - a.cpc
-        case "trend-desc":
-          return b.trend - a.trend
+        case "cpc-asc":
+          return a.cpc - b.cpc
+        case "competition-asc":
+          return a.competition - b.competition
+        case "competition-desc":
+          return b.competition - a.competition
         default:
           return 0
       }
@@ -64,12 +278,12 @@ export function KeywordsTab() {
     return filtered
   }, [keywords, searchQuery, difficultyFilter, sortBy])
 
-  const toggleKeywordSelection = (id: string) => {
+  const toggleKeywordSelection = (index: number) => {
     const newSelected = new Set(selectedKeywords)
-    if (newSelected.has(id)) {
-      newSelected.delete(id)
+    if (newSelected.has(index)) {
+      newSelected.delete(index)
     } else {
-      newSelected.add(id)
+      newSelected.add(index)
     }
     setSelectedKeywords(newSelected)
   }
@@ -78,37 +292,139 @@ export function KeywordsTab() {
     if (selectedKeywords.size === filteredAndSortedKeywords.length) {
       setSelectedKeywords(new Set())
     } else {
-      setSelectedKeywords(new Set(filteredAndSortedKeywords.map((kw) => kw.id)))
+      setSelectedKeywords(new Set(filteredAndSortedKeywords.map((_, index) => index)))
     }
   }
 
-  const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty) {
-      case "Low":
-        return "bg-green-100 text-green-700"
-      case "Medium":
-        return "bg-yellow-100 text-yellow-700"
-      case "High":
-        return "bg-red-100 text-red-700"
-      default:
-        return "bg-gray-100 text-gray-700"
-    }
+  const getDifficultyColor = (difficulty: number) => {
+    if (difficulty <= 40) return "bg-green-100 text-green-700 border-green-200"
+    else if (difficulty <= 70) return "bg-yellow-100 text-yellow-700 border-yellow-200"
+    else return "bg-red-100 text-red-700 border-red-200"
+  }
+
+  const getDifficultyText = (difficulty: number) => {
+    if (difficulty <= 40) return "Low"
+    else if (difficulty <= 70) return "Medium"
+    else return "High"
+  }
+
+  const getCompetitionColor = (competition: number) => {
+    if (competition <= 0.3) return "bg-green-100 text-green-700 border-green-200"
+    else if (competition <= 0.6) return "bg-yellow-100 text-yellow-700 border-yellow-200"
+    else return "bg-red-100 text-red-700 border-red-200"
+  }
+
+  const getCompetitionText = (competition: number) => {
+    if (competition <= 0.3) return "Low"
+    else if (competition <= 0.6) return "Medium"
+    else return "High"
   }
 
   const stats = {
     totalKeywords: filteredAndSortedKeywords.length,
     avgVolume: Math.round(
-      filteredAndSortedKeywords.reduce((sum, kw) => sum + kw.volume, 0) / filteredAndSortedKeywords.length,
+      filteredAndSortedKeywords.reduce((sum, kw) => sum + kw.search_volume, 0) / Math.max(filteredAndSortedKeywords.length, 1)
     ),
-    avgCpc: (filteredAndSortedKeywords.reduce((sum, kw) => sum + kw.cpc, 0) / filteredAndSortedKeywords.length).toFixed(
-      2,
-    ),
+    avgCpc: (filteredAndSortedKeywords.reduce((sum, kw) => sum + kw.cpc, 0) / Math.max(filteredAndSortedKeywords.length, 1)).toFixed(2),
+    avgDifficulty: Math.round(
+      filteredAndSortedKeywords.reduce((sum, kw) => sum + kw.difficulty, 0) / Math.max(filteredAndSortedKeywords.length, 1)
+    )
+  }
+
+  const exportKeywords = () => {
+    const csvContent = [
+      ["Keyword", "Search Volume", "Difficulty", "CPC", "Competition"],
+      ...filteredAndSortedKeywords.map(kw => [
+        kw.keyword,
+        kw.search_volume,
+        kw.difficulty,
+        `$${kw.cpc.toFixed(2)}`,
+        kw.competition.toFixed(2)
+      ])
+    ].map(row => row.join(",")).join("\n")
+    
+    const blob = new Blob([csvContent], { type: "text/csv" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `keywords-${websiteData?.website.topic || "export"}.csv`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-primary" />
+          <p className="text-muted-foreground">Loading keywords...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <p className="text-destructive mb-4">{error}</p>
+          <Button onClick={fetchKeywords} variant="outline">
+            Try Again
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  if (!websiteData) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <p className="text-muted-foreground mb-4">No website data found</p>
+          <p className="text-sm text-muted-foreground">
+            Please go to the Analyze tab and click "View Keywords" on a website.
+          </p>
+        </div>
+      </div>
+    )
   }
 
   return (
     <div className="space-y-6">
+      {/* Website Info Header */}
+      <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
+        <CardContent className="pt-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">SEO Keywords</h1>
+              <div className="flex items-center gap-4 mt-2">
+                <p className="text-sm text-muted-foreground">
+                  <span className="font-medium">Website:</span> {websiteData.website.url}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  <span className="font-medium">Topic:</span> {websiteData.website.topic}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  <span className="font-medium">Total Keywords:</span> {keywords.length}
+                </p>
+              </div>
+            </div>
+            <Button 
+              variant="outline" 
+              className="cursor-pointer border-border/40 gap-2"
+              onClick={() => window.open(websiteData.website.url, '_blank')}
+            >
+              <ExternalLink className="w-4 h-4" />
+              Visit Website
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Stats Cards */}
-      <div className="grid md:grid-cols-3 gap-4">
+      <div className="grid md:grid-cols-4 gap-4">
         <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
@@ -144,13 +460,25 @@ export function KeywordsTab() {
             </div>
           </CardContent>
         </Card>
+
+        <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Avg. Difficulty</p>
+                <p className="text-2xl font-bold text-foreground">{stats.avgDifficulty}/100</p>
+              </div>
+              <BarChart3 className="w-8 h-8 text-yellow-500/40" />
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Filters and Search */}
       <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
         <CardHeader>
-          <CardTitle>Keyword Research</CardTitle>
-          <CardDescription>Find and analyze low-competition, high-volume keywords</CardDescription>
+          <CardTitle>Keyword Analysis</CardTitle>
+          <CardDescription>Analyze and filter keywords for {websiteData.website.topic}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Search and Filters Row */}
@@ -178,21 +506,28 @@ export function KeywordsTab() {
             </Select>
 
             <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-full md:w-40 bg-input border-border/40">
+              <SelectTrigger className="w-full md:w-48 bg-input border-border/40">
                 <SelectValue placeholder="Sort by" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="volume-desc">Volume (High to Low)</SelectItem>
                 <SelectItem value="volume-asc">Volume (Low to High)</SelectItem>
                 <SelectItem value="difficulty-asc">Difficulty (Easy to Hard)</SelectItem>
+                <SelectItem value="difficulty-desc">Difficulty (Hard to Easy)</SelectItem>
                 <SelectItem value="cpc-desc">CPC (High to Low)</SelectItem>
-                <SelectItem value="trend-desc">Trending</SelectItem>
+                <SelectItem value="cpc-asc">CPC (Low to High)</SelectItem>
+                <SelectItem value="competition-asc">Competition (Low to High)</SelectItem>
+                <SelectItem value="competition-desc">Competition (High to Low)</SelectItem>
               </SelectContent>
             </Select>
 
-            <Button variant="outline" className="border-border/40 gap-2 bg-transparent">
+            <Button 
+              variant="outline" 
+              className="cursor-pointer border-border/40 gap-2 bg-transparent"
+              onClick={exportKeywords}
+            >
               <Download className="w-4 h-4" />
-              Export
+              Export CSV
             </Button>
           </div>
 
@@ -214,20 +549,20 @@ export function KeywordsTab() {
                       />
                     </th>
                     <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Keyword</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Volume</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Search Volume</th>
                     <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Difficulty</th>
                     <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">CPC</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Trend</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Competition</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredAndSortedKeywords.map((keyword) => (
-                    <tr key={keyword.id} className="border-b border-border/40 hover:bg-muted/20 transition-colors">
+                  {filteredAndSortedKeywords.map((keyword, index) => (
+                    <tr key={index} className="border-b border-border/40 hover:bg-muted/20 transition-colors">
                       <td className="px-4 py-3">
                         <input
                           type="checkbox"
-                          checked={selectedKeywords.has(keyword.id)}
-                          onChange={() => toggleKeywordSelection(keyword.id)}
+                          checked={selectedKeywords.has(index)}
+                          onChange={() => toggleKeywordSelection(index)}
                           className="rounded"
                         />
                       </td>
@@ -235,19 +570,20 @@ export function KeywordsTab() {
                         <p className="font-medium text-foreground">{keyword.keyword}</p>
                       </td>
                       <td className="px-4 py-3">
-                        <p className="text-foreground">{keyword.volume.toLocaleString()}</p>
+                        <p className="text-foreground font-medium">{keyword.search_volume.toLocaleString()}</p>
                       </td>
                       <td className="px-4 py-3">
-                        <Badge className={getDifficultyColor(keyword.difficulty)}>{keyword.difficulty}</Badge>
+                        <Badge className={getDifficultyColor(keyword.difficulty)}>
+                          {getDifficultyText(keyword.difficulty)} ({keyword.difficulty})
+                        </Badge>
                       </td>
                       <td className="px-4 py-3">
                         <p className="text-foreground font-medium">${keyword.cpc.toFixed(2)}</p>
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex items-center gap-1">
-                          <TrendingUp className="w-4 h-4 text-green-600" />
-                          <p className="text-foreground">{keyword.trend}%</p>
-                        </div>
+                        <Badge className={getCompetitionColor(keyword.competition)}>
+                          {getCompetitionText(keyword.competition)} ({(keyword.competition * 100).toFixed(0)}%)
+                        </Badge>
                       </td>
                     </tr>
                   ))}
@@ -256,6 +592,12 @@ export function KeywordsTab() {
             </div>
           </div>
 
+          {filteredAndSortedKeywords.length === 0 && (
+            <div className="text-center py-8 text-muted-foreground">
+              No keywords found matching your filters.
+            </div>
+          )}
+
           {/* Selected Keywords Actions */}
           {selectedKeywords.size > 0 && (
             <div className="flex items-center justify-between p-4 bg-primary/5 rounded-lg border border-primary/20">
@@ -263,11 +605,23 @@ export function KeywordsTab() {
                 {selectedKeywords.size} keyword{selectedKeywords.size !== 1 ? "s" : ""} selected
               </p>
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" className="border-border/40 bg-transparent">
+                <Button variant="outline" size="sm" className="cursor-pointer border-border/40 bg-transparent">
                   Add to Campaign
                 </Button>
-                <Button size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground">
-                  Generate Articles
+                <Button 
+                  size="sm" 
+                  className="cursor-pointer bg-primary hover:bg-primary/90 text-primary-foreground"
+                  onClick={generateContentFromKeywords}
+                  disabled={generatingContent}
+                >
+                  {generatingContent ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    "Generate Content Ideas"
+                  )}
                 </Button>
               </div>
             </div>
@@ -276,4 +630,4 @@ export function KeywordsTab() {
       </Card>
     </div>
   )
-}
+};

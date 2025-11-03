@@ -1,279 +1,558 @@
-"use client"
+// "use client";
 
-import type React from "react"
+// import { useState, useEffect } from "react";
+// import { signUp, signUpWithGoogle } from "../lib/auth";
+// import { useToast } from "./ui/toast";
+// import { Eye, EyeOff, Check, Info } from "lucide-react"; // Added Info icon
+// import Image from "next/image";
 
-import { useState } from "react"
-import { Eye, EyeOff, ArrowLeft, Check } from "lucide-react"
+// interface SignUpPageProps {
+//   onSignUpSuccess: (email: string) => void;
+//   onBackToLanding: () => void;
+//   onToggleLogin: () => void;
+// }
+
+// const testimonials = [
+//   {
+//     id: 1,
+//     quote:
+//       "With Salestable, I can ensure that our sales team is equipped with in-depth knowledge of the various aspects of plastic injection molding required to be an effective sales professional",
+//     author: "Rob L",
+//     title: "Director, Sales Operations @ HiTech Plastics & Molds",
+//     rating: 5,
+//   },
+//   {
+//     id: 2,
+//     quote:
+//       "Salestable has been a great partner for ContentBacon. We've gone from being a company where the founders are driving the sales to an organization with an effective sales team that is growing and thriving",
+//     author: "Wendy L",
+//     title: "Co-founder - ContentBacon",
+//     rating: 5,
+//   },
+// ];
+
+// export function SignUpPage({
+//   onSignUpSuccess,
+//   onBackToLanding,
+//   onToggleLogin,
+// }: SignUpPageProps) {
+//   const [formData, setFormData] = useState({
+//     name: "",
+//     email: "",
+//     password: "",
+//     confirmPassword: "",
+//   });
+//   const [showPassword, setShowPassword] = useState(false);
+//   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+//   const [isLoading, setIsLoading] = useState(false);
+//   const [googleLoading, setGoogleLoading] = useState(false);
+//   const [error, setError] = useState("");
+//   const [message, setMessage] = useState(""); // Add separate state for info/success messages
+//   const [agreedToTerms, setAgreedToTerms] = useState(false);
+//   const [currentTestimonial, setCurrentTestimonial] = useState(0);
+//   const toast = useToast();
+
+//   // Auto-cycle testimonials every 5 seconds
+//   useEffect(() => {
+//     const interval = setInterval(() => {
+//       setCurrentTestimonial((prev) => (prev + 1) % testimonials.length);
+//     }, 5000);
+//     return () => clearInterval(interval);
+//   }, []);
+
+//   const handleNextTestimonial = () => {
+//     setCurrentTestimonial((prev) => (prev + 1) % testimonials.length);
+//   };
+
+//   const handlePrevTestimonial = () => {
+//     setCurrentTestimonial(
+//       (prev) => (prev - 1 + testimonials.length) % testimonials.length
+//     );
+//   };
+
+//   const passwordRequirements = [
+//     { label: "At least 8 characters", met: formData.password.length >= 8 },
+//     {
+//       label: "Contains uppercase letter",
+//       met: /[A-Z]/.test(formData.password),
+//     },
+//     {
+//       label: "Contains lowercase letter",
+//       met: /[a-z]/.test(formData.password),
+//     },
+//     { label: "Contains number", met: /\d/.test(formData.password) },
+//   ];
+
+//   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+//     const { name, value } = e.target;
+//     setFormData((prev) => ({ ...prev, [name]: value }));
+//     // Clear messages when user starts typing
+//     setError("");
+//     setMessage("");
+//   };
+
+//   const handleSubmit = async (e: React.FormEvent) => {
+//     e.preventDefault();
+//     setError("");
+//     setMessage(""); // Clear previous messages
+
+//     if (
+//       !formData.name ||
+//       !formData.email ||
+//       !formData.password ||
+//       !formData.confirmPassword
+//     ) {
+//       setError("Please fill in all fields");
+//       return;
+//     }
+
+//     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+//       setError("Please enter a valid email address");
+//       return;
+//     }
+
+//     if (formData.password.length < 8) {
+//       setError("Password must be at least 8 characters");
+//       return;
+//     }
+
+//     if (formData.password !== formData.confirmPassword) {
+//       setError("Passwords do not match");
+//       return;
+//     }
+
+//     if (!agreedToTerms) {
+//       setError("Please agree to the terms and conditions");
+//       return;
+//     }
+
+//     setIsLoading(true);
+//     const { data, error } = await signUp(formData.email, formData.password);
+//     setIsLoading(false);
+
+//     if (error) {
+//       const msg =
+//         (error as any).message ?? String(error) ?? "Error creating account";
+//       setError(msg);
+//       try {
+//         toast.showToast({
+//           title: "Sign up failed",
+//           description: msg,
+//           type: "error",
+//         });
+//       } catch {}
+//       return;
+//     }
+
+//     const session = (data as any)?.session ?? null;
+//     if (!session) {
+//       const msg =
+//         "Please check your email to confirm your account before signing in.";
+//       setMessage(msg); // Use message state instead of error for info messages
+//       try {
+//         toast.showToast({
+//           title: "Confirm your email",
+//           description: msg,
+//           type: "info",
+//         });
+//       } catch {
+//         /* ignore */
+//       }
+//       // Don't set this as an error - it's a success that requires email confirmation
+//       return;
+//     }
+
+//     try {
+//       toast.showToast({
+//         title: "Account created",
+//         description: "Welcome! You are now signed in.",
+//         type: "success",
+//       });
+//     } catch {}
+
+//     onSignUpSuccess(formData.email);
+//   };
+
+//   const handleGoogleSignUp = async () => {
+//     setGoogleLoading(true);
+//     setError("");
+//     setMessage(""); // Clear messages
+
+//     const { data, error } = await signUpWithGoogle();
+//     setGoogleLoading(false);
+
+//     if (error) {
+//       const msg =
+//         (error as any).message ??
+//         String(error) ??
+//         "Error signing up with Google";
+//       setError(msg);
+//       try {
+//         toast.showToast({
+//           title: "Google sign up failed",
+//           description: msg,
+//           type: "error",
+//         });
+//       } catch {}
+//     }
+//   };
+
+//   // const testimonial = testimonials[currentTestimonial]
+
+//   return (
+//     <div className="h-screen w-screen flex overflow-hidden bg-white">
+//       {/* Left Side - Testimonials */}
+//       <div className="hidden lg:flex lg:w-1/2 bg-[#2469fe] rounded-none p-12 flex-col justify-between relative overflow-hidden">
+//         <div className="absolute inset-0 opacity-10">
+//           <div className="absolute top-0 right-0 w-96 h-96 bg-white rounded-full blur-3xl"></div>
+//         </div>
+//         <div className="relative z-10 text-center">
+//           <h2 className="text-white text-3xl font-semibold mb-12"></h2>
+//           <div className="space-y-6">
+//             <div className="text-white text-5xl"></div>
+//             <p className="text-white text-lg leading-relaxed font-light"></p>
+//             <div className="flex justify-center gap-1"></div>
+//             <div className="flex flex-col items-center justify-center"></div>
+//           </div>
+//         </div>
+//         <div className="relative z-10 flex items-center justify-center gap-2 mt-12"></div>
+//       </div>
+
+//       {/* Right Side - SignUp Form */}
+//       <div className="w-full lg:w-1/2 flex flex-col justify-between p-8 lg:p-16">
+//         <div>
+//           {/* Info/Success message */}
+//           {message && (
+//             <div className="mb-6 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+//               <div className="flex items-center gap-2">
+//                 <Info className="w-4 h-4 text-blue-400" />
+//                 <p className="text-blue-400 text-sm">{message}</p>
+//               </div>
+//             </div>
+//           )}
+
+//           {/* Form */}
+//           <form onSubmit={handleSubmit} className="space-y-5">
+//             {/* Name field */}
+//             <div>
+//               {/* Link to Sign In */}
+//               <div className="flex flex-col gap-4 mb-4 justify-start items-start text-center">
+//                 <h2 className="text-2xl font-bold text-gray-900">
+//                   Create an Account
+//                 </h2>
+//                 <p className="text-gray-600 ">
+//                   Already have an account?{" "}
+//                   <button
+//                     type="button"
+//                     onClick={onToggleLogin}
+//                     className="cursor-pointer text-blue-500 hover:text-blue-600 font-medium"
+//                   >
+//                     Sign In
+//                   </button>
+//                 </p>
+//               </div>
+//               {error && <p className="text-red-500">{error}</p>}
+//               <p>Full Name</p>
+//               <input
+//                 type="text"
+//                 name="name"
+//                 value={formData.name}
+//                 onChange={handleChange}
+//                 placeholder="John Doe"
+//                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400"
+//               />
+//             </div>
+
+//             {/* Email */}
+//             <div>
+//               <p>Email Address</p>
+//               <input
+//                 type="email"
+//                 name="email"
+//                 value={formData.email}
+//                 onChange={handleChange}
+//                 placeholder="you@example.com"
+//                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400"
+//               />
+//             </div>
+
+//             {/* Password */}
+//             <div className="relative">
+//               <p>Password</p>
+//               <input
+//                 type={showPassword ? "text" : "password"}
+//                 name="password"
+//                 value={formData.password}
+//                 onChange={handleChange}
+//                 placeholder="••••••••"
+//                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400"
+//               />
+//               <button
+//                 type="button"
+//                 onClick={() => setShowPassword(!showPassword)}
+//                 className="cursor-pointer absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+//               >
+//                 {showPassword ? (
+//                   <EyeOff className="mb-15" size={20} />
+//                 ) : (
+//                   <Eye className="mb-15" size={20} />
+//                 )}
+//               </button>
+
+//               {/* Password requirements */}
+//               <div className="mt-2 space-y-1">
+//                 {passwordRequirements.map((req) => (
+//                   <div
+//                     key={req.label}
+//                     className="flex items-center gap-2 text-xs"
+//                   >
+//                     <div
+//                       className={`w-4 h-4 rounded-full flex items-center justify-center ${
+//                         req.met
+//                           ? "bg-green-500/20 border border-green-500/50"
+//                           : "bg-gray-200/30 border border-gray-300"
+//                       }`}
+//                     >
+//                       {req.met && (
+//                         <Check size={12} className="text-green-400" />
+//                       )}
+//                     </div>
+//                     <span
+//                       className={req.met ? "text-green-400" : "text-gray-400"}
+//                     >
+//                       {req.label}
+//                     </span>
+//                   </div>
+//                 ))}
+//               </div>
+//             </div>
+
+//             <div>
+//               <label
+//                 htmlFor="confirmPassword"
+//                 className="block text-sm font-medium text-black mb-2"
+//               >
+//                 Confirm Password
+//               </label>
+//               <div className="relative">
+//                 <input
+//                   id="confirmPassword"
+//                   type={showConfirmPassword ? "text" : "password"}
+//                   name="confirmPassword"
+//                   value={formData.confirmPassword}
+//                   onChange={handleChange}
+//                   placeholder="••••••••"
+//                   className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all"
+//                 />
+//                 <button
+//                   type="button"
+//                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+//                   className="cursor-pointer absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition-colors"
+//                 >
+//                   {showConfirmPassword ? (
+//                     <EyeOff className="w-5 h-5" />
+//                   ) : (
+//                     <Eye className="w-5 h-5" />
+//                   )}
+//                 </button>
+//               </div>
+//             </div>
+
+//             {/* Terms */}
+//             <label className="flex items-center gap-2 cursor-pointer">
+//               <input
+//                 type="checkbox"
+//                 checked={agreedToTerms}
+//                 onChange={(e) => setAgreedToTerms(e.target.checked)}
+//                 className="w-5 h-5 border border-gray-300 rounded cursor-pointer checked:bg-blue-500 checked:border-blue-500"
+//               />
+//               <span className="text-gray-600 text-sm">
+//                 I agree to the{" "}
+//                 <a href="#" className="text-blue-500 hover:text-blue-600">
+//                   Terms of Service
+//                 </a>{" "}
+//                 and{" "}
+//                 <a href="#" className="text-blue-500 hover:text-blue-600">
+//                   Privacy Policy
+//                 </a>
+//               </span>
+//             </label>
+
+//             {/* Submit */}
+//             <button
+//               type="submit"
+//               disabled={isLoading}
+//               className="cursor-pointer w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-4 rounded-lg transition"
+//             >
+//               {isLoading ? "Creating account..." : "Sign Up"}
+//             </button>
+
+//             {/* Social Buttons */}
+//             <div className="flex gap-5 mt-4">
+//               <button
+//                 type="button"
+//                 onClick={handleGoogleSignUp}
+//                 disabled={googleLoading}
+//                 className="cursor-pointer border border-gray-300 rounded-lg py-3 w-full flex items-center justify-center gap-2 hover:bg-gray-50 transition"
+//               >
+//                 <Image src="/google.png" width={30} height={30} alt="Google" />
+//                 <span className="text-gray-700 font-medium">Google</span>
+//               </button>
+//             </div>
+//           </form>
+//         </div>
+//       </div>
+//     </div>
+//   );
+// }
+
+"use client";
+
+import { useState, useEffect } from "react";
+import { signUpWithGoogle } from "../lib/auth";
+import { useToast } from "./ui/toast";
+import { ArrowLeft, Info } from "lucide-react";
+import Image from "next/image";
+import { Button } from "./ui/button"
+import Link from "next/link"
 
 interface SignUpPageProps {
-  onSignUpSuccess: (email: string) => void
-  onBackToLanding: () => void
-  onToggleLogin: () => void
+  onSignUpSuccess: (email: string) => void;
+  onBackToLanding: () => void;
+  onToggleLogin: () => void;
 }
 
-export function SignUpPage({ onSignUpSuccess, onBackToLanding, onToggleLogin }: SignUpPageProps) {
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-  })
-  const [showPassword, setShowPassword] = useState(false)
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState("")
-  const [agreedToTerms, setAgreedToTerms] = useState(false)
+const testimonials = [
+  {
+    id: 1,
+    quote:
+      "With Salestable, I can ensure that our sales team is equipped with in-depth knowledge of the various aspects of plastic injection molding required to be an effective sales professional",
+    author: "Rob L",
+    title: "Director, Sales Operations @ HiTech Plastics & Molds",
+    rating: 5,
+  },
+  {
+    id: 2,
+    quote:
+      "Salestable has been a great partner for ContentBacon. We've gone from being a company where the founders are driving the sales to an organization with an effective sales team that is growing and thriving",
+    author: "Wendy L",
+    title: "Co-founder - ContentBacon",
+    rating: 5,
+  },
+];
 
-  const passwordRequirements = [
-    { label: "At least 8 characters", met: formData.password.length >= 8 },
-    { label: "Contains uppercase letter", met: /[A-Z]/.test(formData.password) },
-    { label: "Contains lowercase letter", met: /[a-z]/.test(formData.password) },
-    { label: "Contains number", met: /\d/.test(formData.password) },
-  ]
+export function SignUpPage({
+  onSignUpSuccess,
+  onBackToLanding,
+  onToggleLogin,
+}: SignUpPageProps) {
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+  const [currentTestimonial, setCurrentTestimonial] = useState(0);
+  const toast = useToast();
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
-  }
+  // Auto-cycle testimonials every 5 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTestimonial((prev) => (prev + 1) % testimonials.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError("")
+  const handleGoogleSignUp = async () => {
+    setGoogleLoading(true);
+    setError("");
+    setMessage("");
 
-    if (!formData.name || !formData.email || !formData.password || !formData.confirmPassword) {
-      setError("Please fill in all fields")
-      return
+    const { data, error } = await signUpWithGoogle();
+    setGoogleLoading(false);
+
+    if (error) {
+      const msg =
+        (error as any).message ??
+        String(error) ??
+        "Error signing up with Google";
+      setError(msg);
+      try {
+        toast.showToast({
+          title: "Google sign up failed",
+          description: msg,
+          type: "error",
+        });
+      } catch {}
     }
-
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      setError("Please enter a valid email address")
-      return
-    }
-
-    if (formData.password.length < 8) {
-      setError("Password must be at least 8 characters")
-      return
-    }
-
-    if (formData.password !== formData.confirmPassword) {
-      setError("Passwords do not match")
-      return
-    }
-
-    if (!agreedToTerms) {
-      setError("Please agree to the terms and conditions")
-      return
-    }
-
-    setIsLoading(true)
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500))
-    setIsLoading(false)
-
-    onSignUpSuccess(formData.email)
-  }
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
-      {/* Background decorative elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 right-20 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-20 left-20 w-72 h-72 bg-amber-500/10 rounded-full blur-3xl"></div>
+    <div className="h-screen w-screen flex overflow-hidden bg-white">
+      {/* Left Side - Testimonials */}
+      <div
+        className="hidden lg:flex lg:w-1/2 bg-[#2469fe] rounded-none p-12 flex-col justify-between relative overflow-hidden"
+      >
+      <div className="absolute bg-[url('/signinbgimg.png')] bg-repeat bg-[17.2px] opacity-[.01] top-0 left-0 z-10 w-full h-full"></div>
       </div>
 
-      <div className="relative w-full max-w-md">
-        {/* Back button */}
-        <button
-          onClick={onBackToLanding}
-          className="mb-8 flex items-center gap-2 text-slate-400 hover:text-slate-200 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span className="text-sm">Back</span>
-        </button>
-
-        {/* Sign up card */}
-        <div className="bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-8 shadow-2xl">
-          {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-white mb-2">Create Account</h1>
-            <p className="text-slate-400">Join SEOFlow and start generating SEO content</p>
-          </div>
-
-          {/* Error message */}
-          {error && (
-            <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-lg">
-              <p className="text-red-400 text-sm">{error}</p>
+      {/* Right Side - SignUp Form */}
+      <div className="w-full lg:w-1/2 pt-2.5 pl-5">
+        <div>
+          <Link href="/"><Button className="bg-white hover:bg-white text-black border border-[#dbdadd] rounded-full hover:text-[#838383] cursor-pointer"><ArrowLeft /> Go to Home</Button></Link>
+        </div>
+      <div className="w-full lg:w-full flex flex-col items-center justify-center p-8 lg:p-16 overflow-y-auto">
+        <div>
+          {/* Info/Success message */}
+          {message && (
+            <div className="mb-6 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+              <div className="flex items-center gap-2">
+                <Info className="w-4 h-4 text-blue-400" />
+                <p className="text-blue-400 text-sm">{message}</p>
+              </div>
             </div>
           )}
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Name field */}
-            <div>
-              <label htmlFor="name" className="block text-sm font-medium text-slate-200 mb-2">
-                Full Name
-              </label>
-              <input
-                id="name"
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                placeholder="John Doe"
-                className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all"
-              />
-            </div>
-
-            {/* Email field */}
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-slate-200 mb-2">
-                Email Address
-              </label>
-              <input
-                id="email"
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                placeholder="you@example.com"
-                className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all"
-              />
-            </div>
-
-            {/* Password field */}
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-slate-200 mb-2">
-                Password
-              </label>
-              <div className="relative">
-                <input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  placeholder="••••••••"
-                  className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all"
-                />
+          {/* Simplified Google-only signup */}
+          <div className="space-y-6">
+            {/* Header */}
+            <div className="flex flex-col gap-4 mb-4 justify-start items-start text-center">
+              <h2 className="text-2xl font-bold text-gray-900">
+                Create an Account
+              </h2>
+              <p className="text-gray-600 ">
+                Already have an account?{" "}
                 <button
                   type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition-colors"
+                  onClick={onToggleLogin}
+                  className="cursor-pointer text-blue-500 hover:text-blue-600 font-medium"
                 >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  Sign In
                 </button>
-              </div>
-
-              {/* Password requirements */}
-              <div className="mt-3 space-y-2">
-                {passwordRequirements.map((req) => (
-                  <div key={req.label} className="flex items-center gap-2 text-xs">
-                    <div
-                      className={`w-4 h-4 rounded-full flex items-center justify-center transition-all ${
-                        req.met
-                          ? "bg-green-500/20 border border-green-500/50"
-                          : "bg-slate-700/30 border border-slate-600/50"
-                      }`}
-                    >
-                      {req.met && <Check className="w-3 h-3 text-green-400" />}
-                    </div>
-                    <span className={req.met ? "text-green-400" : "text-slate-400"}>{req.label}</span>
-                  </div>
-                ))}
-              </div>
+              </p>
             </div>
 
-            {/* Confirm password field */}
-            <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-slate-200 mb-2">
-                Confirm Password
-              </label>
-              <div className="relative">
-                <input
-                  id="confirmPassword"
-                  type={showConfirmPassword ? "text" : "password"}
-                  name="confirmPassword"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  placeholder="••••••••"
-                  className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition-colors"
-                >
-                  {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
-              </div>
+            {error && <p className="text-red-500 text-center">{error}</p>}
+
+            {/* Google Sign Up Button - Centered and prominent */}
+            <div className="flex flex-col items-center justify-center space-y-4 mt-8">
+              <button
+                onClick={handleGoogleSignUp}
+                disabled={googleLoading}
+                className="cursor-pointer border border-gray-300 rounded-lg py-4 px-8 w-full max-w-sm flex items-center justify-center gap-3 hover:bg-gray-50 transition shadow-sm"
+              >
+                <Image src="/google.png" width={24} height={24} alt="Google" />
+                <span className="text-gray-700 font-medium">
+                  {googleLoading ? "Signing up..." : "Sign up with Google"}
+                </span>
+              </button>
+
+              <p className="text-gray-500 text-sm text-center max-w-sm">
+                By continuing, you agree to our Terms of Service and Privacy
+                Policy
+              </p>
             </div>
-
-            {/* Terms checkbox */}
-            <label className="flex items-start gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={agreedToTerms}
-                onChange={(e) => setAgreedToTerms(e.target.checked)}
-                className="w-4 h-4 rounded bg-slate-700/50 border-slate-600/50 cursor-pointer mt-1"
-              />
-              <span className="text-sm text-slate-400">
-                I agree to the{" "}
-                <a href="#" className="text-blue-400 hover:text-blue-300 transition-colors">
-                  Terms of Service
-                </a>{" "}
-                and{" "}
-                <a href="#" className="text-blue-400 hover:text-blue-300 transition-colors">
-                  Privacy Policy
-                </a>
-              </span>
-            </label>
-
-            {/* Submit button */}
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:from-slate-600 disabled:to-slate-700 text-white font-semibold rounded-lg transition-all duration-200 flex items-center justify-center gap-2"
-            >
-              {isLoading ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                  <span>Creating account...</span>
-                </>
-              ) : (
-                "Create Account"
-              )}
-            </button>
-          </form>
-
-          {/* Divider */}
-          <div className="my-6 flex items-center gap-4">
-            <div className="flex-1 h-px bg-slate-700/50"></div>
-            <span className="text-xs text-slate-500">OR</span>
-            <div className="flex-1 h-px bg-slate-700/50"></div>
           </div>
-
-          {/* Social signup buttons */}
-          <div className="grid grid-cols-2 gap-3 mb-6">
-            <button className="py-2 px-4 bg-slate-700/30 hover:bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-300 text-sm font-medium transition-all">
-              Google
-            </button>
-            <button className="py-2 px-4 bg-slate-700/30 hover:bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-300 text-sm font-medium transition-all">
-              GitHub
-            </button>
-          </div>
-
-          {/* Sign in link */}
-          <p className="text-center text-slate-400 text-sm">
-            Already have an account?{" "}
-            <button
-              onClick={onToggleLogin}
-              className="text-blue-400 hover:text-blue-300 font-semibold transition-colors"
-            >
-              Sign in
-            </button>
-          </p>
         </div>
       </div>
+      </div>
     </div>
-  )
+  );
 }
