@@ -12,6 +12,7 @@ export const metadata: Metadata = {
   title: "SEOFlow - AI-Powered SEO Content Generation",
   description: "Analyze websites, discover keywords, and generate SEO-optimized articles at scale",
   generator: "v0.app",
+  icons: "/topicanalyzer-logo.png"
 }
 
 export default function RootLayout({
@@ -21,7 +22,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`font-sans antialiased`}>
+      <body className={`antialiased`}  cz-shortcut-listen="true">
         <ToastProvider>
           {children}
         </ToastProvider>

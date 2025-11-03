@@ -406,14 +406,15 @@
 //   );
 // }
 
-
 "use client";
 
 import { useState, useEffect } from "react";
 import { signUpWithGoogle } from "../lib/auth";
 import { useToast } from "./ui/toast";
-import { Info } from "lucide-react";
+import { ArrowLeft, Info } from "lucide-react";
 import Image from "next/image";
+import { Button } from "./ui/button"
+import Link from "next/link"
 
 interface SignUpPageProps {
   onSignUpSuccess: (email: string) => void;
@@ -486,24 +487,18 @@ export function SignUpPage({
   return (
     <div className="h-screen w-screen flex overflow-hidden bg-white">
       {/* Left Side - Testimonials */}
-      <div className="hidden lg:flex lg:w-1/2 bg-[#2469fe] rounded-none p-12 flex-col justify-between relative overflow-hidden">
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-white rounded-full blur-3xl"></div>
-        </div>
-        <div className="relative z-10 text-center">
-          <h2 className="text-white text-3xl font-semibold mb-12"></h2>
-          <div className="space-y-6">
-            <div className="text-white text-5xl"></div>
-            <p className="text-white text-lg leading-relaxed font-light"></p>
-            <div className="flex justify-center gap-1"></div>
-            <div className="flex flex-col items-center justify-center"></div>
-          </div>
-        </div>
-        <div className="relative z-10 flex items-center justify-center gap-2 mt-12"></div>
+      <div
+        className="hidden lg:flex lg:w-1/2 bg-[#2469fe] rounded-none p-12 flex-col justify-between relative overflow-hidden"
+      >
+      <div className="absolute bg-[url('/signinbgimg.png')] bg-repeat bg-[17.2px] opacity-[.01] top-0 left-0 z-10 w-full h-full"></div>
       </div>
 
       {/* Right Side - SignUp Form */}
-      <div className="w-full lg:w-1/2 flex flex-col justify-between p-8 lg:p-16">
+      <div className="w-full lg:w-1/2 pt-2.5 pl-5">
+        <div>
+          <Link href="/"><Button className="bg-white hover:bg-white text-black border border-[#dbdadd] rounded-full hover:text-[#838383] cursor-pointer"><ArrowLeft /> Go to Home</Button></Link>
+        </div>
+      <div className="w-full lg:w-full flex flex-col items-center justify-center p-8 lg:p-16 overflow-y-auto">
         <div>
           {/* Info/Success message */}
           {message && (
@@ -548,13 +543,15 @@ export function SignUpPage({
                   {googleLoading ? "Signing up..." : "Sign up with Google"}
                 </span>
               </button>
-              
+
               <p className="text-gray-500 text-sm text-center max-w-sm">
-                By continuing, you agree to our Terms of Service and Privacy Policy
+                By continuing, you agree to our Terms of Service and Privacy
+                Policy
               </p>
             </div>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );
