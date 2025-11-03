@@ -314,6 +314,8 @@ import { signUpWithGoogle } from "../lib/auth"
 import { useToast } from "./ui/toast"
 import { ArrowLeft } from "lucide-react"
 import Image from "next/image"
+import { Button } from "./ui/button"
+import Link from "next/link"
 
 interface LoginPageProps {
   onLoginSuccess: (email: string) => void
@@ -358,17 +360,19 @@ export function LoginPage({ onLoginSuccess, onBackToLanding, onToggleSignUp }: L
     }
   }
 
-  const testimonial = testimonials[currentTestimonial]
-
   return (
     <div className="h-screen w-screen flex overflow-hidden bg-white">
       {/* Left Side - Testimonials */}
       <div className="hidden lg:flex lg:w-1/2 bg-[#2469fe] rounded-none p-12 flex-col justify-between relative overflow-hidden">
-        {/* ... your existing testimonial section */}
+        <div className="absolute bg-[url('/signinbgimg.png')] bg-repeat bg-[17.2px] opacity-[.01] top-0 left-0 z-10 w-full h-full"></div>
       </div>
 
       {/* Right Side - Login Form */}
-      <div className="w-full lg:w-1/2 flex flex-col justify-center p-8 lg:p-16 overflow-y-auto">
+      <div className="w-full lg:w-1/2 pt-2.5 pl-5">
+        <div>
+          <Link href="/"><Button className="bg-white hover:bg-white text-black border border-[#dbdadd] rounded-full hover:text-[#838383] cursor-pointer"><ArrowLeft /> Go to Home</Button></Link>
+        </div>
+      <div className="w-full lg:w-full flex flex-col items-center justify-center p-8 lg:p-16 overflow-y-auto">
         <div>
           <div className="mb-12">
             <div className="flex items-center justify-center gap-2 mb-8">
@@ -418,6 +422,7 @@ export function LoginPage({ onLoginSuccess, onBackToLanding, onToggleSignUp }: L
 
         {/* Footer */}
         {/* ... your existing footer */}
+      </div>
       </div>
     </div>
   )
