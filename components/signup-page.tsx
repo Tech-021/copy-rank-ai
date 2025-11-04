@@ -413,8 +413,8 @@ import { signUpWithGoogle } from "../lib/auth";
 import { useToast } from "./ui/toast";
 import { ArrowLeft, Info } from "lucide-react";
 import Image from "next/image";
-import { Button } from "./ui/button"
-import Link from "next/link"
+import { Button } from "./ui/button";
+import Link from "next/link";
 
 interface SignUpPageProps {
   onSignUpSuccess: (email: string) => void;
@@ -487,71 +487,78 @@ export function SignUpPage({
   return (
     <div className="h-screen w-screen flex overflow-hidden bg-white">
       {/* Left Side - Testimonials */}
-      <div
-        className="hidden lg:flex lg:w-1/2 bg-[#2469fe] rounded-none p-12 flex-col justify-between relative overflow-hidden"
-      >
-      <div className="absolute bg-[url('/signinbgimg.png')] bg-repeat bg-[17.2px] opacity-[.01] top-0 left-0 z-10 w-full h-full"></div>
+      <div className="hidden lg:flex lg:w-1/2 bg-blue-700 shadow-[inset_0_0_4px_2px_rgba(255,255,255,0.28),0_0_8px_1px_rgba(36,101,255,0.4)] rounded-none p-12 flex-col justify-between relative overflow-hidden">
+        <div className="absolute bg-[url('/signinbgimg.png')] bg-repeat bg-[17.2px] opacity-[.01] top-0 left-0 z-10 w-full h-full"></div>
       </div>
 
       {/* Right Side - SignUp Form */}
-      <div className="w-full lg:w-1/2 pt-2.5 pl-5">
-        <div>
-          <Link href="/"><Button className="bg-white hover:bg-white text-black border border-[#dbdadd] rounded-full hover:text-[#838383] cursor-pointer"><ArrowLeft /> Go to Home</Button></Link>
+      <div className="w-full lg:w-1/2 pt-2.5 pl-5 flex flex-col">
+        <div className="">
+          <Link href="/">
+            <Button className="bg-white hover:bg-white text-black border border-[#dbdadd] rounded-full hover:text-[#838383] cursor-pointer">
+              <ArrowLeft /> Go to Home
+            </Button>
+          </Link>
         </div>
-      <div className="w-full lg:w-full flex flex-col items-center justify-center p-8 lg:p-16 overflow-y-auto">
-        <div>
-          {/* Info/Success message */}
-          {message && (
-            <div className="mb-6 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
-              <div className="flex items-center gap-2">
-                <Info className="w-4 h-4 text-blue-400" />
-                <p className="text-blue-400 text-sm">{message}</p>
+        <div className="flex-1 flex flex-col items-center justify-center overflow-y-auto max-h-screen">
+          <div>
+            {/* Info/Success message */}
+            {message && (
+              <div className="mb-6 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <Info className="w-4 h-4 text-blue-400" />
+                  <p className="text-blue-400 text-sm">{message}</p>
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Simplified Google-only signup */}
-          <div className="space-y-6">
-            {/* Header */}
-            <div className="flex flex-col gap-4 mb-4 justify-start items-start text-center">
-              <h2 className="text-2xl font-bold text-gray-900">
-                Create an Account
-              </h2>
-              <p className="text-gray-600 ">
-                Already have an account?{" "}
+            {/* Simplified Google-only signup */}
+            <div className="space-y-6">
+              {/* Header */}
+              <div className="flex flex-col gap-4 mb-4 justify-start items-start text-center">
+                <h2 className="text-2xl font-bold text-gray-900">
+                  Create an Account
+                </h2>
+                <p className="text-gray-600 ">
+                  Already have an account?{" "}
+                  <button
+                    type="button"
+                    onClick={onToggleLogin}
+                    className="cursor-pointer text-blue-500 hover:text-blue-600 font-medium"
+                  >
+                    Sign In
+                  </button>
+                </p>
+              </div>
+
+              {error && <p className="text-red-500 text-center">{error}</p>}
+
+              {/* Google Sign Up Button - Centered and prominent */}
+              <div className="flex flex-col items-center justify-center space-y-4 mt-8">
                 <button
-                  type="button"
-                  onClick={onToggleLogin}
-                  className="cursor-pointer text-blue-500 hover:text-blue-600 font-medium"
+                  onClick={handleGoogleSignUp}
+                  disabled={googleLoading}
+                  className="cursor-pointer border border-gray-300 rounded-lg py-4 px-8 w-full max-w-sm flex items-center justify-center gap-3 hover:bg-gray-50 transition shadow-sm"
                 >
-                  Sign In
+                  <Image
+                    src="/google.png"
+                    width={24}
+                    height={24}
+                    alt="Google"
+                  />
+                  <span className="text-gray-700 font-medium">
+                    {googleLoading ? "Signing up..." : "Sign up with Google"}
+                  </span>
                 </button>
-              </p>
-            </div>
 
-            {error && <p className="text-red-500 text-center">{error}</p>}
-
-            {/* Google Sign Up Button - Centered and prominent */}
-            <div className="flex flex-col items-center justify-center space-y-4 mt-8">
-              <button
-                onClick={handleGoogleSignUp}
-                disabled={googleLoading}
-                className="cursor-pointer border border-gray-300 rounded-lg py-4 px-8 w-full max-w-sm flex items-center justify-center gap-3 hover:bg-gray-50 transition shadow-sm"
-              >
-                <Image src="/google.png" width={24} height={24} alt="Google" />
-                <span className="text-gray-700 font-medium">
-                  {googleLoading ? "Signing up..." : "Sign up with Google"}
-                </span>
-              </button>
-
-              <p className="text-gray-500 text-sm text-center max-w-sm">
-                By continuing, you agree to our Terms of Service and Privacy
-                Policy
-              </p>
+                <p className="text-gray-500 text-sm text-center max-w-sm">
+                  By continuing, you agree to our Terms of Service and Privacy
+                  Policy
+                </p>
+              </div>
             </div>
           </div>
         </div>
-      </div>
       </div>
     </div>
   );
