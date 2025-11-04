@@ -106,3 +106,4 @@ export function LandingPage({ onSignIn, onSignUp }: LandingPageProps) {
     </div>
   );
 }
+
