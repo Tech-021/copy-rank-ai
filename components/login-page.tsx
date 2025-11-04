@@ -363,23 +363,17 @@ export function LoginPage({ onLoginSuccess, onBackToLanding, onToggleSignUp }: L
   return (
     <div className="h-screen w-screen flex overflow-hidden bg-white">
       {/* Left Side - Testimonials */}
-      <div className="hidden lg:flex lg:w-1/2 bg-[#2469fe] rounded-none p-12 flex-col justify-between relative overflow-hidden">
+      <div className="hidden lg:flex lg:w-1/2 bg-blue-700 shadow-[inset_0_0_4px_2px_rgba(255,255,255,0.28),0_0_8px_1px_rgba(36,101,255,0.4)] rounded-none p-12 flex-col justify-between relative overflow-hidden">
         <div className="absolute bg-[url('/signinbgimg.png')] bg-repeat bg-[17.2px] opacity-[.01] top-0 left-0 z-10 w-full h-full"></div>
       </div>
 
       {/* Right Side - Login Form */}
-      <div className="w-full lg:w-1/2 pt-2.5 pl-5">
-        <div>
+      <div className="w-full lg:w-1/2 pt-2.5 pl-5 flex flex-col">
+        <div className="">
           <Link href="/"><Button className="bg-white hover:bg-white text-black border border-[#dbdadd] rounded-full hover:text-[#838383] cursor-pointer"><ArrowLeft /> Go to Home</Button></Link>
         </div>
-      <div className="w-full lg:w-full flex flex-col items-center justify-center p-8 lg:p-16 overflow-y-auto">
+      <div className="flex-1 flex flex-col items-center justify-center overflow-y-auto max-h-screen">
         <div>
-          <div className="mb-12">
-            <div className="flex items-center justify-center gap-2 mb-8">
-              {/* ... your existing logo */}
-            </div>
-          </div>
-
           <div className="space-y-6">
             <h2 className="text-2xl font-bold text-gray-900">Sign In</h2>
             
