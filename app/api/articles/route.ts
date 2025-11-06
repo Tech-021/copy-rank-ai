@@ -128,7 +128,9 @@ export async function PATCH(request: Request) {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     const body = await request.json();
-    const userId = body.userId;
+    const { status, userId } = body;
+
+    console.log('PATCH Request - ID:', id, 'Status:', status, 'User ID:', userId);
 
     if (!id) {
       return NextResponse.json({ 
@@ -142,21 +144,54 @@ export async function PATCH(request: Request) {
       }, { status: 400 });
     }
 
+    if (!status) {
+      return NextResponse.json({ 
+        error: 'Status is required' 
+      }, { status: 400 });
+    }
+
+    // Prepare update data
+    const updateData: any = {
+      status: status,
+      updated_at: new Date().toISOString()
+    };
+
+    // Add published_at if publishing for the first time
+    if (status === 'published') {
+      // Check current status to see if we're publishing for the first time
+      const { data: currentArticle } = await supabase
+        .from('articles')
+        .select('status, published_at')
+        .eq('id', id)
+        .single();
+
+      if (currentArticle && currentArticle.status !== 'published') {
+        updateData.published_at = new Date().toISOString();
+      }
+    }
+
+    console.log('Update data:', updateData);
+
     const { data, error } = await supabase
       .from('articles')
-      .update(body)
+      .update(updateData)
       .eq('id', id)
       .eq('user_id', userId)
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase update error:', error);
+      throw error;
+    }
 
     if (!data) {
       return NextResponse.json({ 
         error: 'Article not found or access denied' 
       }, { status: 404 });
     }
+
+    console.log('Successfully updated article:', data.id, 'to status:', data.status);
 
     return NextResponse.json({ 
       success: true, 

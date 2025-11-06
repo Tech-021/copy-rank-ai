@@ -26,7 +26,7 @@ export function Dashboard({ onLogout, userEmail }: DashboardProps) {
             <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
               <Sparkles className="w-5 h-5 text-primary-foreground" />
             </div>
-            <span className="font-bold text-lg text-foreground">SEOFlow</span>
+            <span className="font-bold text-lg text-foreground">Viral SEO AI</span>
           </div>
           <div className="flex items-center gap-4">
             {userEmail && (
@@ -57,8 +57,9 @@ export function Dashboard({ onLogout, userEmail }: DashboardProps) {
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            Analyze Website
+            Analyze Your Website
           </button>
+          <button>Add Your Competitors</button>
           <button
             onClick={() => setActiveTab("keywords")}
             className={`cursor-pointer px-4 py-2 font-medium transition-colors whitespace-nowrap ${

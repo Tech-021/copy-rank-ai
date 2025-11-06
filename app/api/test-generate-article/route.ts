@@ -77,7 +77,7 @@ export async function POST(request: Request) {
     console.log("👤 For user ID:", userId);
 
     // Hardcoded wordCount
-    const wordCount = 1200;
+    const wordCount = 2000;
 
     // Enhanced prompt for complete metadata generation
     const prompt = `Generate a comprehensive SEO-optimized blog post about "${keyword}".
