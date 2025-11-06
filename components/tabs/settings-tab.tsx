@@ -483,7 +483,7 @@ export function SettingsTab() {
         </CardContent>
       </Card> */}
 
-      {/* Danger Zone - MOCK */}
+      {/* Danger Zone - MOCK
       <Card className="border-red-200 bg-red-50">
         <CardHeader>
           <CardTitle className="text-red-700">Danger Zone</CardTitle>
@@ -497,7 +497,7 @@ export function SettingsTab() {
             Delete Account
           </Button>
         </CardContent>
-      </Card>
+      </Card> */}
     </div>
   )
 }

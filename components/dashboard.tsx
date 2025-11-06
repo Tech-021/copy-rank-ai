@@ -59,7 +59,7 @@ export function Dashboard({ onLogout, userEmail }: DashboardProps) {
           >
             Analyze Your Website
           </button>
-          <button>Add Your Competitors</button>
+          {/* <button>Add Your Competitors</button> */}
           <button
             onClick={() => setActiveTab("keywords")}
             className={`cursor-pointer px-4 py-2 font-medium transition-colors whitespace-nowrap ${
