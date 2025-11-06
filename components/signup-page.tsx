@@ -413,8 +413,9 @@ import { signUpWithGoogle } from "../lib/auth";
 import { useToast } from "./ui/toast";
 import { ArrowLeft, Info } from "lucide-react";
 import Image from "next/image";
-import { Button } from "./ui/button"
-import Link from "next/link"
+import { Button } from "./ui/button";
+import { motion } from "framer-motion";
+import Link from "next/link";
 
 interface SignUpPageProps {
   onSignUpSuccess: (email: string) => void;
@@ -422,24 +423,77 @@ interface SignUpPageProps {
   onToggleLogin: () => void;
 }
 
+// Testimonials data
 const testimonials = [
   {
-    id: 1,
-    quote:
-      "With Salestable, I can ensure that our sales team is equipped with in-depth knowledge of the various aspects of plastic injection molding required to be an effective sales professional",
-    author: "Rob L",
-    title: "Director, Sales Operations @ HiTech Plastics & Molds",
-    rating: 5,
+    name: "Soufyane Benguemra",
+    handle: "@SoufyaneBenguemra",
+    text: "best tool ever",
+    image: "/pic3.jpg",
   },
   {
-    id: 2,
-    quote:
-      "Salestable has been a great partner for ContentBacon. We've gone from being a company where the founders are driving the sales to an organization with an effective sales team that is growing and thriving",
-    author: "Wendy L",
-    title: "Co-founder - ContentBacon",
-    rating: 5,
+    name: "Rehman Abdur",
+    handle: "@RehmanAbdur",
+    text: "Great for SEO research.",
+    image: "/pic1.png",
+  },
+  {
+    name: "Praveen Anantharaman",
+    handle: "@PraveenAnantharaman",
+    text: "Adds value for reaching your ICP, providing information for positioning and marketing efficiency!",
+    image: "/pic4.jpg",
+  },
+  {
+    name: "Alexander Bastien",
+    handle: "@AlexanderBastien",
+    text: "Very useful SEO tool!",
+    image: "/pic5.jpg",
+  },
+  {
+    name: "Mike D.",
+    handle: "@mikedevstudio",
+    text: "As a startup, we needed proven results from companies using Viral SEO.",
+    image: "/pic6.jpg",
+  },
+  {
+    name: "Philippe Varin",
+    handle: "@PhilippeVarin",
+    text: "Great tool to find ranking content ideas!..",
+    image: "/pic2.jpg",
   },
 ];
+
+// Split testimonials for animation columns
+const column1 = testimonials.filter((_, i) => i % 2 === 0);
+const column2 = testimonials.filter((_, i) => i % 2 === 1);
+
+// Testimonial Card
+const TestimonialCard = ({
+  testimonial,
+}: {
+  testimonial: (typeof testimonials)[0];
+}) => (
+  <div className="bg-white rounded-xl p-5 mb-4 border border-gray-200/60 hover:border-gray-300 transition-colors">
+    <div className="flex items-start gap-3 mb-3">
+      <img
+        src={testimonial.image}
+        alt={testimonial.name}
+        className="w-12 h-12 rounded-full object-cover"
+      />
+      <div className="flex-1 min-w-0">
+        <h4 className="font-semibold text-gray-900 text-[15px] leading-tight">
+          {testimonial.name}
+        </h4>
+        <p className="text-[13px] text-gray-500 leading-tight">
+          {testimonial.handle}
+        </p>
+      </div>
+    </div>
+    <p className="text-gray-700 text-[14px] leading-relaxed">
+      "{testimonial.text}"
+    </p>
+  </div>
+);
 
 export function SignUpPage({
   onSignUpSuccess,
@@ -449,16 +503,7 @@ export function SignUpPage({
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
-  const [currentTestimonial, setCurrentTestimonial] = useState(0);
   const toast = useToast();
-
-  // Auto-cycle testimonials every 5 seconds
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentTestimonial((prev) => (prev + 1) % testimonials.length);
-    }, 5000);
-    return () => clearInterval(interval);
-  }, []);
 
   const handleGoogleSignUp = async () => {
     setGoogleLoading(true);
@@ -481,70 +526,79 @@ export function SignUpPage({
           type: "error",
         });
       } catch {}
+    } else {
+      setMessage("");
+      if (data?.email) onSignUpSuccess(data.email);
     }
   };
 
   return (
     <div className="h-screen w-screen flex overflow-hidden bg-white">
-      {/* Left Side - Testimonials */}
-      <div
-        className="hidden lg:flex lg:w-1/2 bg-[#2469fe] rounded-none p-12 flex-col justify-between relative overflow-hidden"
-      >
-      <div className="absolute bg-[url('/signinbgimg.png')] bg-repeat bg-[17.2px] opacity-[.01] top-0 left-0 z-10 w-full h-full"></div>
-      </div>
-
-      {/* Right Side - SignUp Form */}
-      <div className="w-full lg:w-1/2 pt-2.5 pl-5">
-        <div>
-          <Link href="/"><Button className="bg-white hover:bg-white text-black border border-[#dbdadd] rounded-full hover:text-[#838383] cursor-pointer"><ArrowLeft /> Go to Home</Button></Link>
+      {/* Left Side - Sign Up Form */}
+      <div className="w-full lg:w-1/2 flex flex-col border-r border-gray-100">
+        <div className="pt-6 pl-6">
+          <Link href="/">
+            <Button className="bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-full px-5 py-2.5 text-[14px] font-medium hover:text-gray-900 cursor-pointer flex items-center gap-2 transition-colors">
+              <ArrowLeft size={16} /> Go to Home
+            </Button>
+          </Link>
         </div>
-      <div className="w-full lg:w-full flex flex-col items-center justify-center p-8 lg:p-16 overflow-y-auto">
-        <div>
-          {/* Info/Success message */}
-          {message && (
-            <div className="mb-6 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
-              <div className="flex items-center gap-2">
-                <Info className="w-4 h-4 text-blue-400" />
-                <p className="text-blue-400 text-sm">{message}</p>
-              </div>
-            </div>
-          )}
 
-          {/* Simplified Google-only signup */}
-          <div className="space-y-6">
+        <div className="flex-1 flex flex-col items-center justify-center px-8 lg:px-16">
+          <div className="max-w-md w-full">
+            {/* Info Message */}
+            {message && (
+              <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <Info className="w-4 h-4 text-blue-600" />
+                  <p className="text-blue-600 text-sm">{message}</p>
+                </div>
+              </div>
+            )}
+
             {/* Header */}
-            <div className="flex flex-col gap-4 mb-4 justify-start items-start text-center">
-              <h2 className="text-2xl font-bold text-gray-900">
-                Create an Account
+            <div className="mb-8">
+              <h2 className="text-[32px] font-bold text-gray-900 mb-3">
+                Create your free Account
               </h2>
-              <p className="text-gray-600 ">
+              <p className="text-gray-600 text-[14px] leading-relaxed">
+                Join for free to see what drives your competitors’ SEO traffic,
+                create better content on autopilot, and rank higher in AI search
+                results.
+              </p>
+              <p className="text-gray-900 text-[16px] mt-3">
                 Already have an account?{" "}
                 <button
                   type="button"
                   onClick={onToggleLogin}
-                  className="cursor-pointer text-blue-500 hover:text-blue-600 font-medium"
+                  className="cursor-pointer text-blue-600 hover:text-blue-700 font-medium transition-colors"
                 >
-                  Sign In
+                  Sign in
                 </button>
               </p>
             </div>
 
-            {error && <p className="text-red-500 text-center">{error}</p>}
+            {/* Error */}
+            {error && (
+              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-red-600 text-sm">{error}</p>
+              </div>
+            )}
 
-            {/* Google Sign Up Button - Centered and prominent */}
-            <div className="flex flex-col items-center justify-center space-y-4 mt-8">
+            {/* Google Sign Up */}
+            <div className="space-y-4">
               <button
                 onClick={handleGoogleSignUp}
                 disabled={googleLoading}
-                className="cursor-pointer border border-gray-300 rounded-lg py-4 px-8 w-full max-w-sm flex items-center justify-center gap-3 hover:bg-gray-50 transition shadow-sm"
+                className="cursor-pointer bg-white border border-gray-300 rounded-lg py-3.5 px-6 w-full flex items-center justify-center gap-3 hover:bg-gray-50 transition-all shadow-sm hover:shadow disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Image src="/google.png" width={24} height={24} alt="Google" />
-                <span className="text-gray-700 font-medium">
+                <span className="text-gray-700 font-medium text-[15px]">
                   {googleLoading ? "Signing up..." : "Sign up with Google"}
                 </span>
               </button>
 
-              <p className="text-gray-500 text-sm text-center max-w-sm">
+              <p className="text-gray-500 text-[13px] text-center leading-relaxed px-4">
                 By continuing, you agree to our Terms of Service and Privacy
                 Policy
               </p>
@@ -552,6 +606,77 @@ export function SignUpPage({
           </div>
         </div>
       </div>
+
+      {/* Right Side - Animated Testimonials */}
+      <div className="hidden lg:flex lg:w-1/2 bg-white relative overflow-hidden">
+        {/* Subtle pattern background */}
+        <div
+          className="absolute inset-0 opacity-[0.03]"
+          style={{
+            backgroundImage: `radial-gradient(circle, #000 1px, transparent 1px)`,
+            backgroundSize: "24px 24px",
+          }}
+        />
+
+        <div className="relative z-10 w-full px-12 py-16">
+          {/* Header */}
+          <div className="mb-12">
+            <h2 className="text-[32px] font-bold text-gray-900 mb-3 leading-tight">
+              Proven results from companies
+              <br />
+              using Viral SEO.
+            </h2>
+          </div>
+
+          {/* Two Column Animated Scroll */}
+          <div className="flex gap-5 h-[calc(100vh-220px)]">
+            {/* Column 1 - Moves Down */}
+            <div className="flex-1 overflow-hidden relative">
+              <motion.div
+                animate={{ y: [0, -100 * column1.length * 2] }}
+                transition={{
+                  duration: 30,
+                  repeat: Infinity,
+                  ease: "linear",
+                }}
+              >
+                {[...column1, ...column1, ...column1].map(
+                  (testimonial, index) => (
+                    <TestimonialCard
+                      key={`col1-${index}`}
+                      testimonial={testimonial}
+                    />
+                  )
+                )}
+              </motion.div>
+              <div className="absolute top-0 left-0 right-0 h-24 bg-gradient-to-b from-white to-transparent pointer-events-none z-10" />
+              <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-white to-transparent pointer-events-none z-10" />
+            </div>
+
+            {/* Column 2 - Moves Up */}
+            <div className="flex-1 overflow-hidden relative">
+              <motion.div
+                animate={{ y: [-100 * column2.length * 2, 0] }}
+                transition={{
+                  duration: 30,
+                  repeat: Infinity,
+                  ease: "linear",
+                }}
+              >
+                {[...column2, ...column2, ...column2].map(
+                  (testimonial, index) => (
+                    <TestimonialCard
+                      key={`col2-${index}`}
+                      testimonial={testimonial}
+                    />
+                  )
+                )}
+              </motion.div>
+              <div className="absolute top-0 left-0 right-0 h-24 bg-gradient-to-b from-white to-transparent pointer-events-none z-10" />
+              <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-white to-transparent pointer-events-none z-10" />
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
