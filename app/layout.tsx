@@ -4,9 +4,17 @@ import { Geist, Geist_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import "./globals.css"
 import { ToastProvider } from "@/components/ui/toast"
+import { Suspense } from "react"
 
-const _geist = Geist({ subsets: ["latin"] })
-const _geistMono = Geist_Mono({ subsets: ["latin"] })
+const geist = Geist({ 
+  subsets: ["latin"],
+  variable: '--font-geist',
+})
+
+const geistMono = Geist_Mono({ 
+  subsets: ["latin"],
+  variable: '--font-geist-mono',
+})
 
 export const metadata: Metadata = {
   title: "SEOFlow - AI-Powered SEO Content Generation",
@@ -21,10 +29,16 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
-      <body className={`antialiased`}  cz-shortcut-listen="true">
+    <html lang="en" className={`${geist.variable} ${geistMono.variable}`}>
+      <body className="antialiased" cz-shortcut-listen="true">
         <ToastProvider>
-          {children}
+          <Suspense fallback={
+            <div className="min-h-screen flex items-center justify-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          }>
+            {children}
+          </Suspense>
         </ToastProvider>
         <Analytics />
       </body>
