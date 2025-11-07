@@ -306,7 +306,6 @@
 // };
 
 
-
 "use client";
 
 import { useState } from "react";
@@ -433,29 +432,19 @@ export function LoginPage({
 
   return (
     <div className="h-screen w-screen flex overflow-hidden bg-white">
-      {/* Left Side - Testimonials */}
-      <div className="hidden lg:flex lg:w-1/2 bg-blue-700 shadow-[inset_0_0_4px_2px_rgba(255,255,255,0.28),0_0_8px_1px_rgba(36,101,255,0.4)] rounded-none p-12 flex-col justify-between relative overflow-hidden">
-        <div className="absolute bg-[url('/signinbgimg.png')] bg-repeat bg-[17.2px] opacity-[.01] top-0 left-0 z-10 w-full h-full"></div>
-      </div>
-
-      {/* Right Side - Login Form */}
-      <div className="w-full lg:w-1/2 pt-2.5 pl-5 flex flex-col">
-        <div className="">
-          <Link href="/"><Button className="bg-white hover:bg-white text-black border border-[#dbdadd] rounded-full hover:text-[#838383] cursor-pointer"><ArrowLeft /> Go to Home</Button></Link>
+      {/* Left Side - Login Form */}
+      <div className="w-full lg:w-1/2 flex flex-col">
+        {/* Back Button */}
+        <div className="pt-2.5 pl-5">
+          <Link href="/">
+            <Button className="bg-white hover:bg-white text-black border border-[#dbdadd] rounded-full hover:text-[#838383] cursor-pointer">
+              <ArrowLeft /> Go to Home
+            </Button>
+          </Link>
         </div>
-      <div className="flex-1 flex flex-col items-center justify-center overflow-y-auto max-h-screen">
-        <div>
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-gray-900">Sign In</h2>
-            
-            <p className="text-gray-600">
-              Don't have an account yet?{" "}
-              <button type="button" onClick={onToggleSignUp} className="cursor-pointer text-blue-500 hover:text-blue-600 font-medium">
-                Sign Up
-              </button>
-            </p>
 
-        <div className="flex-1 flex flex-col items-center justify-center px-8 lg:px-16">
+        {/* Login Form Content */}
+        <div className="flex-1 flex flex-col items-center justify-center overflow-y-auto max-h-screen px-8 lg:px-16">
           <div className="max-w-md w-full">
             {/* Info Message */}
             {message && (
@@ -476,7 +465,7 @@ export function LoginPage({
                 Sign in to access your dashboard, analyze competitors, and take your SEO to the next level.
               </p>
               <p className="text-gray-900 text-[16px] mt-3">
-                Don’t have an account?{" "}
+                Don't have an account?{" "}
                 <button
                   type="button"
                   onClick={onToggleSignUp}
