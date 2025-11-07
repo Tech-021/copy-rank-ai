@@ -414,7 +414,6 @@ import { useToast } from "./ui/toast";
 import { ArrowLeft, Info } from "lucide-react";
 import Image from "next/image";
 import { Button } from "./ui/button";
-import { motion } from "framer-motion";
 import Link from "next/link";
 
 interface SignUpPageProps {
@@ -534,146 +533,76 @@ export function SignUpPage({
 
   return (
     <div className="h-screen w-screen flex overflow-hidden bg-white">
-      {/* Left Side - Sign Up Form */}
-      <div className="w-full lg:w-1/2 flex flex-col border-r border-gray-100">
-        <div className="pt-6 pl-6">
+      {/* Left Side - Testimonials */}
+      <div className="hidden lg:flex lg:w-1/2 bg-blue-700 shadow-[inset_0_0_4px_2px_rgba(255,255,255,0.28),0_0_8px_1px_rgba(36,101,255,0.4)] rounded-none p-12 flex-col justify-between relative overflow-hidden">
+        <div className="absolute bg-[url('/signinbgimg.png')] bg-repeat bg-[17.2px] opacity-[.01] top-0 left-0 z-10 w-full h-full"></div>
+      </div>
+
+      {/* Right Side - SignUp Form */}
+      <div className="w-full lg:w-1/2 pt-2.5 pl-5 flex flex-col">
+        <div className="">
           <Link href="/">
-            <Button className="bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-full px-5 py-2.5 text-[14px] font-medium hover:text-gray-900 cursor-pointer flex items-center gap-2 transition-colors">
-              <ArrowLeft size={16} /> Go to Home
+            <Button className="bg-white hover:bg-white text-black border border-[#dbdadd] rounded-full hover:text-[#838383] cursor-pointer">
+              <ArrowLeft /> Go to Home
             </Button>
           </Link>
         </div>
-
-        <div className="flex-1 flex flex-col items-center justify-center px-8 lg:px-16">
-          <div className="max-w-md w-full">
-            {/* Info Message */}
+        <div className="flex-1 flex flex-col items-center justify-center overflow-y-auto max-h-screen">
+          <div>
+            {/* Info/Success message */}
             {message && (
-              <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="mb-6 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
                 <div className="flex items-center gap-2">
-                  <Info className="w-4 h-4 text-blue-600" />
-                  <p className="text-blue-600 text-sm">{message}</p>
+                  <Info className="w-4 h-4 text-blue-400" />
+                  <p className="text-blue-400 text-sm">{message}</p>
                 </div>
               </div>
             )}
 
-            {/* Header */}
-            <div className="mb-8">
-              <h2 className="text-[32px] font-bold text-gray-900 mb-3">
-                Create your free Account
-              </h2>
-              <p className="text-gray-600 text-[14px] leading-relaxed">
-                Join for free to see what drives your competitors’ SEO traffic,
-                create better content on autopilot, and rank higher in AI search
-                results.
-              </p>
-              <p className="text-gray-900 text-[16px] mt-3">
-                Already have an account?{" "}
-                <button
-                  type="button"
-                  onClick={onToggleLogin}
-                  className="cursor-pointer text-blue-600 hover:text-blue-700 font-medium transition-colors"
-                >
-                  Sign in
-                </button>
-              </p>
-            </div>
-
-            {/* Error */}
-            {error && (
-              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-red-600 text-sm">{error}</p>
+            {/* Simplified Google-only signup */}
+            <div className="space-y-6">
+              {/* Header */}
+              <div className="flex flex-col gap-4 mb-4 justify-start items-start text-center">
+                <h2 className="text-2xl font-bold text-gray-900">
+                  Create an Account
+                </h2>
+                <p className="text-gray-600 ">
+                  Already have an account?{" "}
+                  <button
+                    type="button"
+                    onClick={onToggleLogin}
+                    className="cursor-pointer text-blue-500 hover:text-blue-600 font-medium"
+                  >
+                    Sign In
+                  </button>
+                </p>
               </div>
-            )}
 
-            {/* Google Sign Up */}
-            <div className="space-y-4">
-              <button
-                onClick={handleGoogleSignUp}
-                disabled={googleLoading}
-                className="cursor-pointer bg-white border border-gray-300 rounded-lg py-3.5 px-6 w-full flex items-center justify-center gap-3 hover:bg-gray-50 transition-all shadow-sm hover:shadow disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Image src="/google.png" width={24} height={24} alt="Google" />
-                <span className="text-gray-700 font-medium text-[15px]">
-                  {googleLoading ? "Signing up..." : "Sign up with Google"}
-                </span>
-              </button>
+              {error && <p className="text-red-500 text-center">{error}</p>}
 
-              <p className="text-gray-500 text-[13px] text-center leading-relaxed px-4">
-                By continuing, you agree to our Terms of Service and Privacy
-                Policy
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
+              {/* Google Sign Up Button - Centered and prominent */}
+              <div className="flex flex-col items-center justify-center space-y-4 mt-8">
+                <button
+                  onClick={handleGoogleSignUp}
+                  disabled={googleLoading}
+                  className="cursor-pointer border border-gray-300 rounded-lg py-4 px-8 w-full max-w-sm flex items-center justify-center gap-3 hover:bg-gray-50 transition shadow-sm"
+                >
+                  <Image
+                    src="/google.png"
+                    width={24}
+                    height={24}
+                    alt="Google"
+                  />
+                  <span className="text-gray-700 font-medium">
+                    {googleLoading ? "Signing up..." : "Sign up with Google"}
+                  </span>
+                </button>
 
-      {/* Right Side - Animated Testimonials */}
-      <div className="hidden lg:flex lg:w-1/2 bg-white relative overflow-hidden">
-        {/* Subtle pattern background */}
-        <div
-          className="absolute inset-0 opacity-[0.03]"
-          style={{
-            backgroundImage: `radial-gradient(circle, #000 1px, transparent 1px)`,
-            backgroundSize: "24px 24px",
-          }}
-        />
-
-        <div className="relative z-10 w-full px-12 py-16">
-          {/* Header */}
-          <div className="mb-12">
-            <h2 className="text-[32px] font-bold text-gray-900 mb-3 leading-tight">
-              Proven results from companies
-              <br />
-              using Viral SEO.
-            </h2>
-          </div>
-
-          {/* Two Column Animated Scroll */}
-          <div className="flex gap-5 h-[calc(100vh-220px)]">
-            {/* Column 1 - Moves Down */}
-            <div className="flex-1 overflow-hidden relative">
-              <motion.div
-                animate={{ y: [0, -100 * column1.length * 2] }}
-                transition={{
-                  duration: 30,
-                  repeat: Infinity,
-                  ease: "linear",
-                }}
-              >
-                {[...column1, ...column1, ...column1].map(
-                  (testimonial, index) => (
-                    <TestimonialCard
-                      key={`col1-${index}`}
-                      testimonial={testimonial}
-                    />
-                  )
-                )}
-              </motion.div>
-              <div className="absolute top-0 left-0 right-0 h-24 bg-gradient-to-b from-white to-transparent pointer-events-none z-10" />
-              <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-white to-transparent pointer-events-none z-10" />
-            </div>
-
-            {/* Column 2 - Moves Up */}
-            <div className="flex-1 overflow-hidden relative">
-              <motion.div
-                animate={{ y: [-100 * column2.length * 2, 0] }}
-                transition={{
-                  duration: 30,
-                  repeat: Infinity,
-                  ease: "linear",
-                }}
-              >
-                {[...column2, ...column2, ...column2].map(
-                  (testimonial, index) => (
-                    <TestimonialCard
-                      key={`col2-${index}`}
-                      testimonial={testimonial}
-                    />
-                  )
-                )}
-              </motion.div>
-              <div className="absolute top-0 left-0 right-0 h-24 bg-gradient-to-b from-white to-transparent pointer-events-none z-10" />
-              <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-white to-transparent pointer-events-none z-10" />
+                <p className="text-gray-500 text-sm text-center max-w-sm">
+                  By continuing, you agree to our Terms of Service and Privacy
+                  Policy
+                </p>
+              </div>
             </div>
           </div>
         </div>

@@ -28,13 +28,13 @@ export function LandingPage({ onSignIn, onSignUp }: LandingPageProps) {
           <div className="flex items-center gap-3">
             <Button
               onClick={onSignIn}
-              className="cursor-pointer bg-white border border-[#dbdadd] hover:bg-white hover:text-[#838383] text-foreground text-sm rounded-full shadow-[inset_0_0_4px_2px_rgba(255,255,255,0.3),0_0_10px_2px_rgba(0,0,0,0.4)] transition"
+              className="cursor-pointer bg-white border border-[#dbdadd] hover:bg-white hover:text-[#838383] text-foreground text-sm rounded-full shadow-[inset_0_0_4px_2px_rgba(255,255,255,0.3),0_0_10px_2px_rgba(0,0,0,0.1)] transition"
             >
               Sign In
             </Button>
             <Button
               onClick={onSignUp}
-              className="cursor-pointer bg-blue-700 hover:bg-blue-700 text-primary-foreground rounded-full shadow-[inset_0_0_4px_2px_rgba(255,255,255,0.2),0_0_8px_1px_rgba(36,101,255,0.8)] opacity-100 will-change-auto hover:bg-blue-700 transition text-sm"
+              className="cursor-pointer bg-blue-700 hover:bg-blue-700 text-primary-foreground rounded-full shadow-[inset_0_0_4px_2px_rgba(255,255,255,0.28),0_0_8px_1px_rgba(36,101,255,0.4)] opacity-100 will-change-auto hover:bg-blue-700 transition text-sm"
             >
               Sign Up
             </Button>
@@ -56,7 +56,7 @@ export function LandingPage({ onSignIn, onSignUp }: LandingPageProps) {
           <Button
             onClick={onSignUp}
             size="lg"
-            className="cursor-pointer bg-blue-700 text-primary-foreground gap-2 rounded-full border-0 shadow-[inset_0_0_4px_2px_rgba(255,255,255,0.2),0_0_8px_1px_rgba(36,101,255,0.8)] opacity-100 will-change-auto hover:bg-blue-700 transition text-sm"
+            className="cursor-pointer bg-blue-700 text-primary-foreground gap-2 rounded-full border-0 shadow-[inset_0_0_4px_2px_rgba(255,255,255,0.28),0_0_8px_1px_rgba(36,101,255,0.4)] opacity-100 will-change-auto hover:bg-blue-700 transition text-sm"
           >
             Try Viral SEO Free <ArrowRight className="w-4 h-4" />
           </Button>
