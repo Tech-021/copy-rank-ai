@@ -10,7 +10,8 @@ const supabase = createClient(
 interface ArticleRequest {
   keyword: string;
   websiteId?: string;
-  userId: string; // Add this - make it required
+  userId: string;
+  targetWordCount?: number;
 }
 
 interface EnhancedArticle {
@@ -49,7 +50,7 @@ export async function POST(request: Request) {
   try {
     const body: ArticleRequest = await request.json();
     
-    const { keyword, websiteId, userId } = body; // Destructure userId
+    const { keyword, websiteId, userId, targetWordCount = 2000 } = body;
 
     if (!keyword) {
       return NextResponse.json(
@@ -75,38 +76,48 @@ export async function POST(request: Request) {
 
     console.log("🚀 Generating enhanced article for:", keyword);
     console.log("👤 For user ID:", userId);
+    console.log("📊 Target word count:", targetWordCount);
 
-    // Hardcoded wordCount
-    const wordCount = 1200;
-
-    // Enhanced prompt for complete metadata generation
-    const prompt = `Generate a comprehensive SEO-optimized blog post about "${keyword}".
+    // ENHANCED PROMPT for comprehensive, long-form content
+    const prompt = `Generate a comprehensive, in-depth SEO-optimized blog post about "${keyword}".
 
 CRITICAL REQUIREMENTS:
 
-1. MAIN CONTENT (${wordCount} words):
-- Write engaging, well-researched content
-- Use proper HTML structure with <h2> and <h3> headings
-- Include practical tips, examples, and actionable advice
-- Natural keyword integration (1-2% density)
-- Conclusion with key takeaways
+1. MAIN CONTENT (${targetWordCount}+ WORDS - THIS IS NON-NEGOTIABLE):
+- Write detailed, well-researched, comprehensive content
+- Aim for ${targetWordCount}+ words minimum for SEO optimization
+- Use proper HTML structure with <h1>, <h2>, and <h3> headings
+- Include extensive examples, case studies, and actionable advice
+- Natural keyword integration throughout (1-2% density)
+- Comprehensive conclusion with key takeaways and next steps
 
-2. METADATA (Generate these EXACTLY as specified):
+2. CONTENT STRUCTURE (EXPANDED FOR LENGTH):
+- Engaging introduction with hook and problem statement (150-200 words)
+- Background and context section (200-300 words)
+- 5-7 main sections with multiple subsections (each section 250-400 words)
+- Include: statistics, research findings, expert opinions
+- Add: step-by-step guides, checklists, practical applications
+- Use: bullet points, numbered lists, comparison tables where relevant
+- Comprehensive conclusion summarizing all key points (200-250 words)
+
+3. DEPTH AND DETAIL REQUIREMENTS:
+- Cover the topic from multiple angles and perspectives
+- Include recent data, trends, and developments
+- Address common questions and misconceptions
+- Provide real-world examples and case studies
+- Offer actionable tips and implementation strategies
+- Compare different approaches or methodologies
+
+4. METADATA (Generate these EXACTLY as specified):
 - META_TITLE: Create a compelling title (55-60 characters) that includes the main keyword
 - META_DESCRIPTION: Write a click-worthy description (150-160 characters) that encourages clicks
 - OG_TITLE: Create a social media optimized title (with emoji if appropriate)
 - OG_DESCRIPTION: Social media friendly description (120-130 characters)
 
-3. STRUCTURE:
-- Start with engaging introduction
-- 3-5 main sections with subheadings
-- Use bullet points or numbered lists where appropriate
-- End with strong conclusion
-
 Please format your response EXACTLY as:
 
 CONTENT:
-[Your full article content here with HTML tags]
+[Your full article content here with HTML tags - MUST BE ${targetWordCount}+ WORDS]
 
 META_TITLE: [Optimized title 55-60 chars]
 META_DESCRIPTION: [Compelling description 150-160 chars]
@@ -124,7 +135,7 @@ OG_DESCRIPTION: [Social media description 120-130 chars]`;
         messages: [
           {
             role: "system",
-            content: "You are an expert SEO content strategist. Create engaging, well-structured blog posts with perfect metadata for immediate publishing."
+            content: `You are an expert SEO content strategist specializing in long-form, comprehensive articles. Create detailed, well-researched blog posts of ${targetWordCount}+ words with perfect metadata for immediate publishing. Focus on depth, practical value, and comprehensive coverage.`
           },
           {
             role: "user",
@@ -132,7 +143,7 @@ OG_DESCRIPTION: [Social media description 120-130 chars]`;
           }
         ],
         temperature: 0.7,
-        max_tokens: 1500
+        max_tokens: 4000 // Increased tokens for longer content
       }),
     });
 
@@ -157,7 +168,7 @@ OG_DESCRIPTION: [Social media description 120-130 chars]`;
     const parsedData = parseStructuredResponse(fullResponse, keyword);
     
     // Generate enhanced metadata
-    const enhancedArticle = generateEnhancedMetadata(parsedData, keyword);
+    const enhancedArticle = generateEnhancedMetadata(parsedData, keyword, targetWordCount);
 
     // Save to Supabase WITH user_id
     const { data: savedArticle, error: dbError } = await supabase
@@ -210,6 +221,7 @@ OG_DESCRIPTION: [Social media description 120-130 chars]`;
     }
 
     console.log("✅ Enhanced article generated and saved to Supabase for user:", userId);
+    console.log("📊 Final word count:", enhancedArticle.wordCount);
 
     return NextResponse.json({
       success: true,
@@ -220,8 +232,9 @@ OG_DESCRIPTION: [Social media description 120-130 chars]`;
         date: savedArticle.date
       },
       analysis: {
-        seoReady: enhancedArticle.contentScore >= 70,
-        immediatePublish: true,
+        seoReady: enhancedArticle.contentScore >= 70 && enhancedArticle.wordCount >= 1800,
+        immediatePublish: enhancedArticle.wordCount >= 1800,
+        wordCountStatus: enhancedArticle.wordCount >= 1800 ? "optimal" : "needs_expansion",
         recommendations: generateRecommendations(enhancedArticle)
       }
     });
@@ -243,7 +256,7 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const websiteId = searchParams.get('websiteId');
-    const userId = searchParams.get('userId'); // Add this
+    const userId = searchParams.get('userId');
     
     if (!userId) {
       return NextResponse.json(
@@ -255,7 +268,7 @@ export async function GET(request: Request) {
     let query = supabase
       .from('articles')
       .select('*')
-      .eq('user_id', userId) // Filter by user ID
+      .eq('user_id', userId)
       .order('created_at', { ascending: false });
 
     if (websiteId) {
@@ -318,7 +331,7 @@ export async function PATCH(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
-    const userId = searchParams.get('userId'); // Add this
+    const userId = searchParams.get('userId');
     const body = await request.json();
 
     if (!id || !userId) {
@@ -362,7 +375,7 @@ export async function DELETE(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
-    const userId = searchParams.get('userId'); // Add this
+    const userId = searchParams.get('userId');
 
     if (!id || !userId) {
       return NextResponse.json({ error: 'Article ID and User ID are required' }, { status: 400 });
@@ -415,7 +428,7 @@ function parseStructuredResponse(response: string, keyword: string) {
   };
 }
 
-function generateEnhancedMetadata(parsedData: any, keyword: string): EnhancedArticle {
+function generateEnhancedMetadata(parsedData: any, keyword: string, targetWordCount: number): EnhancedArticle {
   const content = parsedData.content;
   const wordCount = content.split(/\s+/).length;
   
@@ -433,7 +446,7 @@ function generateEnhancedMetadata(parsedData: any, keyword: string): EnhancedArt
     // Content Analysis
     readingTime: calculateReadingTime(wordCount),
     wordCount: wordCount,
-    contentScore: calculateContentScore(content, keyword),
+    contentScore: calculateContentScore(content, keyword, targetWordCount),
     keywordDensity: calculateKeywordDensity(content, keyword),
     
     // Social Media
@@ -450,6 +463,30 @@ function generateEnhancedMetadata(parsedData: any, keyword: string): EnhancedArt
     generatedAt: new Date().toISOString(),
     estimatedTraffic: estimateTrafficPotential(keyword)
   };
+}
+
+// Enhanced content scoring that rewards longer articles
+function calculateContentScore(content: string, keyword: string, targetWordCount: number): number {
+  let score = 50; // Base score
+  
+  const wordCount = content.split(/\s+/).length;
+  
+  // Reward longer content significantly more for SEO
+  if (wordCount >= targetWordCount) score += 25;
+  else if (wordCount >= 1800) score += 20;
+  else if (wordCount >= 1500) score += 15;
+  else if (wordCount >= 1200) score += 10;
+  else if (wordCount >= 1000) score += 5;
+  
+  // Check for headings structure
+  if (content.includes('<h1>')) score += 5;
+  if ((content.match(/<h2>/g) || []).length >= 3) score += 10;
+  if ((content.match(/<h3>/g) || []).length >= 5) score += 10;
+  
+  // Check keyword optimization
+  if (content.toLowerCase().includes(keyword.toLowerCase())) score += 10;
+  
+  return Math.min(score, 100);
 }
 
 // Metadata generation helpers
@@ -495,24 +532,6 @@ function calculateReadingTime(wordCount: number): string {
   return `${minutes} min read`;
 }
 
-function calculateContentScore(content: string, keyword: string): number {
-  let score = 50; // Base score
-  
-  // Check for headings
-  if (content.includes('<h2>')) score += 10;
-  if (content.includes('<h3>')) score += 10;
-  
-  // Check keyword in title
-  if (content.toLowerCase().includes(keyword.toLowerCase())) score += 10;
-  
-  // Check content length
-  const wordCount = content.split(/\s+/).length;
-  if (wordCount > 800) score += 10;
-  if (wordCount > 1200) score += 10;
-  
-  return Math.min(score, 100);
-}
-
 function calculateKeywordDensity(content: string, keyword: string): number {
   const words = content.toLowerCase().split(/\s+/);
   const keywordCount = words.filter(word => word.includes(keyword.toLowerCase())).length;
@@ -556,16 +575,16 @@ function generateRecommendations(article: EnhancedArticle): string[] {
   const recommendations = [];
   
   if (article.contentScore < 70) {
-    recommendations.push("Consider adding more subheadings and examples");
+    recommendations.push("Consider adding more subheadings and detailed examples");
   }
   
   if (article.keywordDensity < 1) {
     recommendations.push("Increase keyword density naturally throughout the content");
   }
   
-  if (article.wordCount < 800) {
-    recommendations.push("Expand content to reach optimal word count (1200+ words)");
+  if (article.wordCount < 1800) {
+    recommendations.push(`Expand content to reach optimal SEO word count (1800+ words). Current: ${article.wordCount} words`);
   }
   
-  return recommendations.length > 0 ? recommendations : ["Content is ready for immediate publishing!"];
+  return recommendations.length > 0 ? recommendations : ["Content is optimized and ready for immediate publishing!"];
 }

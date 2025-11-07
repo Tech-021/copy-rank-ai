@@ -49,6 +49,7 @@ export function ArticlesTab({ generatedArticles, onArticlesUpdate, websiteId }: 
   const [articles, setArticles] = useState<Article[]>([])
   const [loading, setLoading] = useState(true)
   const [isGenerating, setIsGenerating] = useState(false)
+  const [updatingStatus, setUpdatingStatus] = useState<string | null>(null)
   const [newArticleKeyword, setNewArticleKeyword] = useState("")
   const [newArticleDate, setNewArticleDate] = useState("")
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null)
@@ -168,6 +169,7 @@ export function ArticlesTab({ generatedArticles, onArticlesUpdate, websiteId }: 
       if (response.ok) {
         // Remove from local state
         setArticles(prev => prev.filter(article => article.id !== id))
+        alert('Article deleted successfully!')
       } else {
         throw new Error('Failed to delete article')
       }
@@ -177,48 +179,74 @@ export function ArticlesTab({ generatedArticles, onArticlesUpdate, websiteId }: 
     }
   }
 
-  const handleUpdateStatus = async (id: string, newStatus: "draft" | "scheduled" | "published") => {
-    if (!currentUser) return
-
-    try {
-      const response = await fetch(`/api/articles?id=${id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          status: newStatus,
-          userId: currentUser.id
-        }),
-      })
-
-      if (response.ok) {
-        // Update local state
-        setArticles(prev => 
-          prev.map(article => 
-            article.id === id ? { ...article, status: newStatus } : article
-          )
-        )
-      } else {
-        throw new Error('Failed to update article status')
-      }
-    } catch (error) {
-      console.error('Error updating article status:', error)
-      alert('Failed to update article status. Please try again.')
-    }
+ const handleUpdateStatus = async (id: string, newStatus: "draft" | "scheduled" | "published") => {
+  if (!currentUser) {
+    alert('Please log in to update article status')
+    return
   }
 
-  // ... rest of your component code remains the same
+  setUpdatingStatus(id)
+
+  try {
+    console.log(`Updating article ${id} to status: ${newStatus}`)
+
+    const response = await fetch(`/api/articles?id=${id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        status: newStatus,
+        userId: currentUser.id
+      }),
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      console.error('API Error response:', data)
+      throw new Error(data.error || `HTTP error! status: ${response.status}`)
+    }
+
+    if (data.success) {
+      // Update local state with the returned article data
+      setArticles(prev => 
+        prev.map(article => 
+          article.id === id ? { 
+            ...article, 
+            status: newStatus,
+            // Update date if publishing for the first time
+            ...(newStatus === 'published' && article.status !== 'published' && { 
+              date: new Date().toISOString().split('T')[0] 
+            })
+          } : article
+        )
+      )
+      console.log(`✅ Article status updated to ${newStatus}`)
+    } else {
+      throw new Error(data.error || 'Failed to update article status')
+    }
+  } catch (error) {
+    console.error('❌ Error updating article status:', error)
+    alert(`Failed to update article status: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    
+    // Revert optimistic update by refreshing from server
+    await fetchArticles()
+  } finally {
+    setUpdatingStatus(null)
+  }
+}
+
   const getStatusStyles = (status: string) => {
     switch (status) {
       case "published":
-        return "bg-green-100 text-green-700"
+        return "bg-green-100 text-green-700 border-green-200"
       case "scheduled":
-        return "bg-blue-100 text-blue-700"
+        return "bg-blue-100 text-blue-700 border-blue-200"
       case "draft":
-        return "bg-gray-100 text-gray-700"
+        return "bg-gray-100 text-gray-700 border-gray-200"
       default:
-        return "bg-gray-100 text-gray-700"
+        return "bg-gray-100 text-gray-700 border-gray-200"
     }
   }
 
@@ -324,7 +352,7 @@ export function ArticlesTab({ generatedArticles, onArticlesUpdate, websiteId }: 
                   className="mt-1 bg-input border-border/40"
                 />
               </div>
-              <div>
+              {/* <div>
                 <label className="text-sm font-medium text-foreground">Publish Date</label>
                 <Input
                   type="date"
@@ -332,7 +360,7 @@ export function ArticlesTab({ generatedArticles, onArticlesUpdate, websiteId }: 
                   onChange={(e) => setNewArticleDate(e.target.value)}
                   className="mt-1 bg-input border-border/40"
                 />
-              </div>
+              </div> */}
               <Button
                 onClick={handleGenerateArticle}
                 disabled={isGenerating || !newArticleKeyword.trim() || !newArticleDate}
@@ -365,7 +393,7 @@ export function ArticlesTab({ generatedArticles, onArticlesUpdate, websiteId }: 
       <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
         <CardHeader>
           <CardTitle>Generated Articles</CardTitle>
-          <CardDescription>SEO-optimized articles saved in database</CardDescription>
+          <CardDescription>SEO-optimized articles</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -378,7 +406,7 @@ export function ArticlesTab({ generatedArticles, onArticlesUpdate, websiteId }: 
               articles.map((article) => (
                 <div
                   key={article.id}
-                  className="p-4 rounded-lg border border-border/40 hover:border-primary/30 transition-colors"
+                  className="p-4 rounded-lg border border-border/40 hover:border-primary/30 transition-colors bg-background/50"
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex-1">
@@ -437,7 +465,7 @@ export function ArticlesTab({ generatedArticles, onArticlesUpdate, websiteId }: 
                         </div>
                       )}
                     </div>
-                    <Badge className={getStatusStyles(article.status)}>
+                    <Badge className={`${getStatusStyles(article.status)} border`}>
                       {getStatusDisplayText(article.status)}
                     </Badge>
                   </div>
@@ -494,7 +522,10 @@ export function ArticlesTab({ generatedArticles, onArticlesUpdate, websiteId }: 
                               <Edit2 className="w-4 h-4 mr-2" />
                               Edit
                             </Button>
-                            <Button className="cursor-pointer bg-primary hover:bg-primary/90 text-primary-foreground flex-1">
+                            <Button 
+                              className="cursor-pointer bg-primary hover:bg-primary/90 text-primary-foreground flex-1"
+                              onClick={() => handleUpdateStatus(article.id, 'published')}
+                            >
                               Publish Now
                             </Button>
                           </div>
@@ -507,9 +538,16 @@ export function ArticlesTab({ generatedArticles, onArticlesUpdate, websiteId }: 
                       onValueChange={(value) =>
                         handleUpdateStatus(article.id, value as "draft" | "scheduled" | "published")
                       }
+                      disabled={updatingStatus === article.id}
                     >
                       <SelectTrigger className="w-32 h-8 text-xs bg-input border-border/40">
-                        <SelectValue />
+                        <SelectValue>
+                          {updatingStatus === article.id ? (
+                            <Loader2 className="w-3 h-3 animate-spin inline" />
+                          ) : (
+                            getStatusDisplayText(article.status)
+                          )}
+                        </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="draft">Draft</SelectItem>
@@ -523,6 +561,7 @@ export function ArticlesTab({ generatedArticles, onArticlesUpdate, websiteId }: 
                       size="sm"
                       className="cursor-pointer text-muted-foreground hover:text-destructive"
                       onClick={() => handleDeleteArticle(article.id)}
+                      disabled={updatingStatus === article.id}
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
@@ -535,4 +574,4 @@ export function ArticlesTab({ generatedArticles, onArticlesUpdate, websiteId }: 
       </Card>
     </div>
   )
-};
+}

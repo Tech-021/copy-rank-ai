@@ -422,24 +422,77 @@ interface SignUpPageProps {
   onToggleLogin: () => void;
 }
 
+// Testimonials data
 const testimonials = [
   {
-    id: 1,
-    quote:
-      "With Salestable, I can ensure that our sales team is equipped with in-depth knowledge of the various aspects of plastic injection molding required to be an effective sales professional",
-    author: "Rob L",
-    title: "Director, Sales Operations @ HiTech Plastics & Molds",
-    rating: 5,
+    name: "Soufyane Benguemra",
+    handle: "@SoufyaneBenguemra",
+    text: "best tool ever",
+    image: "/pic3.jpg",
   },
   {
-    id: 2,
-    quote:
-      "Salestable has been a great partner for ContentBacon. We've gone from being a company where the founders are driving the sales to an organization with an effective sales team that is growing and thriving",
-    author: "Wendy L",
-    title: "Co-founder - ContentBacon",
-    rating: 5,
+    name: "Rehman Abdur",
+    handle: "@RehmanAbdur",
+    text: "Great for SEO research.",
+    image: "/pic1.png",
+  },
+  {
+    name: "Praveen Anantharaman",
+    handle: "@PraveenAnantharaman",
+    text: "Adds value for reaching your ICP, providing information for positioning and marketing efficiency!",
+    image: "/pic4.jpg",
+  },
+  {
+    name: "Alexander Bastien",
+    handle: "@AlexanderBastien",
+    text: "Very useful SEO tool!",
+    image: "/pic5.jpg",
+  },
+  {
+    name: "Mike D.",
+    handle: "@mikedevstudio",
+    text: "As a startup, we needed proven results from companies using Viral SEO.",
+    image: "/pic6.jpg",
+  },
+  {
+    name: "Philippe Varin",
+    handle: "@PhilippeVarin",
+    text: "Great tool to find ranking content ideas!..",
+    image: "/pic2.jpg",
   },
 ];
+
+// Split testimonials for animation columns
+const column1 = testimonials.filter((_, i) => i % 2 === 0);
+const column2 = testimonials.filter((_, i) => i % 2 === 1);
+
+// Testimonial Card
+const TestimonialCard = ({
+  testimonial,
+}: {
+  testimonial: (typeof testimonials)[0];
+}) => (
+  <div className="bg-white rounded-xl p-5 mb-4 border border-gray-200/60 hover:border-gray-300 transition-colors">
+    <div className="flex items-start gap-3 mb-3">
+      <img
+        src={testimonial.image}
+        alt={testimonial.name}
+        className="w-12 h-12 rounded-full object-cover"
+      />
+      <div className="flex-1 min-w-0">
+        <h4 className="font-semibold text-gray-900 text-[15px] leading-tight">
+          {testimonial.name}
+        </h4>
+        <p className="text-[13px] text-gray-500 leading-tight">
+          {testimonial.handle}
+        </p>
+      </div>
+    </div>
+    <p className="text-gray-700 text-[14px] leading-relaxed">
+      "{testimonial.text}"
+    </p>
+  </div>
+);
 
 export function SignUpPage({
   onSignUpSuccess,
@@ -449,16 +502,7 @@ export function SignUpPage({
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
-  const [currentTestimonial, setCurrentTestimonial] = useState(0);
   const toast = useToast();
-
-  // Auto-cycle testimonials every 5 seconds
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentTestimonial((prev) => (prev + 1) % testimonials.length);
-    }, 5000);
-    return () => clearInterval(interval);
-  }, []);
 
   const handleGoogleSignUp = async () => {
     setGoogleLoading(true);
@@ -481,6 +525,9 @@ export function SignUpPage({
           type: "error",
         });
       } catch {}
+    } else {
+      setMessage("");
+      if (data?.email) onSignUpSuccess(data.email);
     }
   };
 

@@ -103,3 +103,137 @@ export default function AuthCallbackPage() {
     </div>
   )
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// // app/paywall/page.tsx
+// 'use client';
+
+// import { useEffect, useState } from 'react';
+// import { useRouter, useSearchParams } from 'next/navigation';
+// import PaywallScreen from '../../../components/PaywallScreen';
+// import { supabase } from '@/lib/client'; // Import supabase
+
+// export default function PaywallPage() {
+//   const router = useRouter();
+//   const searchParams = useSearchParams();
+//   const [userEmail, setUserEmail] = useState<string>('');
+//   const [userName, setUserName] = useState<string>('');
+//   const [userId, setUserId] = useState<string>('');
+//   const [isLoading, setIsLoading] = useState(true);
+
+//   useEffect(() => {
+//     async function getUserData() {
+//       try {
+//         console.log("🔍 Paywall page - Getting user data");
+        
+//         // Method 1: Try to get from URL params first
+//         const emailFromParams = searchParams.get('email');
+//         const nameFromParams = searchParams.get('name');
+        
+//         console.log("📊 URL params:", { emailFromParams, nameFromParams });
+
+//         if (emailFromParams) {
+//           setUserEmail(emailFromParams);
+//           setUserName(nameFromParams || '');
+//           setIsLoading(false);
+//           return;
+//         }
+
+//         // Method 2: If no URL params, get from Supabase session
+//         console.log("🔄 No URL params, checking Supabase session...");
+//         const { data: { session } } = await supabase.auth.getSession();
+        
+//         if (session?.user) {
+//           console.log("✅ User from session:", session.user.email);
+//           setUserEmail(session.user.email!);
+//           setUserName(session.user.user_metadata?.full_name || session.user.user_metadata?.name || '');
+//           setUserId(session.user.id);
+//         } else {
+//           console.warn("⚠️ No user session found");
+//           setUserEmail('user@example.com'); // Fallback
+//         }
+
+//         setIsLoading(false);
+
+//       } catch (error) {
+//         console.error("Error getting user data:", error);
+//         setIsLoading(false);
+//       }
+//     }
+
+//     getUserData();
+//   }, [searchParams]);
+
+//   const handleActivateTrial = async () => {
+//     try {
+//       console.log("🎯 Activating trial for:", userEmail);
+      
+//       if (!userEmail) {
+//         throw new Error('User email is required');
+//       }
+
+//       // Call your LemonSqueezy API
+//       const response = await fetch('/api/lemonsqueezy', {
+//         method: 'POST',
+//         headers: {
+//           'Content-Type': 'application/json',
+//         },
+//         body: JSON.stringify({
+//           userEmail,
+//           userName,
+//           userId: userId || `user-${Date.now()}`
+//         })
+//       });
+
+//       if (!response.ok) {
+//         const errorData = await response.json();
+//         throw new Error(errorData.error || 'Failed to create checkout');
+//       }
+
+//       const data = await response.json();
+      
+//       // Redirect to LemonSqueezy checkout
+//       window.location.href = data.checkoutUrl;
+      
+//     } catch (error) {
+//       console.error('Failed to activate trial:', error);
+//       throw error;
+//     }
+//   };
+
+//   const handleSkipTrial = () => {
+//     router.push('/analyze?plan=free');
+//   };
+
+//   if (isLoading) {
+//     return (
+//       <div className="min-h-screen flex items-center justify-center">
+//         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+//       </div>
+//     );
+//   }
+
+//   console.log("🎯 Paywall rendering with user:", { userEmail, userName });
+
+//   return (
+//     <PaywallScreen
+//       onActivateTrial={handleActivateTrial}
+//       onSkipTrial={handleSkipTrial}
+//       userEmail={userEmail}
+//     />
+//   );
+// }

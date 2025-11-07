@@ -351,7 +351,7 @@ export function SettingsTab() {
               </Select>
             </div>
 
-            <div>
+            {/* <div>
               <label className="text-sm font-medium text-foreground">AI Model</label>
               <Select
                 value={mockSettings.aiModel}
@@ -367,7 +367,7 @@ export function SettingsTab() {
                   <SelectItem value="claude-3">Claude 3</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
+            </div> */}
 
             <div>
               <label className="text-sm font-medium text-foreground">Publishing Schedule</label>
@@ -411,7 +411,7 @@ export function SettingsTab() {
         </CardContent>
       </Card>
 
-      {/* Notification Settings - MOCK */}
+      {/* Notification Settings - MOCK
       <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
         <CardHeader>
           <CardTitle>Notifications</CardTitle>
@@ -440,7 +440,7 @@ export function SettingsTab() {
             />
           </div>
         </CardContent>
-      </Card>
+      </Card> */}
 
       {/* Usage Statistics - MOCK
       <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
@@ -483,7 +483,7 @@ export function SettingsTab() {
         </CardContent>
       </Card> */}
 
-      {/* Danger Zone - MOCK */}
+      {/* Danger Zone - MOCK
       <Card className="border-red-200 bg-red-50">
         <CardHeader>
           <CardTitle className="text-red-700">Danger Zone</CardTitle>
@@ -497,7 +497,7 @@ export function SettingsTab() {
             Delete Account
           </Button>
         </CardContent>
-      </Card>
+      </Card> */}
     </div>
   )
 }
