@@ -28,6 +28,8 @@ export async function POST(req: Request) {
       );
     }
 
+
+
     const checkoutData = {
       data: {
         type: "checkouts",
@@ -53,7 +55,7 @@ export async function POST(req: Request) {
             }
           },
           preview: false,
-          test_mode: process.env.NODE_ENV === "development" || true
+          test_mode: process.env.NODE_ENV === "development"
         },
         relationships: {
           store: {
@@ -81,6 +83,8 @@ export async function POST(req: Request) {
       },
       body: JSON.stringify(checkoutData),
     });
+
+    console.log("LemonSqueezy response status:", response);
 
     if (!response.ok) {
       const errorText = await response.text();

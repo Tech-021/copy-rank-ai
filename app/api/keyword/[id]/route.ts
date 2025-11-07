@@ -40,7 +40,41 @@ export async function GET(
     }
 
     console.log(`✅ API: Found website: ${website.url}`);
-    console.log(`📊 API: Keywords data:`, website.keywords);
+    console.log(`📊 API: Keywords data type:`, typeof website.keywords);
+    console.log(`📊 API: Keywords data structure:`, website.keywords);
+
+    // FIX: Handle both old and new data formats
+    let keywordsArray = [];
+    let fullData = null;
+    
+    if (Array.isArray(website.keywords)) {
+      // Old format: direct array of keywords
+      keywordsArray = website.keywords;
+      fullData = {
+        keywords: website.keywords,
+        competitors: [],
+        analysis_metadata: null
+      };
+      console.log(`✅ API: Using old format - ${keywordsArray.length} keywords`);
+    } else if (website.keywords && typeof website.keywords === 'object' && Array.isArray(website.keywords.keywords)) {
+      // New format: object with keywords array inside
+      keywordsArray = website.keywords.keywords;
+      fullData = website.keywords; // This contains competitors data
+      console.log(`✅ API: Using new format - ${keywordsArray.length} keywords`);
+      
+      // Log competitor info if available
+      if (website.keywords.competitors && Array.isArray(website.keywords.competitors)) {
+        console.log(`✅ API: Also found ${website.keywords.competitors.length} competitors`);
+      }
+    } else {
+      console.warn('❌ API: Unexpected keywords format:', website.keywords);
+      keywordsArray = [];
+      fullData = {
+        keywords: [],
+        competitors: [],
+        analysis_metadata: null
+      };
+    }
 
     return NextResponse.json({
       success: true,
@@ -49,7 +83,17 @@ export async function GET(
         url: website.url,
         topic: website.topic
       },
-      keywords: Array.isArray(website.keywords) ? website.keywords : []
+      keywords: keywordsArray, // Always return array for backward compatibility
+      fullData: fullData, // Include full data with competitors for CompetitorsTab
+      metadata: website.keywords && typeof website.keywords === 'object' ? {
+        hasCompetitors: Array.isArray(website.keywords.competitors),
+        totalCompetitors: website.keywords.competitors?.length || 0,
+        analysisMetadata: website.keywords.analysis_metadata
+      } : {
+        hasCompetitors: false,
+        totalCompetitors: 0,
+        analysisMetadata: null
+      }
     });
 
   } catch (error) {

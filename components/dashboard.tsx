@@ -7,6 +7,7 @@ import { AnalyzeTab } from "@/components/tabs/analyze-tab"
 import { KeywordsTab } from "@/components/tabs/keywords-tab"
 import { ArticlesTab } from "@/components/tabs/articles-tab"
 import { SettingsTab } from "@/components/tabs/settings-tab"
+import { CompetitorsTab } from "@/components/tabs/competitors-tab" // NEW: Import CompetitorsTab
 
 interface DashboardProps {
   onLogout: () => void
@@ -14,7 +15,7 @@ interface DashboardProps {
 }
 
 export function Dashboard({ onLogout, userEmail }: DashboardProps) {
-  const [activeTab, setActiveTab] = useState<"analyze" | "keywords" | "articles" | "settings">("analyze")
+  const [activeTab, setActiveTab] = useState<"analyze" | "keywords" | "competitors" | "articles" | "settings">("analyze") // NEW: Added competitors
   const [selectedWebsiteId, setSelectedWebsiteId] = useState<string | null>(null)
 
   return (
@@ -59,7 +60,6 @@ export function Dashboard({ onLogout, userEmail }: DashboardProps) {
           >
             Analyze Your Website
           </button>
-          {/* <button>Add Your Competitors</button> */}
           <button
             onClick={() => setActiveTab("keywords")}
             className={`cursor-pointer px-4 py-2 font-medium transition-colors whitespace-nowrap ${
@@ -69,6 +69,17 @@ export function Dashboard({ onLogout, userEmail }: DashboardProps) {
             }`}
           >
             Keywords
+          </button>
+          {/* NEW: Competitors Tab */}
+          <button
+            onClick={() => setActiveTab("competitors")}
+            className={`cursor-pointer px-4 py-2 font-medium transition-colors whitespace-nowrap ${
+              activeTab === "competitors"
+                ? "text-primary border-b-2 border-primary"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Add Your Competitors
           </button>
           <button
             onClick={() => setActiveTab("articles")}
@@ -98,11 +109,19 @@ export function Dashboard({ onLogout, userEmail }: DashboardProps) {
             onViewKeywords={(websiteId) => {
               setSelectedWebsiteId(websiteId)
               setActiveTab("keywords")
+            }}
+            onViewCompetitors={(websiteId) => { // NEW: Add onViewCompetitors prop
+              setSelectedWebsiteId(websiteId)
+              setActiveTab("competitors")
             }} 
           />
         )}
         {activeTab === "keywords" && (
           <KeywordsTab websiteId={selectedWebsiteId} />
+        )}
+        {/* NEW: Competitors Tab Content */}
+        {activeTab === "competitors" && (
+          <CompetitorsTab websiteId={selectedWebsiteId} />
         )}
         {activeTab === "articles" && <ArticlesTab />}
         {activeTab === "settings" && <SettingsTab />}
