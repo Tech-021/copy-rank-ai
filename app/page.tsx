@@ -8,7 +8,6 @@ import { LandingPage } from "@/components/landing-page"
 import { Dashboard } from "@/components/dashboard"
 import { LoginPage } from "@/components/login-page"
 import { SignUpPage } from "@/components/signup-page"
-
 export default function Home() {
   const [authState, setAuthState] = useState<"landing" | "login" | "signup" | "dashboard">("landing")
   const [userEmail, setUserEmail] = useState("")

@@ -330,6 +330,8 @@ export function ArticlesTab({ generatedArticles, onArticlesUpdate, websiteId }: 
 
       {/* Actions */}
       <div className="flex gap-4">
+
+{/* 
         <Dialog>
           <DialogTrigger asChild>
             <Button className="cursor-pointer bg-primary hover:bg-primary/90 text-primary-foreground gap-2">
@@ -361,7 +363,7 @@ export function ArticlesTab({ generatedArticles, onArticlesUpdate, websiteId }: 
                   className="mt-1 bg-input border-border/40"
                 />
               </div> */}
-              <Button
+              {/* <Button
                 onClick={handleGenerateArticle}
                 disabled={isGenerating || !newArticleKeyword.trim() || !newArticleDate}
                 className="cursor-pointer w-full bg-primary hover:bg-primary/90 text-primary-foreground gap-2"
@@ -377,7 +379,8 @@ export function ArticlesTab({ generatedArticles, onArticlesUpdate, websiteId }: 
               </Button>
             </div>
           </DialogContent>
-        </Dialog>
+        </Dialog> */}
+
 
         <Button 
           variant="outline" 

@@ -100,40 +100,58 @@ useEffect(() => {
     }
   }, [websiteId])
 
-  const fetchKeywords = async () => {
-    if (!websiteId) return;
+  // Update the fetchKeywords function to handle both formats
+const fetchKeywords = async () => {
+  if (!websiteId) return;
+  
+  try {
+    setLoading(true)
+    setError(null)
+    console.log(`🔍 Fetching keywords for website: ${websiteId}`)
     
-    try {
-      setLoading(true)
-      setError(null)
-      console.log(`🔍 Fetching keywords for website: ${websiteId}`)
-      
-      const response = await fetch(`/api/keyword/${websiteId}`)
-      
-      if (!response.ok) {
-        if (response.status === 404) {
-          throw new Error("Website not found")
-        }
-        throw new Error(`HTTP error! status: ${response.status}`)
+    const response = await fetch(`/api/keyword/${websiteId}`)
+    
+    if (!response.ok) {
+      if (response.status === 404) {
+        throw new Error("Website not found")
       }
-      
-      const data = await response.json()
-      
-      if (!data.success) {
-        throw new Error(data.error || "Failed to fetch keywords")
-      }
-      
-      setWebsiteData(data)
-      setKeywords(data.keywords || [])
-      console.log(`✅ Loaded ${data.keywords?.length || 0} keywords`)
-      
-    } catch (err) {
-      console.error('Error fetching keywords:', err)
-      setError(err instanceof Error ? err.message : "Failed to load keywords")
-    } finally {
-      setLoading(false)
+      throw new Error(`HTTP error! status: ${response.status}`)
     }
+    
+    const data = await response.json()
+    
+    if (!data.success) {
+      throw new Error(data.error || "Failed to fetch keywords")
+    }
+    
+    setWebsiteData(data)
+    
+    // FIX: Handle both old and new data formats
+    let keywordsArray = [];
+    
+    if (Array.isArray(data.keywords)) {
+      // Old format: direct array of keywords
+      keywordsArray = data.keywords;
+      console.log(`✅ Loaded ${keywordsArray.length} keywords (old format)`);
+    } else if (data.keywords && Array.isArray(data.keywords.keywords)) {
+      // New format: object with keywords array inside
+      keywordsArray = data.keywords.keywords;
+      console.log(`✅ Loaded ${keywordsArray.length} keywords (new format)`);
+    } else {
+      console.warn('❌ Unexpected keywords format:', data.keywords);
+      keywordsArray = [];
+    }
+    
+    setKeywords(keywordsArray)
+    console.log(`✅ Total keywords loaded: ${keywordsArray.length}`)
+    
+  } catch (err) {
+    console.error('Error fetching keywords:', err)
+    setError(err instanceof Error ? err.message : "Failed to load keywords")
+  } finally {
+    setLoading(false)
   }
+}
 
   const generateContentFromKeywords = async () => {
   if (selectedKeywords.size === 0) {

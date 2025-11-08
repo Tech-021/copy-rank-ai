@@ -1,6 +1,10 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select2";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 import {
   Card,
   CardDescription,
@@ -23,7 +27,9 @@ export function LandingPage({ onSignIn, onSignUp }: LandingPageProps) {
       <nav className="border-b border-border/40 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Link href={"/"}><Image src="/topicanalyzer-logo.png" alt="" width={120} height={30} /></Link>
+            <Link href={"/"}>
+              <Image src="/topicanalyzer-logo.png" alt="" width={120} height={30} />
+            </Link>
           </div>
           <div className="flex items-center gap-3">
             <Button
@@ -106,4 +112,3 @@ export function LandingPage({ onSignIn, onSignUp }: LandingPageProps) {
     </div>
   );
 }
-
