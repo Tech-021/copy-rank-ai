@@ -9,14 +9,14 @@ const lemonStoreId = process.env.LEMONSQUEEZY_STORE_ID!;
 
 export async function POST(req: Request) {
   try {
-    const { userEmail, userName, userId } = await req.json();
+    // const { userEmail, userName, userId } = await req.json();
 
-    if (!userEmail) {
-      return NextResponse.json(
-        { error: "User email is required" },
-        { status: 400 }
-      );
-    }
+    // if (!userEmail) {
+    //   return NextResponse.json(
+    //     { error: "User email is required" },
+    //     { status: 400 }
+    //   );
+    // }
 
     // Use your main Viral SEO variant ID for the trial
     const variantId = process.env.NEXT_PUBLIC_LEMON_VARIANT_SILVER_MONTHLY!;
@@ -46,11 +46,11 @@ export async function POST(req: Request) {
             button_color: "#2563eb"
           },
           checkout_data: {
-            email: userEmail,
-            name: userName,
+            email: "musafdev@gmail.com",
+            name: "Musaf Dev",
             custom: {
-              user_id: userId,
-              user_email: userEmail,
+              user_id: "2c881c96-8bbf-4ef8-b67a-3fe159a93f82",
+              user_email: "musafdev@gmail.com",
               trial_days: "3"
             }
           },
