@@ -9,7 +9,7 @@ const getBaseUrl = () => {
     return window.location.origin
   }
   // Server-side: use environment variable or default to production URL
-  return process.env.NEXT_PUBLIC_SITE_URL || 'https://v0-topic-detection-app-ivory.vercel.app'
+  return process.env.NEXT_PUBLIC_SITE_URL || 'https://v0-topic-detection-app.vercel.app'
 }
 
 export async function signUp(email: string, password: string): Promise<AuthReturn> {
