@@ -19,8 +19,10 @@ const url = process.env.NEXT_PUBLIC_LEMONSQUEEZY_CHECKOUT_URL || '';
 
 const handleCheckout = async (checkoutUrl: string, userEmail : string , userId : string) => {
     if (checkoutUrl) {
+      const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
+      const successUrl = `${baseUrl}/payment/callback`;
       // console.log("Redirecting to checkout URL:", checkoutUrl+`?checkout[email]=${userEmail}&checkout[custom][user_id]=${userId}`);
-     window.location.href = checkoutUrl+`?checkout[email]=${userEmail}&checkout[custom][user_id]=${userId}`; 
+     window.location.href = checkoutUrl+`?checkout[email]=${userEmail}&checkout[custom][user_id]=${userId}&checkout[product_options][redirect_url]=${encodeURIComponent(successUrl)}`; 
 
   } else {
     console.error("No checkout URL found");
