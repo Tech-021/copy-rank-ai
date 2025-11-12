@@ -6,31 +6,26 @@ import { useState } from 'react';
 import { CreditCard, Shield, Zap, Search, FileText, TrendingUp } from 'lucide-react';
 
 interface PaywallScreenProps {
-  onActivateTrial: () => Promise<void>;
-  onSkipTrial?: () => void;
-  isLoading?: boolean;
   userEmail?: string;
+  userId?: string;
 }
 
 const PaywallScreen: React.FC<PaywallScreenProps> = ({
-  onActivateTrial,
-  onSkipTrial,
-  isLoading = false,
+  userId,
   userEmail
 }) => {
-  const [isActivating, setIsActivating] = useState(false);
 
-  const handleActivateTrial = async () => {
-    setIsActivating(true);
-    try {
-      await onActivateTrial();
-    } catch (error) {
-      console.error('Failed to activate trial:', error);
-      alert('Failed to start trial. Please try again.');
-    } finally {
-      setIsActivating(false);
-    }
-  };
+const url = process.env.NEXT_PUBLIC_LEMONSQUEEZY_CHECKOUT_URL || '';
+
+const handleCheckout = async (checkoutUrl: string, userEmail : string , userId : string) => {
+    if (checkoutUrl) {
+      // console.log("Redirecting to checkout URL:", checkoutUrl+`?checkout[email]=${userEmail}&checkout[custom][user_id]=${userId}`);
+     window.location.href = checkoutUrl+`?checkout[email]=${userEmail}&checkout[custom][user_id]=${userId}`; 
+
+  } else {
+    console.error("No checkout URL found");
+  }
+};
 
   const features = [
     {
@@ -96,32 +91,11 @@ const PaywallScreen: React.FC<PaywallScreenProps> = ({
           {/* CTA Buttons */}
           <div className="space-y-4">
             <button
-              onClick={handleActivateTrial}
-              disabled={isActivating || isLoading}
-              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold py-4 px-6 rounded-lg transition-colors duration-200 flex items-center justify-center disabled:cursor-not-allowed"
-            >
-              {(isActivating || isLoading) ? (
-                <>
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                  Activating Your Trial...
-                </>
-              ) : (
-                <>
-                  <CreditCard className="w-5 h-5 mr-2" />
-                  Try Viral SEO Free for 3 Days
-                </>
-              )}
+              onClick={() => handleCheckout(url, userEmail || '', userId || '')}
+              className="cursor-pointer w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold py-4 px-6 rounded-lg transition-colors duration-200 flex items-center justify-center disabled:cursor-not-allowed"
+            >Start Your Free Trial
+              <CreditCard className="w-5 h-5 ml-2" />
             </button>
-
-            {onSkipTrial && (
-              <button
-                onClick={onSkipTrial}
-                disabled={isLoading}
-                className="w-full text-gray-600 hover:text-gray-800 font-medium py-3 px-6 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Continue with Limited Free Access
-              </button>
-            )}
           </div>
 
           {/* Security Badge */}

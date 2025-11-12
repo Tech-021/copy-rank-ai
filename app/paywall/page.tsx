@@ -4,61 +4,44 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import PaywallScreen from '@/components/PaywallScreen';
+import { getUser } from '@/lib/auth';
 
 export default function PaywallPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [userEmail, setUserEmail] = useState<string>('');
-  const [userName, setUserName] = useState<string>('');
+  const [userId, setUserId] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Get user data from URL params
-    const email = searchParams.get('email');
-    const name = searchParams.get('name');
-    
-    if (email) {
-      setUserEmail(email);
-      setUserName(name || '');
-    }
-    setIsLoading(false);
-  }, [searchParams]);
+    async function loadUserData() {
+      try {
 
-  const handleActivateTrial = async () => {
-    try {
-      // Call your working LemonSqueezy API
-      const response = await fetch('/api/lemonsqueezy', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userEmail,
-          userName,
-          userId: `user-${Date.now()}` // In real app, get from auth
-        })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create checkout');
+        // If no URL params, get user from Supabase session
+        const { data: user, error } = await getUser();
+        
+        if (user && !error) {
+          setUserEmail(user.email || '');
+          // Supabase user object has user_metadata for additional info
+          setUserId(user?.id || '');
+        } else {
+          // No user found, redirect to login
+          console.error('No authenticated user found');
+          router.push('/login');
+        }
+      } catch (error) {
+        console.error('Error loading user data:', error);
+        router.push('/login');
+      } finally {
+        setIsLoading(false);
       }
-
-      const data = await response.json();
-      
-      // Redirect to LemonSqueezy checkout (your working API!)
-      window.location.href = data.checkoutUrl;
-      
-    } catch (error) {
-      console.error('Failed to activate trial:', error);
-      throw error;
     }
-  };
 
-  const handleSkipTrial = () => {
-    // Redirect to your analyze page or dashboard
-    router.push('/analyze?plan=free');
-  };
+    loadUserData();
+  }, [router]);
+
+  console.log('userEmail', userEmail);
+  console.log('userId', userId);
 
   if (isLoading) {
     return (
@@ -70,9 +53,8 @@ export default function PaywallPage() {
 
   return (
     <PaywallScreen
-      onActivateTrial={handleActivateTrial}
-      onSkipTrial={handleSkipTrial}
       userEmail={userEmail}
+      userId={userId}
     />
   );
 }
