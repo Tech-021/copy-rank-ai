@@ -9,22 +9,21 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export default function OnboardingPage() {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
-  const [sellingStatus, setSellingStatus] = useState("");
-  const [revenue, setRevenue] = useState("");
-  const [isForClient, setIsForClient] = useState("no");
+  
+  // New state variables
+  const [websiteName, setWebsiteName] = useState("");
+  const [competitor1, setCompetitor1] = useState("");
+  const [competitor2, setCompetitor2] = useState("");
+  const [competitor3, setCompetitor3] = useState("");
+  const [keyword1, setKeyword1] = useState("");
+  const [keyword2, setKeyword2] = useState("");
+  const [keyword3, setKeyword3] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   // Automatically open the dialog when the page loads
@@ -38,10 +37,12 @@ export default function OnboardingPage() {
     // Here you can save the onboarding data to your database/API
     try {
       const onboardingData = {
-        sellingStatus,
-        revenue,
-        isForClient,
+        websiteName,
+        competitors: [competitor1, competitor2, competitor3],
+        keywords: [keyword1, keyword2, keyword3],
       };
+      
+      console.log("Onboarding Data:", onboardingData);
       
       // Save to your backend API
       // await fetch('/api/onboarding', {
@@ -62,7 +63,15 @@ export default function OnboardingPage() {
     }
   };
 
-  const canProceed = sellingStatus && revenue && isForClient;
+  // Validation: all fields must be filled
+  const canProceed = 
+    websiteName.trim() && 
+    competitor1.trim() && 
+    competitor2.trim() && 
+    competitor3.trim() &&
+    keyword1.trim() && 
+    keyword2.trim() && 
+    keyword3.trim();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
@@ -84,81 +93,91 @@ export default function OnboardingPage() {
           <div className="px-10 py-8">
             <DialogHeader className="mb-6 text-center">
               <DialogTitle className="text-2xl text-center font-semibold text-gray-800">
-                Tell us a little about yourself
+                Tell us about your website
               </DialogTitle>
 
               {/* Progress dots */}
-              <div className="flex justify-center mt-2">
+              {/* <div className="flex justify-center mt-2">
                 <div className="w-2 h-2 rounded-full bg-[#4a5fd8]" />
                 <div className="w-2 h-2 rounded-full bg-gray-300 mx-1" />
                 <div className="w-2 h-2 rounded-full bg-gray-300" />
-              </div>
+              </div> */}
             </DialogHeader>
 
             {/* Form Fields */}
-            <div className="space-y-6">
-              {/* Selling Status */}
+            <div className="space-y-5">
+              {/* Website Name */}
               <div className="space-y-2">
-                <div className="border border-gray-300 rounded-md p-3">
-                  <Label className="text-xs text-gray-600 block mb-2">
-                    Are you already selling?
-                  </Label>
-                  <Select value={sellingStatus} onValueChange={setSellingStatus}>
-                    <SelectTrigger className="w-full border-0 p-0 h-6 focus:ring-0 focus-visible:ring-0 focus:outline-none">
-                      <SelectValue placeholder="Please choose one..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="yes">Yes</SelectItem>
-                      <SelectItem value="no">No</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Revenue */}
-              <div className="space-y-2">
-                <div className="border border-gray-300 rounded-md p-3">
-                  <Label className="text-xs text-gray-600 block mb-2">
-                    What is your current revenue?
-                  </Label>
-                  <Select value={revenue} onValueChange={setRevenue}>
-                    <SelectTrigger className="w-full border-0 p-0 h-6 focus:ring-0 focus-visible:ring-0 focus:outline-none">
-                      <SelectValue placeholder="Please choose one..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">None yet</SelectItem>
-                      <SelectItem value="below10k">Below $10k</SelectItem>
-                      <SelectItem value="above10k">Above $10k</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Client Store */}
-              <div className="pt-1">
-                <Label className="text-xs text-gray-600 block mb-3">
-                  Are you setting up a store for a client?
+                <Label className="text-sm text-gray-700 font-medium">
+                  Website Name
                 </Label>
-                <RadioGroup value={isForClient} onValueChange={setIsForClient}>
-                  <div className="flex items-start space-x-2 mb-3">
-                    <RadioGroupItem value="yes" id="r1" />
-                    <Label
-                      htmlFor="r1"
-                      className="text-sm font-normal text-gray-700 cursor-pointer select-none leading-tight"
-                    >
-                      Yes, I'm designing/developing a store for a client
-                    </Label>
-                  </div>
-                  <div className="flex items-start space-x-2">
-                    <RadioGroupItem value="no" id="r2" />
-                    <Label
-                      htmlFor="r2"
-                      className="text-sm font-normal text-gray-700 cursor-pointer select-none leading-tight"
-                    >
-                      No, this is for my own business
-                    </Label>
-                  </div>
-                </RadioGroup>
+                <Input
+                  type="text"
+                  placeholder="Enter your website name"
+                  value={websiteName}
+                  onChange={(e) => setWebsiteName(e.target.value)}
+                  className="w-full border-gray-300 focus:border-[#4a5fd8] focus:ring-[#4a5fd8]"
+                />
+              </div>
+
+              {/* Competitors */}
+              <div className="space-y-2">
+                <Label className="text-sm text-gray-700 font-medium">
+                  Top 3 Competitors
+                </Label>
+                <div className="space-y-2">
+                  <Input
+                    type="text"
+                    placeholder="Competitor 1"
+                    value={competitor1}
+                    onChange={(e) => setCompetitor1(e.target.value)}
+                    className="w-full border-gray-300 focus:border-[#4a5fd8] focus:ring-[#4a5fd8]"
+                  />
+                  <Input
+                    type="text"
+                    placeholder="Competitor 2"
+                    value={competitor2}
+                    onChange={(e) => setCompetitor2(e.target.value)}
+                    className="w-full border-gray-300 focus:border-[#4a5fd8] focus:ring-[#4a5fd8]"
+                  />
+                  <Input
+                    type="text"
+                    placeholder="Competitor 3"
+                    value={competitor3}
+                    onChange={(e) => setCompetitor3(e.target.value)}
+                    className="w-full border-gray-300 focus:border-[#4a5fd8] focus:ring-[#4a5fd8]"
+                  />
+                </div>
+              </div>
+
+              {/* Keywords */}
+              <div className="space-y-2">
+                <Label className="text-sm text-gray-700 font-medium">
+                  Top 3 Keywords
+                </Label>
+                <div className="space-y-2">
+                  <Input
+                    type="text"
+                    placeholder="Keyword 1"
+                    value={keyword1}
+                    onChange={(e) => setKeyword1(e.target.value)}
+                    className="w-full border-gray-300 focus:border-[#4a5fd8] focus:ring-[#4a5fd8]"
+                  />
+                  <Input
+                    type="text"
+                    placeholder="Keyword 2"
+                    value={keyword2}
+                    onChange={(e) => setKeyword2(e.target.value)}
+                    className="w-full border-gray-300 focus:border-[#4a5fd8] focus:ring-[#4a5fd8]"
+                  />
+                  <Input
+                    type="text"
+                    placeholder="Keyword 3"
+                    value={keyword3}
+                    onChange={(e) => setKeyword3(e.target.value)}
+                    className="w-full border-gray-300 focus:border-[#4a5fd8] focus:ring-[#4a5fd8]"
+                  />
+                </div>
               </div>
             </div>
 
@@ -175,7 +194,7 @@ export default function OnboardingPage() {
                     Setting up...
                   </div>
                 ) : (
-                  "Next"
+                  "Submit"
                 )}
               </Button>
             </div>
