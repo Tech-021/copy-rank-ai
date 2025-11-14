@@ -8,9 +8,17 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Search, ExternalLink, TrendingUp, Users, Target, BarChart3, Loader2 } from "lucide-react"
+import { supabase } from "@/lib/client"
 
 interface CompetitorsTabProps {
   websiteId: string | null;
+}
+
+interface Website {
+  id: string;
+  url: string;
+  topic: string;
+  created_at?: string;
 }
 
 interface Competitor {
@@ -46,34 +54,85 @@ interface WebsiteData {
   };
 }
 
-export function CompetitorsTab({ websiteId }: CompetitorsTabProps) {
+export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabProps) {
+  const [selectedWebsiteId, setSelectedWebsiteId] = useState<string | null>(initialWebsiteId)
+  const [websites, setWebsites] = useState<Website[]>([])
   const [websiteData, setWebsiteData] = useState<WebsiteData | null>(null)
   const [competitors, setCompetitors] = useState<Competitor[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadingWebsites, setLoadingWebsites] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [qualityFilter, setQualityFilter] = useState<string>("all")
   const [sortBy, setSortBy] = useState<string>("overlap-desc")
 
-  // Fetch competitors when websiteId changes
-  useEffect(() => {
-    if (websiteId) {
-      fetchCompetitors()
-    } else {
-      setLoading(false)
-      setError("No website selected")
+  // Load user websites if no websiteId is provided
+  const loadUserWebsites = async () => {
+    try {
+      setLoadingWebsites(true)
+      const { data: { user } } = await supabase.auth.getUser()
+
+      if (!user) {
+        setError("Please log in to view competitors")
+        return
+      }
+
+      const { data, error } = await supabase
+        .from("websites")
+        .select("id, url, topic, created_at")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+
+      if (error) {
+        console.error("Error loading websites:", error)
+        setError("Failed to load websites")
+        return
+      }
+
+      if (data && data.length > 0) {
+        setWebsites(data)
+        // Auto-select first website if no websiteId was provided
+        if (!selectedWebsiteId) {
+          setSelectedWebsiteId(data[0].id)
+        }
+      } else {
+        setError("No websites found. Add a website in the Analyze tab first.")
+      }
+    } catch (error) {
+      console.error("Error loading websites:", error)
+      setError("Failed to load websites")
+    } finally {
+      setLoadingWebsites(false)
     }
-  }, [websiteId])
+  }
+
+  // Load websites on mount if no websiteId provided
+  useEffect(() => {
+    if (!initialWebsiteId) {
+      loadUserWebsites()
+    } else {
+      setSelectedWebsiteId(initialWebsiteId)
+    }
+  }, [initialWebsiteId])
+
+  // Fetch competitors when selectedWebsiteId changes
+  useEffect(() => {
+    if (selectedWebsiteId) {
+      fetchCompetitors()
+    } else if (!loadingWebsites) {
+      setLoading(false)
+    }
+  }, [selectedWebsiteId])
 
   const fetchCompetitors = async () => {
-    if (!websiteId) return;
+    if (!selectedWebsiteId) return;
     
     try {
       setLoading(true)
       setError(null)
-      console.log(`🔍 Fetching competitors for website: ${websiteId}`)
+      console.log(`🔍 Fetching competitors for website: ${selectedWebsiteId}`)
       
-      const response = await fetch(`/api/keyword/${websiteId}`)
+      const response = await fetch(`/api/keyword/${selectedWebsiteId}`)
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
@@ -239,6 +298,31 @@ export function CompetitorsTab({ websiteId }: CompetitorsTabProps) {
     highQualityCount: competitors.filter(c => !isNewFormat(c) && c.serp_overlap_quality === "High").length
   }
 
+  if (loadingWebsites) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-primary" />
+          <p className="text-muted-foreground">Loading websites...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error && !selectedWebsiteId && websites.length === 0) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <Users className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+          <p className="text-destructive mb-4">{error}</p>
+          <Button onClick={loadUserWebsites} variant="outline">
+            Try Again
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -286,6 +370,39 @@ export function CompetitorsTab({ websiteId }: CompetitorsTabProps) {
 
   return (
     <div className="space-y-6">
+      {/* Website Selector Pills - Show when multiple websites or no initial websiteId */}
+      {websites.length > 0 && (
+        <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
+          <CardHeader>
+            <CardTitle>Select Website</CardTitle>
+            <CardDescription>Choose a website to view its competitors</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-2">
+              {websites.map((website) => (
+                <Button
+                  key={website.id}
+                  variant={selectedWebsiteId === website.id ? "default" : "outline"}
+                  onClick={() => setSelectedWebsiteId(website.id)}
+                  className={`cursor-pointer ${
+                    selectedWebsiteId === website.id
+                      ? "bg-primary text-primary-foreground"
+                      : "border-border/40 hover:bg-accent"
+                  }`}
+                >
+                  {website.url}
+                  {selectedWebsiteId === website.id && (
+                    <Badge className="ml-2 bg-primary-foreground/20 text-primary-foreground">
+                      Active
+                    </Badge>
+                  )}
+                </Button>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Website Info Header */}
       <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
         <CardContent className="pt-6">
