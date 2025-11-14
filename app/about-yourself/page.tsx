@@ -1,5 +1,5 @@
 "use client";
-
+import { supabase } from "@/lib/client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -34,30 +34,57 @@ export default function OnboardingPage() {
   const handleNext = async () => {
     setIsLoading(true);
     
-    // Here you can save the onboarding data to your database/API
     try {
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        alert("Please log in to continue");
+        setIsLoading(false);
+        return;
+      }
+  
+      // Prepare onboarding data
       const onboardingData = {
-        websiteName,
-        competitors: [competitor1, competitor2, competitor3],
-        keywords: [keyword1, keyword2, keyword3],
+        clientDomain: websiteName.trim(), // Client website URL
+        competitors: [
+          competitor1.trim(),
+          competitor2.trim(),
+          competitor3.trim()
+        ],
+        targetKeywords: [
+          keyword1.trim(),
+          keyword2.trim(),
+          keyword3.trim()
+        ],
+        userId: user.id
       };
-      
+  
       console.log("Onboarding Data:", onboardingData);
-      
-      // Save to your backend API
-      // await fetch('/api/onboarding', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(onboardingData)
-      // });
-      
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+  
+      // Call onboarding API
+      const response = await fetch('/api/onboarding', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json' 
+        },
+        body: JSON.stringify(onboardingData)
+      });
+  
+      const data = await response.json();
+  
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Onboarding failed');
+      }
+  
+      console.log("✅ Onboarding successful:", data);
       
       // Navigate to dashboard
       router.push("/dashboard");
+      
     } catch (error) {
-      console.error("Error saving onboarding data:", error);
+      console.error("Error during onboarding:", error);
+      alert(`Onboarding failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsLoading(false);
     }
