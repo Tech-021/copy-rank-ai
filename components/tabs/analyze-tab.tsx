@@ -3,11 +3,17 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
 import { Loader2, Trash2, ExternalLink, Users } from "lucide-react"
 import { supabase } from "@/lib/client"
 import { useToast } from "@/components/ui/toast"
-import Link from "next/link"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 
 interface AnalyzeTabProps {
   onViewKeywords: (websiteId: string) => void
@@ -22,28 +28,6 @@ interface Website {
   isAnalyzing?: boolean
   user_id?: string
   created_at?: string
-}
-
-interface ScraperResponse {
-  ok: boolean
-  niche?: {
-    niche: string
-    confidence: number
-  }
-  error?: {
-    code: string
-    message: string
-  }
-}
-
-interface KeywordsResponse {
-  success: boolean
-  topic: string
-  keywords: any[]
-  competitors: any[]
-  totalKeywords: number
-  totalCompetitors: number
-  error?: string
 }
 
 // Helper function to get keywords count
@@ -77,167 +61,21 @@ const getCompetitorsCount = (keywordsData: any): number => {
 
 export function AnalyzeTab({ onViewKeywords, onViewCompetitors }: AnalyzeTabProps) {
   const [websites, setWebsites] = useState<Website[]>([])
-  const [urlInput, setUrlInput] = useState("")
-  const [isAnalyzing, setIsAnalyzing] = useState(false)
-  const [urlError, setUrlError] = useState("")
-  const [includeCompetitors, setIncludeCompetitors] = useState(true)
+  const [isLoading, setIsLoading] = useState(false)
   const toast = useToast()
 
-  // URL validation and formatting
-  const validateAndFormatUrl = (input: string): { isValid: boolean; formattedUrl: string; error?: string } => {
-    let url = input.trim()
-
-    url = url.replace(/\s+/g, "")
-
-    if (!url) {
-      return { isValid: false, formattedUrl: "", error: "URL is required" }
-    }
-
-    if (!url.startsWith("http://") && !url.startsWith("https://")) {
-      url = "https://" + url
-    }
-
-    if (!url.includes(".") && !url.includes("localhost")) {
-      const lastSlashIndex = url.lastIndexOf("/")
-      const domainPart = lastSlashIndex > 6 ? url.substring(8, lastSlashIndex) : url.substring(8)
-
-      if (!domainPart.includes(".")) {
-        url = url.replace(/\/$/, "") + ".com/"
-      }
-    }
-
-    try {
-      const urlObj = new URL(url)
-
-      if (urlObj.protocol !== "http:" && urlObj.protocol !== "https:") {
-        return { isValid: false, formattedUrl: url, error: "URL must start with http:// or https://" }
-      }
-
-      if (!urlObj.hostname) {
-        return { isValid: false, formattedUrl: url, error: "Invalid domain name" }
-      }
-
-      return { isValid: true, formattedUrl: urlObj.toString() }
-    } catch (error) {
-      return {
-        isValid: false,
-        formattedUrl: url,
-        error: "Please enter a valid URL (e.g., example.com or https://example.com)",
-      }
-    }
-  }
-
-  const handleUrlInputChange = (value: string) => {
-    setUrlInput(value)
-    if (urlError && value.trim()) {
-      setUrlError("")
-    }
-  }
-
-  // STEP 1: Get website topic
-  const getWebsiteTopic = async (url: string): Promise<string> => {
-    try {
-      const response = await fetch("/api/scraper", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ url }),
-      })
-
-      const data: ScraperResponse = await response.json()
-
-      if (!response.ok || !data.ok) {
-        throw new Error(data.error?.message || "Scraping failed")
-      }
-
-      const topic = data.niche?.niche || "General"
-      return topic
-    } catch (error) {
-      console.error("Scraper API call failed:", error)
-      throw error
-    }
-  }
-
-  // STEP 2: Get keywords and competitors
-  const getKeywordsAndCompetitors = async (topic: string, websiteUrl: string): Promise<KeywordsResponse> => {
-    try {
-      const response = await fetch("/api/keyword", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          topic,
-          websiteUrl,
-          includeCompetitors: includeCompetitors,
-        }),
-      })
-
-      const data: KeywordsResponse = await response.json()
-
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || "Keywords API failed")
-      }
-
-      return data
-    } catch (error) {
-      console.error("Keywords API call failed:", error)
-      throw error
-    }
-  }
-
-  // STEP 3: Save website to database
-  const saveWebsiteToDB = async (url: string, topic: string, keywords: any[], competitors: any[]): Promise<string> => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser()
-
-      if (!user) {
-        throw new Error("User not authenticated")
-      }
-
-      console.log(`💾 Saving ${keywords.length} keywords and ${competitors?.length || 0} competitors to database...`)
-
-      // Combine both keywords and competitors into a single object
-      const combinedData = {
-        keywords: Array.isArray(keywords) ? keywords : [],
-        competitors: Array.isArray(competitors) ? competitors : [],
-        analysis_metadata: {
-          analyzed_at: new Date().toISOString(),
-          total_keywords: keywords?.length || 0,
-          total_competitors: competitors?.length || 0,
-          highest_competitor_overlap: competitors?.[0]?.common_keywords || 0,
-        },
-      }
-
-      const insertData = {
-        url: url,
-        topic: topic,
-        keywords: combinedData,
-        user_id: user.id,
-      }
-
-      console.log("📦 Insert data prepared:", {
-        url: insertData.url,
-        topic: insertData.topic,
-        keywords_count: combinedData.keywords.length,
-        competitors_count: combinedData.competitors.length,
-      })
-
-      const { data, error } = await supabase.from("websites").insert([insertData]).select().single()
-
-      if (error) {
-        console.error("❌ Supabase insert error:", error)
-        throw error
-      }
-
-      console.log("✅ Successfully saved website with combined keywords and competitors data")
-      return data.id
-    } catch (error) {
-      console.error("💥 Error saving to database:", error)
-      throw error
-    }
-  }
+  // Dialog state
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  
+  // Form state
+  const [websiteName, setWebsiteName] = useState("")
+  const [competitor1, setCompetitor1] = useState("")
+  const [competitor2, setCompetitor2] = useState("")
+  const [competitor3, setCompetitor3] = useState("")
+  const [keyword1, setKeyword1] = useState("")
+  const [keyword2, setKeyword2] = useState("")
+  const [keyword3, setKeyword3] = useState("")
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const loadUserWebsites = async () => {
     try {
@@ -277,96 +115,6 @@ export function AnalyzeTab({ onViewKeywords, onViewCompetitors }: AnalyzeTabProp
     }
   }
 
-  // MAIN FUNCTION: Chain all APIs
-  const handleAddWebsite = async () => {
-    const validation = validateAndFormatUrl(urlInput)
-
-    if (!validation.isValid) {
-      setUrlError(validation.error || "Invalid URL")
-      return
-    }
-
-    const formattedUrl = validation.formattedUrl
-
-    setIsAnalyzing(true)
-    const tempId = Math.random().toString()
-
-    const newWebsite: Website = {
-      id: tempId,
-      url: formattedUrl,
-      topic: "Detecting topic...",
-      keywords: null,
-      isAnalyzing: true,
-    }
-    setWebsites([...websites, newWebsite])
-    setUrlInput("")
-
-    try {
-      // STEP 1: Get topic
-      console.log("🔍 Step 1: Getting website topic...")
-      const topic = await getWebsiteTopic(formattedUrl)
-
-      // Update UI with detected topic
-      setWebsites((prev) =>
-        prev.map((site) =>
-          site.id === tempId ? { ...site, topic: `Getting keywords for: ${topic}` } : site
-        )
-      )
-
-      // STEP 2: Get keywords AND competitors
-      console.log("🔍 Step 2: Getting keywords and competitors for topic:", topic)
-      const keywordData = await getKeywordsAndCompetitors(topic, formattedUrl)
-
-      // STEP 3: Save to database
-      console.log("💾 Step 3: Saving to database...")
-      const dbId = await saveWebsiteToDB(formattedUrl, topic, keywordData.keywords, keywordData.competitors)
-
-      // Final UI update with complete data
-      setWebsites((prev) =>
-        prev.map((site) =>
-          site.id === tempId
-            ? {
-                ...site,
-                id: dbId,
-                topic: topic,
-                keywords: {
-                  keywords: keywordData.keywords,
-                  competitors: keywordData.competitors,
-                  analysis_metadata: keywordData.analysis_metadata || {},
-                },
-                isAnalyzing: false,
-              }
-            : site
-        )
-      )
-
-      // Show success toast
-      toast.showToast({
-        title: "Analysis Complete!",
-        description: `Found ${keywordData.keywords.length} keywords and ${keywordData.competitors.length} competitors for "${topic}"`,
-        type: "success",
-      })
-    } catch (error) {
-      console.error("Error analyzing website:", error)
-
-      const errorMessage = error instanceof Error ? error.message : "Analysis failed"
-
-      // Remove failed website
-      setTimeout(() => {
-        setWebsites((prev) => prev.filter((site) => site.id !== tempId))
-      }, 500)
-
-      // Show error toast
-      toast.showToast({
-        title: "Analysis Failed",
-        description: `Failed to analyze ${formattedUrl}: ${errorMessage}`,
-        type: "error",
-      })
-    } finally {
-      setIsAnalyzing(false)
-    }
-  }
-
   const handleRemoveWebsite = async (id: string) => {
     try {
       await deleteWebsiteFromDB(id)
@@ -388,6 +136,102 @@ export function AnalyzeTab({ onViewKeywords, onViewCompetitors }: AnalyzeTabProp
     }
   }
 
+  const handleSubmitOnboarding = async () => {
+    setIsSubmitting(true)
+    
+    try {
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      if (!user) {
+        toast.showToast({
+          title: "Authentication Required",
+          description: "Please log in to continue",
+          type: "error",
+        })
+        setIsSubmitting(false)
+        return
+      }
+  
+      // Prepare onboarding data
+      const onboardingData = {
+        clientDomain: websiteName.trim(),
+        competitors: [
+          competitor1.trim(),
+          competitor2.trim(),
+          competitor3.trim()
+        ],
+        targetKeywords: [
+          keyword1.trim(),
+          keyword2.trim(),
+          keyword3.trim()
+        ],
+        userId: user.id
+      }
+  
+      console.log("Onboarding Data:", onboardingData)
+  
+      // Call onboarding API
+      const response = await fetch('/api/onboarding', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json' 
+        },
+        body: JSON.stringify(onboardingData)
+      })
+  
+      const data = await response.json()
+  
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Onboarding failed')
+      }
+  
+      console.log("✅ Onboarding successful:", data)
+      
+      // Close dialog
+      setIsDialogOpen(false)
+      
+      // Reset form
+      setWebsiteName("")
+      setCompetitor1("")
+      setCompetitor2("")
+      setCompetitor3("")
+      setKeyword1("")
+      setKeyword2("")
+      setKeyword3("")
+      
+      // Reload websites to show the new one
+      await loadUserWebsites()
+      
+      // Show success toast
+      toast.showToast({
+        title: "Website Added Successfully!",
+        description: `Found ${data.totalKeywords} keywords. 30 articles are being generated in the background.`,
+        type: "success",
+      })
+      
+    } catch (error) {
+      console.error("Error during onboarding:", error)
+      toast.showToast({
+        title: "Failed to Add Website",
+        description: error instanceof Error ? error.message : 'Unknown error',
+        type: "error",
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  // Validation: all fields must be filled
+  const canProceed = 
+    websiteName.trim() && 
+    competitor1.trim() && 
+    competitor2.trim() && 
+    competitor3.trim() &&
+    keyword1.trim() && 
+    keyword2.trim() && 
+    keyword3.trim()
+
   // Load websites on mount
   useEffect(() => {
     loadUserWebsites()
@@ -398,50 +242,125 @@ export function AnalyzeTab({ onViewKeywords, onViewCompetitors }: AnalyzeTabProp
       <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
         <CardHeader>
           <CardTitle>Add Website</CardTitle>
-          <CardDescription>Enter your website URL to analyze its topic and discover keywords + competitors</CardDescription>
+          <CardDescription>Add your website with competitors and keywords to get started</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex gap-2">
-            <Input
-              placeholder="example.com or https://example.com"
-              value={urlInput}
-              onChange={(e) => handleUrlInputChange(e.target.value)}
-              onKeyPress={(e) => e.key === "Enter" && !isAnalyzing && handleAddWebsite()}
-              className="bg-input border-border/40"
-              disabled={isAnalyzing}
-            />
-            <Button
-              onClick={handleAddWebsite}
-              disabled={isAnalyzing}
-              className="cursor-pointer bg-primary hover:bg-primary/90 text-primary-foreground gap-2"
-            >
-              {isAnalyzing ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Analyzing...
-                </>
-              ) : (
-                "Analyze"
-              )}
-            </Button>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              id="includeCompetitors"
-              checked={includeCompetitors}
-              onChange={(e) => setIncludeCompetitors(e.target.checked)}
-              className="rounded border-gray-300"
-            />
-            <label htmlFor="includeCompetitors" className="text-sm text-muted-foreground">
-              Include competitor analysis (finds websites competing for similar keywords)
-            </label>
-          </div>
-
-          {urlError && <p className="text-sm text-destructive">{urlError}</p>}
+        <CardContent>
+          <Button
+            onClick={() => setIsDialogOpen(true)}
+            className="cursor-pointer bg-primary hover:bg-primary/90 text-primary-foreground gap-2"
+          >
+            Add Your Website
+          </Button>
         </CardContent>
       </Card>
+
+      {/* Onboarding Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-lg p-0 overflow-hidden rounded-xl shadow-lg border border-border/50 bg-white">
+          <div className="px-10 py-8">
+            <DialogHeader className="mb-6 text-center">
+              <DialogTitle className="text-2xl text-center font-semibold text-gray-800">
+                Tell us about your website
+              </DialogTitle>
+            </DialogHeader>
+
+            {/* Form Fields */}
+            <div className="space-y-5">
+              {/* Website Name */}
+              <div className="space-y-2">
+                <Label className="text-sm text-gray-700 font-medium">
+                  Website Name
+                </Label>
+                <Input
+                  type="text"
+                  placeholder="Enter your website name"
+                  value={websiteName}
+                  onChange={(e) => setWebsiteName(e.target.value)}
+                  className="w-full border-gray-300 focus:border-[#4a5fd8] focus:ring-[#4a5fd8]"
+                />
+              </div>
+
+              {/* Competitors */}
+              <div className="space-y-2">
+                <Label className="text-sm text-gray-700 font-medium">
+                  Top 3 Competitors
+                </Label>
+                <div className="space-y-2">
+                  <Input
+                    type="text"
+                    placeholder="Competitor 1"
+                    value={competitor1}
+                    onChange={(e) => setCompetitor1(e.target.value)}
+                    className="w-full border-gray-300 focus:border-[#4a5fd8] focus:ring-[#4a5fd8]"
+                  />
+                  <Input
+                    type="text"
+                    placeholder="Competitor 2"
+                    value={competitor2}
+                    onChange={(e) => setCompetitor2(e.target.value)}
+                    className="w-full border-gray-300 focus:border-[#4a5fd8] focus:ring-[#4a5fd8]"
+                  />
+                  <Input
+                    type="text"
+                    placeholder="Competitor 3"
+                    value={competitor3}
+                    onChange={(e) => setCompetitor3(e.target.value)}
+                    className="w-full border-gray-300 focus:border-[#4a5fd8] focus:ring-[#4a5fd8]"
+                  />
+                </div>
+              </div>
+
+              {/* Keywords */}
+              <div className="space-y-2">
+                <Label className="text-sm text-gray-700 font-medium">
+                  Top 3 Keywords
+                </Label>
+                <div className="space-y-2">
+                  <Input
+                    type="text"
+                    placeholder="Keyword 1"
+                    value={keyword1}
+                    onChange={(e) => setKeyword1(e.target.value)}
+                    className="w-full border-gray-300 focus:border-[#4a5fd8] focus:ring-[#4a5fd8]"
+                  />
+                  <Input
+                    type="text"
+                    placeholder="Keyword 2"
+                    value={keyword2}
+                    onChange={(e) => setKeyword2(e.target.value)}
+                    className="w-full border-gray-300 focus:border-[#4a5fd8] focus:ring-[#4a5fd8]"
+                  />
+                  <Input
+                    type="text"
+                    placeholder="Keyword 3"
+                    value={keyword3}
+                    onChange={(e) => setKeyword3(e.target.value)}
+                    className="w-full border-gray-300 focus:border-[#4a5fd8] focus:ring-[#4a5fd8]"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="flex justify-end mt-8">
+              <Button
+                onClick={handleSubmitOnboarding}
+                disabled={!canProceed || isSubmitting}
+                className="px-6 bg-[#4a5fd8] hover:bg-[#3d52c7] text-white rounded-md shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSubmitting ? (
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Setting up...
+                  </div>
+                ) : (
+                  "Submit"
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {websites.length > 0 && (
         <div className="space-y-4">

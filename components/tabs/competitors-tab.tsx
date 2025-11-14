@@ -8,23 +8,37 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Search, ExternalLink, TrendingUp, Users, Target, BarChart3, Loader2 } from "lucide-react"
+import { supabase } from "@/lib/client"
 
 interface CompetitorsTabProps {
   websiteId: string | null;
 }
 
+interface Website {
+  id: string;
+  url: string;
+  topic: string;
+  created_at?: string;
+}
+
 interface Competitor {
   domain: string;
-  avg_position: number;
-  common_keywords: number;
-  organic_traffic: {
+  topic?: string;
+  success?: boolean;
+  keywords?: any[];
+  keywords_count?: number;
+  error?: string | null;
+  // Old format fields (for backward compatibility)
+  avg_position?: number;
+  common_keywords?: number;
+  organic_traffic?: {
     total_keywords: number;
     top_3_positions: number;
     top_10_positions: number;
     estimated_traffic_value: number;
   };
-  competitive_overlap: number;
-  serp_overlap_quality: "High" | "Medium" | "Low";
+  competitive_overlap?: number;
+  serp_overlap_quality?: "High" | "Medium" | "Low";
 }
 
 interface WebsiteData {
@@ -40,34 +54,85 @@ interface WebsiteData {
   };
 }
 
-export function CompetitorsTab({ websiteId }: CompetitorsTabProps) {
+export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabProps) {
+  const [selectedWebsiteId, setSelectedWebsiteId] = useState<string | null>(initialWebsiteId)
+  const [websites, setWebsites] = useState<Website[]>([])
   const [websiteData, setWebsiteData] = useState<WebsiteData | null>(null)
   const [competitors, setCompetitors] = useState<Competitor[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadingWebsites, setLoadingWebsites] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [qualityFilter, setQualityFilter] = useState<string>("all")
   const [sortBy, setSortBy] = useState<string>("overlap-desc")
 
-  // Fetch competitors when websiteId changes
-  useEffect(() => {
-    if (websiteId) {
-      fetchCompetitors()
-    } else {
-      setLoading(false)
-      setError("No website selected")
+  // Load user websites if no websiteId is provided
+  const loadUserWebsites = async () => {
+    try {
+      setLoadingWebsites(true)
+      const { data: { user } } = await supabase.auth.getUser()
+
+      if (!user) {
+        setError("Please log in to view competitors")
+        return
+      }
+
+      const { data, error } = await supabase
+        .from("websites")
+        .select("id, url, topic, created_at")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+
+      if (error) {
+        console.error("Error loading websites:", error)
+        setError("Failed to load websites")
+        return
+      }
+
+      if (data && data.length > 0) {
+        setWebsites(data)
+        // Auto-select first website if no websiteId was provided
+        if (!selectedWebsiteId) {
+          setSelectedWebsiteId(data[0].id)
+        }
+      } else {
+        setError("No websites found. Add a website in the Analyze tab first.")
+      }
+    } catch (error) {
+      console.error("Error loading websites:", error)
+      setError("Failed to load websites")
+    } finally {
+      setLoadingWebsites(false)
     }
-  }, [websiteId])
+  }
+
+  // Load websites on mount if no websiteId provided
+  useEffect(() => {
+    if (!initialWebsiteId) {
+      loadUserWebsites()
+    } else {
+      setSelectedWebsiteId(initialWebsiteId)
+    }
+  }, [initialWebsiteId])
+
+  // Fetch competitors when selectedWebsiteId changes
+  useEffect(() => {
+    if (selectedWebsiteId) {
+      fetchCompetitors()
+    } else if (!loadingWebsites) {
+      setLoading(false)
+    }
+  }, [selectedWebsiteId])
 
   const fetchCompetitors = async () => {
-    if (!websiteId) return;
+    if (!selectedWebsiteId) return;
     
     try {
       setLoading(true)
       setError(null)
-      console.log(`🔍 Fetching competitors for website: ${websiteId}`)
+      console.log(`🔍 Fetching competitors for website: ${selectedWebsiteId}`)
       
-      const response = await fetch(`/api/keyword/${websiteId}`)
+      const response = await fetch(`/api/keyword/${selectedWebsiteId}`)
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
@@ -82,12 +147,11 @@ export function CompetitorsTab({ websiteId }: CompetitorsTabProps) {
       // Extract competitors from the API response
       let competitorsData: Competitor[] = []
       
+      // Check for competitors in fullData (new format from onboarding)
       if (data.fullData && data.fullData.competitors && Array.isArray(data.fullData.competitors)) {
-        // Use the fullData from API
         competitorsData = data.fullData.competitors
         console.log(`✅ Loaded ${competitorsData.length} competitors from fullData`)
       } else if (data.metadata?.hasCompetitors) {
-        // Fallback: check if metadata indicates competitors exist
         console.log('⚠️ Metadata indicates competitors but fullData not found')
         competitorsData = []
       }
@@ -109,27 +173,90 @@ export function CompetitorsTab({ websiteId }: CompetitorsTabProps) {
     }
   }
 
+  // Helper function to check if competitor is in new format (from onboarding)
+  const isNewFormat = (competitor: Competitor | undefined): boolean => {
+    if (!competitor) return false; // Handle undefined/null
+    return competitor.keywords_count !== undefined || 
+           (competitor.keywords !== undefined && competitor.topic !== undefined)
+  }
+
+  // Helper function to get display values for new format
+  const getCompetitorDisplayData = (competitor: Competitor) => {
+    if (isNewFormat(competitor)) {
+      // New format: show topic, keywords count, and keywords list
+      return {
+        domain: competitor.domain,
+        topic: competitor.topic || 'Unknown',
+        keywordsCount: competitor.keywords_count || competitor.keywords?.length || 0,
+        keywords: competitor.keywords || [],
+        success: competitor.success !== false,
+        error: competitor.error
+      }
+    } else {
+      // Old format: use existing fields
+      return {
+        domain: competitor.domain,
+        topic: 'N/A',
+        keywordsCount: competitor.organic_traffic?.total_keywords || competitor.common_keywords || 0,
+        keywords: [],
+        success: true,
+        error: null,
+        avgPosition: competitor.avg_position,
+        commonKeywords: competitor.common_keywords,
+        organicTraffic: competitor.organic_traffic,
+        competitiveOverlap: competitor.competitive_overlap,
+        serpOverlapQuality: competitor.serp_overlap_quality
+      }
+    }
+  }
+
   const filteredAndSortedCompetitors = competitors
-    .filter(competitor => 
-      competitor.domain.toLowerCase().includes(searchQuery.toLowerCase()) &&
-      (qualityFilter === "all" || competitor.serp_overlap_quality === qualityFilter)
-    )
+    .filter(competitor => {
+      const displayData = getCompetitorDisplayData(competitor)
+      const matchesSearch = displayData.domain.toLowerCase().includes(searchQuery.toLowerCase())
+      
+      if (isNewFormat(competitor)) {
+        // For new format, filter by topic or domain
+        const matchesTopic = displayData.topic.toLowerCase().includes(searchQuery.toLowerCase())
+        return matchesSearch || matchesTopic
+      } else {
+        // For old format, use existing quality filter
+        return matchesSearch && 
+               (qualityFilter === "all" || competitor.serp_overlap_quality === qualityFilter)
+      }
+    })
     .sort((a, b) => {
-      switch (sortBy) {
-        case "overlap-desc":
-          return b.common_keywords - a.common_keywords
-        case "overlap-asc":
-          return a.common_keywords - b.common_keywords
-        case "position-asc":
-          return a.avg_position - b.avg_position
-        case "position-desc":
-          return b.avg_position - a.avg_position
-        case "traffic-desc":
-          return b.organic_traffic.estimated_traffic_value - a.organic_traffic.estimated_traffic_value
-        case "traffic-asc":
-          return a.organic_traffic.estimated_traffic_value - b.organic_traffic.estimated_traffic_value
-        default:
-          return 0
+      const aData = getCompetitorDisplayData(a)
+      const bData = getCompetitorDisplayData(b)
+      
+      if (isNewFormat(a) && isNewFormat(b)) {
+        // Sort new format by keywords count
+        switch (sortBy) {
+          case "overlap-desc":
+            return bData.keywordsCount - aData.keywordsCount
+          case "overlap-asc":
+            return aData.keywordsCount - bData.keywordsCount
+          default:
+            return 0
+        }
+      } else {
+        // Use existing sort logic for old format
+        switch (sortBy) {
+          case "overlap-desc":
+            return (b.common_keywords || 0) - (a.common_keywords || 0)
+          case "overlap-asc":
+            return (a.common_keywords || 0) - (b.common_keywords || 0)
+          case "position-asc":
+            return (a.avg_position || 0) - (b.avg_position || 0)
+          case "position-desc":
+            return (b.avg_position || 0) - (a.avg_position || 0)
+          case "traffic-desc":
+            return (b.organic_traffic?.estimated_traffic_value || 0) - (a.organic_traffic?.estimated_traffic_value || 0)
+          case "traffic-asc":
+            return (a.organic_traffic?.estimated_traffic_value || 0) - (b.organic_traffic?.estimated_traffic_value || 0)
+          default:
+            return 0
+        }
       }
     })
 
@@ -162,9 +289,38 @@ export function CompetitorsTab({ websiteId }: CompetitorsTabProps) {
 
   const stats = {
     totalCompetitors: competitors.length,
-    avgOverlap: Math.round(competitors.reduce((sum, c) => sum + c.common_keywords, 0) / Math.max(competitors.length, 1)),
-    avgPosition: (competitors.reduce((sum, c) => sum + c.avg_position, 0) / Math.max(competitors.length, 1)).toFixed(1),
-    highQualityCount: competitors.filter(c => c.serp_overlap_quality === "High").length
+    avgOverlap: competitors.length > 0 && isNewFormat(competitors[0])
+      ? Math.round(competitors.reduce((sum, c) => sum + (c.keywords_count || c.keywords?.length || 0), 0) / Math.max(competitors.length, 1))
+      : Math.round(competitors.reduce((sum, c) => sum + (c.common_keywords || 0), 0) / Math.max(competitors.length, 1)),
+    avgPosition: competitors.length > 0 && isNewFormat(competitors[0])
+      ? "N/A"
+      : (competitors.reduce((sum, c) => sum + (c.avg_position || 0), 0) / Math.max(competitors.length, 1)).toFixed(1),
+    highQualityCount: competitors.filter(c => !isNewFormat(c) && c.serp_overlap_quality === "High").length
+  }
+
+  if (loadingWebsites) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-primary" />
+          <p className="text-muted-foreground">Loading websites...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error && !selectedWebsiteId && websites.length === 0) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <Users className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+          <p className="text-destructive mb-4">{error}</p>
+          <Button onClick={loadUserWebsites} variant="outline">
+            Try Again
+          </Button>
+        </div>
+      </div>
+    )
   }
 
   if (loading) {
@@ -214,6 +370,39 @@ export function CompetitorsTab({ websiteId }: CompetitorsTabProps) {
 
   return (
     <div className="space-y-6">
+      {/* Website Selector Pills - Show when multiple websites or no initial websiteId */}
+      {websites.length > 0 && (
+        <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
+          <CardHeader>
+            <CardTitle>Select Website</CardTitle>
+            <CardDescription>Choose a website to view its competitors</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-2">
+              {websites.map((website) => (
+                <Button
+                  key={website.id}
+                  variant={selectedWebsiteId === website.id ? "default" : "outline"}
+                  onClick={() => setSelectedWebsiteId(website.id)}
+                  className={`cursor-pointer ${
+                    selectedWebsiteId === website.id
+                      ? "bg-primary text-primary-foreground"
+                      : "border-border/40 hover:bg-accent"
+                  }`}
+                >
+                  {website.url}
+                  {selectedWebsiteId === website.id && (
+                    <Badge className="ml-2 bg-primary-foreground/20 text-primary-foreground">
+                      Active
+                    </Badge>
+                  )}
+                </Button>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Website Info Header */}
       <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
         <CardContent className="pt-6">
@@ -345,77 +534,139 @@ export function CompetitorsTab({ websiteId }: CompetitorsTabProps) {
 
           {/* Competitors Grid */}
           <div className="grid gap-4">
-            {filteredAndSortedCompetitors.map((competitor, index) => (
-              <Card key={competitor.domain} className="border-border/40 bg-card/50 backdrop-blur-sm">
-                <CardContent className="pt-6">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-3">
-                        <h3 className="font-semibold text-foreground text-lg">{competitor.domain}</h3>
-                        <Badge className={getQualityColor(competitor.serp_overlap_quality)}>
-                          {competitor.serp_overlap_quality} Quality
-                        </Badge>
+            {filteredAndSortedCompetitors.map((competitor, index) => {
+              const displayData = getCompetitorDisplayData(competitor)
+              const isNew = isNewFormat(competitor)
+              
+              return (
+                <Card key={competitor.domain} className="border-border/40 bg-card/50 backdrop-blur-sm">
+                  <CardContent className="pt-6">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-3">
+                          <h3 className="font-semibold text-foreground text-lg">{displayData.domain}</h3>
+                          {isNew ? (
+                            <Badge className="bg-blue-100 text-blue-700 border-blue-200">
+                              {displayData.topic}
+                            </Badge>
+                          ) : (
+                            <Badge className={getQualityColor(competitor.serp_overlap_quality || "Low")}>
+                              {competitor.serp_overlap_quality} Quality
+                            </Badge>
+                          )}
+                          {displayData.success === false && (
+                            <Badge variant="outline" className="text-red-600 border-red-300">
+                              Failed
+                            </Badge>
+                          )}
+                        </div>
+                        
+                        {isNew ? (
+                          // New format display
+                          <div className="space-y-3">
+                            <div className="grid md:grid-cols-2 gap-4">
+                              <div>
+                                <p className="text-sm text-muted-foreground">Topic</p>
+                                <p className="text-lg font-bold text-foreground">{displayData.topic}</p>
+                              </div>
+                              <div>
+                                <p className="text-sm text-muted-foreground">Keywords Found</p>
+                                <p className="text-lg font-bold text-foreground">{displayData.keywordsCount}</p>
+                              </div>
+                            </div>
+                            
+                            {displayData.keywords && displayData.keywords.length > 0 && (
+                              <div>
+                                <p className="text-sm text-muted-foreground mb-2">Keywords:</p>
+                                <div className="flex flex-wrap gap-2">
+                                  {displayData.keywords.slice(0, 10).map((kw: any, idx: number) => (
+                                    <Badge key={idx} variant="outline" className="text-xs">
+                                      {typeof kw === 'string' ? kw : kw.keyword}
+                                    </Badge>
+                                  ))}
+                                  {displayData.keywords.length > 10 && (
+                                    <Badge variant="outline" className="text-xs">
+                                      +{displayData.keywords.length - 10} more
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                            
+                            {displayData.error && (
+                              <p className="text-sm text-red-600">Error: {displayData.error}</p>
+                            )}
+                          </div>
+                        ) : (
+                          // Old format display (existing code)
+                          <>
+                            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                              <div>
+                                <p className="text-sm text-muted-foreground">Keyword Overlap</p>
+                                <p className="text-lg font-bold text-foreground">
+                                  {formatNumber(competitor.common_keywords || 0)}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {competitor.competitive_overlap}% overlap
+                                </p>
+                              </div>
+                              
+                              <div>
+                                <p className="text-sm text-muted-foreground">Avg. Position</p>
+                                <p className={`text-lg font-bold ${getPositionColor(competitor.avg_position || 0)}`}>
+                                  #{competitor.avg_position?.toFixed(1) || 'N/A'}
+                                </p>
+                                <p className="text-xs text-muted-foreground">SERP position</p>
+                              </div>
+                              
+                              <div>
+                                <p className="text-sm text-muted-foreground">Estimated Traffic</p>
+                                <p className="text-lg font-bold text-foreground">
+                                  {formatCurrency(competitor.organic_traffic?.estimated_traffic_value || 0)}
+                                </p>
+                                <p className="text-xs text-muted-foreground">Traffic value</p>
+                              </div>
+                              
+                              <div>
+                                <p className="text-sm text-muted-foreground">Top Positions</p>
+                                <p className="text-lg font-bold text-foreground">
+                                  {formatNumber(competitor.organic_traffic?.top_3_positions || 0)}
+                                </p>
+                                <p className="text-xs text-muted-foreground">Top 3 rankings</p>
+                              </div>
+                            </div>
+                            
+                            <div className="flex gap-2">
+                              <Badge variant="outline" className="text-xs">
+                                Total Keywords: {formatNumber(competitor.organic_traffic?.total_keywords || 0)}
+                              </Badge>
+                              <Badge variant="outline" className="text-xs">
+                                Top 10: {formatNumber(competitor.organic_traffic?.top_10_positions || 0)}
+                              </Badge>
+                            </div>
+                          </>
+                        )}
                       </div>
                       
-                      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-                        <div>
-                          <p className="text-sm text-muted-foreground">Keyword Overlap</p>
-                          <p className="text-lg font-bold text-foreground">
-                            {formatNumber(competitor.common_keywords)}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {competitor.competitive_overlap}% overlap
-                          </p>
-                        </div>
-                        
-                        <div>
-                          <p className="text-sm text-muted-foreground">Avg. Position</p>
-                          <p className={`text-lg font-bold ${getPositionColor(competitor.avg_position)}`}>
-                            #{competitor.avg_position.toFixed(1)}
-                          </p>
-                          <p className="text-xs text-muted-foreground">SERP position</p>
-                        </div>
-                        
-                        <div>
-                          <p className="text-sm text-muted-foreground">Estimated Traffic</p>
-                          <p className="text-lg font-bold text-foreground">
-                            {formatCurrency(competitor.organic_traffic.estimated_traffic_value)}
-                          </p>
-                          <p className="text-xs text-muted-foreground">Traffic value</p>
-                        </div>
-                        
-                        <div>
-                          <p className="text-sm text-muted-foreground">Top Positions</p>
-                          <p className="text-lg font-bold text-foreground">
-                            {formatNumber(competitor.organic_traffic.top_3_positions)}
-                          </p>
-                          <p className="text-xs text-muted-foreground">Top 3 rankings</p>
-                        </div>
-                      </div>
-                      
-                      <div className="flex gap-2">
-                        <Badge variant="outline" className="text-xs">
-                          Total Keywords: {formatNumber(competitor.organic_traffic.total_keywords)}
-                        </Badge>
-                        <Badge variant="outline" className="text-xs">
-                          Top 10: {formatNumber(competitor.organic_traffic.top_10_positions)}
-                        </Badge>
-                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="cursor-pointer gap-2 ml-4"
+                        onClick={() => {
+                          const url = displayData.domain.startsWith('http') 
+                            ? displayData.domain 
+                            : `https://${displayData.domain}`
+                          window.open(url, '_blank')
+                        }}
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                        Visit
+                      </Button>
                     </div>
-                    
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="cursor-pointer gap-2 ml-4"
-                      onClick={() => window.open(`https://${competitor.domain}`, '_blank')}
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                      Visit
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              )
+            })}
           </div>
 
           {filteredAndSortedCompetitors.length === 0 && (

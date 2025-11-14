@@ -19,10 +19,10 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const websiteId = params.id;
+    const { id: websiteId } = await params;
     console.log(`🔍 API: Fetching keywords for website: ${websiteId}`);
 
     const { data: website, error } = await supabase

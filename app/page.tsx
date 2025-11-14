@@ -3,29 +3,72 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { getUser, signOut } from "@/lib/auth"
+import { supabase } from "@/lib/client"
 import { useToast } from "@/components/ui/toast"
 import { LandingPage } from "@/components/landing-page"
 import { Dashboard } from "@/components/dashboard"
 import { LoginPage } from "@/components/login-page"
 import { SignUpPage } from "@/components/signup-page"
+
 export default function Home() {
   const [authState, setAuthState] = useState<"landing" | "login" | "signup" | "dashboard">("landing")
   const [userEmail, setUserEmail] = useState("")
+  const [isCheckingSubscription, setIsCheckingSubscription] = useState(true)
   const router = useRouter()
 
   useEffect(() => {
     let mounted = true
     async function check() {
       try {
+        setIsCheckingSubscription(true)
         const { data } = await getUser()
         // data is normalized to the user object (or null)
         const user = data
+        
         if (mounted && user && (user.id || user.email)) {
           setUserEmail(user.email ?? "")
-          setAuthState("dashboard")
+          
+          // Check subscription status
+          const { data: userData, error: dbError } = await supabase
+            .from('users')
+            .select('subscribe')
+            .eq('id', user.id)
+            .single()
+
+          if (dbError) {
+            console.error('Error checking subscription:', dbError)
+            // If error checking subscription, redirect to paywall to be safe
+            if (mounted) {
+              router.push('/paywall')
+            }
+            return
+          }
+
+          // Check if user is subscribed
+          if (mounted) {
+            if (userData?.subscribe === true) {
+              // User is subscribed, show dashboard
+              setAuthState("dashboard")
+            } else {
+              // User is not subscribed, redirect to paywall
+              router.push('/paywall')
+            }
+          }
+        } else {
+          // No user logged in, show landing page
+          if (mounted) {
+            setAuthState("landing")
+          }
         }
       } catch (err) {
-        // ignore
+        console.error('Error in auth check:', err)
+        if (mounted) {
+          setAuthState("landing")
+        }
+      } finally {
+        if (mounted) {
+          setIsCheckingSubscription(false)
+        }
       }
     }
 
@@ -33,7 +76,7 @@ export default function Home() {
     return () => {
       mounted = false
     }
-  }, [])
+  }, [router])
 
   const handleSignIn = () => {
     router.push("/login")
@@ -45,12 +88,37 @@ export default function Home() {
 
   const handleLoginSuccess = (email: string) => {
     setUserEmail(email)
-    setAuthState("dashboard")
+    // After login, check subscription status
+    checkSubscriptionAndRedirect()
   }
 
   const handleSignUpSuccess = (email: string) => {
     setUserEmail(email)
-    setAuthState("dashboard")
+    // After signup, check subscription status
+    checkSubscriptionAndRedirect()
+  }
+
+  // Helper function to check subscription and redirect
+  const checkSubscriptionAndRedirect = async () => {
+    try {
+      const { data: user } = await getUser()
+      if (user?.id) {
+        const { data: userData, error: dbError } = await supabase
+          .from('users')
+          .select('subscribe')
+          .eq('id', user.id)
+          .single()
+
+        if (!dbError && userData?.subscribe === true) {
+          setAuthState("dashboard")
+        } else {
+          router.push('/paywall')
+        }
+      }
+    } catch (err) {
+      console.error('Error checking subscription:', err)
+      router.push('/paywall')
+    }
   }
 
   const toast = useToast()
@@ -82,6 +150,15 @@ export default function Home() {
 
   const handleToggleAuthMode = (mode: "login" | "signup") => {
     router.push(mode === "login" ? "/login" : "/signup")
+  }
+
+  // Show loading state while checking subscription
+  if (isCheckingSubscription) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    )
   }
 
   if (authState === "dashboard") {

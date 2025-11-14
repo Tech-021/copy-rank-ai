@@ -1,7 +1,8 @@
 "use client";
-
+import { supabase } from "@/lib/client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { getUser } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -9,60 +10,191 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useToast } from "@/components/ui/toast";
 
 export default function OnboardingPage() {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
-  const [sellingStatus, setSellingStatus] = useState("");
-  const [revenue, setRevenue] = useState("");
-  const [isForClient, setIsForClient] = useState("no");
+  const [isCheckingSubscription, setIsCheckingSubscription] = useState(true);
+  
+  // New state variables
+  const [websiteName, setWebsiteName] = useState("");
+  const [competitor1, setCompetitor1] = useState("");
+  const [competitor2, setCompetitor2] = useState("");
+  const [competitor3, setCompetitor3] = useState("");
+  const [keyword1, setKeyword1] = useState("");
+  const [keyword2, setKeyword2] = useState("");
+  const [keyword3, setKeyword3] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const toast = useToast();
 
-  // Automatically open the dialog when the page loads
+  // Check subscription status on mount
   useEffect(() => {
-    setIsOpen(true);
-  }, []);
+    let mounted = true;
+    
+    async function checkSubscription() {
+      try {
+        setIsCheckingSubscription(true);
+        
+        // Check if user is logged in
+        const { data: user, error: userError } = await getUser();
+        
+        if (!user || userError || !user.id) {
+          // User not logged in, redirect to login
+          if (mounted) {
+            router.push('/login');
+          }
+          return;
+        }
+
+        // Check subscription status from the users table
+        const { data: userData, error: dbError } = await supabase
+          .from('users')
+          .select('subscribe')
+          .eq('id', user.id)
+          .single();
+
+        if (dbError) {
+          console.error('Error checking subscription:', dbError);
+          // If error checking subscription, redirect to paywall to be safe
+          if (mounted) {
+            router.push('/paywall');
+          }
+          return;
+        }
+
+        // Check if user is subscribed
+        if (mounted) {
+          if (userData?.subscribe === true) {
+            // User is subscribed, allow access - open dialog
+            setIsOpen(true);
+          } else {
+            // User is not subscribed, redirect to paywall
+            router.push('/paywall');
+          }
+        }
+      } catch (error) {
+        console.error('Error checking subscription:', error);
+        if (mounted) {
+          router.push('/paywall');
+        }
+      } finally {
+        if (mounted) {
+          setIsCheckingSubscription(false);
+        }
+      }
+    }
+
+    checkSubscription();
+    
+    return () => {
+      mounted = false;
+    };
+  }, [router]);
+
+  // Automatically open the dialog when subscription check passes
+  // (This is now handled in the subscription check useEffect above)
 
   const handleNext = async () => {
     setIsLoading(true);
     
-    // Here you can save the onboarding data to your database/API
     try {
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        toast.showToast({
+          title: "Authentication Required",
+          description: "Please log in to continue",
+          type: "error",
+        });
+        setIsLoading(false);
+        return;
+      }
+  
+      // Prepare onboarding data
       const onboardingData = {
-        sellingStatus,
-        revenue,
-        isForClient,
+        clientDomain: websiteName.trim(), // Client website URL
+        competitors: [
+          competitor1.trim(),
+          competitor2.trim(),
+          competitor3.trim()
+        ],
+        targetKeywords: [
+          keyword1.trim(),
+          keyword2.trim(),
+          keyword3.trim()
+        ],
+        userId: user.id
       };
+  
+      console.log("Onboarding Data:", onboardingData);
+  
+      // Call onboarding API
+      const response = await fetch('/api/onboarding', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json' 
+        },
+        body: JSON.stringify(onboardingData)
+      });
+  
+      const data = await response.json();
+  
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Onboarding failed');
+      }
+  
+      console.log("✅ Onboarding successful:", data);
       
-      // Save to your backend API
-      // await fetch('/api/onboarding', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(onboardingData)
-      // });
+      // Show success toast with article generation message
+      toast.showToast({
+        title: "Website Added Successfully!",
+        description: `Found ${data.totalKeywords} keywords. 30 articles are being generated in the background.`,
+        type: "success",
+      });
       
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Small delay to show the toast before navigation
+      await new Promise(resolve => setTimeout(resolve, 1500));
       
       // Navigate to dashboard
       router.push("/dashboard");
+      
     } catch (error) {
-      console.error("Error saving onboarding data:", error);
+      console.error("Error during onboarding:", error);
+      toast.showToast({
+        title: "Onboarding Failed",
+        description: error instanceof Error ? error.message : 'Unknown error',
+        type: "error",
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const canProceed = sellingStatus && revenue && isForClient;
+  // Validation: all fields must be filled
+  const canProceed = 
+    websiteName.trim() && 
+    competitor1.trim() && 
+    competitor2.trim() && 
+    competitor3.trim() &&
+    keyword1.trim() && 
+    keyword2.trim() && 
+    keyword3.trim();
+
+  // Show loading state while checking subscription
+  if (isCheckingSubscription) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Checking subscription status...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
@@ -84,81 +216,91 @@ export default function OnboardingPage() {
           <div className="px-10 py-8">
             <DialogHeader className="mb-6 text-center">
               <DialogTitle className="text-2xl text-center font-semibold text-gray-800">
-                Tell us a little about yourself
+                Tell us about your website
               </DialogTitle>
 
               {/* Progress dots */}
-              <div className="flex justify-center mt-2">
+              {/* <div className="flex justify-center mt-2">
                 <div className="w-2 h-2 rounded-full bg-[#4a5fd8]" />
                 <div className="w-2 h-2 rounded-full bg-gray-300 mx-1" />
                 <div className="w-2 h-2 rounded-full bg-gray-300" />
-              </div>
+              </div> */}
             </DialogHeader>
 
             {/* Form Fields */}
-            <div className="space-y-6">
-              {/* Selling Status */}
+            <div className="space-y-5">
+              {/* Website Name */}
               <div className="space-y-2">
-                <div className="border border-gray-300 rounded-md p-3">
-                  <Label className="text-xs text-gray-600 block mb-2">
-                    Are you already selling?
-                  </Label>
-                  <Select value={sellingStatus} onValueChange={setSellingStatus}>
-                    <SelectTrigger className="w-full border-0 p-0 h-6 focus:ring-0 focus-visible:ring-0 focus:outline-none">
-                      <SelectValue placeholder="Please choose one..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="yes">Yes</SelectItem>
-                      <SelectItem value="no">No</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Revenue */}
-              <div className="space-y-2">
-                <div className="border border-gray-300 rounded-md p-3">
-                  <Label className="text-xs text-gray-600 block mb-2">
-                    What is your current revenue?
-                  </Label>
-                  <Select value={revenue} onValueChange={setRevenue}>
-                    <SelectTrigger className="w-full border-0 p-0 h-6 focus:ring-0 focus-visible:ring-0 focus:outline-none">
-                      <SelectValue placeholder="Please choose one..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">None yet</SelectItem>
-                      <SelectItem value="below10k">Below $10k</SelectItem>
-                      <SelectItem value="above10k">Above $10k</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Client Store */}
-              <div className="pt-1">
-                <Label className="text-xs text-gray-600 block mb-3">
-                  Are you setting up a store for a client?
+                <Label className="text-sm text-gray-700 font-medium">
+                  Website Name
                 </Label>
-                <RadioGroup value={isForClient} onValueChange={setIsForClient}>
-                  <div className="flex items-start space-x-2 mb-3">
-                    <RadioGroupItem value="yes" id="r1" />
-                    <Label
-                      htmlFor="r1"
-                      className="text-sm font-normal text-gray-700 cursor-pointer select-none leading-tight"
-                    >
-                      Yes, I'm designing/developing a store for a client
-                    </Label>
-                  </div>
-                  <div className="flex items-start space-x-2">
-                    <RadioGroupItem value="no" id="r2" />
-                    <Label
-                      htmlFor="r2"
-                      className="text-sm font-normal text-gray-700 cursor-pointer select-none leading-tight"
-                    >
-                      No, this is for my own business
-                    </Label>
-                  </div>
-                </RadioGroup>
+                <Input
+                  type="text"
+                  placeholder="Enter your website name"
+                  value={websiteName}
+                  onChange={(e) => setWebsiteName(e.target.value)}
+                  className="w-full border-gray-300 focus:border-[#4a5fd8] focus:ring-[#4a5fd8]"
+                />
+              </div>
+
+              {/* Competitors */}
+              <div className="space-y-2">
+                <Label className="text-sm text-gray-700 font-medium">
+                  Top 3 Competitors
+                </Label>
+                <div className="space-y-2">
+                  <Input
+                    type="text"
+                    placeholder="Competitor 1"
+                    value={competitor1}
+                    onChange={(e) => setCompetitor1(e.target.value)}
+                    className="w-full border-gray-300 focus:border-[#4a5fd8] focus:ring-[#4a5fd8]"
+                  />
+                  <Input
+                    type="text"
+                    placeholder="Competitor 2"
+                    value={competitor2}
+                    onChange={(e) => setCompetitor2(e.target.value)}
+                    className="w-full border-gray-300 focus:border-[#4a5fd8] focus:ring-[#4a5fd8]"
+                  />
+                  <Input
+                    type="text"
+                    placeholder="Competitor 3"
+                    value={competitor3}
+                    onChange={(e) => setCompetitor3(e.target.value)}
+                    className="w-full border-gray-300 focus:border-[#4a5fd8] focus:ring-[#4a5fd8]"
+                  />
+                </div>
+              </div>
+
+              {/* Keywords */}
+              <div className="space-y-2">
+                <Label className="text-sm text-gray-700 font-medium">
+                  Top 3 Keywords
+                </Label>
+                <div className="space-y-2">
+                  <Input
+                    type="text"
+                    placeholder="Keyword 1"
+                    value={keyword1}
+                    onChange={(e) => setKeyword1(e.target.value)}
+                    className="w-full border-gray-300 focus:border-[#4a5fd8] focus:ring-[#4a5fd8]"
+                  />
+                  <Input
+                    type="text"
+                    placeholder="Keyword 2"
+                    value={keyword2}
+                    onChange={(e) => setKeyword2(e.target.value)}
+                    className="w-full border-gray-300 focus:border-[#4a5fd8] focus:ring-[#4a5fd8]"
+                  />
+                  <Input
+                    type="text"
+                    placeholder="Keyword 3"
+                    value={keyword3}
+                    onChange={(e) => setKeyword3(e.target.value)}
+                    className="w-full border-gray-300 focus:border-[#4a5fd8] focus:ring-[#4a5fd8]"
+                  />
+                </div>
               </div>
             </div>
 
@@ -175,7 +317,7 @@ export default function OnboardingPage() {
                     Setting up...
                   </div>
                 ) : (
-                  "Next"
+                  "Submit"
                 )}
               </Button>
             </div>
