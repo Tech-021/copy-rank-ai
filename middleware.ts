@@ -65,6 +65,9 @@ export async function middleware(request: NextRequest) {
     '/signup',
     '/auth/callback',
     '/auth/reset-password',
+    '/paywall', // Add paywall to public routes
+    '/payment/callback', // Payment callback should also be public
+    '/payment/fail', // Payment fail page should be public
   ]
 
   // Check if the current path is a public route
