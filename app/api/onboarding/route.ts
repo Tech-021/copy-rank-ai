@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from '@supabase/supabase-js';
 import { hybridScraper } from "@/app/api/scraper/route";
 import { analyzeWithQwen } from "@/lib/qwen";
-import { fetchKeywordsFromDataForSEO, filterKeywords } from "@/lib/dataforseo";
+import { fetchKeywordsFromDataForSEO, filterKeywords, fetchKeywordOverview } from "@/lib/dataforseo";
 
 // Initialize Supabase client
 const supabase = createClient(
@@ -28,7 +28,7 @@ interface CompetitorResult {
 export async function POST(request: Request) {
   try {
     const body: OnboardingRequest = await request.json();
-    
+
     const { clientDomain, competitors, targetKeywords, userId } = body;
 
     // Validation
@@ -60,7 +60,7 @@ export async function POST(request: Request) {
     // STEP 1: Find topic for client domain (NO keywords)
     console.log("🔍 Step 1: Finding topic for client domain...");
     let clientTopic = "General";
-    
+
     try {
       const clientScrape = await hybridScraper(clientDomain);
       if (clientScrape) {
@@ -87,7 +87,7 @@ export async function POST(request: Request) {
       try {
         // 2a. Scrape competitor domain
         const competitorScrape = await hybridScraper(competitorUrl);
-        
+
         if (!competitorScrape) {
           console.warn(`⚠️ Failed to scrape competitor ${i + 1}`);
           competitorResults.push({
@@ -108,7 +108,7 @@ export async function POST(request: Request) {
         // 2c. Fetch keywords for competitor topic
         console.log(`🔍 Fetching keywords for topic: ${competitorTopic}`);
         const rawKeywords = await fetchKeywordsFromDataForSEO(competitorTopic);
-        
+
         // Apply filters: 100-500 volume, competition ≤0.3
         const filteredKeywords = filterKeywords(
           rawKeywords,
@@ -142,12 +142,50 @@ export async function POST(request: Request) {
       }
     }
 
-    // STEP 3: Remove duplicate keywords (by keyword text)
-    console.log("\n🔍 Step 3: Removing duplicate keywords...");
-    const uniqueKeywords = allKeywords.filter((keyword, index, self) => 
+    // STEP 2.5: Process target keywords (NO filtering - explicit keywords)
+    console.log("\n🔍 Step 2.5: Processing target keywords...");
+    let targetKeywordData: any[] = [];
+
+    if (targetKeywords && targetKeywords.length > 0) {
+      // Filter out empty keywords
+      const validTargetKeywords = targetKeywords.filter(kw => kw && kw.trim() !== '');
+
+      if (validTargetKeywords.length > 0) {
+        try {
+          console.log(`📋 Processing ${validTargetKeywords.length} target keywords:`, validTargetKeywords);
+
+          // Call keyword overview API (processes keywords one by one internally)
+          const overviewResults = await fetchKeywordOverview(validTargetKeywords);
+
+          // NO filtering - use whatever data we get (explicit keywords)
+          targetKeywordData = overviewResults.map(kw => ({
+            ...kw,
+            is_target_keyword: true // Flag to identify target keywords
+          }));
+
+          console.log(`✅ Retrieved data for ${targetKeywordData.length} target keywords`);
+
+        } catch (error) {
+          console.error("❌ Error processing target keywords:", error);
+          // Continue even if target keywords fail
+        }
+      }
+    } else {
+      console.log("ℹ️ No target keywords provided");
+    }
+
+    // STEP 3: Merge competitor keywords + target keywords, then remove duplicates
+    console.log("\n🔍 Step 3: Merging all keywords and removing duplicates...");
+
+    // Combine competitor keywords + target keywords
+    const allMergedKeywords = [...allKeywords, ...targetKeywordData];
+    console.log(`📊 Total before deduplication: ${allKeywords.length} competitor + ${targetKeywordData.length} target = ${allMergedKeywords.length} total`);
+
+    // Remove duplicate keywords (by keyword text, case-insensitive)
+    const uniqueKeywords = allMergedKeywords.filter((keyword, index, self) =>
       index === self.findIndex(k => k.keyword.toLowerCase() === keyword.keyword.toLowerCase())
     );
-    console.log(`✅ Merged ${allKeywords.length} total keywords → ${uniqueKeywords.length} unique keywords`);
+    console.log(`✅ Merged ${allMergedKeywords.length} total keywords → ${uniqueKeywords.length} unique keywords`);
 
     // STEP 4: Sort by search volume (highest first) and limit
     const finalKeywords = uniqueKeywords
@@ -155,10 +193,12 @@ export async function POST(request: Request) {
       .slice(0, 50); // Limit to top 50 keywords
 
     console.log(`✅ Final keyword count: ${finalKeywords.length}`);
+    console.log(`   - Competitor keywords: ${finalKeywords.filter(k => !k.is_target_keyword).length}`);
+    console.log(`   - Target keywords: ${finalKeywords.filter(k => k.is_target_keyword).length}`);
 
     // STEP 5: Save to database
     console.log("\n💾 Step 5: Saving to database...");
-    
+
     const insertData = {
       url: clientDomain,
       topic: clientTopic,
