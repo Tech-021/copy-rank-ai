@@ -159,15 +159,18 @@ function transformItems(items: any[], topic: string): KeywordData[] {
 
 export function filterKeywords(
   keywords: KeywordData[], 
-  maxDifficulty: number = 70, // Increased from 60
-  minVolume: number = 50      // Lowered from 100
+  maxDifficulty: number = 70,
+  minVolume: number = 100,
+  maxVolume: number = 500,  // NEW: Maximum search volume
+  maxCompetition: number = 0.3  // CHANGED: Low competition threshold (30%)
 ): KeywordData[] {
   return keywords
     .filter(kw => 
       kw.search_volume >= minVolume && 
+      kw.search_volume <= maxVolume &&  // NEW: Maximum volume filter
       kw.difficulty <= maxDifficulty &&
-      kw.competition <= 0.8  // Increased from 0.7
+      kw.competition <= maxCompetition  // CHANGED: Low competition (0.3 = 30%)
     )
-    .sort((a, b) => b.search_volume - a.search_volume)
+    .sort((a, b) => b.search_volume - a.search_volume)  // Sort by volume (highest first)
     .slice(0, 30);
 }

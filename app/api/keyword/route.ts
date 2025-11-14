@@ -4,11 +4,12 @@ import { fetchKeywordsFromDataForSEO, filterKeywords } from "@/lib/dataforseo";
 
 interface KeywordRequest {
   topic: string;
-  websiteUrl?: string; // NEW: Add website URL for competitor analysis
+  websiteUrl?: string;
   maxDifficulty?: number;
   minVolume?: number;
+  maxVolume?: number;  // NEW: Add this line
   limit?: number;
-  includeCompetitors?: boolean; // NEW: Flag to include competitors
+  includeCompetitors?: boolean;
 }
 
 // Internal function to call your competitor API
@@ -55,11 +56,12 @@ export async function POST(request: Request) {
     
     const { 
       topic, 
-      websiteUrl, // NEW
+      websiteUrl,
       maxDifficulty = 70, 
       minVolume = 100,
+      maxVolume = 500,  // NEW: Default max volume 500
       limit = 20,
-      includeCompetitors = false // NEW
+      includeCompetitors = false
     } = body;
 
     if (!topic) {
@@ -103,8 +105,9 @@ export async function POST(request: Request) {
       filters: {
         maxDifficulty,
         minVolume,
+        maxVolume,  // NEW: Add this line
         limit,
-        includeCompetitors // NEW
+        includeCompetitors
       }
     });
 
