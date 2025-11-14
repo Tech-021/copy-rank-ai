@@ -337,15 +337,14 @@ export async function POST(request: Request) {
     // Don't await - let it run in background while we return the response
     console.log("\n🚀 Step 6: Starting automatic article generation in background...");
     
-    generateArticlesAutomatically(
-      finalKeywords,
-      savedWebsite.id,
-      userId,
-      30 // Generate 30 articles
-    ).catch(error => {
-      console.error("💥 Background article generation error:", error);
-      // Don't throw - this is background process, errors are logged but don't affect response
-    });
+    // generateArticlesAutomatically(
+    //   finalKeywords,
+    //   savedWebsite.id,
+    //   userId,
+    //   30
+    // ).catch(error => {
+    //   console.error("💥 Background article generation error:", error);
+    // });
 
     // Return response
     return NextResponse.json({
