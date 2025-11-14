@@ -206,7 +206,7 @@ export function AnalyzeTab({ onViewKeywords, onViewCompetitors }: AnalyzeTabProp
       // Show success toast
       toast.showToast({
         title: "Website Added Successfully!",
-        description: `Found ${data.totalKeywords} keywords for "${data.clientDomain}"`,
+        description: `Found ${data.totalKeywords} keywords. 30 articles are being generated in the background.`,
         type: "success",
       })
       
