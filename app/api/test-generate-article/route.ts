@@ -79,10 +79,15 @@ export async function POST(request: Request) {
       );
     }
 
-    const primaryKeyword = keywords[0]; // Use first keyword as primary
+    // Select a different keyword for each article (cycle through keywords)
+    // For article 1, use keyword[0], article 2 use keyword[1], etc.
+    // If more articles than keywords, cycle back (use modulo)
+    const selectedKeywordIndex = (articleNumber - 1) % keywords.length;
+    const selectedKeyword = keywords[selectedKeywordIndex];
     const allKeywordsText = keywords.join(', ');
 
     console.log(`🚀 Generating article ${articleNumber}/${totalArticles} with keywords:`, keywords);
+    console.log(`📌 Selected keyword for meta title: "${selectedKeyword}" (index ${selectedKeywordIndex})`);
     console.log("👤 For user ID:", userId);
     console.log("📊 Target word count:", targetWordCount);
 
@@ -94,8 +99,8 @@ export async function POST(request: Request) {
     // ENHANCED PROMPT for comprehensive, long-form content with multiple keywords
     const prompt = `Generate a comprehensive, in-depth SEO-optimized blog post that naturally incorporates ALL of these keywords: ${allKeywordsText}.${variationInstructions}
 
-PRIMARY KEYWORD: "${primaryKeyword}"
-ADDITIONAL KEYWORDS: ${keywords.slice(1).join(', ')}
+ALL KEYWORDS: ${allKeywordsText}
+SELECTED KEYWORD FOR META TITLE: "${selectedKeyword}" (use this keyword in the meta title and description)
 
 CRITICAL REQUIREMENTS:
 
@@ -104,24 +109,24 @@ CRITICAL REQUIREMENTS:
 - Aim for ${targetWordCount}+ words minimum for SEO optimization
 - Use proper HTML structure with <h1>, <h2>, and <h3> headings
 - Include extensive examples, case studies, and actionable advice
-- Naturally integrate ALL keywords throughout the content (1-2% density for primary keyword, natural mentions for others)
+- Naturally integrate ALL keywords throughout the content (1-2% density for the selected keyword "${selectedKeyword}", natural mentions for others)
 - Ensure the content flows naturally and doesn't feel keyword-stuffed
 - Comprehensive conclusion with key takeaways and next steps
 ${totalArticles > 1 ? '- Create a unique angle or perspective that makes this article stand out from others on the same topic' : ''}
 
 2. CONTENT STRUCTURE (EXPANDED FOR LENGTH):
-- Engaging introduction with hook and problem statement (150-200 words) - include primary keyword
+- Engaging introduction with hook and problem statement (150-200 words) - naturally include keywords
 - Background and context section (200-300 words) - naturally mention related keywords
 - 5-7 main sections with multiple subsections (each section 250-400 words)
 - Each section should naturally incorporate relevant keywords from the list
 - Include: statistics, research findings, expert opinions
 - Add: step-by-step guides, checklists, practical applications
 - Use: bullet points, numbered lists, comparison tables where relevant
-- Comprehensive conclusion summarizing all key points (200-250 words) - reinforce primary keyword
+- Comprehensive conclusion summarizing all key points (200-250 words) - naturally reinforce keywords
 ${totalArticles > 1 ? '- Vary the section structure and order to create uniqueness' : ''}
 
 3. KEYWORD INTEGRATION REQUIREMENTS:
-- Primary keyword ("${primaryKeyword}") should appear naturally throughout (1-2% density)
+- The selected keyword "${selectedKeyword}" should appear naturally throughout (1-2% density)
 - All other keywords should be naturally woven into relevant sections
 - Keywords should feel organic, not forced
 - Use variations and related terms naturally
@@ -137,8 +142,8 @@ ${totalArticles > 1 ? '- Vary the section structure and order to create uniquene
 ${totalArticles > 1 ? '- Use different examples, case studies, and data points than previous articles' : ''}
 
 5. METADATA (Generate these EXACTLY as specified):
-- META_TITLE: Create a compelling title (55-60 characters) that includes the primary keyword "${primaryKeyword}" ${totalArticles > 1 ? 'with a unique angle' : ''}
-- META_DESCRIPTION: Write a click-worthy description (150-160 characters) that includes primary keyword and encourages clicks
+- META_TITLE: Create a compelling title (55-60 characters) that includes the keyword "${selectedKeyword}" ${totalArticles > 1 ? 'with a unique angle' : ''}
+- META_DESCRIPTION: Write a click-worthy description (150-160 characters) that includes the keyword "${selectedKeyword}" and encourages clicks
 - OG_TITLE: Create a social media optimized title (with emoji if appropriate)
 - OG_DESCRIPTION: Social media friendly description (120-130 characters)
 
@@ -147,8 +152,8 @@ Please format your response EXACTLY as:
 CONTENT:
 [Your full article content here with HTML tags - MUST BE ${targetWordCount}+ WORDS and naturally include ALL keywords: ${allKeywordsText}]
 
-META_TITLE: [Optimized title 55-60 chars with primary keyword]
-META_DESCRIPTION: [Compelling description 150-160 chars with primary keyword]
+META_TITLE: [Optimized title 55-60 chars with keyword "${selectedKeyword}"]
+META_DESCRIPTION: [Compelling description 150-160 chars with keyword "${selectedKeyword}"]
 OG_TITLE: [Social media title with emoji]
 OG_DESCRIPTION: [Social media description 120-130 chars]`;
 
@@ -192,11 +197,11 @@ OG_DESCRIPTION: [Social media description 120-130 chars]`;
 
     const fullResponse = data.choices[0].message.content;
 
-    // Parse the structured response
-    const parsedData = parseStructuredResponse(fullResponse, primaryKeyword);
+    // Parse the structured response - use selectedKeyword instead of primaryKeyword
+    const parsedData = parseStructuredResponse(fullResponse, selectedKeyword);
     
-    // Generate enhanced metadata
-    const enhancedArticle = generateEnhancedMetadata(parsedData, primaryKeyword, targetWordCount);
+    // Generate enhanced metadata - use selectedKeyword instead of primaryKeyword
+    const enhancedArticle = generateEnhancedMetadata(parsedData, selectedKeyword, targetWordCount);
 
     // Save to Supabase WITH user_id
     const { data: savedArticle, error: dbError } = await supabase
@@ -213,7 +218,7 @@ OG_DESCRIPTION: [Social media description 120-130 chars]`;
         meta_title: enhancedArticle.metaTitle,
         meta_description: enhancedArticle.metaDescription,
         slug: enhancedArticle.slug,
-        focus_keyword: primaryKeyword, // Store primary keyword as focus keyword
+        focus_keyword: selectedKeyword, // Store selected keyword as focus keyword
         
         // Content Analysis
         reading_time: enhancedArticle.readingTime,
