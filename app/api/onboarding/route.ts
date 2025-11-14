@@ -282,16 +282,26 @@ export async function POST(request: Request) {
     // STEP 5: Save to database
     console.log("\n💾 Step 5: Saving to database...");
 
+    // Prepare competitor data for the competitors column
+    const competitorsData = competitorResults.map(c => ({
+      domain: c.domain,
+      topic: c.topic,
+      keywords: c.keywords,
+      keywords_count: c.keywords.length,
+      success: c.success,
+      error: c.error || null
+    }));
+
     const insertData = {
       url: clientDomain,
       topic: clientTopic,
       keywords: {
         keywords: finalKeywords,
-        competitors: [], // No competitor analysis in this flow
+        competitors: competitorsData, // Save competitor data here
         analysis_metadata: {
           analyzed_at: new Date().toISOString(),
           total_keywords: finalKeywords.length,
-          total_competitors: 0,
+          total_competitors: competitorResults.length, // Update with actual count
           onboarding_data: {
             competitor_domains: competitors,
             competitor_results: competitorResults.map(c => ({
@@ -304,6 +314,9 @@ export async function POST(request: Request) {
           }
         }
       },
+      // Add top-level competitors column if your schema has it
+      competitors: competitorsData, // Save to top-level competitors column (jsonb)
+      total_competitors: competitorResults.length, // Save to total_competitors column (int4)
       user_id: userId
     };
 
