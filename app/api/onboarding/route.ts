@@ -25,6 +25,89 @@ interface CompetitorResult {
   error?: string;
 }
 
+async function generateArticlesAutomatically(
+  keywords: any[],
+  websiteId: string,
+  userId: string,
+  totalArticles: number = 30
+): Promise<void> {
+  try {
+    console.log(`\n🚀 Starting automatic article generation in background...`);
+    console.log(`📝 Generating ${totalArticles} articles with ${keywords.length} keywords`);
+    
+    // Extract keyword strings from keyword objects
+    const keywordStrings = keywords.map(kw => 
+      typeof kw === 'string' ? kw : kw.keyword
+    ).filter(kw => kw && kw.trim() !== '');
+
+    if (keywordStrings.length === 0) {
+      console.warn("⚠️ No valid keywords found for article generation");
+      return;
+    }
+
+    console.log(`✅ Extracted ${keywordStrings.length} keywords for article generation`);
+
+    // Construct the base URL for internal API calls
+    // In production, use the actual domain, in development use localhost
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 
+                    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+
+    console.log(`🌐 Using base URL: ${baseUrl}`);
+
+    // Generate articles in background
+    for (let i = 0; i < totalArticles; i++) {
+      const articleNumber = i + 1;
+      
+      try {
+        console.log(`📄 Generating article ${articleNumber}/${totalArticles}...`);
+
+        const response = await fetch(`${baseUrl}/api/test-generate-article`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            keywords: keywordStrings,
+            userId: userId,
+            websiteId: websiteId,
+            articleNumber: articleNumber,
+            totalArticles: totalArticles,
+            targetWordCount: 2000
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          console.error(`❌ Failed to generate article ${articleNumber}:`, errorData);
+          continue; // Continue with next article even if one fails
+        }
+
+        const data = await response.json();
+        if (data.success) {
+          console.log(`✅ Generated article ${articleNumber}/${totalArticles}`);
+        } else {
+          console.error(`❌ Article ${articleNumber} generation failed:`, data.error);
+        }
+
+        // Small delay between requests to avoid rate limiting
+        if (i < totalArticles - 1) {
+          await new Promise(resolve => setTimeout(resolve, 1000)); // 1 second delay
+        }
+
+      } catch (error) {
+        console.error(`❌ Error generating article ${articleNumber}:`, error);
+        // Continue with next article even if one fails
+      }
+    }
+
+    console.log(`\n✅ Background article generation complete for website ${websiteId}`);
+
+  } catch (error) {
+    console.error("💥 Error in automatic article generation:", error);
+  }
+}
+
+
 export async function POST(request: Request) {
   try {
     const body: OnboardingRequest = await request.json();
@@ -237,6 +320,20 @@ export async function POST(request: Request) {
 
     console.log("✅ Successfully saved to database");
 
+    // STEP 6: Start article generation in background (non-blocking)
+    // Don't await - let it run in background while we return the response
+    console.log("\n🚀 Step 6: Starting automatic article generation in background...");
+    
+    generateArticlesAutomatically(
+      finalKeywords,
+      savedWebsite.id,
+      userId,
+      30 // Generate 30 articles
+    ).catch(error => {
+      console.error("💥 Background article generation error:", error);
+      // Don't throw - this is background process, errors are logged but don't affect response
+    });
+
     // Return response
     return NextResponse.json({
       success: true,
@@ -251,7 +348,7 @@ export async function POST(request: Request) {
         success: c.success
       })),
       websiteId: savedWebsite.id,
-      message: "Onboarding completed successfully"
+      message: "Onboarding completed successfully. Articles are being generated in the background."
     });
 
   } catch (error) {
