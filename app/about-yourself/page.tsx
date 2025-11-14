@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-
+import { useToast } from "@/components/ui/toast"; // Add this import
 export default function OnboardingPage() {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
@@ -25,7 +25,7 @@ export default function OnboardingPage() {
   const [keyword2, setKeyword2] = useState("");
   const [keyword3, setKeyword3] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-
+  const toast = useToast();
   // Automatically open the dialog when the page loads
   useEffect(() => {
     setIsOpen(true);
@@ -39,7 +39,11 @@ export default function OnboardingPage() {
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
-        alert("Please log in to continue");
+        toast.showToast({
+          title: "Authentication Required",
+          description: "Please log in to continue",
+          type: "error",
+        });
         setIsLoading(false);
         return;
       }
@@ -79,12 +83,26 @@ export default function OnboardingPage() {
   
       console.log("✅ Onboarding successful:", data);
       
+      // Show success toast with article generation message
+      toast.showToast({
+        title: "Website Added Successfully!",
+        description: `Found ${data.totalKeywords} keywords. 30 articles are being generated in the background.`,
+        type: "success",
+      });
+      
+      // Small delay to show the toast before navigation
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
       // Navigate to dashboard
       router.push("/dashboard");
       
     } catch (error) {
       console.error("Error during onboarding:", error);
-      alert(`Onboarding failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      toast.showToast({
+        title: "Onboarding Failed",
+        description: error instanceof Error ? error.message : 'Unknown error',
+        type: "error",
+      });
     } finally {
       setIsLoading(false);
     }
