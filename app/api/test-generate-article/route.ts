@@ -8,10 +8,13 @@ const supabase = createClient(
 );
 
 interface ArticleRequest {
-  keyword: string;
+  keyword?: string; // Keep for backward compatibility
+  keywords?: string[]; // Array of keywords
   websiteId?: string;
   userId: string;
   targetWordCount?: number;
+  articleNumber?: number; // NEW: Article number (1-30)
+  totalArticles?: number; // NEW: Total articles being generated
 }
 
 interface EnhancedArticle {
@@ -50,11 +53,13 @@ export async function POST(request: Request) {
   try {
     const body: ArticleRequest = await request.json();
     
-    const { keyword, websiteId, userId, targetWordCount = 2000 } = body;
+    // Support both single keyword (backward compat) and multiple keywords
+    const keywords = body.keywords || (body.keyword ? [body.keyword] : []);
+    const { websiteId, userId, targetWordCount = 2000, articleNumber = 1, totalArticles = 1 } = body;
 
-    if (!keyword) {
+    if (keywords.length === 0) {
       return NextResponse.json(
-        { error: "Keyword is required" },
+        { error: "At least one keyword is required" },
         { status: 400 }
       );
     }
@@ -74,53 +79,76 @@ export async function POST(request: Request) {
       );
     }
 
-    console.log("🚀 Generating enhanced article for:", keyword);
+    const primaryKeyword = keywords[0]; // Use first keyword as primary
+    const allKeywordsText = keywords.join(', ');
+
+    console.log(`🚀 Generating article ${articleNumber}/${totalArticles} with keywords:`, keywords);
     console.log("👤 For user ID:", userId);
     console.log("📊 Target word count:", targetWordCount);
 
-    // ENHANCED PROMPT for comprehensive, long-form content
-    const prompt = `Generate a comprehensive, in-depth SEO-optimized blog post about "${keyword}".
+    // Add variation instructions for unique articles
+    const variationInstructions = totalArticles > 1 
+      ? `\n\nIMPORTANT: This is article ${articleNumber} of ${totalArticles}. Create a UNIQUE variation that differs from the previous articles. Use a different angle, perspective, or approach while still incorporating all keywords naturally. Vary the structure, examples, and content flow to ensure each article is distinct and valuable.`
+      : '';
+
+    // ENHANCED PROMPT for comprehensive, long-form content with multiple keywords
+    const prompt = `Generate a comprehensive, in-depth SEO-optimized blog post that naturally incorporates ALL of these keywords: ${allKeywordsText}.${variationInstructions}
+
+PRIMARY KEYWORD: "${primaryKeyword}"
+ADDITIONAL KEYWORDS: ${keywords.slice(1).join(', ')}
 
 CRITICAL REQUIREMENTS:
 
 1. MAIN CONTENT (${targetWordCount}+ WORDS - THIS IS NON-NEGOTIABLE):
-- Write detailed, well-researched, comprehensive content
+- Write detailed, well-researched, comprehensive content that naturally weaves in ALL the provided keywords
 - Aim for ${targetWordCount}+ words minimum for SEO optimization
 - Use proper HTML structure with <h1>, <h2>, and <h3> headings
 - Include extensive examples, case studies, and actionable advice
-- Natural keyword integration throughout (1-2% density)
+- Naturally integrate ALL keywords throughout the content (1-2% density for primary keyword, natural mentions for others)
+- Ensure the content flows naturally and doesn't feel keyword-stuffed
 - Comprehensive conclusion with key takeaways and next steps
+${totalArticles > 1 ? '- Create a unique angle or perspective that makes this article stand out from others on the same topic' : ''}
 
 2. CONTENT STRUCTURE (EXPANDED FOR LENGTH):
-- Engaging introduction with hook and problem statement (150-200 words)
-- Background and context section (200-300 words)
+- Engaging introduction with hook and problem statement (150-200 words) - include primary keyword
+- Background and context section (200-300 words) - naturally mention related keywords
 - 5-7 main sections with multiple subsections (each section 250-400 words)
+- Each section should naturally incorporate relevant keywords from the list
 - Include: statistics, research findings, expert opinions
 - Add: step-by-step guides, checklists, practical applications
 - Use: bullet points, numbered lists, comparison tables where relevant
-- Comprehensive conclusion summarizing all key points (200-250 words)
+- Comprehensive conclusion summarizing all key points (200-250 words) - reinforce primary keyword
+${totalArticles > 1 ? '- Vary the section structure and order to create uniqueness' : ''}
 
-3. DEPTH AND DETAIL REQUIREMENTS:
+3. KEYWORD INTEGRATION REQUIREMENTS:
+- Primary keyword ("${primaryKeyword}") should appear naturally throughout (1-2% density)
+- All other keywords should be naturally woven into relevant sections
+- Keywords should feel organic, not forced
+- Use variations and related terms naturally
+- Ensure content reads naturally for humans while optimizing for SEO
+
+4. DEPTH AND DETAIL REQUIREMENTS:
 - Cover the topic from multiple angles and perspectives
 - Include recent data, trends, and developments
 - Address common questions and misconceptions
 - Provide real-world examples and case studies
 - Offer actionable tips and implementation strategies
 - Compare different approaches or methodologies
+${totalArticles > 1 ? '- Use different examples, case studies, and data points than previous articles' : ''}
 
-4. METADATA (Generate these EXACTLY as specified):
-- META_TITLE: Create a compelling title (55-60 characters) that includes the main keyword
-- META_DESCRIPTION: Write a click-worthy description (150-160 characters) that encourages clicks
+5. METADATA (Generate these EXACTLY as specified):
+- META_TITLE: Create a compelling title (55-60 characters) that includes the primary keyword "${primaryKeyword}" ${totalArticles > 1 ? 'with a unique angle' : ''}
+- META_DESCRIPTION: Write a click-worthy description (150-160 characters) that includes primary keyword and encourages clicks
 - OG_TITLE: Create a social media optimized title (with emoji if appropriate)
 - OG_DESCRIPTION: Social media friendly description (120-130 characters)
 
 Please format your response EXACTLY as:
 
 CONTENT:
-[Your full article content here with HTML tags - MUST BE ${targetWordCount}+ WORDS]
+[Your full article content here with HTML tags - MUST BE ${targetWordCount}+ WORDS and naturally include ALL keywords: ${allKeywordsText}]
 
-META_TITLE: [Optimized title 55-60 chars]
-META_DESCRIPTION: [Compelling description 150-160 chars]
+META_TITLE: [Optimized title 55-60 chars with primary keyword]
+META_DESCRIPTION: [Compelling description 150-160 chars with primary keyword]
 OG_TITLE: [Social media title with emoji]
 OG_DESCRIPTION: [Social media description 120-130 chars]`;
 
@@ -135,7 +163,7 @@ OG_DESCRIPTION: [Social media description 120-130 chars]`;
         messages: [
           {
             role: "system",
-            content: `You are an expert SEO content strategist specializing in long-form, comprehensive articles. Create detailed, well-researched blog posts of ${targetWordCount}+ words with perfect metadata for immediate publishing. Focus on depth, practical value, and comprehensive coverage.`
+            content: `You are an expert SEO content strategist specializing in long-form, comprehensive articles. Create detailed, well-researched blog posts of ${targetWordCount}+ words that naturally incorporate multiple keywords. Focus on depth, practical value, and natural keyword integration without keyword stuffing.`
           },
           {
             role: "user",
@@ -143,7 +171,7 @@ OG_DESCRIPTION: [Social media description 120-130 chars]`;
           }
         ],
         temperature: 0.7,
-        max_tokens: 4000 // Increased tokens for longer content
+        max_tokens: 4000
       }),
     });
 
@@ -165,10 +193,10 @@ OG_DESCRIPTION: [Social media description 120-130 chars]`;
     const fullResponse = data.choices[0].message.content;
 
     // Parse the structured response
-    const parsedData = parseStructuredResponse(fullResponse, keyword);
+    const parsedData = parseStructuredResponse(fullResponse, primaryKeyword);
     
     // Generate enhanced metadata
-    const enhancedArticle = generateEnhancedMetadata(parsedData, keyword, targetWordCount);
+    const enhancedArticle = generateEnhancedMetadata(parsedData, primaryKeyword, targetWordCount);
 
     // Save to Supabase WITH user_id
     const { data: savedArticle, error: dbError } = await supabase
@@ -176,7 +204,7 @@ OG_DESCRIPTION: [Social media description 120-130 chars]`;
       .insert({
         title: enhancedArticle.title,
         content: enhancedArticle.content,
-        keyword: keyword,
+        keyword: keywords.join(', '), // Store all keywords as comma-separated string
         status: 'draft',
         date: new Date().toISOString().split('T')[0],
         preview: enhancedArticle.metaDescription || enhancedArticle.content.substring(0, 150) + '...',
@@ -185,7 +213,7 @@ OG_DESCRIPTION: [Social media description 120-130 chars]`;
         meta_title: enhancedArticle.metaTitle,
         meta_description: enhancedArticle.metaDescription,
         slug: enhancedArticle.slug,
-        focus_keyword: enhancedArticle.focusKeyword,
+        focus_keyword: primaryKeyword, // Store primary keyword as focus keyword
         
         // Content Analysis
         reading_time: enhancedArticle.readingTime,

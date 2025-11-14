@@ -62,35 +62,35 @@ export function KeywordsTab({ websiteId, onArticlesGenerated }: KeywordsTabProps
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [generatingContent, setGeneratingContent] = useState(false)
-   const [currentUser, setCurrentUser] = useState<any>(null) // Add current user state
+  const [currentUser, setCurrentUser] = useState<any>(null) // Add current user state
   const [searchQuery, setSearchQuery] = useState("")
   const [difficultyFilter, setDifficultyFilter] = useState<string>("all")
   const [sortBy, setSortBy] = useState<string>("volume-desc")
   const [selectedKeywords, setSelectedKeywords] = useState<Set<number>>(new Set())
-  const toast=useToast()
+  const toast = useToast()
 
   // Get current user on component mount
-useEffect(() => {
-  const fetchCurrentUser = async () => {
-    try {
-      const { data: user, error } = await getUser()
-      if (error) {
-        console.error("Error fetching current user:", error)
-        return
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      try {
+        const { data: user, error } = await getUser()
+        if (error) {
+          console.error("Error fetching current user:", error)
+          return
+        }
+        setCurrentUser(user)
+        console.log("👤 Current user:", user?.id)
+      } catch (err) {
+        console.error("Failed to get current user:", err)
       }
-      setCurrentUser(user)
-      console.log("👤 Current user:", user?.id)
-    } catch (err) {
-      console.error("Failed to get current user:", err)
     }
-  }
-  
-  fetchCurrentUser()
-}, [])
+
+    fetchCurrentUser()
+  }, [])
   // Fetch keywords when websiteId changes
   useEffect(() => {
     console.log("🔍 KeywordsTab - websiteId:", websiteId);
-    
+
     if (websiteId) {
       fetchKeywords()
     } else {
@@ -101,170 +101,183 @@ useEffect(() => {
   }, [websiteId])
 
   // Update the fetchKeywords function to handle both formats
-const fetchKeywords = async () => {
-  if (!websiteId) return;
-  
-  try {
-    setLoading(true)
-    setError(null)
-    console.log(`🔍 Fetching keywords for website: ${websiteId}`)
-    
-    const response = await fetch(`/api/keyword/${websiteId}`)
-    
-    if (!response.ok) {
-      if (response.status === 404) {
-        throw new Error("Website not found")
-      }
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
-    
-    const data = await response.json()
-    
-    if (!data.success) {
-      throw new Error(data.error || "Failed to fetch keywords")
-    }
-    
-    setWebsiteData(data)
-    
-    // FIX: Handle both old and new data formats
-    let keywordsArray = [];
-    
-    if (Array.isArray(data.keywords)) {
-      // Old format: direct array of keywords
-      keywordsArray = data.keywords;
-      console.log(`✅ Loaded ${keywordsArray.length} keywords (old format)`);
-    } else if (data.keywords && Array.isArray(data.keywords.keywords)) {
-      // New format: object with keywords array inside
-      keywordsArray = data.keywords.keywords;
-      console.log(`✅ Loaded ${keywordsArray.length} keywords (new format)`);
-    } else {
-      console.warn('❌ Unexpected keywords format:', data.keywords);
-      keywordsArray = [];
-    }
-    
-    setKeywords(keywordsArray)
-    console.log(`✅ Total keywords loaded: ${keywordsArray.length}`)
-    
-  } catch (err) {
-    console.error('Error fetching keywords:', err)
-    setError(err instanceof Error ? err.message : "Failed to load keywords")
-  } finally {
-    setLoading(false)
-  }
-}
+  const fetchKeywords = async () => {
+    if (!websiteId) return;
 
-  const generateContentFromKeywords = async () => {
-  if (selectedKeywords.size === 0) {
-    alert("Please select at least one keyword to generate content.")
-    return;
-  }
+    try {
+      setLoading(true)
+      setError(null)
+      console.log(`🔍 Fetching keywords for website: ${websiteId}`)
 
-  // Check if user is authenticated
-  if (!currentUser) {
-    alert("Please log in to generate content.")
-    return;
-  }
-
-  try {
-    setGeneratingContent(true);
-
-    // Get the selected keyword texts
-    const selectedKeywordTexts = Array.from(selectedKeywords).map(
-      index => filteredAndSortedKeywords[index].keyword
-    );
-
-    console.log("🚀 Generating content for keywords:", selectedKeywordTexts);
-    console.log("👤 Current user ID:", currentUser.id);
-
-    const generatedArticles: Article[] = [];
-
-    // Generate articles for each selected keyword
-    for (const keyword of selectedKeywordTexts) {
-      const response = await fetch('/api/test-generate-article', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          keyword: keyword,
-          userId: currentUser.id, // Use the actual user ID
-          websiteId: websiteId,
-        }),
-      });
+      const response = await fetch(`/api/keyword/${websiteId}`)
 
       if (!response.ok) {
-        throw new Error(`Failed to generate article for: ${keyword}`);
+        if (response.status === 404) {
+          throw new Error("Website not found")
+        }
+        throw new Error(`HTTP error! status: ${response.status}`)
       }
 
-      const data = await response.json();
-      
-      if (data.success && data.article) {
-        // Use the actual article ID from the database response
-        const newArticle: Article = {
-          id: data.article.id, // Use the actual ID from database
-          title: data.article.title,
-          content: data.article.content,
-          keyword: keyword,
-          status: "Draft",
-          date: new Date().toLocaleDateString('en-US', { 
-            year: 'numeric', 
-            month: 'short', 
-            day: 'numeric' 
-          }),
-          preview: data.article.metaDescription || data.article.content.substring(0, 150) + '...',
-          wordCount: data.article.wordCount,
-          metaTitle: data.article.metaTitle,
-          metaDescription: data.article.metaDescription,
-          readingTime: data.article.readingTime,
-          contentScore: data.article.contentScore,
-          keywordDensity: data.article.keywordDensity,
-          tags: data.article.tags,
-          category: data.article.category,
-          estimatedTraffic: data.article.estimatedTraffic
-        };
+      const data = await response.json()
 
-        generatedArticles.push(newArticle);
+      if (!data.success) {
+        throw new Error(data.error || "Failed to fetch keywords")
       }
-    }
 
-    // Pass generated articles to parent component
-    if (onArticlesGenerated && generatedArticles.length > 0) {
-      onArticlesGenerated(generatedArticles);
-    }
+      setWebsiteData(data)
 
-    console.log("✅ Generated articles:", generatedArticles);
-    
-    // Clear selection after generation
-    setSelectedKeywords(new Set());
-    
-    toast.showToast({
-      title: `Successfully generated ${generatedArticles.length} articles! Check the Articles tab.`, 
-      type: "success", 
-      duration: 5000
-    });
-    
-  } catch (error) {
-    console.error('Error generating content:', error);
-    toast.showToast({
-      title: "Failed to generate content",
-      description: "Please try again.",
-      type: "error"
-    });
-  } finally {
-    setGeneratingContent(false);
+      // FIX: Handle both old and new data formats
+      let keywordsArray = [];
+
+      if (Array.isArray(data.keywords)) {
+        // Old format: direct array of keywords
+        keywordsArray = data.keywords;
+        console.log(`✅ Loaded ${keywordsArray.length} keywords (old format)`);
+      } else if (data.keywords && Array.isArray(data.keywords.keywords)) {
+        // New format: object with keywords array inside
+        keywordsArray = data.keywords.keywords;
+        console.log(`✅ Loaded ${keywordsArray.length} keywords (new format)`);
+      } else {
+        console.warn('❌ Unexpected keywords format:', data.keywords);
+        keywordsArray = [];
+      }
+
+      setKeywords(keywordsArray)
+      console.log(`✅ Total keywords loaded: ${keywordsArray.length}`)
+
+    } catch (err) {
+      console.error('Error fetching keywords:', err)
+      setError(err instanceof Error ? err.message : "Failed to load keywords")
+    } finally {
+      setLoading(false)
+    }
   }
-};
+
+  const generateContentFromKeywords = async () => {
+    if (selectedKeywords.size === 0) {
+      alert("Please select at least one keyword to generate content.")
+      return;
+    }
+
+    // Check if user is authenticated
+    if (!currentUser) {
+      alert("Please log in to generate content.")
+      return;
+    }
+
+    try {
+      setGeneratingContent(true);
+
+      // Get the selected keyword texts
+      const selectedKeywordTexts = Array.from(selectedKeywords).map(
+        index => filteredAndSortedKeywords[index].keyword
+      );
+
+      console.log("🚀 Generating 30 articles with keywords:", selectedKeywordTexts);
+      console.log("👤 Current user ID:", currentUser.id);
+
+      const generatedArticles: Article[] = [];
+      const totalArticles = 30;
+
+      // Generate 30 articles, each incorporating ALL selected keywords
+      for (let i = 0; i < totalArticles; i++) {
+        console.log(`�� Generating article ${i + 1}/${totalArticles}...`);
+        
+        const response = await fetch('/api/test-generate-article', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            keywords: selectedKeywordTexts, // Send array of all keywords
+            userId: currentUser.id,
+            websiteId: websiteId,
+            articleNumber: i + 1, // Pass article number for variation
+            totalArticles: totalArticles, // Pass total for context
+          }),
+        });
+
+        if (!response.ok) {
+          console.error(`Failed to generate article ${i + 1}`);
+          continue; // Continue with next article instead of stopping
+        }
+
+        const data = await response.json();
+        
+        if (data.success && data.article) {
+          const newArticle: Article = {
+            id: data.article.id,
+            title: data.article.title,
+            content: data.article.content,
+            keyword: selectedKeywordTexts.join(', '), // Store all keywords as comma-separated
+            status: "Draft",
+            date: new Date().toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric'
+            }),
+            preview: data.article.metaDescription || data.article.content.substring(0, 150) + '...',
+            wordCount: data.article.wordCount,
+            metaTitle: data.article.metaTitle,
+            metaDescription: data.article.metaDescription,
+            readingTime: data.article.readingTime,
+            contentScore: data.article.contentScore,
+            keywordDensity: data.article.keywordDensity,
+            tags: data.article.tags,
+            category: data.article.category,
+            estimatedTraffic: data.article.estimatedTraffic
+          };
+
+          generatedArticles.push(newArticle);
+          
+          // Update progress (optional: you could add a progress bar)
+          console.log(`✅ Generated article ${i + 1}/${totalArticles}`);
+        }
+
+        // Small delay to avoid rate limiting (optional)
+        if (i < totalArticles - 1) {
+          await new Promise(resolve => setTimeout(resolve, 500)); // 500ms delay between requests
+        }
+      }
+
+      // Pass all generated articles to parent component
+      if (onArticlesGenerated && generatedArticles.length > 0) {
+        onArticlesGenerated(generatedArticles);
+      }
+
+      console.log(`✅ Generated ${generatedArticles.length} articles with keywords:`, selectedKeywordTexts);
+
+      // Clear selection after generation
+      setSelectedKeywords(new Set());
+
+      toast.showToast({
+        title: `Successfully generated ${generatedArticles.length} articles with ${selectedKeywordTexts.length} keywords! Check the Articles tab.`,
+        type: "success",
+        duration: 5000
+      });
+
+    } catch (error) {
+      console.error('Error generating content:', error);
+      toast.showToast({
+        title: "Failed to generate content",
+        description: "Please try again.",
+        type: "error"
+      });
+    } finally {
+      setGeneratingContent(false);
+    }
+  };
 
   const filteredAndSortedKeywords = useMemo(() => {
     const filtered = keywords.filter((kw) => {
       const matchesSearch = kw.keyword.toLowerCase().includes(searchQuery.toLowerCase())
-      
+
       // Convert difficulty number to category for filtering
       let difficultyCategory: "Low" | "Medium" | "High"
       if (kw.difficulty <= 40) difficultyCategory = "Low"
       else if (kw.difficulty <= 70) difficultyCategory = "Medium"
       else difficultyCategory = "High"
-      
+
       const matchesDifficulty = difficultyFilter === "all" || difficultyCategory === difficultyFilter
       return matchesSearch && matchesDifficulty
     })
@@ -360,7 +373,7 @@ const fetchKeywords = async () => {
         kw.competition.toFixed(2)
       ])
     ].map(row => row.join(",")).join("\n")
-    
+
     const blob = new Blob([csvContent], { type: "text/csv" })
     const url = URL.createObjectURL(blob)
     const a = document.createElement("a")
@@ -429,8 +442,8 @@ const fetchKeywords = async () => {
                 </p>
               </div>
             </div>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               className="cursor-pointer border-border/40 gap-2"
               onClick={() => window.open(websiteData.website.url, '_blank')}
             >
@@ -539,8 +552,8 @@ const fetchKeywords = async () => {
               </SelectContent>
             </Select>
 
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               className="cursor-pointer border-border/40 gap-2 bg-transparent"
               onClick={exportKeywords}
             >
@@ -626,8 +639,8 @@ const fetchKeywords = async () => {
                 <Button variant="outline" size="sm" className="cursor-pointer border-border/40 bg-transparent">
                   Add to Campaign
                 </Button>
-                <Button 
-                  size="sm" 
+                <Button
+                  size="sm"
                   className="cursor-pointer bg-primary hover:bg-primary/90 text-primary-foreground"
                   onClick={generateContentFromKeywords}
                   disabled={generatingContent}
