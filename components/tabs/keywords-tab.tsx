@@ -24,6 +24,7 @@ interface Keyword {
   cpc: number
   competition: number
   selected?: boolean
+  is_target_keyword?: boolean
 }
 
 interface Website {
@@ -719,7 +720,14 @@ export function KeywordsTab({ websiteId: initialWebsiteId, onArticlesGenerated }
                         />
                       </td>
                       <td className="px-4 py-3">
-                        <p className="font-medium text-foreground">{keyword.keyword}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-foreground">{keyword.keyword}</p>
+                          {keyword.is_target_keyword && (
+                            <Badge className="bg-blue-100 text-blue-700 border-blue-200 text-xs">
+                              Targeted
+                            </Badge>
+                          )}
+                        </div>
                       </td>
                       <td className="px-4 py-3">
                         <p className="text-foreground font-medium">{keyword.search_volume.toLocaleString()}</p>
