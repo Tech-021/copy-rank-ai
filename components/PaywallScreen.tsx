@@ -98,7 +98,7 @@ const PaywallScreen: React.FC<PaywallScreenProps> = ({
           {plans.map((plan) => (
             <div
               key={plan.id}
-              className={`relative bg-white rounded-2xl shadow-xl overflow-hidden transition-all duration-300 hover:shadow-2xl ${
+              className={`relative bg-white rounded-2xl shadow-xl transition-all duration-300 hover:shadow-2xl ${
                 plan.popular
                   ? 'ring-4 ring-blue-500 scale-105 md:scale-110'
                   : 'border-2 border-gray-200'
@@ -116,8 +116,8 @@ const PaywallScreen: React.FC<PaywallScreenProps> = ({
               {/* Card Header */}
               <div className={`p-8 text-center ${
                 plan.popular
-                  ? 'bg-gradient-to-r from-blue-600 to-indigo-700'
-                  : 'bg-gradient-to-r from-gray-700 to-gray-800'
+                  ? 'bg-gradient-to-r from-blue-600 to-indigo-700 rounded-t-2xl'
+                  : 'bg-gradient-to-r from-gray-700 to-gray-800 rounded-t-2xl'
               } text-white`}>
                 <h2 className="text-2xl font-bold mb-2">{plan.name}</h2>
                 <div className="flex items-baseline justify-center mb-4">
