@@ -25,6 +25,17 @@ interface CompetitorResult {
   error?: string;
 }
 
+function normalizeUrl(websiteUrl: string): string | null {
+  if (!websiteUrl) return null;
+
+  const cleanDomain = websiteUrl
+    .trim()
+    .replace(/^(https?:\/\/)?(www\.)?/, '')
+    .split('/')[0];
+
+  return `https://www.${cleanDomain}`;
+}
+
 async function generateArticlesAutomatically(
   keywords: any[],
   websiteId: string,
@@ -135,16 +146,34 @@ export async function POST(request: Request) {
       );
     }
 
+    // Normalize client domain
+    const normalizedClientDomain = normalizeUrl(clientDomain);
+    if (!normalizedClientDomain) {
+      return NextResponse.json(
+        { error: "Invalid client domain" },
+        { status: 400 }
+      );
+    }
+
+    // Normalize competitor URLs
+    const normalizedCompetitors = competitors.map(comp => normalizeUrl(comp)).filter(Boolean) as string[];
+    if (normalizedCompetitors.length !== 3) {
+      return NextResponse.json(
+        { error: "Failed to normalize one or more competitor URLs" },
+        { status: 400 }
+      );
+    }
+
     console.log("🚀 Starting onboarding process...");
-    console.log("📋 Client domain:", clientDomain);
-    console.log("📋 Competitors:", competitors);
+    console.log("📋 Client domain (normalized):", normalizedClientDomain);
+    console.log("📋 Competitors (normalized):", normalizedCompetitors);
 
     // STEP 1: Find topic for client domain (NO keywords)
     console.log("🔍 Step 1: Finding topic for client domain...");
     let clientTopic = "General";
 
     try {
-      const clientScrape = await hybridScraper(clientDomain);
+      const clientScrape = await hybridScraper(normalizedClientDomain);
       if (clientScrape) {
         const clientAnalysis = await analyzeWithQwen(clientScrape);
         clientTopic = clientAnalysis.niche || "General";
@@ -162,8 +191,8 @@ export async function POST(request: Request) {
     const competitorResults: CompetitorResult[] = [];
     const allKeywords: any[] = [];
 
-    for (let i = 0; i < competitors.length; i++) {
-      const competitorUrl = competitors[i];
+    for (let i = 0; i < normalizedCompetitors.length; i++) {
+      const competitorUrl = normalizedCompetitors[i];
       console.log(`\n📊 Processing competitor ${i + 1}/3: ${competitorUrl}`);
 
       try {
@@ -292,7 +321,7 @@ export async function POST(request: Request) {
     }));
 
     const insertData = {
-      url: clientDomain,
+      url: normalizedClientDomain, // Use normalized URL
       topic: clientTopic,
       keywords: {
         keywords: finalKeywords,
@@ -302,7 +331,7 @@ export async function POST(request: Request) {
           total_keywords: finalKeywords.length,
           total_competitors: competitorResults.length, // Update with actual count
           onboarding_data: {
-            competitor_domains: competitors,
+            competitor_domains: normalizedCompetitors, // Use normalized URLs
             competitor_results: competitorResults.map(c => ({
               domain: c.domain,
               topic: c.topic,
@@ -345,10 +374,10 @@ export async function POST(request: Request) {
       console.error("💥 Background article generation error:", error);
     });
 
-    // Return response
+    // Return response with normalized URLs
     return NextResponse.json({
       success: true,
-      clientDomain,
+      clientDomain: normalizedClientDomain, // Return normalized URL
       clientTopic,
       totalKeywords: finalKeywords.length,
       keywords: finalKeywords,
