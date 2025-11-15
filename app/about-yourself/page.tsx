@@ -160,7 +160,7 @@ export default function OnboardingPage() {
       await new Promise(resolve => setTimeout(resolve, 1500));
       
       // Navigate to dashboard
-      router.push("/dashboard");
+      router.push("/");
       
     } catch (error) {
       console.error("Error during onboarding:", error);
