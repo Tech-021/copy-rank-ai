@@ -69,6 +69,8 @@ export async function middleware(request: NextRequest) {
     '/payment/callback', // Payment callback should also be public
     '/payment/fail', // Payment fail page should be public
     '/about-yourself', // Payment fail page should be public
+    '/fonts',
+    '/fav-icon.ico',
   ]
 
   // Check if the current path is a public route
@@ -113,6 +115,6 @@ export const config = {
      * - favicon.ico (favicon file)
      * - public folder files
      */
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|fav-icon.ico|fonts|public|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ttf|woff|woff2|eot)$).*)',
   ],
 }
