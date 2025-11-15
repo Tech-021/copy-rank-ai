@@ -49,7 +49,7 @@ async function generateArticlesAutomatically(
 
     // Construct the base URL for internal API calls
     // In production, use the actual domain, in development use localhost
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ? `https://${process.env.NEXT_PUBLIC_SITE_URL}` : 'http://localhost:3000';
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ? `${process.env.NEXT_PUBLIC_SITE_URL}` : 'http://localhost:3000';
 
     console.log(`🌐 Using base URL: ${baseUrl}`);
 
