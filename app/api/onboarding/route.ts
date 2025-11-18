@@ -1,3 +1,8 @@
+export const runtime = "nodejs";
+export const maxDuration = 300;
+export const deploymentTarget = "v8-worker"; // Enables background tasks
+export const maxRetries = 0;
+
 import { NextResponse } from "next/server";
 import { createClient } from '@supabase/supabase-js';
 import { hybridScraper } from "@/app/api/scraper/route";
