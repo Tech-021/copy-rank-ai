@@ -109,30 +109,13 @@ export function ArticlesTab({ generatedArticles, onArticlesUpdate, websiteId }: 
     }
   }, [currentUser, websiteId])
 
-  // Process pending article jobs (client-side polling for Hobby plan)
-  // This replaces Vercel cron jobs which are limited on Hobby plan
+  // Refresh articles periodically to show newly generated ones
+  // (Cron job handles processing, we just need to refresh the UI)
   useEffect(() => {
     if (!currentUser) return;
 
-    // Process pending jobs when user visits articles tab
-    const processPendingJobs = async () => {
-      try {
-        // Trigger job processing (fire and forget)
-        await fetch('/api/article-jobs/trigger', {
-          method: 'POST',
-        });
-      } catch (error) {
-        console.error('Error triggering job processing:', error);
-      }
-    };
-
-    // Process jobs immediately on mount
-    processPendingJobs()
-
-    // Then poll every 30 seconds to process more jobs
+    // Refresh articles every 30 seconds to show newly generated ones
     const interval = setInterval(() => {
-      processPendingJobs()
-      // Refresh articles to show newly generated ones
       fetchArticles()
     }, 30000); // 30 seconds
 

@@ -56,8 +56,9 @@ export async function POST(request: Request) {
 
       console.log(`📄 Processing job ${job.id} - Article ${job.article_number}/${job.total_articles}`);
 
-      // Call article generation API
-      const response = await fetch(`${baseUrl}/api/test-generate-article`, {
+      // Trigger article generation asynchronously (fire and forget)
+      // This prevents timeout - the article generation will update job status when done
+      fetch(`${baseUrl}/api/test-generate-article`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -68,37 +69,31 @@ export async function POST(request: Request) {
           websiteId: job.website_id,
           articleNumber: job.article_number,
           totalArticles: job.total_articles,
-          targetWordCount: 2000
+          targetWordCount: 2000,
+          jobId: job.id // Pass job ID so article generation can update status
         }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(`API returned ${response.status}: ${JSON.stringify(errorData)}`);
-      }
-
-      const data = await response.json();
-      
-      if (data.success) {
-        // Mark job as completed
-        await supabase
+      }).catch(error => {
+        console.error(`❌ Error triggering article generation for job ${job.id}:`, error);
+        // Mark job as failed if we can't even trigger it
+        supabase
           .from('article_jobs')
           .update({
-            status: 'completed',
+            status: 'failed',
+            error_message: `Failed to trigger: ${error instanceof Error ? error.message : 'Unknown error'}`,
             completed_at: new Date().toISOString()
           })
           .eq('id', job.id);
+      });
 
-        console.log(`✅ Completed job ${job.id}`);
-        return NextResponse.json({
-          success: true,
-          message: `Processed job ${job.id}`,
-          processed: 1,
-          jobId: job.id
-        });
-      } else {
-        throw new Error(data.error || 'Article generation failed');
-      }
+      // Return immediately - don't wait for article generation
+      // The article generation endpoint will update job status when complete
+      console.log(`✅ Triggered article generation for job ${job.id}`);
+      return NextResponse.json({
+        success: true,
+        message: `Triggered article generation for job ${job.id}`,
+        processed: 1,
+        jobId: job.id
+      });
 
     } catch (error) {
       console.error(`❌ Error processing job ${job.id}:`, error);

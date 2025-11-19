@@ -15,6 +15,7 @@ interface ArticleRequest {
   targetWordCount?: number;
   articleNumber?: number; // NEW: Article number (1-30)
   totalArticles?: number; // NEW: Total articles being generated
+  jobId?: string; // NEW: Job ID from article_jobs table (for queue system)
 }
 
 interface EnhancedArticle {
@@ -50,12 +51,15 @@ interface EnhancedArticle {
 }
 
 export async function POST(request: Request) {
+  let jobId: string | undefined;
+  
   try {
     const body: ArticleRequest = await request.json();
     
     // Support both single keyword (backward compat) and multiple keywords
     const keywords = body.keywords || (body.keyword ? [body.keyword] : []);
     const { websiteId, userId, targetWordCount = 2000, articleNumber = 1, totalArticles = 1 } = body;
+    jobId = body.jobId; // Store jobId for error handling
 
     if (keywords.length === 0) {
       return NextResponse.json(
@@ -256,6 +260,23 @@ OG_DESCRIPTION: [Social media description 120-130 chars]`;
     console.log("✅ Enhanced article generated and saved to Supabase for user:", userId);
     console.log("📊 Final word count:", enhancedArticle.wordCount);
 
+    // Update job status if this was triggered from the queue system
+    if (jobId) {
+      try {
+        await supabase
+          .from('article_jobs')
+          .update({
+            status: 'completed',
+            completed_at: new Date().toISOString()
+          })
+          .eq('id', jobId);
+        console.log(`✅ Updated job ${jobId} status to completed`);
+      } catch (jobUpdateError) {
+        console.error(`⚠️ Failed to update job ${jobId} status:`, jobUpdateError);
+        // Don't fail the whole request if job update fails
+      }
+    }
+
     return NextResponse.json({
       success: true,
       article: {
@@ -274,6 +295,24 @@ OG_DESCRIPTION: [Social media description 120-130 chars]`;
 
   } catch (error) {
     console.error("💥 Enhanced article generation error:", error);
+    
+    // Update job status to failed if this was triggered from the queue system
+    if (jobId) {
+      try {
+        await supabase
+          .from('article_jobs')
+          .update({
+            status: 'failed',
+            error_message: error instanceof Error ? error.message : "Unknown error",
+            completed_at: new Date().toISOString()
+          })
+          .eq('id', jobId);
+        console.log(`❌ Updated job ${jobId} status to failed`);
+      } catch (jobUpdateError) {
+        console.error(`⚠️ Failed to update job ${jobId} status:`, jobUpdateError);
+      }
+    }
+    
     return NextResponse.json(
       { 
         error: "Failed to generate enhanced article",
