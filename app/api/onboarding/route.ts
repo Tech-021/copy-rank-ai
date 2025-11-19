@@ -4,10 +4,14 @@ export const deploymentTarget = "v8-worker"; // Enables background tasks
 export const maxRetries = 0;
 
 import { NextResponse } from "next/server";
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from "@supabase/supabase-js";
 import { hybridScraper } from "@/app/api/scraper/route";
 import { analyzeWithQwen } from "@/lib/qwen";
-import { fetchKeywordsFromDataForSEO, filterKeywords, fetchKeywordOverview } from "@/lib/dataforseo";
+import {
+  fetchKeywordsFromDataForSEO,
+  filterKeywords,
+  fetchKeywordOverview,
+} from "@/lib/dataforseo";
 
 // Initialize Supabase client
 const supabase = createClient(
@@ -35,8 +39,8 @@ function normalizeUrl(websiteUrl: string): string | null {
 
   const cleanDomain = websiteUrl
     .trim()
-    .replace(/^(https?:\/\/)?(www\.)?/, '')
-    .split('/')[0];
+    .replace(/^(https?:\/\/)?(www\.)?/, "")
+    .split("/")[0];
 
   return `https://www.${cleanDomain}`;
 }
@@ -49,79 +53,78 @@ async function generateArticlesAutomatically(
 ): Promise<void> {
   try {
     console.log(`\n🚀 Starting automatic article generation in background...`);
-    console.log(`📝 Generating ${totalArticles} articles with ${keywords.length} keywords`);
-    
+    console.log(
+      `📝 Generating ${totalArticles} articles with ${keywords.length} keywords`
+    );
+
     // Extract keyword strings from keyword objects
-    const keywordStrings = keywords.map(kw => 
-      typeof kw === 'string' ? kw : kw.keyword
-    ).filter(kw => kw && kw.trim() !== '');
+    const keywordStrings = keywords
+      .map((kw) => (typeof kw === "string" ? kw : kw.keyword))
+      .filter((kw) => kw && kw.trim() !== "");
 
     if (keywordStrings.length === 0) {
       console.warn("⚠️ No valid keywords found for article generation");
       return;
     }
 
-    console.log(`✅ Extracted ${keywordStrings.length} keywords for article generation`);
+    console.log(
+      `✅ Extracted ${keywordStrings.length} keywords for article generation`
+    );
 
     // Construct the base URL for internal API calls
     // In production, use the actual domain, in development use localhost
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ? `${process.env.NEXT_PUBLIC_SITE_URL}` : 'http://localhost:3000';
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL
+      ? `${process.env.NEXT_PUBLIC_SITE_URL}`
+      : "http://localhost:3000";
 
     console.log(`🌐 Using base URL: ${baseUrl}`);
 
     // Generate articles in background
     for (let i = 0; i < totalArticles; i++) {
       const articleNumber = i + 1;
-      
-      try {
-        console.log(`📄 Generating article ${articleNumber}/${totalArticles}...`);
 
-        const response = await fetch(`${baseUrl}/api/test-generate-article`, {
-          method: 'POST',
+      try {
+        console.log(
+          `📄 Triggering article ${articleNumber}/${totalArticles}...`
+        );
+
+        // 🔥 Fire-and-forget request
+        fetch(`${baseUrl}/api/test-generate-article`, {
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
           body: JSON.stringify({
             keywords: keywordStrings,
-            userId: userId,
-            websiteId: websiteId,
-            articleNumber: articleNumber,
-            totalArticles: totalArticles,
-            targetWordCount: 2000
+            userId,
+            websiteId,
+            articleNumber,
+            totalArticles,
+            targetWordCount: 2000,
           }),
+        }).catch((err) => {
+          console.error(
+            `❌ Fire request failed for article ${articleNumber}`,
+            err
+          );
         });
 
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          console.error(`❌ Failed to generate article ${articleNumber}:`, errorData);
-          continue; // Continue with next article even if one fails
-        }
+        console.log(`🚀 Streaming started for article ${articleNumber}`);
 
-        const data = await response.json();
-        if (data.success) {
-          console.log(`✅ Generated article ${articleNumber}/${totalArticles}`);
-        } else {
-          console.error(`❌ Article ${articleNumber} generation failed:`, data.error);
-        }
-
-        // Small delay between requests to avoid rate limiting
-        if (i < totalArticles - 1) {
-          await new Promise(resolve => setTimeout(resolve, 1000)); // 1 second delay
-        }
-
+        // Optional: slight delay between firing next stream
+        await new Promise((res) => setTimeout(res, 300));
       } catch (error) {
-        console.error(`❌ Error generating article ${articleNumber}:`, error);
-        // Continue with next article even if one fails
+        console.error(`❌ Error triggering article ${articleNumber}:`, error);
       }
     }
 
-    console.log(`\n✅ Background article generation complete for website ${websiteId}`);
-
+    console.log(
+      `\n✅ Background article generation complete for website ${websiteId}`
+    );
   } catch (error) {
     console.error("💥 Error in automatic article generation:", error);
   }
 }
-
 
 export async function POST(request: Request) {
   try {
@@ -137,7 +140,11 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!competitors || !Array.isArray(competitors) || competitors.length !== 3) {
+    if (
+      !competitors ||
+      !Array.isArray(competitors) ||
+      competitors.length !== 3
+    ) {
       return NextResponse.json(
         { error: "Exactly 3 competitors are required" },
         { status: 400 }
@@ -161,7 +168,9 @@ export async function POST(request: Request) {
     }
 
     // Normalize competitor URLs
-    const normalizedCompetitors = competitors.map(comp => normalizeUrl(comp)).filter(Boolean) as string[];
+    const normalizedCompetitors = competitors
+      .map((comp) => normalizeUrl(comp))
+      .filter(Boolean) as string[];
     if (normalizedCompetitors.length !== 3) {
       return NextResponse.json(
         { error: "Failed to normalize one or more competitor URLs" },
@@ -211,7 +220,7 @@ export async function POST(request: Request) {
             topic: "Unknown",
             keywords: [],
             success: false,
-            error: "Failed to scrape domain"
+            error: "Failed to scrape domain",
           });
           continue;
         }
@@ -228,13 +237,15 @@ export async function POST(request: Request) {
         // Apply filters: 100-500 volume, competition ≤0.3
         const filteredKeywords = filterKeywords(
           rawKeywords,
-          70,    // maxDifficulty
-          100,   // minVolume
-          500,   // maxVolume
-          0.3    // maxCompetition (low competition)
+          70, // maxDifficulty
+          100, // minVolume
+          500, // maxVolume
+          0.3 // maxCompetition (low competition)
         );
 
-        console.log(`✅ Found ${filteredKeywords.length} keywords for competitor ${i + 1}`);
+        console.log(
+          `✅ Found ${filteredKeywords.length} keywords for competitor ${i + 1}`
+        );
 
         // Add to merged keywords array
         allKeywords.push(...filteredKeywords);
@@ -243,9 +254,8 @@ export async function POST(request: Request) {
           domain: competitorUrl,
           topic: competitorTopic,
           keywords: filteredKeywords,
-          success: true
+          success: true,
         });
-
       } catch (error) {
         console.error(`❌ Error processing competitor ${i + 1}:`, error);
         competitorResults.push({
@@ -253,7 +263,7 @@ export async function POST(request: Request) {
           topic: "Unknown",
           keywords: [],
           success: false,
-          error: error instanceof Error ? error.message : "Unknown error"
+          error: error instanceof Error ? error.message : "Unknown error",
         });
       }
     }
@@ -264,23 +274,31 @@ export async function POST(request: Request) {
 
     if (targetKeywords && targetKeywords.length > 0) {
       // Filter out empty keywords
-      const validTargetKeywords = targetKeywords.filter(kw => kw && kw.trim() !== '');
+      const validTargetKeywords = targetKeywords.filter(
+        (kw) => kw && kw.trim() !== ""
+      );
 
       if (validTargetKeywords.length > 0) {
         try {
-          console.log(`📋 Processing ${validTargetKeywords.length} target keywords:`, validTargetKeywords);
+          console.log(
+            `📋 Processing ${validTargetKeywords.length} target keywords:`,
+            validTargetKeywords
+          );
 
           // Call keyword overview API (processes keywords one by one internally)
-          const overviewResults = await fetchKeywordOverview(validTargetKeywords);
+          const overviewResults = await fetchKeywordOverview(
+            validTargetKeywords
+          );
 
           // NO filtering - use whatever data we get (explicit keywords)
-          targetKeywordData = overviewResults.map(kw => ({
+          targetKeywordData = overviewResults.map((kw) => ({
             ...kw,
-            is_target_keyword: true // Flag to identify target keywords
+            is_target_keyword: true, // Flag to identify target keywords
           }));
 
-          console.log(`✅ Retrieved data for ${targetKeywordData.length} target keywords`);
-
+          console.log(
+            `✅ Retrieved data for ${targetKeywordData.length} target keywords`
+          );
         } catch (error) {
           console.error("❌ Error processing target keywords:", error);
           // Continue even if target keywords fail
@@ -295,13 +313,21 @@ export async function POST(request: Request) {
 
     // Combine competitor keywords + target keywords
     const allMergedKeywords = [...allKeywords, ...targetKeywordData];
-    console.log(`📊 Total before deduplication: ${allKeywords.length} competitor + ${targetKeywordData.length} target = ${allMergedKeywords.length} total`);
+    console.log(
+      `📊 Total before deduplication: ${allKeywords.length} competitor + ${targetKeywordData.length} target = ${allMergedKeywords.length} total`
+    );
 
     // Remove duplicate keywords (by keyword text, case-insensitive)
-    const uniqueKeywords = allMergedKeywords.filter((keyword, index, self) =>
-      index === self.findIndex(k => k.keyword.toLowerCase() === keyword.keyword.toLowerCase())
+    const uniqueKeywords = allMergedKeywords.filter(
+      (keyword, index, self) =>
+        index ===
+        self.findIndex(
+          (k) => k.keyword.toLowerCase() === keyword.keyword.toLowerCase()
+        )
     );
-    console.log(`✅ Merged ${allMergedKeywords.length} total keywords → ${uniqueKeywords.length} unique keywords`);
+    console.log(
+      `✅ Merged ${allMergedKeywords.length} total keywords → ${uniqueKeywords.length} unique keywords`
+    );
 
     // STEP 4: Sort by search volume (highest first) and limit
     const finalKeywords = uniqueKeywords
@@ -309,20 +335,28 @@ export async function POST(request: Request) {
       .slice(0, 50); // Limit to top 50 keywords
 
     console.log(`✅ Final keyword count: ${finalKeywords.length}`);
-    console.log(`   - Competitor keywords: ${finalKeywords.filter(k => !k.is_target_keyword).length}`);
-    console.log(`   - Target keywords: ${finalKeywords.filter(k => k.is_target_keyword).length}`);
+    console.log(
+      `   - Competitor keywords: ${
+        finalKeywords.filter((k) => !k.is_target_keyword).length
+      }`
+    );
+    console.log(
+      `   - Target keywords: ${
+        finalKeywords.filter((k) => k.is_target_keyword).length
+      }`
+    );
 
     // STEP 5: Save to database
     console.log("\n💾 Step 5: Saving to database...");
 
     // Prepare competitor data for the competitors column
-    const competitorsData = competitorResults.map(c => ({
+    const competitorsData = competitorResults.map((c) => ({
       domain: c.domain,
       topic: c.topic,
       keywords: c.keywords,
       keywords_count: c.keywords.length,
       success: c.success,
-      error: c.error || null
+      error: c.error || null,
     }));
 
     const insertData = {
@@ -337,20 +371,20 @@ export async function POST(request: Request) {
           total_competitors: competitorResults.length, // Update with actual count
           onboarding_data: {
             competitor_domains: normalizedCompetitors, // Use normalized URLs
-            competitor_results: competitorResults.map(c => ({
+            competitor_results: competitorResults.map((c) => ({
               domain: c.domain,
               topic: c.topic,
               keywords_count: c.keywords.length,
-              success: c.success
+              success: c.success,
             })),
-            target_keywords: targetKeywords || []
-          }
-        }
+            target_keywords: targetKeywords || [],
+          },
+        },
       },
       // Add top-level competitors column if your schema has it
       competitors: competitorsData, // Save to top-level competitors column (jsonb)
       total_competitors: competitorResults.length, // Save to total_competitors column (int4)
-      user_id: userId
+      user_id: userId,
     };
 
     const { data: savedWebsite, error: dbError } = await supabase
@@ -394,23 +428,22 @@ export async function POST(request: Request) {
       clientTopic,
       totalKeywords: finalKeywords.length,
       keywords: finalKeywords,
-      competitorResults: competitorResults.map(c => ({
+      competitorResults: competitorResults.map((c) => ({
         domain: c.domain,
         topic: c.topic,
         keywordsCount: c.keywords.length,
-        success: c.success
+        success: c.success,
       })),
       websiteId: savedWebsite.id,
       message: "Onboarding completed successfully. 30 articles are queued for generation."
     });
-
   } catch (error) {
     console.error("💥 Onboarding error:", error);
     return NextResponse.json(
       {
         success: false,
         error: "Onboarding failed",
-        details: error instanceof Error ? error.message : "Unknown error"
+        details: error instanceof Error ? error.message : "Unknown error",
       },
       { status: 500 }
     );
