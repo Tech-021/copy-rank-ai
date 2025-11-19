@@ -17,6 +17,7 @@ interface ArticleRequest {
   targetWordCount?: number;
   articleNumber?: number; // NEW: Article number (1-30)
   totalArticles?: number; // NEW: Total articles being generated
+  jobId?: string; // NEW: Job ID from article_jobs table (for queue system)
 }
 
 interface EnhancedArticle {
@@ -52,17 +53,14 @@ interface EnhancedArticle {
 }
 
 export async function POST(request: Request) {
+  let jobId: string | undefined;
+  
   try {
     const body: ArticleRequest = await request.json();
 
     const keywords = body.keywords || (body.keyword ? [body.keyword] : []);
-    const {
-      websiteId,
-      userId,
-      targetWordCount = 2000,
-      articleNumber = 1,
-      totalArticles = 1,
-    } = body;
+    const { websiteId, userId, targetWordCount = 2000, articleNumber = 1, totalArticles = 1 } = body;
+    jobId = body.jobId; // Store jobId for error handling
 
     if (keywords.length === 0) {
       return new Response("At least one keyword is required", { status: 400 });
@@ -203,78 +201,57 @@ OG_DESCRIPTION: [Social media description 120-130 chars]`;
           const text = decoder.decode(value);
           const lines = text.split("\n");
 
-          for (const line of lines) {
-            if (!line.startsWith("data: ")) continue;
+    // Update job status if this was triggered from the queue system
+    if (jobId) {
+      try {
+        await supabase
+          .from('article_jobs')
+          .update({
+            status: 'completed',
+            completed_at: new Date().toISOString()
+          })
+          .eq('id', jobId);
+        console.log(`✅ Updated job ${jobId} status to completed`);
+      } catch (jobUpdateError) {
+        console.error(`⚠️ Failed to update job ${jobId} status:`, jobUpdateError);
+        // Don't fail the whole request if job update fails
+      }
+    }
 
-            const jsonStr = line.replace("data: ", "").trim();
-            if (jsonStr === "[DONE]") {
-              controller.close();
-              break;
-            }
-
-            try {
-              const json = JSON.parse(jsonStr);
-              const delta =
-                json?.choices?.[0]?.delta?.content ??
-                json?.choices?.[0]?.delta ??
-                "";
-
-              fullText += delta;
-
-              // 🔥 Send chunk to frontend immediately
-              controller.enqueue(encoder.encode(delta));
-            } catch (e) {
-              console.log("Chunk parse error", e);
-            }
-          }
-        }
-
-        controller.close();
-
-        // ✔ After stream finishes → Parse metadata and save to Supabase
-        const parsed = parseStructuredResponse(fullText, selectedKeyword);
-        const enhanced = generateEnhancedMetadata(
-          parsed,
-          selectedKeyword,
-          targetWordCount
-        );
-
-        await supabase.from("articles").insert({
-          title: enhanced.title,
-          content: enhanced.content,
-          keyword: keywords.join(", "),
-          status: "draft",
-          date: new Date().toISOString().split("T")[0],
-          preview:
-            enhanced.metaDescription ||
-            enhanced.content.substring(0, 150) + "...",
-          meta_title: enhanced.metaTitle,
-          meta_description: enhanced.metaDescription,
-          slug: enhanced.slug,
-          focus_keyword: selectedKeyword,
-          reading_time: enhanced.readingTime,
-          word_count: enhanced.wordCount,
-          content_score: enhanced.contentScore,
-          keyword_density: enhanced.keywordDensity,
-          og_title: enhanced.ogTitle,
-          og_description: enhanced.ogDescription,
-          twitter_title: enhanced.twitterTitle,
-          twitter_description: enhanced.twitterDescription,
-          tags: enhanced.tags,
-          category: enhanced.category,
-          estimated_traffic: enhanced.estimatedTraffic,
-          ...(websiteId && { website_id: websiteId }),
-          user_id: userId,
-        });
-
-        console.log("✨ Article saved successfully");
+    return NextResponse.json({
+      success: true,
+      article: {
+        ...enhancedArticle,
+        id: savedArticle.id,
+        status: savedArticle.status,
+        date: savedArticle.date
       },
     });
 
-    return new Response(stream, {
-      headers: {
-        "Content-Type": "text/plain; charset=utf-8",
-        "Cache-Control": "no-cache, no-transform",
+  } catch (error) {
+    console.error("💥 Enhanced article generation error:", error);
+    
+    // Update job status to failed if this was triggered from the queue system
+    if (jobId) {
+      try {
+        await supabase
+          .from('article_jobs')
+          .update({
+            status: 'failed',
+            error_message: error instanceof Error ? error.message : "Unknown error",
+            completed_at: new Date().toISOString()
+          })
+          .eq('id', jobId);
+        console.log(`❌ Updated job ${jobId} status to failed`);
+      } catch (jobUpdateError) {
+        console.error(`⚠️ Failed to update job ${jobId} status:`, jobUpdateError);
+      }
+    }
+    
+    return NextResponse.json(
+      { 
+        error: "Failed to generate enhanced article",
+        details: error instanceof Error ? error.message : "Unknown error"
       },
     });
   } catch (err) {

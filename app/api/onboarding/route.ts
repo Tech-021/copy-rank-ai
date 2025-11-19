@@ -400,22 +400,28 @@ export async function POST(request: Request) {
 
     console.log("✅ Successfully saved to database");
 
-    // STEP 6: Start article generation in background (non-blocking)
-    // Don't await - let it run in background while we return the response
-    console.log(
-      "\n🚀 Step 6: Starting automatic article generation in background..."
-    );
+    // STEP 6: Enqueue articles for generation (non-blocking)
+    console.log("\n🚀 Step 6: Enqueueing articles for generation...");
 
-    generateArticlesAutomatically(
-      finalKeywords,
-      savedWebsite.id,
-      userId,
-      30
-    ).catch((error) => {
-      console.error("💥 Background article generation error:", error);
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+
+    // Enqueue all articles as jobs (fire and forget)
+    fetch(`${baseUrl}/api/article-jobs/enqueue`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        keywords: finalKeywords,
+        websiteId: savedWebsite.id,
+        userId: userId,
+        totalArticles: 30
+      }),
+    }).catch(error => {
+      console.error("💥 Error enqueueing articles:", error);
     });
 
-    // Return response with normalized URLs
+    // Return response immediately
     return NextResponse.json({
       success: true,
       clientDomain: normalizedClientDomain, // Return normalized URL
@@ -429,8 +435,7 @@ export async function POST(request: Request) {
         success: c.success,
       })),
       websiteId: savedWebsite.id,
-      message:
-        "Onboarding completed successfully. Articles are being generated in the background.",
+      message: "Onboarding completed successfully. 30 articles are queued for generation."
     });
   } catch (error) {
     console.error("💥 Onboarding error:", error);

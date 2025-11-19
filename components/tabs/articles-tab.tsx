@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -65,7 +65,7 @@ export function ArticlesTab({ generatedArticles, onArticlesUpdate, websiteId }: 
   }, [])
 
   // Fetch articles from database
-  const fetchArticles = async () => {
+  const fetchArticles = useCallback(async () => {
     try {
       setLoading(true)
       
@@ -100,7 +100,7 @@ export function ArticlesTab({ generatedArticles, onArticlesUpdate, websiteId }: 
     } finally {
       setLoading(false)
     }
-  }
+  }, [currentUser, websiteId])
 
   // Load articles when currentUser is available
   useEffect(() => {
@@ -108,6 +108,19 @@ export function ArticlesTab({ generatedArticles, onArticlesUpdate, websiteId }: 
       fetchArticles()
     }
   }, [currentUser, websiteId])
+
+  // Refresh articles periodically to show newly generated ones
+  // (Cron job handles processing, we just need to refresh the UI)
+  useEffect(() => {
+    if (!currentUser) return;
+
+    // Refresh articles every 30 seconds to show newly generated ones
+    const interval = setInterval(() => {
+      fetchArticles()
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(interval);
+  }, [currentUser, websiteId, fetchArticles])
 
   // Update articles when new generated articles come in
   useEffect(() => {
