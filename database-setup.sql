@@ -3,6 +3,10 @@
 -- ============================================
 -- Run this SQL in your Supabase SQL Editor
 -- This creates the table needed for the article generation queue system
+--
+-- NOTE: This solution uses client-side polling instead of Vercel cron jobs
+-- because Hobby plan only allows 2 cron jobs that run once per day.
+-- Articles are processed automatically when users visit the Articles tab.
 
 -- Create article_jobs table
 CREATE TABLE IF NOT EXISTS article_jobs (

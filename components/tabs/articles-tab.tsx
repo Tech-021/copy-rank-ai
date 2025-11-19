@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -65,7 +65,7 @@ export function ArticlesTab({ generatedArticles, onArticlesUpdate, websiteId }: 
   }, [])
 
   // Fetch articles from database
-  const fetchArticles = async () => {
+  const fetchArticles = useCallback(async () => {
     try {
       setLoading(true)
       
@@ -100,7 +100,7 @@ export function ArticlesTab({ generatedArticles, onArticlesUpdate, websiteId }: 
     } finally {
       setLoading(false)
     }
-  }
+  }, [currentUser, websiteId])
 
   // Load articles when currentUser is available
   useEffect(() => {
@@ -108,6 +108,36 @@ export function ArticlesTab({ generatedArticles, onArticlesUpdate, websiteId }: 
       fetchArticles()
     }
   }, [currentUser, websiteId])
+
+  // Process pending article jobs (client-side polling for Hobby plan)
+  // This replaces Vercel cron jobs which are limited on Hobby plan
+  useEffect(() => {
+    if (!currentUser) return;
+
+    // Process pending jobs when user visits articles tab
+    const processPendingJobs = async () => {
+      try {
+        // Trigger job processing (fire and forget)
+        await fetch('/api/article-jobs/trigger', {
+          method: 'POST',
+        });
+      } catch (error) {
+        console.error('Error triggering job processing:', error);
+      }
+    };
+
+    // Process jobs immediately on mount
+    processPendingJobs()
+
+    // Then poll every 30 seconds to process more jobs
+    const interval = setInterval(() => {
+      processPendingJobs()
+      // Refresh articles to show newly generated ones
+      fetchArticles()
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(interval);
+  }, [currentUser, websiteId, fetchArticles])
 
   // Update articles when new generated articles come in
   useEffect(() => {
