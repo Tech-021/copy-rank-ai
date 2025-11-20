@@ -11,7 +11,15 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { keywords, websiteId, userId, totalArticles = 30 } = body;
 
+    console.log(`📥 Enqueue request received:`, {
+      websiteId,
+      userId,
+      totalArticles,
+      keywordsCount: keywords?.length || 0
+    });
+
     if (!keywords || keywords.length === 0) {
+      console.error("❌ No keywords provided");
       return NextResponse.json(
         { error: "Keywords are required" },
         { status: 400 }
@@ -19,6 +27,7 @@ export async function POST(request: Request) {
     }
 
     if (!websiteId || !userId) {
+      console.error("❌ Missing websiteId or userId:", { websiteId, userId });
       return NextResponse.json(
         { error: "Website ID and User ID are required" },
         { status: 400 }
@@ -30,7 +39,10 @@ export async function POST(request: Request) {
       typeof kw === 'string' ? kw : kw.keyword
     ).filter((kw: string) => kw && kw.trim() !== '');
 
+    console.log(`📊 Extracted ${keywordStrings.length} keyword strings`);
+
     if (keywordStrings.length === 0) {
+      console.error("❌ No valid keywords after extraction");
       return NextResponse.json(
         { error: "No valid keywords found" },
         { status: 400 }
@@ -50,6 +62,8 @@ export async function POST(request: Request) {
       });
     }
 
+    console.log(`📝 Created ${jobs.length} job objects, inserting into database...`);
+
     // Insert all jobs at once
     const { data, error } = await supabase
       .from('article_jobs')
@@ -57,14 +71,15 @@ export async function POST(request: Request) {
       .select();
 
     if (error) {
-      console.error("Error creating jobs:", error);
+      console.error("❌ Error creating jobs:", error);
       return NextResponse.json(
         { error: "Failed to create jobs", details: error.message },
         { status: 500 }
       );
     }
 
-    console.log(`✅ Created ${data.length} article jobs for website ${websiteId}`);
+    console.log(`✅ Successfully created ${data?.length || 0} article jobs for website ${websiteId}`);
+    console.log(`📋 Job IDs:`, data?.map(j => j.id).slice(0, 5), data?.length > 5 ? '...' : '');
 
     return NextResponse.json({
       success: true,

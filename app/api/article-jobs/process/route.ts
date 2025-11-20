@@ -8,7 +8,8 @@ const supabase = createClient(
 
 export const maxDuration = 60; // Vercel Pro plan limit
 
-export async function POST(request: Request) {
+// Process function (shared between GET and POST)
+async function processJobs() {
   try {
     // Process only 1 job at a time to stay under timeout limit
     const maxJobs = 1;
@@ -123,5 +124,15 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
+}
+
+// GET handler for Vercel cron jobs (cron sends GET requests)
+export async function GET(request: Request) {
+  return processJobs();
+}
+
+// POST handler for manual triggering
+export async function POST(request: Request) {
+  return processJobs();
 }
 
