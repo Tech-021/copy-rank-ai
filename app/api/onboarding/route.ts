@@ -400,26 +400,39 @@ export async function POST(request: Request) {
 
     console.log("✅ Successfully saved to database");
 
-    // STEP 6: Enqueue articles for generation (non-blocking)
+    // STEP 6: Enqueue articles for generation
     console.log("\n🚀 Step 6: Enqueueing articles for generation...");
 
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 
-    // Enqueue all articles as jobs (fire and forget)
-    fetch(`${baseUrl}/api/article-jobs/enqueue`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        keywords: finalKeywords,
-        websiteId: savedWebsite.id,
-        userId: userId,
-        totalArticles: 30
-      }),
-    }).catch(error => {
+    // Enqueue all articles as jobs - wait for response to ensure jobs are created
+    try {
+      const enqueueResponse = await fetch(`${baseUrl}/api/article-jobs/enqueue`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          keywords: finalKeywords,
+          websiteId: savedWebsite.id,
+          userId: userId,
+          totalArticles: 30
+        }),
+      });
+
+      if (!enqueueResponse.ok) {
+        const errorData = await enqueueResponse.json().catch(() => ({}));
+        console.error("💥 Error enqueueing articles:", errorData);
+        throw new Error(`Failed to enqueue articles: ${JSON.stringify(errorData)}`);
+      }
+
+      const enqueueData = await enqueueResponse.json();
+      console.log(`✅ Successfully enqueued ${enqueueData.jobCount || 30} article jobs`);
+    } catch (error) {
       console.error("💥 Error enqueueing articles:", error);
-    });
+      // Don't fail the whole onboarding if enqueue fails - user can manually generate
+      console.warn("⚠️ Continuing despite enqueue error - articles can be generated manually");
+    }
 
     // Return response immediately
     return NextResponse.json({
