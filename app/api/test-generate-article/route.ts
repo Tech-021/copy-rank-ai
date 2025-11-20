@@ -188,7 +188,7 @@ OG_DESCRIPTION: [Social media description 120-130 chars]`;
           }
         ],
         temperature: 0.7,
-        max_tokens: 3000 // Further reduced to speed up generation and avoid timeout
+        max_tokens: 4500 // Further reduced to speed up generation and avoid timeout
       }),
     });
 
