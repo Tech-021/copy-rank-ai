@@ -16,13 +16,14 @@ async function processJobs() {
 
     console.log(`🔄 Processing up to ${maxJobs} article job...`);
 
-    // First, check for stuck jobs (processing for more than 5 minutes) and reset them
-    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+    // First, check for stuck jobs (processing for more than 2 minutes) and reset them
+    // This handles edge cases where a job might have been left in processing state
+    const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString();
     const { data: stuckJobs } = await supabase
       .from('article_jobs')
       .select('id')
       .eq('status', 'processing')
-      .lt('started_at', fiveMinutesAgo);
+      .lt('started_at', twoMinutesAgo);
     
     if (stuckJobs && stuckJobs.length > 0) {
       console.log(`⚠️ Found ${stuckJobs.length} stuck jobs, resetting to pending...`);
@@ -77,10 +78,15 @@ async function processJobs() {
 
       console.log(`📄 Processing job ${job.id} - Article ${job.article_number}/${job.total_articles}`);
 
-      // Trigger article generation asynchronously (fire and forget)
-      // This prevents timeout - the article generation will update job status when done
-      // Don't await - let it run in background
-      fetch(`${baseUrl}/api/test-generate-article`, {
+      // Create a timeout promise (59 seconds max)
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => {
+          reject(new Error('Article generation timeout after 59 seconds'));
+        }, 59000);
+      });
+
+      // Call article generation and wait for it (with timeout)
+      const articleGenerationPromise = fetch(`${baseUrl}/api/test-generate-article`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -91,31 +97,47 @@ async function processJobs() {
           websiteId: job.website_id,
           articleNumber: job.article_number,
           totalArticles: job.total_articles,
-          targetWordCount: 2000,
-          jobId: job.id // Pass job ID so article generation can update status
+          targetWordCount: 1500,
+          jobId: job.id // Pass job ID for logging (status update handled here)
         }),
-      }).catch(async (error) => {
-        console.error(`❌ Error triggering article generation for job ${job.id}:`, error);
-        // Mark job as failed if we can't even trigger it
+      });
+
+      // Race between article generation and timeout
+      let response: Response;
+      try {
+        response = await Promise.race([articleGenerationPromise, timeoutPromise]);
+      } catch (timeoutError) {
+        // Timeout occurred
+        throw new Error('Article generation timeout after 59 seconds');
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`Article generation failed: ${response.status} - ${JSON.stringify(errorData)}`);
+      }
+
+      const result = await response.json();
+
+      if (result.success) {
+        // Mark job as completed
         await supabase
           .from('article_jobs')
           .update({
-            status: 'failed',
-            error_message: `Failed to trigger: ${error instanceof Error ? error.message : 'Unknown error'}`,
+            status: 'completed',
             completed_at: new Date().toISOString()
           })
           .eq('id', job.id);
-      });
 
-      // Return immediately - don't wait for article generation
-      // The article generation endpoint will update job status when complete
-      console.log(`✅ Triggered article generation for job ${job.id}`);
-      return NextResponse.json({
-        success: true,
-        message: `Triggered article generation for job ${job.id}`,
-        processed: 1,
-        jobId: job.id
-      });
+        console.log(`✅ Completed job ${job.id} - Article ${job.article_number}/${job.total_articles}`);
+        return NextResponse.json({
+          success: true,
+          message: `Successfully processed job ${job.id}`,
+          processed: 1,
+          jobId: job.id
+        });
+      } else {
+        throw new Error(result.error || 'Article generation failed');
+      }
 
     } catch (error) {
       console.error(`❌ Error processing job ${job.id}:`, error);
@@ -130,12 +152,14 @@ async function processJobs() {
         })
         .eq('id', job.id);
 
+      // Return success even if this job failed - we'll process the next one on next cron run
       return NextResponse.json({
-        success: false,
-        error: "Failed to process job",
-        details: error instanceof Error ? error.message : 'Unknown error',
-        jobId: job.id
-      }, { status: 500 });
+        success: true,
+        message: `Job ${job.id} failed, will retry next pending job`,
+        processed: 1,
+        jobId: job.id,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
 
   } catch (error) {

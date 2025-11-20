@@ -271,22 +271,8 @@ OG_DESCRIPTION: [Social media description 120-130 chars]`;
     console.log("✅ Enhanced article generated and saved to Supabase for user:", userId);
     console.log("📊 Final word count:", enhancedArticle.wordCount);
 
-    // Update job status if this was triggered from the queue system
-    if (jobId) {
-      try {
-        await supabase
-          .from('article_jobs')
-          .update({
-            status: 'completed',
-            completed_at: new Date().toISOString()
-          })
-          .eq('id', jobId);
-        console.log(`✅ Updated job ${jobId} status to completed`);
-      } catch (jobUpdateError) {
-        console.error(`⚠️ Failed to update job ${jobId} status:`, jobUpdateError);
-        // Don't fail the whole request if job update fails
-      }
-    }
+    // Note: Job status is now updated by the process endpoint, not here
+    // This keeps the process endpoint in control of job lifecycle
 
     return NextResponse.json({
       success: true,
@@ -307,25 +293,12 @@ OG_DESCRIPTION: [Social media description 120-130 chars]`;
   } catch (error) {
     console.error("💥 Enhanced article generation error:", error);
     
-    // Update job status to failed if this was triggered from the queue system
-    if (jobId) {
-      try {
-        await supabase
-          .from('article_jobs')
-          .update({
-            status: 'failed',
-            error_message: error instanceof Error ? error.message : "Unknown error",
-            completed_at: new Date().toISOString()
-          })
-          .eq('id', jobId);
-        console.log(`❌ Updated job ${jobId} status to failed`);
-      } catch (jobUpdateError) {
-        console.error(`⚠️ Failed to update job ${jobId} status:`, jobUpdateError);
-      }
-    }
+    // Note: Job status is now updated by the process endpoint, not here
+    // The process endpoint will catch this error and mark the job as failed
     
     return NextResponse.json(
       { 
+        success: false,
         error: "Failed to generate enhanced article",
         details: error instanceof Error ? error.message : "Unknown error"
       },
