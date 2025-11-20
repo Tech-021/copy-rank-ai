@@ -6,7 +6,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-export const maxDuration = 60; // Vercel Pro plan limit
+export const maxDuration = 300; // Vercel Pro plan limit
 
 // Process function (shared between GET and POST)
 async function processJobs() {
@@ -82,7 +82,7 @@ async function processJobs() {
       const timeoutPromise = new Promise<never>((_, reject) => {
         setTimeout(() => {
           reject(new Error('Article generation timeout after 59 seconds'));
-        }, 59000);
+        }, 180000);
       });
 
       // Call article generation and wait for it (with timeout)
@@ -97,7 +97,7 @@ async function processJobs() {
           websiteId: job.website_id,
           articleNumber: job.article_number,
           totalArticles: job.total_articles,
-          targetWordCount: 1500,
+          targetWordCount: 2000,
           jobId: job.id // Pass job ID for logging (status update handled here)
         }),
       });

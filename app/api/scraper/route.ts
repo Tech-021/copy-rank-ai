@@ -1,6 +1,6 @@
 // ✅ Force Node.js runtime (Edge doesn’t support console logs)
 export const runtime = "nodejs";
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 import { NextResponse } from "next/server";
 import { analyzeWithQwen } from "@/lib/qwen";

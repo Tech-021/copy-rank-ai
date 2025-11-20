@@ -8,7 +8,7 @@ const supabase = createClient(
 );
 
 // Set max duration for Pro plan (60 seconds)
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 interface ArticleRequest {
   keyword?: string; // Keep for backward compatibility
@@ -61,7 +61,7 @@ export async function POST(request: Request) {
     
     // Support both single keyword (backward compat) and multiple keywords
     const keywords = body.keywords || (body.keyword ? [body.keyword] : []);
-    const { websiteId, userId, targetWordCount = 1500, articleNumber = 1, totalArticles = 1 } = body;
+    const { websiteId, userId, targetWordCount = 2000, articleNumber = 1, totalArticles = 1 } = body;
     jobId = body.jobId; // Store jobId for error handling
 
     if (keywords.length === 0) {
@@ -166,7 +166,7 @@ OG_DESCRIPTION: [Social media description 120-130 chars]`;
 
     // Add timeout wrapper (45 seconds max to leave buffer for processing and DB operations)
     const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error('Article generation timeout after 45 seconds')), 45000);
+      setTimeout(() => reject(new Error('Article generation timeout after 3 minutes')), 180000);
     });
 
     const fetchPromise = fetch("https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions", {
@@ -188,7 +188,7 @@ OG_DESCRIPTION: [Social media description 120-130 chars]`;
           }
         ],
         temperature: 0.7,
-        max_tokens: 2500 // Further reduced to speed up generation and avoid timeout
+        max_tokens: 3000 // Further reduced to speed up generation and avoid timeout
       }),
     });
 
