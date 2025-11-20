@@ -16,6 +16,26 @@ async function processJobs() {
 
     console.log(`🔄 Processing up to ${maxJobs} article job...`);
 
+    // First, check for stuck jobs (processing for more than 5 minutes) and reset them
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+    const { data: stuckJobs } = await supabase
+      .from('article_jobs')
+      .select('id')
+      .eq('status', 'processing')
+      .lt('started_at', fiveMinutesAgo);
+    
+    if (stuckJobs && stuckJobs.length > 0) {
+      console.log(`⚠️ Found ${stuckJobs.length} stuck jobs, resetting to pending...`);
+      await supabase
+        .from('article_jobs')
+        .update({
+          status: 'pending',
+          started_at: null,
+          error_message: 'Job was stuck in processing, reset to pending'
+        })
+        .in('id', stuckJobs.map(j => j.id));
+    }
+
     // Fetch one pending job
     const { data: jobs, error: fetchError } = await supabase
       .from('article_jobs')
@@ -59,6 +79,7 @@ async function processJobs() {
 
       // Trigger article generation asynchronously (fire and forget)
       // This prevents timeout - the article generation will update job status when done
+      // Don't await - let it run in background
       fetch(`${baseUrl}/api/test-generate-article`, {
         method: 'POST',
         headers: {
@@ -73,10 +94,10 @@ async function processJobs() {
           targetWordCount: 2000,
           jobId: job.id // Pass job ID so article generation can update status
         }),
-      }).catch(error => {
+      }).catch(async (error) => {
         console.error(`❌ Error triggering article generation for job ${job.id}:`, error);
         // Mark job as failed if we can't even trigger it
-        supabase
+        await supabase
           .from('article_jobs')
           .update({
             status: 'failed',

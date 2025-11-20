@@ -7,6 +7,9 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+// Set max duration for Pro plan (60 seconds)
+export const maxDuration = 60;
+
 interface ArticleRequest {
   keyword?: string; // Keep for backward compatibility
   keywords?: string[]; // Array of keywords
@@ -58,7 +61,7 @@ export async function POST(request: Request) {
     
     // Support both single keyword (backward compat) and multiple keywords
     const keywords = body.keywords || (body.keyword ? [body.keyword] : []);
-    const { websiteId, userId, targetWordCount = 2000, articleNumber = 1, totalArticles = 1 } = body;
+    const { websiteId, userId, targetWordCount = 1500, articleNumber = 1, totalArticles = 1 } = body;
     jobId = body.jobId; // Store jobId for error handling
 
     if (keywords.length === 0) {
@@ -161,7 +164,12 @@ META_DESCRIPTION: [Compelling description 150-160 chars with keyword "${selected
 OG_TITLE: [Social media title with emoji]
 OG_DESCRIPTION: [Social media description 120-130 chars]`;
 
-    const response = await fetch("https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions", {
+    // Add timeout wrapper (45 seconds max to leave buffer for processing and DB operations)
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('Article generation timeout after 45 seconds')), 45000);
+    });
+
+    const fetchPromise = fetch("https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -180,9 +188,12 @@ OG_DESCRIPTION: [Social media description 120-130 chars]`;
           }
         ],
         temperature: 0.7,
-        max_tokens: 4000
+        max_tokens: 2500 // Further reduced to speed up generation and avoid timeout
       }),
     });
+
+    // Race between fetch and timeout
+    const response = await Promise.race([fetchPromise, timeoutPromise]);
 
     if (!response.ok) {
       const errorText = await response.text();
