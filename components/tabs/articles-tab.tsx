@@ -322,16 +322,16 @@ export function ArticlesTab({ generatedArticles, onArticlesUpdate, websiteId }: 
                   Upgrade Your Plan to Generate More Articles
                 </h3>
                 <p className="text-sm text-blue-700">
-                  You're currently on the free plan (3 articles). Upgrade to Pro (15 articles) or Premium (30 articles) to unlock more content generation.
+                  You're currently on the free plan (3 articles).
                 </p>
               </div>
-              <Button
+              {/* <Button
                 onClick={() => router.push('/paywall')}
                 className="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white gap-2 ml-4"
               >
                 Upgrade Plan
                 <ArrowUpRight className="w-4 h-4" />
-              </Button>
+              </Button> */}
             </div>
           </CardContent>
         </Card>
