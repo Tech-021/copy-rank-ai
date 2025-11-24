@@ -167,13 +167,13 @@ const PaywallScreen: React.FC<PaywallScreenProps> = ({
                       : 'bg-gray-800 hover:bg-gray-900 text-white'
                   }`}
                 >
-                  Start Free Trial
+                  try for $1
                   <CreditCard className="w-5 h-5 ml-2" />
                 </button>
 
                 {/* Free Trial Info */}
                 <p className="text-center text-sm text-gray-500 mt-4">
-                  3 days free • Cancel anytime
+                  3 days for $1 • Cancel anytime
                 </p>
               </div>
             </div>
