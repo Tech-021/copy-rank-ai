@@ -260,7 +260,7 @@ export function AnalyzeTab({ onViewKeywords, onViewCompetitors }: AnalyzeTabProp
           <div className="px-10 py-8">
             <DialogHeader className="mb-6 text-center">
               <DialogTitle className="text-2xl text-center font-semibold text-gray-800">
-                Tell us about your website
+                Tell us about your product
               </DialogTitle>
             </DialogHeader>
 
@@ -269,11 +269,11 @@ export function AnalyzeTab({ onViewKeywords, onViewCompetitors }: AnalyzeTabProp
               {/* Website Name */}
               <div className="space-y-2">
                 <Label className="text-sm text-gray-700 font-medium">
-                  Website Name
+                  Website URL
                 </Label>
                 <Input
                   type="text"
-                  placeholder="Enter your website name"
+                  placeholder="Enter your website URL"
                   value={websiteName}
                   onChange={(e) => setWebsiteName(e.target.value)}
                   className="w-full border-gray-300 focus:border-[#4a5fd8] focus:ring-[#4a5fd8]"

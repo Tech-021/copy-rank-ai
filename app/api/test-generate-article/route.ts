@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from '@supabase/supabase-js';
+import { getUserArticleLimit } from '@/lib/articleLimits';
 
 // Initialize Supabase client
 const supabase = createClient(
@@ -75,6 +76,18 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: "User ID is required" },
         { status: 400 }
+      );
+    }
+
+    // Check user's package limit
+    const userLimit = await getUserArticleLimit(userId);
+    if (totalArticles > userLimit) {
+      return NextResponse.json(
+        { 
+          error: `Package limit exceeded. Your package allows ${userLimit} articles, but ${totalArticles} were requested.`,
+          packageLimit: userLimit
+        },
+        { status: 403 }
       );
     }
 

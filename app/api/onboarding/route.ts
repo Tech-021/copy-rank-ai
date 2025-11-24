@@ -12,6 +12,7 @@ import {
   filterKeywords,
   fetchKeywordOverview,
 } from "@/lib/dataforseo";
+import { getUserArticleLimit } from '@/lib/articleLimits';
 
 // Initialize Supabase client
 const supabase = createClient(
@@ -49,12 +50,16 @@ async function generateArticlesAutomatically(
   keywords: any[],
   websiteId: string,
   userId: string,
-  totalArticles: number = 30
+  totalArticles?: number
 ): Promise<void> {
   try {
+    // Get user's package limit if totalArticles not provided
+    const userLimit = await getUserArticleLimit(userId);
+    const finalArticleCount = totalArticles ? Math.min(totalArticles, userLimit) : userLimit;
+
     console.log(`\n🚀 Starting automatic article generation in background...`);
     console.log(
-      `📝 Generating ${totalArticles} articles with ${keywords.length} keywords`
+      `📝 Generating ${finalArticleCount} articles (package limit: ${userLimit}) with ${keywords.length} keywords`
     );
 
     // Extract keyword strings from keyword objects
@@ -79,13 +84,13 @@ async function generateArticlesAutomatically(
 
     console.log(`🌐 Using base URL: ${baseUrl}`);
 
-    // Generate articles in background
-    for (let i = 0; i < totalArticles; i++) {
+    // Generate articles in background (up to package limit)
+    for (let i = 0; i < finalArticleCount; i++) {
       const articleNumber = i + 1;
 
       try {
         console.log(
-          `📄 Triggering article ${articleNumber}/${totalArticles}...`
+          `📄 Triggering article ${articleNumber}/${finalArticleCount}...`
         );
 
         // 🔥 Fire-and-forget request
@@ -99,7 +104,7 @@ async function generateArticlesAutomatically(
             userId,
             websiteId,
             articleNumber,
-            totalArticles,
+            totalArticles: finalArticleCount,
             targetWordCount: 2000,
           }),
         }).catch((err) => {
@@ -406,7 +411,11 @@ export async function POST(request: Request) {
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 
     // Enqueue all articles as jobs - wait for response to ensure jobs are created
+    // The enqueue endpoint will enforce package limits automatically
     try {
+      // Get user's package limit to pass to enqueue
+      const userLimit = await getUserArticleLimit(userId);
+      
       const enqueueResponse = await fetch(`${baseUrl}/api/article-jobs/enqueue`, {
         method: 'POST',
         headers: {
@@ -416,7 +425,7 @@ export async function POST(request: Request) {
           keywords: finalKeywords,
           websiteId: savedWebsite.id,
           userId: userId,
-          totalArticles: 30
+          totalArticles: userLimit // Use package limit instead of hardcoded 30
         }),
       });
 
@@ -427,7 +436,7 @@ export async function POST(request: Request) {
       }
 
       const enqueueData = await enqueueResponse.json();
-      console.log(`✅ Successfully enqueued ${enqueueData.jobCount || 30} article jobs`);
+      console.log(`✅ Successfully enqueued ${enqueueData.jobCount || enqueueData.actual || 0} article jobs (package limit: ${enqueueData.packageLimit || userLimit})`);
     } catch (error) {
       console.error("💥 Error enqueueing articles:", error);
       // Don't fail the whole onboarding if enqueue fails - user can manually generate
@@ -448,7 +457,7 @@ export async function POST(request: Request) {
         success: c.success,
       })),
       websiteId: savedWebsite.id,
-      message: "Onboarding completed successfully. 30 articles are queued for generation."
+      message: `Onboarding completed successfully. Articles are queued for generation based on your package limit.`
     });
   } catch (error) {
     console.error("💥 Onboarding error:", error);
