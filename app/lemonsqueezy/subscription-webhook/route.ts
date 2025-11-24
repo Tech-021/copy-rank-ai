@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { createHmac, timingSafeEqual } from "crypto";
-import type { Database } from "@/types/supabase";
 
 export const dynamic = "force-dynamic";
 
@@ -32,7 +31,7 @@ export async function POST(req: Request) {
   const event = JSON.parse(rawBody);
   const type = event.meta?.event_name;
 
-  const supabase = createClient<Database>(
+  const supabase = createClient(
     supabaseUrl,
     supabaseServiceRoleKey,
     {

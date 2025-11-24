@@ -10,6 +10,7 @@ import { Search, Download, TrendingUp, BarChart3, Filter, Loader2, ExternalLink 
 import { useToast } from "../ui/toast"
 import { getUser } from "@/lib/auth"
 import { supabase } from "@/lib/client"
+import { getUserArticleLimit } from '@/lib/articleLimits'
 
 interface KeywordsTabProps {
   websiteId?: string | null;
@@ -283,11 +284,14 @@ export function KeywordsTab({ websiteId: initialWebsiteId, onArticlesGenerated }
         return;
       }
 
-      console.log("🚀 Generating 30 articles with keywords:", selectedKeywordTexts);
+      // Get user's package limit
+      const userLimit = await getUserArticleLimit(currentUser.id);
+      const totalArticles = userLimit;
+
+      console.log(`🚀 Generating ${totalArticles} articles (package limit) with keywords:`, selectedKeywordTexts);
       console.log("👤 Current user ID:", currentUser.id);
 
       const generatedArticles: Article[] = [];
-      const totalArticles = 30;
 
       for (let i = 0; i < totalArticles; i++) {
         console.log(`📄 Generating article ${i + 1}/${totalArticles}...`);

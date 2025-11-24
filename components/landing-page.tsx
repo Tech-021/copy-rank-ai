@@ -64,7 +64,7 @@ export function LandingPage({ onSignIn, onSignUp }: LandingPageProps) {
             size="lg"
             className="cursor-pointer bg-blue-700 text-primary-foreground gap-2 rounded-full border-0 shadow-[inset_0_0_4px_2px_rgba(255,255,255,0.28),0_0_8px_1px_rgba(36,101,255,0.4)] opacity-100 will-change-auto hover:bg-blue-700 transition text-sm"
           >
-            Try Viral SEO Free <ArrowRight className="w-4 h-4" />
+            Try Viral SEO For $1 <ArrowRight className="w-4 h-4" />
           </Button>
         </div>
 

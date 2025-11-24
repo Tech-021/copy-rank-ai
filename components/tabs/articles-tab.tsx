@@ -14,8 +14,10 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Loader2, Plus, Eye, Trash2, Edit2, BarChart3, Clock, Target, RefreshCw } from "lucide-react"
+import { Loader2, Plus, Eye, Trash2, Edit2, BarChart3, Clock, Target, RefreshCw, ArrowUpRight } from "lucide-react"
 import { getUser } from "@/lib/auth"
+import { getUserPackage } from "@/lib/articleLimits"
+import { useRouter } from "next/navigation"
 
 interface Article {
   id: string
@@ -54,12 +56,20 @@ export function ArticlesTab({ generatedArticles, onArticlesUpdate, websiteId }: 
   const [newArticleDate, setNewArticleDate] = useState("")
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null)
   const [currentUser, setCurrentUser] = useState<any>(null)
+  const [userPackage, setUserPackage] = useState<'free' | 'pro' | 'premium' | null>(null)
+  const router = useRouter()
 
-  // Get current user on component mount
+  // Get current user and package on component mount
   useEffect(() => {
     const getCurrentUser = async () => {
       const { data: user } = await getUser()
       setCurrentUser(user)
+      
+      // Fetch user's package
+      if (user?.id) {
+        const packageType = await getUserPackage(user.id)
+        setUserPackage(packageType)
+      }
     }
     getCurrentUser()
   }, [])
@@ -302,6 +312,31 @@ export function ArticlesTab({ generatedArticles, onArticlesUpdate, websiteId }: 
 
   return (
     <div className="space-y-6">
+      {/* Upgrade Banner for Free Users */}
+      {userPackage === 'free' && (
+        <Card className="border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <h3 className="font-semibold text-blue-900 mb-1">
+                  Upgrade Your Plan to Generate More Articles
+                </h3>
+                <p className="text-sm text-blue-700">
+                  You're currently on the free plan (3 articles).
+                </p>
+              </div>
+              {/* <Button
+                onClick={() => router.push('/paywall')}
+                className="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white gap-2 ml-4"
+              >
+                Upgrade Plan
+                <ArrowUpRight className="w-4 h-4" />
+              </Button> */}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Stats Cards */}
       <div className="grid md:grid-cols-4 gap-4">
         <Card className="border-border/40 bg-card/50 backdrop-blur-sm">

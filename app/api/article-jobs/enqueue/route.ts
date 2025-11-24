@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from '@supabase/supabase-js';
+import { getUserArticleLimit } from '@/lib/articleLimits';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -34,6 +35,17 @@ export async function POST(request: Request) {
       );
     }
 
+    // Get user's package limit and enforce it
+    const userLimit = await getUserArticleLimit(userId);
+    const requestedArticles = totalArticles || userLimit;
+    const finalArticleCount = Math.min(requestedArticles, userLimit);
+    
+    if (requestedArticles > userLimit) {
+      console.warn(`⚠️ User requested ${requestedArticles} articles but limit is ${userLimit}, capping to ${userLimit}`);
+    }
+
+    console.log(`📊 User package limit: ${userLimit}, Requested: ${requestedArticles}, Final: ${finalArticleCount}`);
+
     // Extract keyword strings
     const keywordStrings = keywords.map((kw: any) => 
       typeof kw === 'string' ? kw : kw.keyword
@@ -49,15 +61,15 @@ export async function POST(request: Request) {
       );
     }
 
-    // Create jobs for all articles
+    // Create jobs for articles (up to package limit)
     const jobs = [];
-    for (let i = 1; i <= totalArticles; i++) {
+    for (let i = 1; i <= finalArticleCount; i++) {
       jobs.push({
         website_id: websiteId,
         user_id: userId,
         keywords: keywordStrings,
         article_number: i,
-        total_articles: totalArticles,
+        total_articles: finalArticleCount,
         status: 'pending'
       });
     }
@@ -83,8 +95,11 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      message: `Queued ${totalArticles} articles for generation`,
-      jobCount: data.length
+      message: `Queued ${finalArticleCount} articles for generation`,
+      jobCount: data.length,
+      packageLimit: userLimit,
+      requested: requestedArticles,
+      actual: finalArticleCount
     });
 
   } catch (error) {
