@@ -161,7 +161,7 @@ const PaywallScreen: React.FC<PaywallScreenProps> = ({
                 <button
                   onClick={() => handleCheckout(plan.checkoutUrl, userEmail || '', userId || '')}
                   disabled={!plan.checkoutUrl || !userEmail || !userId}
-                  className={`w-full font-semibold py-4 px-6 rounded-lg transition-all duration-200 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed ${
+                  className={`cursor-pointer w-full font-semibold py-4 px-6 rounded-lg transition-all duration-200 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed ${
                     plan.popular
                       ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl'
                       : 'bg-gray-800 hover:bg-gray-900 text-white'
