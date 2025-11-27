@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -14,8 +14,10 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Loader2, Plus, Eye, Trash2, Edit2, BarChart3, Clock, Target, RefreshCw } from "lucide-react"
+import { Loader2, Plus, Eye, Trash2, Edit2, BarChart3, Clock, Target, RefreshCw, ArrowUpRight } from "lucide-react"
 import { getUser } from "@/lib/auth"
+import { getUserPackage } from "@/lib/articleLimits"
+import { useRouter } from "next/navigation"
 
 interface Article {
   id: string
@@ -54,68 +56,62 @@ export function ArticlesTab({ generatedArticles, onArticlesUpdate, websiteId }: 
   const [newArticleDate, setNewArticleDate] = useState("")
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null)
   const [currentUser, setCurrentUser] = useState<any>(null)
+  const [userPackage, setUserPackage] = useState<'free' | 'pro' | 'premium' | null>(null)
+  const router = useRouter()
 
-  // Get current user on component mount
   useEffect(() => {
     const getCurrentUser = async () => {
       const { data: user } = await getUser()
       setCurrentUser(user)
+      
+      if (user?.id) {
+        const packageType = await getUserPackage(user.id)
+        setUserPackage(packageType)
+      }
     }
     getCurrentUser()
   }, [])
 
-  // Fetch articles from database
-  const fetchArticles = async () => {
+  const fetchArticles = useCallback(async () => {
     try {
       setLoading(true)
       
-      if (!currentUser) {
-        console.log('No current user found')
-        return
-      }
+      if (!currentUser) return
       
       const url = websiteId 
         ? `/api/articles?websiteId=${websiteId}&userId=${currentUser.id}`
         : `/api/articles?userId=${currentUser.id}`
       
-      console.log('Fetching from URL:', url)
-      
       const response = await fetch(url)
-      
       if (!response.ok) {
         const errorText = await response.text()
-        console.error('Response error:', response.status, errorText)
-        throw new Error(`Failed to fetch articles: ${response.status}`)
+        throw new Error(`Failed to fetch articles: ${response.status} ${errorText}`)
       }
       
       const data = await response.json()
-      
-      if (data.success) {
-        setArticles(data.articles || [])
-      } else {
-        throw new Error(data.error || 'Failed to fetch articles')
-      }
+      if (data.success) setArticles(data.articles || [])
+      else throw new Error(data.error || 'Failed to fetch articles')
     } catch (error) {
       console.error('Error fetching articles:', error)
     } finally {
       setLoading(false)
     }
-  }
-
-  // Load articles when currentUser is available
-  useEffect(() => {
-    if (currentUser) {
-      fetchArticles()
-    }
   }, [currentUser, websiteId])
 
-  // Update articles when new generated articles come in
+  useEffect(() => {
+    if (currentUser) fetchArticles()
+  }, [currentUser, websiteId])
+
+  useEffect(() => {
+    if (!currentUser) return
+    const interval = setInterval(() => fetchArticles(), 30000)
+    return () => clearInterval(interval)
+  }, [currentUser, websiteId, fetchArticles])
+
   useEffect(() => {
     if (generatedArticles && generatedArticles.length > 0) {
       setArticles(prev => [...generatedArticles, ...prev])
-      if (onArticlesUpdate) {
-        onArticlesUpdate([...generatedArticles, ...prev])
-      }
+      if (onArticlesUpdate) onArticlesUpdate([...generatedArticles, ...prev])
     }
   }, [generatedArticles, onArticlesUpdate])
 
@@ -127,24 +123,14 @@ export function ArticlesTab({ generatedArticles, onArticlesUpdate, websiteId }: 
     try {
       const response = await fetch('/api/test-generate-article', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          keyword: newArticleKeyword,
-          websiteId: websiteId,
-          userId: currentUser.id
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ keyword: newArticleKeyword, websiteId, userId: currentUser.id }),
       })
 
-      if (!response.ok) {
-        throw new Error('Failed to generate article')
-      }
+      if (!response.ok) throw new Error('Failed to generate article')
 
       const data = await response.json()
-      
       if (data.success && data.article) {
-        // Refresh articles from database to get the saved one
         await fetchArticles()
         setNewArticleKeyword("")
         setNewArticleDate("")
@@ -160,106 +146,63 @@ export function ArticlesTab({ generatedArticles, onArticlesUpdate, websiteId }: 
 
   const handleDeleteArticle = async (id: string) => {
     if (!confirm('Are you sure you want to delete this article?') || !currentUser) return
-
     try {
-      const response = await fetch(`/api/articles?id=${id}&userId=${currentUser.id}`, {
-        method: 'DELETE',
-      })
-
+      const response = await fetch(`/api/articles?id=${id}&userId=${currentUser.id}`, { method: 'DELETE' })
       if (response.ok) {
-        // Remove from local state
         setArticles(prev => prev.filter(article => article.id !== id))
         alert('Article deleted successfully!')
-      } else {
-        throw new Error('Failed to delete article')
-      }
+      } else throw new Error('Failed to delete article')
     } catch (error) {
       console.error('Error deleting article:', error)
       alert('Failed to delete article. Please try again.')
     }
   }
 
- const handleUpdateStatus = async (id: string, newStatus: "draft" | "scheduled" | "published") => {
-  if (!currentUser) {
-    alert('Please log in to update article status')
-    return
-  }
+  const handleUpdateStatus = async (id: string, newStatus: "draft" | "scheduled" | "published") => {
+    if (!currentUser) { alert('Please log in to update article status'); return }
+    setUpdatingStatus(id)
 
-  setUpdatingStatus(id)
+    try {
+      const response = await fetch(`/api/articles?id=${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus, userId: currentUser.id }),
+      })
 
-  try {
-    console.log(`Updating article ${id} to status: ${newStatus}`)
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error || 'Failed to update article status')
 
-    const response = await fetch(`/api/articles?id=${id}`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        status: newStatus,
-        userId: currentUser.id
-      }),
-    })
-
-    const data = await response.json()
-
-    if (!response.ok) {
-      console.error('API Error response:', data)
-      throw new Error(data.error || `HTTP error! status: ${response.status}`)
-    }
-
-    if (data.success) {
-      // Update local state with the returned article data
-      setArticles(prev => 
-        prev.map(article => 
-          article.id === id ? { 
-            ...article, 
-            status: newStatus,
-            // Update date if publishing for the first time
-            ...(newStatus === 'published' && article.status !== 'published' && { 
-              date: new Date().toISOString().split('T')[0] 
-            })
-          } : article
+      if (data.success) {
+        setArticles(prev => 
+          prev.map(article => 
+            article.id === id ? { ...article, status: newStatus, ...(newStatus === 'published' && article.status !== 'published' && { date: new Date().toISOString().split('T')[0] }) } : article
+          )
         )
-      )
-      console.log(`✅ Article status updated to ${newStatus}`)
-    } else {
-      throw new Error(data.error || 'Failed to update article status')
+      } else throw new Error(data.error || 'Failed to update article status')
+    } catch (error) {
+      console.error('Error updating article status:', error)
+      alert(`Failed to update article status: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      await fetchArticles()
+    } finally {
+      setUpdatingStatus(null)
     }
-  } catch (error) {
-    console.error('❌ Error updating article status:', error)
-    alert(`Failed to update article status: ${error instanceof Error ? error.message : 'Unknown error'}`)
-    
-    // Revert optimistic update by refreshing from server
-    await fetchArticles()
-  } finally {
-    setUpdatingStatus(null)
   }
-}
 
   const getStatusStyles = (status: string) => {
     switch (status) {
-      case "published":
-        return "bg-green-100 text-green-700 border-green-200"
-      case "scheduled":
-        return "bg-blue-100 text-blue-700 border-blue-200"
-      case "draft":
-        return "bg-gray-100 text-gray-700 border-gray-200"
-      default:
-        return "bg-gray-100 text-gray-700 border-gray-200"
+      case "published": return "bg-green-100 text-green-700 border-green-200"
+      case "scheduled": return "bg-blue-100 text-blue-700 border-blue-200"
+      case "draft": return "bg-gray-100 text-gray-700 border-gray-200"
+      default: return "bg-gray-100 text-gray-700 border-gray-200"
     }
   }
 
   const getStatusDisplayText = (status: string) => {
     switch (status) {
-      case "published":
-        return "Published"
-      case "scheduled":
-        return "Scheduled"
-      case "draft":
-        return "Draft"
-      default:
-        return status
+      case "published": return "Published"
+      case "scheduled": return "Scheduled"
+      case "draft": return "Draft"
+      default: return status
     }
   }
 
@@ -289,7 +232,19 @@ export function ArticlesTab({ generatedArticles, onArticlesUpdate, websiteId }: 
 
   return (
     <div className="space-y-6">
-      {/* Stats Cards */}
+      {userPackage === 'free' && (
+        <Card className="border-blue-200 bg-linear-to-r from-blue-50 to-indigo-50">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <h3 className="font-semibold text-blue-900 mb-1">Upgrade Your Plan to Generate More Articles</h3>
+                <p className="text-sm text-blue-700">You're currently on the free plan (3 articles).</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid md:grid-cols-4 gap-4">
         <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
           <CardContent className="pt-6">
@@ -328,68 +283,12 @@ export function ArticlesTab({ generatedArticles, onArticlesUpdate, websiteId }: 
         </Card>
       </div>
 
-      {/* Actions */}
       <div className="flex gap-4">
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button className="cursor-pointer bg-primary hover:bg-primary/90 text-primary-foreground gap-2">
-              <Plus className="w-4 h-4" />
-              Generate New Article
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Generate New Article</DialogTitle>
-              <DialogDescription>Create a new SEO-optimized article for a keyword</DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm font-medium text-foreground">Keyword</label>
-                <Input
-                  placeholder="Enter target keyword"
-                  value={newArticleKeyword}
-                  onChange={(e) => setNewArticleKeyword(e.target.value)}
-                  className="mt-1 bg-input border-border/40"
-                />
-              </div>
-              {/* <div>
-                <label className="text-sm font-medium text-foreground">Publish Date</label>
-                <Input
-                  type="date"
-                  value={newArticleDate}
-                  onChange={(e) => setNewArticleDate(e.target.value)}
-                  className="mt-1 bg-input border-border/40"
-                />
-              </div> */}
-              <Button
-                onClick={handleGenerateArticle}
-                disabled={isGenerating || !newArticleKeyword.trim() || !newArticleDate}
-                className="cursor-pointer w-full bg-primary hover:bg-primary/90 text-primary-foreground gap-2"
-              >
-                {isGenerating ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Generating...
-                  </>
-                ) : (
-                  "Generate Article"
-                )}
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        <Button 
-          variant="outline" 
-          onClick={fetchArticles}
-          className="cursor-pointer gap-2"
-        >
-          <RefreshCw className="w-4 h-4" />
-          Refresh
+        <Button variant="outline" onClick={fetchArticles} className="cursor-pointer gap-2">
+          <RefreshCw className="w-4 h-4" /> Refresh
         </Button>
       </div>
 
-      {/* Articles List */}
       <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
         <CardHeader>
           <CardTitle>Generated Articles</CardTitle>
@@ -404,63 +303,41 @@ export function ArticlesTab({ generatedArticles, onArticlesUpdate, websiteId }: 
               </div>
             ) : (
               articles.map((article) => (
-                <div
-                  key={article.id}
-                  className="p-4 rounded-lg border border-border/40 hover:border-primary/30 transition-colors bg-background/50"
-                >
-                  <div className="flex items-start justify-between mb-3">
+                <div key={article.id} className="p-4 rounded-lg border border-border/40 hover:border-primary/30 transition-colors bg-background/50">
+                  <div className="flex flex-col items-start justify-between mb-3">
                     <div className="flex-1">
                       <h3 className="font-semibold text-foreground mb-1">{article.title}</h3>
                       <p className="text-sm text-muted-foreground mb-2">{article.preview}</p>
-                      
-                      {/* Enhanced SEO Metrics */}
-                      <div className="flex items-center gap-4 text-xs text-muted-foreground mb-2">
-                        <span>Keyword: <strong>{article.keyword}</strong></span>
-                        <span>•</span>
-                        <span>{article.wordCount.toLocaleString()} words</span>
-                        <span>•</span>
-                        <span>{article.date}</span>
+
+                      {/* ✅ Flex-row for highlighted content */}
+                      <div className="flex flex-row flex-wrap items-center gap-4 text-xs text-muted-foreground mb-2">
+                        <span className="w-full md:w-auto">Keyword: <strong>{article.keyword}</strong></span>
+                        <span className="w-full md:w-auto order-last md:order-0">{article.wordCount.toLocaleString()} words</span>
+                        <span className="w-full md:w-auto">{article.date}</span>
                         {article.readingTime && (
-                          <>
-                            <span>•</span>
-                            <span className="flex items-center gap-1">
-                              <Clock className="w-3 h-3" />
-                              {article.readingTime}
-                            </span>
-                          </>
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-3 h-3" /> {article.readingTime}
+                          </span>
                         )}
                         {article.contentScore && (
-                          <>
-                            <span>•</span>
-                            <span className={`flex items-center gap-1 ${getContentScoreColor(article.contentScore)}`}>
-                              <BarChart3 className="w-3 h-3" />
-                              Score: {article.contentScore}%
-                            </span>
-                          </>
+                          <span className={`flex items-center gap-1 ${getContentScoreColor(article.contentScore)}`}>
+                            <BarChart3 className="w-3 h-3" /> Score: {article.contentScore}%
+                          </span>
                         )}
                         {article.estimatedTraffic && (
-                          <>
-                            <span>•</span>
-                            <span className="flex items-center gap-1">
-                              <Target className="w-3 h-3" />
-                              Est. traffic: {article.estimatedTraffic}
-                            </span>
-                          </>
+                          <span className="flex items-center gap-1">
+                            <Target className="w-3 h-3" /> Est. traffic: {article.estimatedTraffic}
+                          </span>
                         )}
                       </div>
 
-                      {/* Tags */}
                       {article.tags && article.tags.length > 0 && (
                         <div className="flex flex-wrap gap-1 mb-2">
                           {article.tags.slice(0, 3).map((tag, index) => (
-                            <Badge key={index} variant="outline" className="text-xs">
-                              {tag}
-                            </Badge>
+                            <Badge key={index} variant="outline" className="text-xs">{tag}</Badge>
                           ))}
                           {article.tags.length > 3 && (
-                            <Badge variant="outline" className="text-xs">
-                              +{article.tags.length - 3} more
-                            </Badge>
+                            <Badge variant="outline" className="text-xs">+{article.tags.length - 3} more</Badge>
                           )}
                         </div>
                       )}
@@ -473,59 +350,36 @@ export function ArticlesTab({ generatedArticles, onArticlesUpdate, websiteId }: 
                   <div className="flex items-center gap-2 pt-3 border-t border-border/40">
                     <Dialog>
                       <DialogTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="cursor-pointer text-muted-foreground hover:text-foreground gap-2"
-                          onClick={() => setSelectedArticle(article)}
-                        >
-                          <Eye className="w-4 h-4" />
-                          Preview
+                        <Button variant="ghost" size="sm" className="cursor-pointer text-muted-foreground hover:text-foreground gap-2" onClick={() => setSelectedArticle(article)}>
+                          <Eye className="w-4 h-4" /> Preview
                         </Button>
                       </DialogTrigger>
-                      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                      <DialogContent className="sm:max-w-[880px] max-h-[80vh] overflow-y-scroll [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                         <DialogHeader>
                           <DialogTitle>{article.title}</DialogTitle>
-                            <div className="flex flex-wrap gap-4 text-sm">
-                              <span>Keyword: <strong>{article.keyword}</strong></span>
-                              {article.readingTime && <span>Reading Time: {article.readingTime}</span>}
-                              {article.wordCount && <span>Words: {article.wordCount}</span>}
-                              {article.contentScore && (
-                                <span className={getContentScoreColor(article.contentScore)}>
-                                  Content Score: {article.contentScore}%
-                                </span>
-                              )}
-                            </div>
+                          <div className="flex flex-wrap gap-4 text-sm">
+                            <span>Keyword: <strong>{article.keyword}</strong></span>
+                            {article.readingTime && <span>Reading Time: {article.readingTime}</span>}
+                            {article.wordCount && <span>Words: {article.wordCount}</span>}
+                            {article.contentScore && (
+                              <span className={getContentScoreColor(article.contentScore)}>Content Score: {article.contentScore}%</span>
+                            )}
+                          </div>
                         </DialogHeader>
                         <div className="space-y-4">
-                          {/* SEO Metadata Preview */}
                           {(article.metaTitle || article.metaDescription) && (
                             <div className="p-4 bg-muted/30 rounded-lg">
                               <h4 className="font-semibold mb-2">SEO Preview</h4>
-                              {article.metaTitle && (
-                                <p className="text-blue-600 font-medium text-lg mb-1">{article.metaTitle}</p>
-                              )}
-                              {article.metaDescription && (
-                                <p className="text-gray-600 text-sm">{article.metaDescription}</p>
-                              )}
+                              {article.metaTitle && <p className="text-blue-600 font-medium text-lg mb-1">{article.metaTitle}</p>}
+                              {article.metaDescription && <p className="text-gray-600 text-sm">{article.metaDescription}</p>}
                             </div>
                           )}
-
-                          {/* Article Content */}
-                          <div 
-                            className="prose prose-sm max-w-none"
-                            dangerouslySetInnerHTML={{ __html: article.content }}
-                          />
-                          
+                          <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: article.content }} />
                           <div className="flex gap-2 pt-4 border-t border-border/40">
                             <Button variant="outline" className="cursor-pointer border-border/40 bg-transparent flex-1">
-                              <Edit2 className="w-4 h-4 mr-2" />
-                              Edit
+                              <Edit2 className="w-4 h-4 mr-2" /> Edit
                             </Button>
-                            <Button 
-                              className="cursor-pointer bg-primary hover:bg-primary/90 text-primary-foreground flex-1"
-                              onClick={() => handleUpdateStatus(article.id, 'published')}
-                            >
+                            <Button className="cursor-pointer bg-primary hover:bg-primary/90 text-primary-foreground flex-1" onClick={() => handleUpdateStatus(article.id, 'published')}>
                               Publish Now
                             </Button>
                           </div>
@@ -533,20 +387,10 @@ export function ArticlesTab({ generatedArticles, onArticlesUpdate, websiteId }: 
                       </DialogContent>
                     </Dialog>
 
-                    <Select
-                      value={article.status}
-                      onValueChange={(value) =>
-                        handleUpdateStatus(article.id, value as "draft" | "scheduled" | "published")
-                      }
-                      disabled={updatingStatus === article.id}
-                    >
+                    <Select value={article.status} onValueChange={(value) => handleUpdateStatus(article.id, value as "draft" | "scheduled" | "published")} disabled={updatingStatus === article.id}>
                       <SelectTrigger className="w-32 h-8 text-xs bg-input border-border/40">
                         <SelectValue>
-                          {updatingStatus === article.id ? (
-                            <Loader2 className="w-3 h-3 animate-spin inline" />
-                          ) : (
-                            getStatusDisplayText(article.status)
-                          )}
+                          {updatingStatus === article.id ? <Loader2 className="w-3 h-3 animate-spin inline" /> : getStatusDisplayText(article.status)}
                         </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
@@ -556,13 +400,7 @@ export function ArticlesTab({ generatedArticles, onArticlesUpdate, websiteId }: 
                       </SelectContent>
                     </Select>
 
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="cursor-pointer text-muted-foreground hover:text-destructive"
-                      onClick={() => handleDeleteArticle(article.id)}
-                      disabled={updatingStatus === article.id}
-                    >
+                    <Button variant="ghost" size="sm" className="cursor-pointer text-muted-foreground hover:text-destructive" onClick={() => handleDeleteArticle(article.id)} disabled={updatingStatus === article.id}>
                       <Trash2 className="w-4 h-4" />
                     </Button>
                   </div>

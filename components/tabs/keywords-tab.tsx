@@ -8,10 +8,13 @@ import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Search, Download, TrendingUp, BarChart3, Filter, Loader2, ExternalLink } from "lucide-react"
 import { useToast } from "../ui/toast"
-import { getUser } from "@/lib/auth" // Import your auth function
+import { getUser } from "@/lib/auth"
+import { supabase } from "@/lib/client"
+import { getUserArticleLimit } from '@/lib/articleLimits'
+
 interface KeywordsTabProps {
   websiteId?: string | null;
-  onArticlesGenerated?: (articles: any[]) => void; // Add this prop
+  onArticlesGenerated?: (articles: any[]) => void;
 }
 
 interface Keyword {
@@ -22,6 +25,14 @@ interface Keyword {
   cpc: number
   competition: number
   selected?: boolean
+  is_target_keyword?: boolean
+}
+
+interface Website {
+  id: string;
+  url: string;
+  topic: string;
+  created_at?: string;
 }
 
 interface WebsiteData {
@@ -33,7 +44,6 @@ interface WebsiteData {
   keywords: Keyword[]
 }
 
-// Add Article interface for generated content
 interface Article {
   id: string
   title: string
@@ -56,77 +66,147 @@ interface Article {
   estimatedTraffic?: number
 }
 
-export function KeywordsTab({ websiteId, onArticlesGenerated }: KeywordsTabProps) {
+export function KeywordsTab({ websiteId: initialWebsiteId, onArticlesGenerated }: KeywordsTabProps) {
+  const [selectedWebsiteId, setSelectedWebsiteId] = useState<string | null>(initialWebsiteId || null)
+  const [websites, setWebsites] = useState<Website[]>([])
   const [websiteData, setWebsiteData] = useState<WebsiteData | null>(null)
   const [keywords, setKeywords] = useState<Keyword[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadingWebsites, setLoadingWebsites] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [generatingContent, setGeneratingContent] = useState(false)
-   const [currentUser, setCurrentUser] = useState<any>(null) // Add current user state
+  const [currentUser, setCurrentUser] = useState<any>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [difficultyFilter, setDifficultyFilter] = useState<string>("all")
   const [sortBy, setSortBy] = useState<string>("volume-desc")
-  const [selectedKeywords, setSelectedKeywords] = useState<Set<number>>(new Set())
-  const toast=useToast()
+  const [selectedKeywords, setSelectedKeywords] = useState<Set<number>>(new Set()) // FIX: Use useState properly
+  const toast = useToast()
 
   // Get current user on component mount
-useEffect(() => {
-  const fetchCurrentUser = async () => {
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      try {
+        const { data: user, error } = await getUser()
+        if (error) {
+          console.error("Error fetching current user:", error)
+          return
+        }
+        setCurrentUser(user)
+        console.log("👤 Current user:", user?.id)
+      } catch (err) {
+        console.error("Failed to get current user:", err)
+      }
+    }
+
+    fetchCurrentUser()
+  }, [])
+
+  // Load user websites if no websiteId is provided
+  const loadUserWebsites = async () => {
     try {
-      const { data: user, error } = await getUser()
-      if (error) {
-        console.error("Error fetching current user:", error)
+      setLoadingWebsites(true)
+      const { data: { user } } = await supabase.auth.getUser()
+
+      if (!user) {
+        setError("Please log in to view keywords")
         return
       }
-      setCurrentUser(user)
-      console.log("👤 Current user:", user?.id)
-    } catch (err) {
-      console.error("Failed to get current user:", err)
+
+      const { data, error } = await supabase
+        .from("websites")
+        .select("id, url, topic, created_at")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+
+      if (error) {
+        console.error("Error loading websites:", error)
+        setError("Failed to load websites")
+        return
+      }
+
+      if (data && data.length > 0) {
+        setWebsites(data)
+        // Auto-select first website if no websiteId was provided
+        if (!selectedWebsiteId) {
+          setSelectedWebsiteId(data[0].id)
+        }
+      } else {
+        setError("No websites found. Add a website in the Analyze tab first.")
+      }
+    } catch (error) {
+      console.error("Error loading websites:", error)
+      setError("Failed to load websites")
+    } finally {
+      setLoadingWebsites(false)
     }
   }
-  
-  fetchCurrentUser()
-}, [])
-  // Fetch keywords when websiteId changes
+
+  // Load websites on mount if no websiteId provided
   useEffect(() => {
-    console.log("🔍 KeywordsTab - websiteId:", websiteId);
-    
-    if (websiteId) {
-      fetchKeywords()
+    if (!initialWebsiteId) {
+      loadUserWebsites()
     } else {
-      console.log("❌ No websiteId provided");
-      setLoading(false)
-      setError("No website selected. Please go back to Analyze tab and click 'View Keywords' on a website.")
+      setSelectedWebsiteId(initialWebsiteId)
     }
-  }, [websiteId])
+  }, [initialWebsiteId])
+
+  // Fetch keywords when selectedWebsiteId changes
+  useEffect(() => {
+    console.log("🔍 KeywordsTab - selectedWebsiteId:", selectedWebsiteId);
+
+    if (selectedWebsiteId) {
+      fetchKeywords()
+    } else if (!loadingWebsites) {
+      setLoading(false)
+    }
+  }, [selectedWebsiteId])
 
   const fetchKeywords = async () => {
-    if (!websiteId) return;
-    
+    if (!selectedWebsiteId) return;
+
     try {
       setLoading(true)
       setError(null)
-      console.log(`🔍 Fetching keywords for website: ${websiteId}`)
-      
-      const response = await fetch(`/api/keyword/${websiteId}`)
-      
+      console.log(`🔍 Fetching keywords for website: ${selectedWebsiteId}`)
+
+      const response = await fetch(`/api/keyword/${selectedWebsiteId}`)
+
       if (!response.ok) {
         if (response.status === 404) {
           throw new Error("Website not found")
         }
         throw new Error(`HTTP error! status: ${response.status}`)
       }
-      
+
       const data = await response.json()
-      
+
       if (!data.success) {
         throw new Error(data.error || "Failed to fetch keywords")
       }
-      
+
       setWebsiteData(data)
-      setKeywords(data.keywords || [])
-      console.log(`✅ Loaded ${data.keywords?.length || 0} keywords`)
-      
+
+      // Handle both old and new data formats
+      let keywordsArray = [];
+
+      if (Array.isArray(data.keywords)) {
+        // Old format: direct array of keywords
+        keywordsArray = data.keywords;
+        console.log(`✅ Loaded ${keywordsArray.length} keywords (old format)`);
+      } else if (data.keywords && Array.isArray(data.keywords.keywords)) {
+        // New format: object with keywords array inside
+        keywordsArray = data.keywords.keywords;
+        console.log(`✅ Loaded ${keywordsArray.length} keywords (new format)`);
+      } else {
+        console.warn('❌ Unexpected keywords format:', data.keywords);
+        keywordsArray = [];
+      }
+
+      setKeywords(keywordsArray)
+      // Reset selected keywords when new keywords are loaded
+      setSelectedKeywords(new Set())
+      console.log(`✅ Total keywords loaded: ${keywordsArray.length}`)
+
     } catch (err) {
       console.error('Error fetching keywords:', err)
       setError(err instanceof Error ? err.message : "Failed to load keywords")
@@ -135,123 +215,20 @@ useEffect(() => {
     }
   }
 
-  const generateContentFromKeywords = async () => {
-  if (selectedKeywords.size === 0) {
-    alert("Please select at least one keyword to generate content.")
-    return;
-  }
-
-  // Check if user is authenticated
-  if (!currentUser) {
-    alert("Please log in to generate content.")
-    return;
-  }
-
-  try {
-    setGeneratingContent(true);
-
-    // Get the selected keyword texts
-    const selectedKeywordTexts = Array.from(selectedKeywords).map(
-      index => filteredAndSortedKeywords[index].keyword
-    );
-
-    console.log("🚀 Generating content for keywords:", selectedKeywordTexts);
-    console.log("👤 Current user ID:", currentUser.id);
-
-    const generatedArticles: Article[] = [];
-
-    // Generate articles for each selected keyword
-    for (const keyword of selectedKeywordTexts) {
-      const response = await fetch('/api/test-generate-article', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          keyword: keyword,
-          userId: currentUser.id, // Use the actual user ID
-          websiteId: websiteId,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to generate article for: ${keyword}`);
-      }
-
-      const data = await response.json();
-      
-      if (data.success && data.article) {
-        // Use the actual article ID from the database response
-        const newArticle: Article = {
-          id: data.article.id, // Use the actual ID from database
-          title: data.article.title,
-          content: data.article.content,
-          keyword: keyword,
-          status: "Draft",
-          date: new Date().toLocaleDateString('en-US', { 
-            year: 'numeric', 
-            month: 'short', 
-            day: 'numeric' 
-          }),
-          preview: data.article.metaDescription || data.article.content.substring(0, 150) + '...',
-          wordCount: data.article.wordCount,
-          metaTitle: data.article.metaTitle,
-          metaDescription: data.article.metaDescription,
-          readingTime: data.article.readingTime,
-          contentScore: data.article.contentScore,
-          keywordDensity: data.article.keywordDensity,
-          tags: data.article.tags,
-          category: data.article.category,
-          estimatedTraffic: data.article.estimatedTraffic
-        };
-
-        generatedArticles.push(newArticle);
-      }
-    }
-
-    // Pass generated articles to parent component
-    if (onArticlesGenerated && generatedArticles.length > 0) {
-      onArticlesGenerated(generatedArticles);
-    }
-
-    console.log("✅ Generated articles:", generatedArticles);
-    
-    // Clear selection after generation
-    setSelectedKeywords(new Set());
-    
-    toast.showToast({
-      title: `Successfully generated ${generatedArticles.length} articles! Check the Articles tab.`, 
-      type: "success", 
-      duration: 5000
-    });
-    
-  } catch (error) {
-    console.error('Error generating content:', error);
-    toast.showToast({
-      title: "Failed to generate content",
-      description: "Please try again.",
-      type: "error"
-    });
-  } finally {
-    setGeneratingContent(false);
-  }
-};
-
+  // Move filteredAndSortedKeywords BEFORE generateContentFromKeywords
   const filteredAndSortedKeywords = useMemo(() => {
     const filtered = keywords.filter((kw) => {
       const matchesSearch = kw.keyword.toLowerCase().includes(searchQuery.toLowerCase())
-      
-      // Convert difficulty number to category for filtering
+
       let difficultyCategory: "Low" | "Medium" | "High"
       if (kw.difficulty <= 40) difficultyCategory = "Low"
       else if (kw.difficulty <= 70) difficultyCategory = "Medium"
       else difficultyCategory = "High"
-      
+
       const matchesDifficulty = difficultyFilter === "all" || difficultyCategory === difficultyFilter
       return matchesSearch && matchesDifficulty
     })
 
-    // Sort keywords
     filtered.sort((a, b) => {
       switch (sortBy) {
         case "volume-desc":
@@ -278,7 +255,129 @@ useEffect(() => {
     return filtered
   }, [keywords, searchQuery, difficultyFilter, sortBy])
 
+  const generateContentFromKeywords = async () => {
+    if (!selectedKeywords || selectedKeywords.size === 0) {
+      alert("Please select at least one keyword to generate content.")
+      return;
+    }
+
+    if (!currentUser) {
+      alert("Please log in to generate content.")
+      return;
+    }
+
+    if (!filteredAndSortedKeywords || filteredAndSortedKeywords.length === 0) {
+      alert("No keywords available to generate content.")
+      return;
+    }
+
+    try {
+      setGeneratingContent(true);
+
+      const selectedKeywordTexts = Array.from(selectedKeywords).map(
+        index => filteredAndSortedKeywords[index]?.keyword
+      ).filter(Boolean);
+
+      if (selectedKeywordTexts.length === 0) {
+        alert("No valid keywords selected.")
+        setGeneratingContent(false);
+        return;
+      }
+
+      // Get user's package limit
+      const userLimit = await getUserArticleLimit(currentUser.id);
+      const totalArticles = userLimit;
+
+      console.log(`🚀 Generating ${totalArticles} articles (package limit) with keywords:`, selectedKeywordTexts);
+      console.log("👤 Current user ID:", currentUser.id);
+
+      const generatedArticles: Article[] = [];
+
+      for (let i = 0; i < totalArticles; i++) {
+        console.log(`📄 Generating article ${i + 1}/${totalArticles}...`);
+        
+        const response = await fetch('/api/test-generate-article', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            keywords: selectedKeywordTexts,
+            userId: currentUser.id,
+            websiteId: selectedWebsiteId,
+            articleNumber: i + 1,
+            totalArticles: totalArticles,
+          }),
+        });
+
+        if (!response.ok) {
+          console.error(`Failed to generate article ${i + 1}`);
+          continue;
+        }
+
+        const data = await response.json();
+        
+        if (data.success && data.article) {
+          const newArticle: Article = {
+            id: data.article.id,
+            title: data.article.title,
+            content: data.article.content,
+            keyword: selectedKeywordTexts.join(', '),
+            status: "Draft",
+            date: new Date().toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric'
+            }),
+            preview: data.article.metaDescription || data.article.content.substring(0, 150) + '...',
+            wordCount: data.article.wordCount,
+            metaTitle: data.article.metaTitle,
+            metaDescription: data.article.metaDescription,
+            readingTime: data.article.readingTime,
+            contentScore: data.article.contentScore,
+            keywordDensity: data.article.keywordDensity,
+            tags: data.article.tags,
+            category: data.article.category,
+            estimatedTraffic: data.article.estimatedTraffic
+          };
+
+          generatedArticles.push(newArticle);
+          console.log(`✅ Generated article ${i + 1}/${totalArticles}`);
+        }
+
+        if (i < totalArticles - 1) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      }
+
+      if (onArticlesGenerated && generatedArticles.length > 0) {
+        onArticlesGenerated(generatedArticles);
+      }
+
+      console.log(`✅ Generated ${generatedArticles.length} articles with keywords:`, selectedKeywordTexts);
+
+      setSelectedKeywords(new Set());
+
+      toast.showToast({
+        title: `Successfully generated ${generatedArticles.length} articles with ${selectedKeywordTexts.length} keywords! Check the Articles tab.`,
+        type: "success",
+        duration: 5000
+      });
+
+    } catch (error) {
+      console.error('Error generating content:', error);
+      toast.showToast({
+        title: "Failed to generate content",
+        description: "Please try again.",
+        type: "error"
+      });
+    } finally {
+      setGeneratingContent(false);
+    }
+  };
+
   const toggleKeywordSelection = (index: number) => {
+    if (!selectedKeywords) return;
     const newSelected = new Set(selectedKeywords)
     if (newSelected.has(index)) {
       newSelected.delete(index)
@@ -289,6 +388,7 @@ useEffect(() => {
   }
 
   const toggleSelectAll = () => {
+    if (!selectedKeywords || !filteredAndSortedKeywords) return;
     if (selectedKeywords.size === filteredAndSortedKeywords.length) {
       setSelectedKeywords(new Set())
     } else {
@@ -342,7 +442,7 @@ useEffect(() => {
         kw.competition.toFixed(2)
       ])
     ].map(row => row.join(",")).join("\n")
-    
+
     const blob = new Blob([csvContent], { type: "text/csv" })
     const url = URL.createObjectURL(blob)
     const a = document.createElement("a")
@@ -352,6 +452,31 @@ useEffect(() => {
     a.click()
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
+  }
+
+  if (loadingWebsites) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-primary" />
+          <p className="text-muted-foreground">Loading websites...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error && !selectedWebsiteId && websites.length === 0) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <BarChart3 className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+          <p className="text-destructive mb-4">{error}</p>
+          <Button onClick={loadUserWebsites} variant="outline">
+            Try Again
+          </Button>
+        </div>
+      </div>
+    )
   }
 
   if (loading) {
@@ -365,7 +490,7 @@ useEffect(() => {
     )
   }
 
-  if (error) {
+  if (error && selectedWebsiteId) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
@@ -384,7 +509,7 @@ useEffect(() => {
         <div className="text-center">
           <p className="text-muted-foreground mb-4">No website data found</p>
           <p className="text-sm text-muted-foreground">
-            Please go to the Analyze tab and click "View Keywords" on a website.
+            Please select a website from the list above.
           </p>
         </div>
       </div>
@@ -393,6 +518,39 @@ useEffect(() => {
 
   return (
     <div className="space-y-6">
+      {/* Website Selector Pills */}
+      {websites.length > 0 && (
+        <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
+          <CardHeader>
+            <CardTitle>Select Website</CardTitle>
+            <CardDescription>Choose a website to view its keywords</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-2">
+              {websites.map((website) => (
+                <Button
+                  key={website.id}
+                  variant={selectedWebsiteId === website.id ? "default" : "outline"}
+                  onClick={() => setSelectedWebsiteId(website.id)}
+                  className={`cursor-pointer ${
+                    selectedWebsiteId === website.id
+                      ? "bg-primary text-primary-foreground"
+                      : "border-border/40 hover:bg-accent"
+                  }`}
+                >
+                  {website.url}
+                  {selectedWebsiteId === website.id && (
+                    <Badge className="ml-2 bg-primary-foreground/20 text-primary-foreground">
+                      Active
+                    </Badge>
+                  )}
+                </Button>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Website Info Header */}
       <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
         <CardContent className="pt-6">
@@ -411,8 +569,8 @@ useEffect(() => {
                 </p>
               </div>
             </div>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               className="cursor-pointer border-border/40 gap-2"
               onClick={() => window.open(websiteData.website.url, '_blank')}
             >
@@ -481,7 +639,6 @@ useEffect(() => {
           <CardDescription>Analyze and filter keywords for {websiteData.website.topic}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Search and Filters Row */}
           <div className="flex flex-col md:flex-row gap-3">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -521,8 +678,8 @@ useEffect(() => {
               </SelectContent>
             </Select>
 
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               className="cursor-pointer border-border/40 gap-2 bg-transparent"
               onClick={exportKeywords}
             >
@@ -531,7 +688,6 @@ useEffect(() => {
             </Button>
           </div>
 
-          {/* Keywords Table */}
           <div className="border border-border/40 rounded-lg overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
@@ -541,6 +697,7 @@ useEffect(() => {
                       <input
                         type="checkbox"
                         checked={
+                          selectedKeywords && 
                           selectedKeywords.size === filteredAndSortedKeywords.length &&
                           filteredAndSortedKeywords.length > 0
                         }
@@ -561,13 +718,20 @@ useEffect(() => {
                       <td className="px-4 py-3">
                         <input
                           type="checkbox"
-                          checked={selectedKeywords.has(index)}
+                          checked={selectedKeywords ? selectedKeywords.has(index) : false}
                           onChange={() => toggleKeywordSelection(index)}
                           className="rounded"
                         />
                       </td>
                       <td className="px-4 py-3">
-                        <p className="font-medium text-foreground">{keyword.keyword}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-foreground">{keyword.keyword}</p>
+                          {keyword.is_target_keyword && (
+                            <Badge className="bg-blue-100 text-blue-700 border-blue-200 text-xs">
+                              Targeted
+                            </Badge>
+                          )}
+                        </div>
                       </td>
                       <td className="px-4 py-3">
                         <p className="text-foreground font-medium">{keyword.search_volume.toLocaleString()}</p>
@@ -598,8 +762,7 @@ useEffect(() => {
             </div>
           )}
 
-          {/* Selected Keywords Actions */}
-          {selectedKeywords.size > 0 && (
+          {selectedKeywords && selectedKeywords.size > 0 && (
             <div className="flex items-center justify-between p-4 bg-primary/5 rounded-lg border border-primary/20">
               <p className="text-sm font-medium text-foreground">
                 {selectedKeywords.size} keyword{selectedKeywords.size !== 1 ? "s" : ""} selected
@@ -608,8 +771,8 @@ useEffect(() => {
                 <Button variant="outline" size="sm" className="cursor-pointer border-border/40 bg-transparent">
                   Add to Campaign
                 </Button>
-                <Button 
-                  size="sm" 
+                <Button
+                  size="sm"
                   className="cursor-pointer bg-primary hover:bg-primary/90 text-primary-foreground"
                   onClick={generateContentFromKeywords}
                   disabled={generatingContent}
@@ -630,4 +793,4 @@ useEffect(() => {
       </Card>
     </div>
   )
-};
+}

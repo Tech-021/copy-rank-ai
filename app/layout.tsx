@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   title: "SEOFlow - AI-Powered SEO Content Generation",
   description: "Analyze websites, discover keywords, and generate SEO-optimized articles at scale",
   generator: "v0.app",
-  icons: "/topicanalyzer-logo.png"
+  icons: "/fav-icon.ico"
 }
 
 export default function RootLayout({

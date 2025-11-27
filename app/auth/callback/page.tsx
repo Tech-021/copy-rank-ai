@@ -23,7 +23,7 @@ export default function AuthCallbackPage() {
 
         if (!hasAuthParams) {
           console.warn('No auth parameters found in URL')
-          router.replace("/")
+          router.replace("/paywall")
           return
         }
 

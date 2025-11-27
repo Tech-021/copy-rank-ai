@@ -408,7 +408,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { signUpWithGoogle } from "../lib/auth";
 import { useToast } from "./ui/toast";
 import { ArrowLeft, Info } from "lucide-react";
@@ -416,12 +416,6 @@ import Image from "next/image";
 import { Button } from "./ui/button";
 import { motion } from "framer-motion";
 import Link from "next/link";
-
-interface SignUpPageProps {
-  onSignUpSuccess: (email: string) => void;
-  onBackToLanding: () => void;
-  onToggleLogin: () => void;
-}
 
 // Testimonials data
 const testimonials = [
@@ -495,6 +489,12 @@ const TestimonialCard = ({
   </div>
 );
 
+interface SignUpPageProps {
+  onSignUpSuccess: (email: string) => void;
+  onBackToLanding: () => void;
+  onToggleLogin: () => void;
+}
+
 export function SignUpPage({
   onSignUpSuccess,
   onBackToLanding,
@@ -515,9 +515,7 @@ export function SignUpPage({
 
     if (error) {
       const msg =
-        (error as any).message ??
-        String(error) ??
-        "Error signing up with Google";
+        (error as any).message ?? String(error) ?? "Error signing up with Google";
       setError(msg);
       try {
         toast.showToast({
@@ -535,7 +533,8 @@ export function SignUpPage({
   return (
     <div className="h-screen w-screen flex overflow-hidden bg-white">
       {/* Left Side - Sign Up Form */}
-      <div className="w-full lg:w-1/2 flex flex-col border-r border-gray-100">
+      <div className="w-full lg:w-1/2 flex flex-col">
+        {/* Back Button */}
         <div className="pt-6 pl-6">
           <Link href="/">
             <Button className="bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-full px-5 py-2.5 text-[14px] font-medium hover:text-gray-900 cursor-pointer flex items-center gap-2 transition-colors">
@@ -544,6 +543,7 @@ export function SignUpPage({
           </Link>
         </div>
 
+        {/* Sign Up Form Content */}
         <div className="flex-1 flex flex-col items-center justify-center px-8 lg:px-16">
           <div className="max-w-md w-full">
             {/* Info Message */}
@@ -562,7 +562,7 @@ export function SignUpPage({
                 Create your free Account
               </h2>
               <p className="text-gray-600 text-[14px] leading-relaxed">
-                Join for free to see what drives your competitors’ SEO traffic,
+                Join for free to see what drives your competitors' SEO traffic,
                 create better content on autopilot, and rank higher in AI search
                 results.
               </p>
@@ -599,8 +599,7 @@ export function SignUpPage({
               </button>
 
               <p className="text-gray-500 text-[13px] text-center leading-relaxed px-4">
-                By continuing, you agree to our Terms of Service and Privacy
-                Policy
+                By continuing, you agree to our Terms of Service and Privacy Policy
               </p>
             </div>
           </div>

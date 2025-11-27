@@ -159,15 +159,99 @@ function transformItems(items: any[], topic: string): KeywordData[] {
 
 export function filterKeywords(
   keywords: KeywordData[], 
-  maxDifficulty: number = 70, // Increased from 60
-  minVolume: number = 50      // Lowered from 100
+  maxDifficulty: number = 70,
+  minVolume: number = 100,
+  maxVolume: number = 500,  // NEW: Maximum search volume
+  maxCompetition: number = 0.3  // CHANGED: Low competition threshold (30%)
 ): KeywordData[] {
   return keywords
     .filter(kw => 
       kw.search_volume >= minVolume && 
+      kw.search_volume <= maxVolume &&  // NEW: Maximum volume filter
       kw.difficulty <= maxDifficulty &&
-      kw.competition <= 0.8  // Increased from 0.7
+      kw.competition <= maxCompetition  // CHANGED: Low competition (0.3 = 30%)
     )
-    .sort((a, b) => b.search_volume - a.search_volume)
+    .sort((a, b) => b.search_volume - a.search_volume)  // Sort by volume (highest first)
     .slice(0, 30);
+}
+
+// Fetch keyword overview data for target keywords
+export async function fetchKeywordOverview(keywords: string[]): Promise<KeywordData[]> {
+  const apiLogin = process.env.DATAFORSEO_API_LOGIN;
+  const apiPassword = process.env.DATAFORSEO_API_PASSWORD;
+
+  if (!apiLogin || !apiPassword) {
+    throw new Error("DataForSEO API credentials are missing");
+  }
+
+  const auth = Buffer.from(`${apiLogin}:${apiPassword}`).toString("base64");
+  const results: KeywordData[] = [];
+
+  for (const keyword of keywords) {
+    try {
+      console.log(`🔍 Fetching keyword overview for: ${keyword}`);
+
+      const response = await fetch(
+        "https://api.dataforseo.com/v3/dataforseo_labs/google/keyword_overview/live",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Basic ${auth}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify([
+            {
+              keywords: [keyword],        // Changed: keywords (array) instead of keyword (string)
+              location_code: 2840,
+              language_name: "English",   // Changed: language_name instead of language_code
+              include_serp_info: false,
+              include_clickstream_data: false,
+            },
+          ]),
+        }
+      );
+
+      if (!response.ok) {
+        console.error(`❌ Keyword overview API failed: ${response.status}`);
+        throw new Error(`API request failed with status ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (data.status_code !== 20000) {
+        console.error("❌ API Error:", data.status_message);
+        continue;
+      }
+
+      // FIX: The response structure is data.tasks[0].result[0].items
+      const items = data.tasks?.[0]?.result?.[0]?.items || [];
+
+      if (!items || items.length === 0) {
+        console.warn(`⚠️ No keyword overview returned for "${keyword}"`);
+        continue;
+      }
+
+      const item = items[0];
+      const info = item.keyword_info || {};
+      const props = item.keyword_properties || {};
+
+      results.push({
+        keyword: item.keyword,
+        search_volume: info.search_volume || 0,
+        difficulty: props.keyword_difficulty || 0,
+        cpc: info.cpc || 0,
+        competition: info.competition || 0,
+        low_top_vol: info.low_top_of_page_bid,
+        high_top_vol: info.high_top_of_page_bid,
+      });
+
+      console.log(`✅ Successfully processed keyword: ${item.keyword}`);
+
+    } catch (err) {
+      console.error(`❌ Error fetching keyword "${keyword}":`, err);
+    }
+  }
+
+  console.log(`✅ Retrieved ${results.length} keyword overview results`);
+  return results;
 }

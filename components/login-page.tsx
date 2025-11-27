@@ -306,7 +306,6 @@
 // };
 
 
-
 "use client";
 
 import { useState } from "react";
@@ -434,16 +433,18 @@ export function LoginPage({
   return (
     <div className="h-screen w-screen flex overflow-hidden bg-white">
       {/* Left Side - Login Form */}
-      <div className="w-full lg:w-1/2 flex flex-col border-r border-gray-100">
-        <div className="pt-6 pl-6">
+      <div className="w-full lg:w-1/2 flex flex-col">
+        {/* Back Button */}
+        <div className="pt-2.5 pl-5">
           <Link href="/">
-            <Button className="bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-full px-5 py-2.5 text-[14px] font-medium hover:text-gray-900 cursor-pointer flex items-center gap-2 transition-colors">
-              <ArrowLeft size={16} /> Go to Home
+            <Button className="bg-white hover:bg-white text-black border border-[#dbdadd] rounded-full hover:text-[#838383] cursor-pointer">
+              <ArrowLeft /> Go to Home
             </Button>
           </Link>
         </div>
 
-        <div className="flex-1 flex flex-col items-center justify-center px-8 lg:px-16">
+        {/* Login Form Content */}
+        <div className="flex-1 flex flex-col items-center justify-center overflow-y-auto max-h-screen px-8 lg:px-16">
           <div className="max-w-md w-full">
             {/* Info Message */}
             {message && (
@@ -464,7 +465,7 @@ export function LoginPage({
                 Sign in to access your dashboard, analyze competitors, and take your SEO to the next level.
               </p>
               <p className="text-gray-900 text-[16px] mt-3">
-                Don’t have an account?{" "}
+                Don't have an account?{" "}
                 <button
                   type="button"
                   onClick={onToggleSignUp}
