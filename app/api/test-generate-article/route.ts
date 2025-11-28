@@ -12,14 +12,16 @@ const supabase = createClient(
 export const maxDuration = 300;
 
 interface ArticleRequest {
-  keyword?: string; // Keep for backward compatibility
-  keywords?: string[]; // Array of keywords
+  keyword?: string;
+  keywords?: string[];
   websiteId?: string;
   userId: string;
   targetWordCount?: number;
-  articleNumber?: number; // NEW: Article number (1-30)
-  totalArticles?: number; // NEW: Total articles being generated
-  jobId?: string; // NEW: Job ID from article_jobs table (for queue system)
+  articleNumber?: number;
+  totalArticles?: number;
+  jobId?: string;
+  generateImages?: boolean; // NEW: Flag to enable image generation
+  imageCount?: number; // NEW: Number of images to generate
 }
 
 interface EnhancedArticle {
@@ -52,6 +54,114 @@ interface EnhancedArticle {
   // Technical
   generatedAt: string;
   estimatedTraffic?: number;
+  
+  // NEW: Image URLs
+  generatedImages?: string[];
+}
+
+// NEW: Image generation function
+async function generateImagesForArticle(
+  content: string, 
+  title: string, 
+  keywords: string[], 
+  count: number = 2
+): Promise<string[]> {
+  try {
+    console.log(`🖼️ Generating ${count} images for article...`);
+    
+    const imagePrompts = extractImagePromptsFromContent(content, title, keywords);
+    
+    const images: string[] = [];
+    
+    // Generate multiple images based on extracted prompts
+    for (let i = 0; i < Math.min(count, imagePrompts.length); i++) {
+      const prompt = imagePrompts[i];
+      console.log(`📸 Generating image ${i + 1} with prompt: "${prompt}"`);
+      
+      const imageResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/image-generation`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          prompt: prompt,
+          size: "1328*1328", // CHANGE TO ALLOWED SIZE
+          n: 1
+        }),
+      });
+
+      if (!imageResponse.ok) {
+        console.error(`❌ Image generation failed for prompt: ${prompt}`);
+        continue;
+      }
+
+      const imageData = await imageResponse.json();
+      
+      if (imageData.ok && imageData.images && imageData.images.length > 0) {
+        images.push(imageData.images[0]);
+        console.log(`✅ Image ${i + 1} generated successfully`);
+      }
+    }
+    
+    return images;
+  } catch (error) {
+    console.error("💥 Image generation error:", error);
+    return [];
+  }
+}
+
+// NEW: Extract relevant image prompts from article content
+function extractImagePromptsFromContent(
+  content: string, 
+  title: string, 
+  keywords: string[]
+): string[] {
+  const prompts: string[] = [];
+  
+  // Remove HTML tags for cleaner text processing
+  const cleanContent = content.replace(/<[^>]*>/g, ' ');
+  
+  // Extract main sections (looking for headings and key paragraphs)
+  const sections = cleanContent.split(/\n+/).filter(section => 
+    section.trim().length > 50 && section.split(' ').length > 10
+  );
+  
+  // Create prompts based on different strategies
+  
+  // 1. Main concept prompt based on title and keywords
+  const mainConceptPrompt = `Professional digital illustration, ${title}. ${keywords.join(', ')}. Clean, modern, professional blog style, high quality, detailed`;
+  prompts.push(mainConceptPrompt);
+  
+  // 2. Extract key concepts from first substantial paragraph
+  if (sections.length > 0) {
+    const firstSection = sections[0].substring(0, 200);
+    const sectionPrompt = `Digital illustration concept: ${firstSection}. Professional blog style, clear, engaging visual`;
+    prompts.push(sectionPrompt);
+  }
+  
+  // 3. Create prompt from middle section for variety
+  if (sections.length > 2) {
+    const middleIndex = Math.floor(sections.length / 2);
+    const middleSection = sections[middleIndex].substring(0, 150);
+    const middlePrompt = `Concept art: ${middleSection}. Professional illustration, blog content visual`;
+    prompts.push(middlePrompt);
+  }
+  
+  // 4. Generic fallback prompts based on category
+  const category = determineCategory(keywords[0]);
+  const categoryPrompts = {
+    fitness: "Professional fitness illustration, active lifestyle, health and wellness, modern graphic style",
+    marketing: "Digital marketing concept, business growth, analytics, modern professional illustration",
+    finance: "Financial growth concept, money management, investment strategies, professional business illustration",
+    health: "Health and wellness concept, balanced lifestyle, nutrition, professional medical illustration",
+    technology: "Modern technology concept, innovation, digital transformation, clean tech illustration",
+    general: "Professional blog illustration, content creation, engaging visual concept"
+  };
+  
+  prompts.push(categoryPrompts[category] || categoryPrompts.general);
+  
+  // Ensure we have unique prompts
+  return [...new Set(prompts)].slice(0, 4);
 }
 
 export async function POST(request: Request) {
@@ -60,11 +170,39 @@ export async function POST(request: Request) {
   try {
     const body: ArticleRequest = await request.json();
     
+    // ========== COMPREHENSIVE DEBUGGING ==========
+    console.log('🔍 === DEBUG START ===');
+    console.log('📨 RAW REQUEST BODY:', JSON.stringify(body, null, 2));
+    console.log('🔑 generateImages value:', body.generateImages);
+    console.log('🔑 generateImages type:', typeof body.generateImages);
+    console.log('🔑 All body properties:', Object.keys(body));
+
+    // Check if generateImages exists and its value
+    if ('generateImages' in body) {
+      console.log('✅ generateImages EXISTS in request body');
+      console.log('🔍 generateImages raw value:', body.generateImages);
+      console.log('🔍 generateImages boolean conversion:', Boolean(body.generateImages));
+    } else {
+      console.log('❌ generateImages DOES NOT EXIST in request body');
+    }
+    console.log('🔍 === DEBUG END ===');
     // Support both single keyword (backward compat) and multiple keywords
     const keywords = body.keywords || (body.keyword ? [body.keyword] : []);
-    const { websiteId, userId, targetWordCount = 2000, articleNumber = 1, totalArticles = 1 } = body;
-    jobId = body.jobId; // Store jobId for error handling
-
+    const { 
+      websiteId, 
+      userId, 
+      targetWordCount = 2000, 
+      articleNumber = 1, 
+      totalArticles = 1,
+      generateImages = true, // Default to false for backward compatibility
+      imageCount = 2 // Default number of images
+    } = body;
+    jobId = body.jobId;
+    console.log('🖼️ Image generation enabled:', generateImages)
+ // ========== MORE DEBUGGING ==========
+    console.log('🔄 generateImages after destructuring:', generateImages);
+    console.log('🔄 generateImages actual value for logic:', generateImages);
+    console.log('🔄 Type of generateImages:', typeof generateImages);
     if (keywords.length === 0) {
       return NextResponse.json(
         { error: "At least one keyword is required" },
@@ -99,24 +237,20 @@ export async function POST(request: Request) {
       );
     }
 
-    // Select a different keyword for each article (cycle through keywords)
-    // For article 1, use keyword[0], article 2 use keyword[1], etc.
-    // If more articles than keywords, cycle back (use modulo)
+    // Select a different keyword for each article
     const selectedKeywordIndex = (articleNumber - 1) % keywords.length;
     const selectedKeyword = keywords[selectedKeywordIndex];
     const allKeywordsText = keywords.join(', ');
 
     console.log(`🚀 Generating article ${articleNumber}/${totalArticles} with keywords:`, keywords);
-    console.log(`📌 Selected keyword for meta title: "${selectedKeyword}" (index ${selectedKeywordIndex})`);
-    console.log("👤 For user ID:", userId);
-    console.log("📊 Target word count:", targetWordCount);
+    console.log(`📌 Selected keyword for meta title: "${selectedKeyword}"`);
+    console.log(`🖼️ Image generation: ${generateImages ? 'ENABLED' : 'disabled'}`);
 
-    // Add variation instructions for unique articles
+    // ... existing article generation code remains the same ...
     const variationInstructions = totalArticles > 1 
       ? `\n\nIMPORTANT: This is article ${articleNumber} of ${totalArticles}. Create a UNIQUE variation that differs from the previous articles. Use a different angle, perspective, or approach while still incorporating all keywords naturally. Vary the structure, examples, and content flow to ensure each article is distinct and valuable.`
       : '';
 
-    // ENHANCED PROMPT for comprehensive, long-form content with multiple keywords
     const prompt = `Generate a comprehensive, in-depth SEO-optimized blog post that naturally incorporates ALL of these keywords: ${allKeywordsText}.${variationInstructions}
 
 ALL KEYWORDS: ${allKeywordsText}
@@ -177,7 +311,7 @@ META_DESCRIPTION: [Compelling description 150-160 chars with keyword "${selected
 OG_TITLE: [Social media title with emoji]
 OG_DESCRIPTION: [Social media description 120-130 chars]`;
 
-    // Add timeout wrapper (45 seconds max to leave buffer for processing and DB operations)
+    // Add timeout wrapper
     const timeoutPromise = new Promise<never>((_, reject) => {
       setTimeout(() => reject(new Error('Article generation timeout after 3 minutes')), 180000);
     });
@@ -201,11 +335,10 @@ OG_DESCRIPTION: [Social media description 120-130 chars]`;
           }
         ],
         temperature: 0.7,
-        max_tokens: 4500 // Further reduced to speed up generation and avoid timeout
+        max_tokens: 4500
       }),
     });
 
-    // Race between fetch and timeout
     const response = await Promise.race([fetchPromise, timeoutPromise]);
 
     if (!response.ok) {
@@ -225,11 +358,25 @@ OG_DESCRIPTION: [Social media description 120-130 chars]`;
 
     const fullResponse = data.choices[0].message.content;
 
-    // Parse the structured response - use selectedKeyword instead of primaryKeyword
+    // Parse the structured response
     const parsedData = parseStructuredResponse(fullResponse, selectedKeyword);
     
-    // Generate enhanced metadata - use selectedKeyword instead of primaryKeyword
+    // Generate enhanced metadata
     const enhancedArticle = generateEnhancedMetadata(parsedData, selectedKeyword, targetWordCount);
+
+    // NEW: Generate images if requested
+    let generatedImages: string[] = [];
+    if (generateImages) {
+      console.log("🎨 Starting image generation...");
+      generatedImages = await generateImagesForArticle(
+        enhancedArticle.content,
+        enhancedArticle.title,
+        keywords,
+        imageCount
+      );
+      enhancedArticle.generatedImages = generatedImages;
+      console.log(`✅ Generated ${generatedImages.length} images`);
+    }
 
     // Save to Supabase WITH user_id
     const { data: savedArticle, error: dbError } = await supabase
@@ -237,7 +384,7 @@ OG_DESCRIPTION: [Social media description 120-130 chars]`;
       .insert({
         title: enhancedArticle.title,
         content: enhancedArticle.content,
-        keyword: keywords.join(', '), // Store all keywords as comma-separated string
+        keyword: keywords.join(', '),
         status: 'draft',
         date: new Date().toISOString().split('T')[0],
         preview: enhancedArticle.metaDescription || enhancedArticle.content.substring(0, 150) + '...',
@@ -246,7 +393,7 @@ OG_DESCRIPTION: [Social media description 120-130 chars]`;
         meta_title: enhancedArticle.metaTitle,
         meta_description: enhancedArticle.metaDescription,
         slug: enhancedArticle.slug,
-        focus_keyword: selectedKeyword, // Store selected keyword as focus keyword
+        focus_keyword: selectedKeyword,
         
         // Content Analysis
         reading_time: enhancedArticle.readingTime,
@@ -267,6 +414,9 @@ OG_DESCRIPTION: [Social media description 120-130 chars]`;
         // Technical
         estimated_traffic: enhancedArticle.estimatedTraffic,
         
+        // NEW: Store generated images
+        generated_images: generatedImages,
+        
         // Associate with website if provided
         ...(websiteId && { website_id: websiteId }),
         
@@ -283,9 +433,9 @@ OG_DESCRIPTION: [Social media description 120-130 chars]`;
 
     console.log("✅ Enhanced article generated and saved to Supabase for user:", userId);
     console.log("📊 Final word count:", enhancedArticle.wordCount);
-
-    // Note: Job status is now updated by the process endpoint, not here
-    // This keeps the process endpoint in control of job lifecycle
+    if (generateImages) {
+      console.log("🖼️ Images generated:", generatedImages.length);
+    }
 
     return NextResponse.json({
       success: true,
@@ -293,21 +443,25 @@ OG_DESCRIPTION: [Social media description 120-130 chars]`;
         ...enhancedArticle,
         id: savedArticle.id,
         status: savedArticle.status,
-        date: savedArticle.date
+        date: savedArticle.date,
+        generatedImages: generatedImages // Include in response
       },
       analysis: {
         seoReady: enhancedArticle.contentScore >= 70 && enhancedArticle.wordCount >= 1800,
         immediatePublish: enhancedArticle.wordCount >= 1800,
         wordCountStatus: enhancedArticle.wordCount >= 1800 ? "optimal" : "needs_expansion",
         recommendations: generateRecommendations(enhancedArticle)
-      }
+      },
+      // NEW: Include image generation summary
+      images: generateImages ? {
+        generated: generatedImages.length,
+        totalRequested: imageCount,
+        urls: generatedImages
+      } : undefined
     });
 
   } catch (error) {
     console.error("💥 Enhanced article generation error:", error);
-    
-    // Note: Job status is now updated by the process endpoint, not here
-    // The process endpoint will catch this error and mark the job as failed
     
     return NextResponse.json(
       { 
@@ -320,7 +474,11 @@ OG_DESCRIPTION: [Social media description 120-130 chars]`;
   }
 }
 
-// GET endpoint to fetch articles with user filtering
+// ... ALL THE EXISTING HELPER FUNCTIONS REMAIN THE SAME ...
+// parseStructuredResponse, generateEnhancedMetadata, calculateContentScore, etc.
+// Keep all your existing helper functions exactly as they are
+
+// GET endpoint - update to include generated_images
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -378,7 +536,9 @@ export async function GET(request: Request) {
       tags: article.tags || [],
       category: article.category,
       estimatedTraffic: article.estimated_traffic,
-      generatedAt: article.created_at
+      generatedAt: article.created_at,
+      // NEW: Include generated images
+      generatedImages: article.generated_images || []
     })) || [];
 
     return NextResponse.json({
@@ -394,6 +554,7 @@ export async function GET(request: Request) {
     );
   }
 }
+
 
 // PATCH endpoint with user authorization
 export async function PATCH(request: Request) {
