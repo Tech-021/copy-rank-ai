@@ -70,7 +70,9 @@ export async function POST(request: Request) {
         keywords: keywordStrings,
         article_number: i,
         total_articles: finalArticleCount,
-        status: 'pending'
+        status: 'pending',
+         generate_images: true,  // Use underscore naming to match database
+        image_count: 2          // Use underscore naming to match database
       });
     }
 

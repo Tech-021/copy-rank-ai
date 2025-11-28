@@ -115,34 +115,55 @@ export function ArticlesTab({ generatedArticles, onArticlesUpdate, websiteId }: 
     }
   }, [generatedArticles, onArticlesUpdate])
 
-  const handleGenerateArticle = async () => {
-    if (!newArticleKeyword.trim() || !newArticleDate || !currentUser) return
+ const handleGenerateArticle = async () => {
+  if (!newArticleKeyword.trim() || !currentUser) return
 
-    setIsGenerating(true)
+  setIsGenerating(true)
 
-    try {
-      const response = await fetch('/api/test-generate-article', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ keyword: newArticleKeyword, websiteId, userId: currentUser.id }),
-      })
+  try {
+    // Create the request body with proper formatting
+    const requestBody = {
+      keyword: newArticleKeyword.trim(),
+      websiteId, 
+      userId: currentUser.id,
+      generateImages: true , // Make sure this is boolean true
+      imageCount: 2,           // <-- optional, how many images to create
 
-      if (!response.ok) throw new Error('Failed to generate article')
+    };
 
-      const data = await response.json()
-      if (data.success && data.article) {
-        await fetchArticles()
-        setNewArticleKeyword("")
-        setNewArticleDate("")
-        alert('Article generated successfully!')
-      }
-    } catch (error) {
-      console.error('Error generating article:', error)
-      alert('Failed to generate article. Please try again.')
-    } finally {
-      setIsGenerating(false)
+    console.log('🔄 Sending API request with:', requestBody);
+
+    const response = await fetch('/api/test-generate-article', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(requestBody),
+    })
+
+    const result = await response.json();
+    
+    console.log('📨 API Response:', result);
+
+    if (!response.ok) {
+      throw new Error(result.error || 'Failed to generate article');
     }
+
+    if (result.success && result.article) {
+      console.log('✅ Article generated successfully!');
+      console.log('📊 Word count:', result.article.wordCount);
+      console.log('🖼️ Images generated:', result.images?.generated || 0);
+      
+      await fetchArticles();
+      setNewArticleKeyword("");
+      setNewArticleDate(""); // Clear the date field too
+      alert(`Article generated successfully! ${result.images?.generated ? `(${result.images.generated} images created)` : ''}`);
+    }
+  } catch (error) {
+    console.error('❌ Error generating article:', error);
+    alert(`Failed to generate article: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  } finally {
+    setIsGenerating(false);
   }
+}
 
   const handleDeleteArticle = async (id: string) => {
     if (!confirm('Are you sure you want to delete this article?') || !currentUser) return

@@ -18,6 +18,8 @@ CREATE TABLE IF NOT EXISTS article_jobs (
   total_articles INTEGER NOT NULL,
   status TEXT NOT NULL DEFAULT 'pending',
   error_message TEXT,
+  generate_images BOOLEAN DEFAULT true,
+  image_count INTEGER DEFAULT 2,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   started_at TIMESTAMPTZ,
