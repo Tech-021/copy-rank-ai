@@ -4,10 +4,12 @@ import { NextResponse } from "next/server";
 export async function POST(req: Request) {
   try {
     const body = await req.json();
+     console.log("DEBUG: /api/image-generation incoming body:", JSON.stringify(body).slice(0, 1000));
     const prompt = (body.prompt || "").toString().trim();
-    const size = (body.size || "1024*1024").toString();
+    const size = (body.size || "1328*1328").toString(); // Use one of the allowed sizes
     let n = Number.isFinite(body.n) ? Number(body.n) : Number(body.n || 1);
     if (!prompt) {
+      console.log("DEBUG: missing prompt");
       return NextResponse.json(
         { error: "prompt is required" },
         { status: 400 }
@@ -54,44 +56,59 @@ export async function POST(req: Request) {
     const rawResponses: any[] = [];
 
     // If n === 1, do single call. If n > 1, loop to request multiple images.
-    for (let i = 0; i < n; i++) {
-      const resp = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify(payloadBase),
-      });
+    // ...existing code...
+for (let i = 0; i < n; i++) {
+  const resp = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify(payloadBase),
+  });
 
-      const data = await resp.json();
-      rawResponses.push(data);
+  console.log("DEBUG: provider response status:", resp.status, "ok:", resp.ok);
 
-      if (!resp.ok) {
-        // return provider error and collected responses so far
-        return NextResponse.json(
-          { ok: false, status: resp.status, data, rawResponses },
-          { status: resp.status }
-        );
-      }
+  if (!resp.ok) {
+    // provider returned non-2xx, capture body text for diagnostics
+    const text = await resp.text().catch(() => "<unable to read provider response>");
+    console.error(`DEBUG: provider error (status ${resp.status}):`, text.slice(0, 2000));
+    rawResponses.push({ status: resp.status, body: text });
+    return NextResponse.json(
+      { ok: false, status: resp.status, provider_body: text, rawResponses },
+      { status: resp.status }
+    );
+  }
 
-      const choices = data?.output?.choices || [];
-      for (const choice of choices) {
-        const contentArr = choice?.message?.content || [];
-        for (const item of contentArr) {
-          if (item?.image) images.push(item.image);
-        }
-      }
+  // resp.ok -> try parse JSON and log its keys
+  let data;
+  try {
+    data = await resp.json();
+    console.log("DEBUG: provider OK response keys:", Object.keys(data));
+  } catch (parseErr) {
+    const text = await resp.text().catch(() => "<unable to read provider response>");
+    console.error("DEBUG: provider response not valid JSON. Text:", text.slice(0, 2000));
+    rawResponses.push({ status: resp.status, body: text });
+    return NextResponse.json({ ok: false, status: resp.status, provider_body: text, rawResponses }, { status: 500 });
+  }
 
-      // stop early if provider returned zero images for this iteration
-      if (images.length === 0 && i === 0) {
-        // likely request format issue; return provider payload for debugging
-        return NextResponse.json(
-          { ok: false, message: "No images returned", raw: data },
-          { status: 500 }
-        );
-      }
+  rawResponses.push(data);
+  const choices = data?.output?.choices || [];
+  for (const choice of choices) {
+    const contentArr = choice?.message?.content || [];
+    for (const item of contentArr) {
+      if (item?.image) images.push(item.image);
     }
+  }
+
+  if (images.length === 0 && i === 0) {
+    console.error("DEBUG: provider returned OK but no images in body:", JSON.stringify(data).slice(0, 1200));
+    return NextResponse.json(
+      { ok: false, message: "No images returned", raw: data },
+      { status: 500 }
+    );
+  }
+}
 
     return NextResponse.json({ ok: true, images, raw: rawResponses });
   } catch (err) {

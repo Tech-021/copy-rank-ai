@@ -84,22 +84,32 @@ async function processJobs() {
           reject(new Error('Article generation timeout after 59 seconds'));
         }, 180000);
       });
+const generateImagesFlag = (typeof job.generate_images !== "undefined") ? !!job.generate_images : true;
+const imageCount = Number.isFinite(job.image_count) ? job.image_count : (job.image_count ?? 2);
 
-      // Call article generation and wait for it (with timeout)
+      // ADD DEBUGGING: Create the request body first
+      const requestBody = {
+        keywords: job.keywords,
+        userId: job.user_id,
+        websiteId: job.website_id,
+        articleNumber: job.article_number,
+        totalArticles: job.total_articles,
+        targetWordCount: 2000,
+        jobId: job.id,
+         generateImages: true,  // ← Force enable images
+          imageCount: 2          // ← Explicitly set image count
+      };
+        console.log("DEBUG: calling /api/test-generate-article with payload:", JSON.stringify(requestBody));
+
+      console.log('🔍 Job Processor - RAW request body being sent:', JSON.stringify(requestBody, null, 2));
+
+      // Then make the API call
       const articleGenerationPromise = fetch(`${baseUrl}/api/test-generate-article`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          keywords: job.keywords,
-          userId: job.user_id,
-          websiteId: job.website_id,
-          articleNumber: job.article_number,
-          totalArticles: job.total_articles,
-          targetWordCount: 2000,
-          jobId: job.id // Pass job ID for logging (status update handled here)
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       // Race between article generation and timeout
@@ -110,13 +120,27 @@ async function processJobs() {
         // Timeout occurred
         throw new Error('Article generation timeout after 59 seconds');
       }
+console.log("DEBUG: /api/test-generate-article response status:", response.status);
+const respText = await response.text().catch(() => "<no body>");
+console.log("DEBUG: /api/test-generate-article response body:", respText);
+console.log("DEBUG: /api/test-generate-article parsed result:", result);
+      // ADD DEBUGGING HERE
+      console.log(`📨 Job ${job.id} - API Response status:`, response.status);
+      console.log(`📨 Job ${job.id} - API Response ok:`, response.ok);
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+        console.log(`📨 Job ${job.id} - API Error data:`, errorData);
         throw new Error(`Article generation failed: ${response.status} - ${JSON.stringify(errorData)}`);
       }
 
       const result = await response.json();
+      console.log(`📨 Job ${job.id} - API Success result:`, {
+        success: result.success,
+        images: result.images,
+        articleWordCount: result.article?.wordCount,
+        generatedImages: result.article?.generatedImages?.length || 0
+      });
 
       if (result.success) {
         // Mark job as completed
@@ -180,4 +204,3 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   return processJobs();
 }
-
