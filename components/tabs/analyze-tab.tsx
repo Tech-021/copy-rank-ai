@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Skeleton } from "../ui/skeleton"
 
 interface AnalyzeTabProps {
   onViewKeywords: (websiteId: string) => void
@@ -30,44 +31,32 @@ interface Website {
   created_at?: string
 }
 
-// Helper function to get keywords count
 const getKeywordsCount = (keywordsData: any): number => {
   if (!keywordsData) return 0
-
-  // If it's an object with keywords array
   if (keywordsData.keywords && Array.isArray(keywordsData.keywords)) {
     return keywordsData.keywords.length
   }
-
-  // If it's directly an array
   if (Array.isArray(keywordsData)) {
     return keywordsData.length
   }
-
   return 0
 }
 
-// Helper function to get competitors count
 const getCompetitorsCount = (keywordsData: any): number => {
   if (!keywordsData) return 0
-
-  // If it's an object with competitors array
   if (keywordsData.competitors && Array.isArray(keywordsData.competitors)) {
     return keywordsData.competitors.length
   }
-
   return 0
 }
 
 export function AnalyzeTab({ onViewKeywords, onViewCompetitors }: AnalyzeTabProps) {
   const [websites, setWebsites] = useState<Website[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  const [showSkeletons, setShowSkeletons] = useState(false)
   const toast = useToast()
 
-  // Dialog state
   const [isDialogOpen, setIsDialogOpen] = useState(false)
-  
-  // Form state
   const [websiteName, setWebsiteName] = useState("")
   const [competitor1, setCompetitor1] = useState("")
   const [competitor2, setCompetitor2] = useState("")
@@ -79,8 +68,9 @@ export function AnalyzeTab({ onViewKeywords, onViewCompetitors }: AnalyzeTabProp
 
   const loadUserWebsites = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      setShowSkeletons(true)
 
+      const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
       const { data, error } = await supabase
@@ -99,20 +89,14 @@ export function AnalyzeTab({ onViewKeywords, onViewCompetitors }: AnalyzeTabProp
       }
     } catch (error) {
       console.error("Error loading websites:", error)
+    } finally {
+      setTimeout(() => setShowSkeletons(false), 700)
     }
   }
 
   const deleteWebsiteFromDB = async (id: string) => {
-    try {
-      const { error } = await supabase.from("websites").delete().eq("id", id)
-
-      if (error) {
-        throw error
-      }
-    } catch (error) {
-      console.error("Error deleting website:", error)
-      throw error
-    }
+    const { error } = await supabase.from("websites").delete().eq("id", id)
+    if (error) throw error
   }
 
   const handleRemoveWebsite = async (id: string) => {
@@ -126,8 +110,6 @@ export function AnalyzeTab({ onViewKeywords, onViewCompetitors }: AnalyzeTabProp
         type: "success",
       })
     } catch (error) {
-      console.error("Error deleting website:", error)
-
       toast.showToast({
         title: "Delete Failed",
         description: "Failed to remove website. Please try again.",
@@ -138,11 +120,9 @@ export function AnalyzeTab({ onViewKeywords, onViewCompetitors }: AnalyzeTabProp
 
   const handleSubmitOnboarding = async () => {
     setIsSubmitting(true)
-    
+
     try {
-      // Get current user
       const { data: { user } } = await supabase.auth.getUser()
-      
       if (!user) {
         toast.showToast({
           title: "Authentication Required",
@@ -152,46 +132,25 @@ export function AnalyzeTab({ onViewKeywords, onViewCompetitors }: AnalyzeTabProp
         setIsSubmitting(false)
         return
       }
-  
-      // Prepare onboarding data
+
       const onboardingData = {
         clientDomain: websiteName.trim(),
-        competitors: [
-          competitor1.trim(),
-          competitor2.trim(),
-          competitor3.trim()
-        ],
-        targetKeywords: [
-          keyword1.trim(),
-          keyword2.trim(),
-          keyword3.trim()
-        ],
+        competitors: [competitor1.trim(), competitor2.trim(), competitor3.trim()],
+        targetKeywords: [keyword1.trim(), keyword2.trim(), keyword3.trim()],
         userId: user.id
       }
-  
-      console.log("Onboarding Data:", onboardingData)
-  
-      // Call onboarding API
+
       const response = await fetch('/api/onboarding', {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json' 
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(onboardingData)
       })
-  
+
       const data = await response.json()
-  
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || 'Onboarding failed')
-      }
-  
-      console.log("✅ Onboarding successful:", data)
-      
-      // Close dialog
+      if (!response.ok || !data.success) throw new Error(data.error || 'Onboarding failed')
+
       setIsDialogOpen(false)
-      
-      // Reset form
+
       setWebsiteName("")
       setCompetitor1("")
       setCompetitor2("")
@@ -199,19 +158,16 @@ export function AnalyzeTab({ onViewKeywords, onViewCompetitors }: AnalyzeTabProp
       setKeyword1("")
       setKeyword2("")
       setKeyword3("")
-      
-      // Reload websites to show the new one
+
       await loadUserWebsites()
-      
-      // Show success toast
+
       toast.showToast({
         title: "Website Added Successfully!",
         description: `Found ${data.totalKeywords} keywords. 30 articles are being generated in the background.`,
         type: "success",
       })
-      
+
     } catch (error) {
-      console.error("Error during onboarding:", error)
       toast.showToast({
         title: "Failed to Add Website",
         description: error instanceof Error ? error.message : 'Unknown error',
@@ -222,17 +178,15 @@ export function AnalyzeTab({ onViewKeywords, onViewCompetitors }: AnalyzeTabProp
     }
   }
 
-  // Validation: all fields must be filled
-  const canProceed = 
-    websiteName.trim() && 
-    competitor1.trim() && 
-    competitor2.trim() && 
+  const canProceed =
+    websiteName.trim() &&
+    competitor1.trim() &&
+    competitor2.trim() &&
     competitor3.trim() &&
-    keyword1.trim() && 
-    keyword2.trim() && 
+    keyword1.trim() &&
+    keyword2.trim() &&
     keyword3.trim()
 
-  // Load websites on mount
   useEffect(() => {
     loadUserWebsites()
   }, [])
@@ -254,7 +208,6 @@ export function AnalyzeTab({ onViewKeywords, onViewCompetitors }: AnalyzeTabProp
         </CardContent>
       </Card>
 
-      {/* Onboarding Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-lg p-0 overflow-hidden rounded-xl shadow-lg border border-border/50 bg-white">
           <div className="px-10 py-8">
@@ -362,14 +315,48 @@ export function AnalyzeTab({ onViewKeywords, onViewCompetitors }: AnalyzeTabProp
         </DialogContent>
       </Dialog>
 
+      {/* 🔵 Skeletons — show while loading */}
+      {showSkeletons && (
+        <div className="space-y-4">
+          {[1, 2, 3].map((i) => (
+            <Card key={i} className="border-border/40 bg-card/50 backdrop-blur-sm">
+              <CardContent className="pt-6">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1 space-y-3">
+                    <Skeleton className="h-4 w-40 bg-gray-300" />
+                    <Skeleton className="h-4 w-32 bg-gray-300" />
+
+                    <div className="flex gap-4 mt-3">
+                      <Skeleton className="h-4 w-20 bg-gray-300" />
+                      <Skeleton className="h-4 w-24 bg-gray-300" />
+                    </div>
+
+                    <Skeleton className="h-3 w-24 bg-gray-300" />
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Skeleton className="h-8 w-24 rounded bg-gray-300" />
+                    <Skeleton className="h-8 w-24 rounded bg-gray-300" />
+                    <Skeleton className="h-8 w-10 rounded bg-gray-300" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Real websites */}
       {websites.length > 0 && (
         <div className="space-y-4">
           <h3 className="text-lg font-semibold text-foreground">Your Websites</h3>
+
           {websites.map((site) => (
             <Card key={site.id} className="border-border/40 bg-card/50 backdrop-blur-sm">
               <CardContent className="pt-6">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
+
                     <p className="font-medium text-foreground">{site.url}</p>
                     <p className="text-sm text-muted-foreground mt-1">
                       {site.isAnalyzing ? (
