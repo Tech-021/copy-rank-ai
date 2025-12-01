@@ -92,9 +92,7 @@ export function ArticlesTab({ generatedArticles, onArticlesUpdate, websiteId }: 
               className="w-full h-auto max-h-[400px] object-cover"
               loading="lazy"
             />
-            <div className="p-2 bg-muted/30 text-xs text-center text-muted-foreground border-t border-border/40">
-              AI-generated image #{imgIndex + 1}
-            </div>
+            
           </div>
         );
         imgIndex++;
@@ -110,9 +108,7 @@ export function ArticlesTab({ generatedArticles, onArticlesUpdate, websiteId }: 
             className="w-full h-auto max-h-[400px] object-cover"
             loading="lazy"
           />
-          <div className="p-2 bg-muted/30 text-xs text-center text-muted-foreground border-t border-border/40">
-            AI-generated image #{imgIndex + 1}
-          </div>
+          
         </div>
       );
       imgIndex++;
@@ -455,39 +451,6 @@ export function ArticlesTab({ generatedArticles, onArticlesUpdate, websiteId }: 
                         </div>
                       )}
 
-                      {article.generatedImages && article.generatedImages.length > 0 && (
-                        <div className="mt-3">
-                          <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
-                            <ImageIcon className="w-4 h-4" />
-                            Generated Images ({article.generatedImages.length})
-                          </h4>
-                          <div className="grid grid-cols-2 gap-2">
-                            {article.generatedImages.slice(0, 2).map((imgUrl, index) => (
-                              <div key={index} className="relative group">
-                                <img 
-                                  src={imgUrl} 
-                                  alt={`Generated image ${index + 1} for ${article.title}`}
-                                  className="w-full h-32 object-cover rounded-lg border border-border/40"
-                                  loading="lazy"
-                                />
-                                <a 
-                                  href={imgUrl} 
-                                  target="_blank" 
-                                  rel="noopener noreferrer"
-                                  className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity rounded-lg"
-                                >
-                                  <ArrowUpRight className="w-6 h-6 text-white" />
-                                </a>
-                              </div>
-                            ))}
-                          </div>
-                          {article.generatedImages.length > 2 && (
-                            <p className="text-xs text-muted-foreground mt-1">
-                              +{article.generatedImages.length - 2} more images
-                            </p>
-                          )}
-                        </div>
-                      )}
                     </div>
                     <Badge className={`${getStatusStyles(article.status)} border`}>
                       {getStatusDisplayText(article.status)}
@@ -514,35 +477,7 @@ export function ArticlesTab({ generatedArticles, onArticlesUpdate, websiteId }: 
                           </div>
                         </DialogHeader>
                         <div className="space-y-4">
-                          {article.generatedImages && article.generatedImages.length > 0 && (
-                            <div className="space-y-3">
-                              <h4 className="font-semibold">Generated Images</h4>
-                              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                                {article.generatedImages.map((imgUrl, index) => (
-                                  <div key={index} className="relative group">
-                                    <img 
-                                      src={imgUrl} 
-                                      alt={`Generated image ${index + 1}`}
-                                      className="w-full h-40 object-cover rounded-lg border"
-                                      loading="lazy"
-                                    />
-                                    <a 
-                                      href={imgUrl} 
-                                      target="_blank" 
-                                      rel="noopener noreferrer"
-                                      className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-opacity rounded-lg p-2"
-                                    >
-                                      <ArrowUpRight className="w-6 h-6 text-white mb-1" />
-                                      <span className="text-white text-xs text-center">View Full Size</span>
-                                    </a>
-                                    <div className="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
-                                      #{index + 1}
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
+                          
 
                           {(article.metaTitle || article.metaDescription) && (
                             <div className="p-4 bg-muted/30 rounded-lg">
