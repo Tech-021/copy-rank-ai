@@ -14,7 +14,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Loader2, Plus, Eye, Trash2, Edit2, BarChart3, Clock, Target, RefreshCw, ArrowUpRight } from "lucide-react"
+import { Loader2, Plus, Eye, Trash2, Edit2, BarChart3, Clock, Target, RefreshCw, ArrowUpRight, Image as ImageIcon } from "lucide-react"
 import { getUser } from "@/lib/auth"
 import { getUserPackage } from "@/lib/articleLimits"
 import { useRouter } from "next/navigation"
@@ -39,6 +39,7 @@ interface Article {
   category?: string
   generatedAt?: string
   estimatedTraffic?: number
+  generatedImages?: string[]
 }
 
 interface ArticlesTabProps {
@@ -59,6 +60,66 @@ export function ArticlesTab({ generatedArticles, onArticlesUpdate, websiteId }: 
   const [userPackage, setUserPackage] = useState<'free' | 'pro' | 'premium' | null>(null)
   const router = useRouter()
 
+  // Insert generated images between article paragraphs
+  function renderContentWithImages(content: string, images: string[], maxImagesToInsert = 3) {
+    if (!content) return null;
+    const imgs = images || [];
+    const paragraphs = content
+      .split(/<\/p>/i)
+      .map(s => s.trim())
+      .filter(Boolean)
+      .map(s => s.endsWith('</p>') ? s : s + '</p>');
+
+    if (paragraphs.length === 0) {
+      return <div dangerouslySetInnerHTML={{ __html: content }} />;
+    }
+
+    const imagesToInsert = imgs.slice(0, Math.min(maxImagesToInsert, imgs.length));
+    const interval = Math.max(1, Math.floor(paragraphs.length / (imagesToInsert.length + 1)));
+
+    const nodes: JSX.Element[] = [];
+    let imgIndex = 0;
+    for (let i = 0; i < paragraphs.length; i++) {
+      nodes.push(
+        <div key={`p-${i}`} dangerouslySetInnerHTML={{ __html: paragraphs[i] }} />
+      );
+      if (imgIndex < imagesToInsert.length && (i + 1) % interval === 0) {
+        nodes.push(
+          <div key={`img-${imgIndex}`} className="mb-6 rounded-lg overflow-hidden border border-border/40 shadow-md">
+            <img 
+              src={imagesToInsert[imgIndex]} 
+              alt={`Generated image ${imgIndex + 1}`} 
+              className="w-full h-auto max-h-[400px] object-cover"
+              loading="lazy"
+            />
+            <div className="p-2 bg-muted/30 text-xs text-center text-muted-foreground border-t border-border/40">
+              AI-generated image #{imgIndex + 1}
+            </div>
+          </div>
+        );
+        imgIndex++;
+      }
+    }
+    // append remaining images if any
+    while (imgIndex < imagesToInsert.length) {
+      nodes.push(
+        <div key={`img-end-${imgIndex}`} className="mb-6 rounded-lg overflow-hidden border border-border/40 shadow-md">
+          <img 
+            src={imagesToInsert[imgIndex]} 
+            alt={`Generated image ${imgIndex + 1}`} 
+            className="w-full h-auto max-h-[400px] object-cover"
+            loading="lazy"
+          />
+          <div className="p-2 bg-muted/30 text-xs text-center text-muted-foreground border-t border-border/40">
+            AI-generated image #{imgIndex + 1}
+          </div>
+        </div>
+      );
+      imgIndex++;
+    }
+    return <div className="prose prose-sm max-w-none">{nodes}</div>;
+  }
+
   useEffect(() => {
     const getCurrentUser = async () => {
       const { data: user } = await getUser()
@@ -72,6 +133,7 @@ export function ArticlesTab({ generatedArticles, onArticlesUpdate, websiteId }: 
     getCurrentUser()
   }, [])
 
+ // ...existing code...
   const fetchArticles = useCallback(async () => {
     try {
       setLoading(true)
@@ -82,6 +144,8 @@ export function ArticlesTab({ generatedArticles, onArticlesUpdate, websiteId }: 
         ? `/api/articles?websiteId=${websiteId}&userId=${currentUser.id}`
         : `/api/articles?userId=${currentUser.id}`
       
+      console.log('📡 Fetching articles from:', url)
+      
       const response = await fetch(url)
       if (!response.ok) {
         const errorText = await response.text()
@@ -89,14 +153,40 @@ export function ArticlesTab({ generatedArticles, onArticlesUpdate, websiteId }: 
       }
       
       const data = await response.json()
-      if (data.success) setArticles(data.articles || [])
-      else throw new Error(data.error || 'Failed to fetch articles')
+      console.log('📊 Articles API response:', {
+        success: data.success,
+        count: data.articles?.length || 0,
+        firstArticle: data.articles?.[0] ? {
+          id: data.articles[0].id,
+          title: data.articles[0].title,
+          generatedImages: data.articles[0].generatedImages,
+          generatedImagesCount: data.articles[0].generatedImages?.length || 0
+        } : null
+      })
+      
+      if (data.success) {
+        // normalize snake_case fields to camelCase so the UI can read them
+        const normalizedArticles = (data.articles || []).map((a: any) => {
+          const rawImages = a.generatedImages ?? a.generated_images ?? a.generated_images_urls ?? a.generated_images_url ?? a.images ?? []
+          const parsedImages = typeof rawImages === 'string' ? (() => {
+            try { return JSON.parse(rawImages) } catch { return rawImages ? [rawImages] : [] }
+          })() : rawImages ?? []
+          return { ...a, generatedImages: parsedImages }
+        })
+
+        console.log('🐞 Normalized first article images count:', normalizedArticles[0]?.generatedImages?.length ?? 0)
+        setArticles(normalizedArticles)
+        console.log(`✅ Loaded ${normalizedArticles.length} articles`)
+      } else {
+        throw new Error(data.error || 'Failed to fetch articles')
+      }
     } catch (error) {
-      console.error('Error fetching articles:', error)
+      console.error('❌ Error fetching articles:', error)
     } finally {
       setLoading(false)
     }
   }, [currentUser, websiteId])
+// ...existing code...
 
   useEffect(() => {
     if (currentUser) fetchArticles()
@@ -115,55 +205,58 @@ export function ArticlesTab({ generatedArticles, onArticlesUpdate, websiteId }: 
     }
   }, [generatedArticles, onArticlesUpdate])
 
- const handleGenerateArticle = async () => {
-  if (!newArticleKeyword.trim() || !currentUser) return
+  const handleGenerateArticle = async () => {
+    if (!newArticleKeyword.trim() || !currentUser) return
 
-  setIsGenerating(true)
+    setIsGenerating(true)
 
-  try {
-    // Create the request body with proper formatting
-    const requestBody = {
-      keyword: newArticleKeyword.trim(),
-      websiteId, 
-      userId: currentUser.id,
-      generateImages: true , // Make sure this is boolean true
-      imageCount: 2,           // <-- optional, how many images to create
+    try {
+      const requestBody = {
+        keyword: newArticleKeyword.trim(),
+        websiteId, 
+        userId: currentUser.id,
+        generateImages: true,
+        imageCount: 2,
+      };
 
-    };
+      console.log('🔄 Sending API request with:', requestBody);
 
-    console.log('🔄 Sending API request with:', requestBody);
+      const response = await fetch('/api/test-generate-article', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody),
+      })
 
-    const response = await fetch('/api/test-generate-article', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(requestBody),
-    })
-
-    const result = await response.json();
-    
-    console.log('📨 API Response:', result);
-
-    if (!response.ok) {
-      throw new Error(result.error || 'Failed to generate article');
-    }
-
-    if (result.success && result.article) {
-      console.log('✅ Article generated successfully!');
-      console.log('📊 Word count:', result.article.wordCount);
-      console.log('🖼️ Images generated:', result.images?.generated || 0);
+      const result = await response.json();
       
-      await fetchArticles();
-      setNewArticleKeyword("");
-      setNewArticleDate(""); // Clear the date field too
-      alert(`Article generated successfully! ${result.images?.generated ? `(${result.images.generated} images created)` : ''}`);
+      console.log('📨 API Response:', {
+        success: result.success,
+        articleId: result.article?.id,
+        imagesGenerated: result.images?.generated || result.article?.generatedImages?.length || 0,
+        imageUrls: result.article?.generatedImages
+      });
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to generate article');
+      }
+
+      if (result.success && result.article) {
+        console.log('✅ Article generated successfully!');
+        console.log('📊 Word count:', result.article.wordCount);
+        console.log('🖼️ Images generated:', result.images?.generated || 0);
+        
+        await fetchArticles();
+        setNewArticleKeyword("");
+        setNewArticleDate("");
+        alert(`Article generated successfully! ${result.images?.generated ? `(${result.images.generated} images created)` : ''}`);
+      }
+    } catch (error) {
+      console.error('❌ Error generating article:', error);
+      alert(`Failed to generate article: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsGenerating(false);
     }
-  } catch (error) {
-    console.error('❌ Error generating article:', error);
-    alert(`Failed to generate article: ${error instanceof Error ? error.message : 'Unknown error'}`);
-  } finally {
-    setIsGenerating(false);
   }
-}
 
   const handleDeleteArticle = async (id: string) => {
     if (!confirm('Are you sure you want to delete this article?') || !currentUser) return
@@ -313,7 +406,7 @@ export function ArticlesTab({ generatedArticles, onArticlesUpdate, websiteId }: 
       <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
         <CardHeader>
           <CardTitle>Generated Articles</CardTitle>
-          <CardDescription>SEO-optimized articles</CardDescription>
+          <CardDescription>SEO-optimized articles with AI-generated images</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -330,7 +423,6 @@ export function ArticlesTab({ generatedArticles, onArticlesUpdate, websiteId }: 
                       <h3 className="font-semibold text-foreground mb-1">{article.title}</h3>
                       <p className="text-sm text-muted-foreground mb-2">{article.preview}</p>
 
-                      {/* ✅ Flex-row for highlighted content */}
                       <div className="flex flex-row flex-wrap items-center gap-4 text-xs text-muted-foreground mb-2">
                         <span className="w-full md:w-auto">Keyword: <strong>{article.keyword}</strong></span>
                         <span className="w-full md:w-auto order-last md:order-0">{article.wordCount.toLocaleString()} words</span>
@@ -362,6 +454,40 @@ export function ArticlesTab({ generatedArticles, onArticlesUpdate, websiteId }: 
                           )}
                         </div>
                       )}
+
+                      {article.generatedImages && article.generatedImages.length > 0 && (
+                        <div className="mt-3">
+                          <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
+                            <ImageIcon className="w-4 h-4" />
+                            Generated Images ({article.generatedImages.length})
+                          </h4>
+                          <div className="grid grid-cols-2 gap-2">
+                            {article.generatedImages.slice(0, 2).map((imgUrl, index) => (
+                              <div key={index} className="relative group">
+                                <img 
+                                  src={imgUrl} 
+                                  alt={`Generated image ${index + 1} for ${article.title}`}
+                                  className="w-full h-32 object-cover rounded-lg border border-border/40"
+                                  loading="lazy"
+                                />
+                                <a 
+                                  href={imgUrl} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity rounded-lg"
+                                >
+                                  <ArrowUpRight className="w-6 h-6 text-white" />
+                                </a>
+                              </div>
+                            ))}
+                          </div>
+                          {article.generatedImages.length > 2 && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              +{article.generatedImages.length - 2} more images
+                            </p>
+                          )}
+                        </div>
+                      )}
                     </div>
                     <Badge className={`${getStatusStyles(article.status)} border`}>
                       {getStatusDisplayText(article.status)}
@@ -388,6 +514,36 @@ export function ArticlesTab({ generatedArticles, onArticlesUpdate, websiteId }: 
                           </div>
                         </DialogHeader>
                         <div className="space-y-4">
+                          {article.generatedImages && article.generatedImages.length > 0 && (
+                            <div className="space-y-3">
+                              <h4 className="font-semibold">Generated Images</h4>
+                              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                {article.generatedImages.map((imgUrl, index) => (
+                                  <div key={index} className="relative group">
+                                    <img 
+                                      src={imgUrl} 
+                                      alt={`Generated image ${index + 1}`}
+                                      className="w-full h-40 object-cover rounded-lg border"
+                                      loading="lazy"
+                                    />
+                                    <a 
+                                      href={imgUrl} 
+                                      target="_blank" 
+                                      rel="noopener noreferrer"
+                                      className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-opacity rounded-lg p-2"
+                                    >
+                                      <ArrowUpRight className="w-6 h-6 text-white mb-1" />
+                                      <span className="text-white text-xs text-center">View Full Size</span>
+                                    </a>
+                                    <div className="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+                                      #{index + 1}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
                           {(article.metaTitle || article.metaDescription) && (
                             <div className="p-4 bg-muted/30 rounded-lg">
                               <h4 className="font-semibold mb-2">SEO Preview</h4>
@@ -395,7 +551,10 @@ export function ArticlesTab({ generatedArticles, onArticlesUpdate, websiteId }: 
                               {article.metaDescription && <p className="text-gray-600 text-sm">{article.metaDescription}</p>}
                             </div>
                           )}
-                          <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: article.content }} />
+                          
+                          {/* Use the new function to render content with images inserted */}
+                          {renderContentWithImages(article.content, article.generatedImages || [])}
+                          
                           <div className="flex gap-2 pt-4 border-t border-border/40">
                             <Button variant="outline" className="cursor-pointer border-border/40 bg-transparent flex-1">
                               <Edit2 className="w-4 h-4 mr-2" /> Edit
