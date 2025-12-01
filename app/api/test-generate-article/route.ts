@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { createClient } from '@supabase/supabase-js';
-import { getUserArticleLimit } from '@/lib/articleLimits';
+import { createClient } from "@supabase/supabase-js";
+import { getUserArticleLimit } from "@/lib/articleLimits";
 
 // Initialize Supabase client
 const supabase = createClient(
@@ -9,7 +9,7 @@ const supabase = createClient(
 );
 
 // Set max duration for Pro plan (60 seconds)
-export const maxDuration = 300;
+export const maxDuration = 800;
 
 interface ArticleRequest {
   keyword?: string;
@@ -28,67 +28,76 @@ interface EnhancedArticle {
   // Core Content
   title: string;
   content: string;
-  
+
   // SEO Metadata
   metaTitle: string;
   metaDescription: string;
   slug: string;
   focusKeyword: string;
-  
+
   // Content Analysis
   readingTime: string;
   wordCount: number;
   contentScore: number;
   keywordDensity: number;
-  
+
   // Social Media
   ogTitle: string;
   ogDescription: string;
   twitterTitle: string;
   twitterDescription: string;
-  
+
   // Internal Organization
   tags: string[];
   category: string;
-  
+
   // Technical
   generatedAt: string;
   estimatedTraffic?: number;
-  
+
   // NEW: Image URLs
   generatedImages?: string[];
 }
 
 // NEW: Image generation function
 async function generateImagesForArticle(
-  content: string, 
-  title: string, 
-  keywords: string[], 
+  content: string,
+  title: string,
+  keywords: string[],
   count: number = 2
 ): Promise<string[]> {
   try {
     console.log(`🖼️ Generating ${count} images for article...`);
-    
-    const imagePrompts = extractImagePromptsFromContent(content, title, keywords);
-    
+
+    const imagePrompts = extractImagePromptsFromContent(
+      content,
+      title,
+      keywords
+    );
+
     const images: string[] = [];
-    
+
     // Generate multiple images based on extracted prompts
     for (let i = 0; i < Math.min(count, imagePrompts.length); i++) {
       const prompt = imagePrompts[i];
       console.log(`📸 Generating image ${i + 1} with prompt: "${prompt}"`);
-      
-      const imageResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/image-generation`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          prompt: prompt,
-          size: "1328*1328", // CHANGE TO ALLOWED SIZE
-          n: 1
-        }),
-      });
+
+      const imageResponse = await fetch(
+        `${
+          process.env.NEXTAUTH_URL || "http://localhost:3000"
+        }/api/image-generation`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            prompt: prompt,
+            size: "1328*1328", // CHANGE TO ALLOWED SIZE
+            n: 1,
+          }),
+        }
+      );
 
       if (!imageResponse.ok) {
         console.error(`❌ Image generation failed for prompt: ${prompt}`);
@@ -96,13 +105,13 @@ async function generateImagesForArticle(
       }
 
       const imageData = await imageResponse.json();
-      
+
       if (imageData.ok && imageData.images && imageData.images.length > 0) {
         images.push(imageData.images[0]);
         console.log(`✅ Image ${i + 1} generated successfully`);
       }
     }
-    
+
     return images;
   } catch (error) {
     console.error("💥 Image generation error:", error);
@@ -112,33 +121,37 @@ async function generateImagesForArticle(
 
 // NEW: Extract relevant image prompts from article content
 function extractImagePromptsFromContent(
-  content: string, 
-  title: string, 
+  content: string,
+  title: string,
   keywords: string[]
 ): string[] {
   const prompts: string[] = [];
-  
+
   // Remove HTML tags for cleaner text processing
-  const cleanContent = content.replace(/<[^>]*>/g, ' ');
-  
+  const cleanContent = content.replace(/<[^>]*>/g, " ");
+
   // Extract main sections (looking for headings and key paragraphs)
-  const sections = cleanContent.split(/\n+/).filter(section => 
-    section.trim().length > 50 && section.split(' ').length > 10
-  );
-  
+  const sections = cleanContent
+    .split(/\n+/)
+    .filter(
+      (section) => section.trim().length > 50 && section.split(" ").length > 10
+    );
+
   // Create prompts based on different strategies
-  
+
   // 1. Main concept prompt based on title and keywords
-  const mainConceptPrompt = `Professional digital illustration, ${title}. ${keywords.join(', ')}. Clean, modern, professional blog style, high quality, detailed`;
+  const mainConceptPrompt = `Professional digital illustration, ${title}. ${keywords.join(
+    ", "
+  )}. Clean, modern, professional blog style, high quality, detailed`;
   prompts.push(mainConceptPrompt);
-  
+
   // 2. Extract key concepts from first substantial paragraph
   if (sections.length > 0) {
     const firstSection = sections[0].substring(0, 200);
     const sectionPrompt = `Digital illustration concept: ${firstSection}. Professional blog style, clear, engaging visual`;
     prompts.push(sectionPrompt);
   }
-  
+
   // 3. Create prompt from middle section for variety
   if (sections.length > 2) {
     const middleIndex = Math.floor(sections.length / 2);
@@ -146,63 +159,72 @@ function extractImagePromptsFromContent(
     const middlePrompt = `Concept art: ${middleSection}. Professional illustration, blog content visual`;
     prompts.push(middlePrompt);
   }
-  
+
   // 4. Generic fallback prompts based on category
   const category = determineCategory(keywords[0]);
   const categoryPrompts = {
-    fitness: "Professional fitness illustration, active lifestyle, health and wellness, modern graphic style",
-    marketing: "Digital marketing concept, business growth, analytics, modern professional illustration",
-    finance: "Financial growth concept, money management, investment strategies, professional business illustration",
-    health: "Health and wellness concept, balanced lifestyle, nutrition, professional medical illustration",
-    technology: "Modern technology concept, innovation, digital transformation, clean tech illustration",
-    general: "Professional blog illustration, content creation, engaging visual concept"
+    fitness:
+      "Professional fitness illustration, active lifestyle, health and wellness, modern graphic style",
+    marketing:
+      "Digital marketing concept, business growth, analytics, modern professional illustration",
+    finance:
+      "Financial growth concept, money management, investment strategies, professional business illustration",
+    health:
+      "Health and wellness concept, balanced lifestyle, nutrition, professional medical illustration",
+    technology:
+      "Modern technology concept, innovation, digital transformation, clean tech illustration",
+    general:
+      "Professional blog illustration, content creation, engaging visual concept",
   };
-  
+
   prompts.push(categoryPrompts[category] || categoryPrompts.general);
-  
+
   // Ensure we have unique prompts
   return [...new Set(prompts)].slice(0, 4);
 }
 
 export async function POST(request: Request) {
   let jobId: string | undefined;
-  
+
   try {
     const body: ArticleRequest = await request.json();
-    
+
     // ========== COMPREHENSIVE DEBUGGING ==========
-    console.log('🔍 === DEBUG START ===');
-    console.log('📨 RAW REQUEST BODY:', JSON.stringify(body, null, 2));
-    console.log('🔑 generateImages value:', body.generateImages);
-    console.log('🔑 generateImages type:', typeof body.generateImages);
-    console.log('🔑 All body properties:', Object.keys(body));
+    console.log("🔍 === DEBUG START ===");
+    console.log("📨 RAW REQUEST BODY:", JSON.stringify(body, null, 2));
+    console.log("🔑 generateImages value:", body.generateImages);
+    console.log("🔑 generateImages type:", typeof body.generateImages);
+    console.log("🔑 All body properties:", Object.keys(body));
 
     // Check if generateImages exists and its value
-    if ('generateImages' in body) {
-      console.log('✅ generateImages EXISTS in request body');
-      console.log('🔍 generateImages raw value:', body.generateImages);
-      console.log('🔍 generateImages boolean conversion:', Boolean(body.generateImages));
+    if ("generateImages" in body) {
+      console.log("✅ generateImages EXISTS in request body");
+      console.log("🔍 generateImages raw value:", body.generateImages);
+      console.log(
+        "🔍 generateImages boolean conversion:",
+        Boolean(body.generateImages)
+      );
     } else {
-      console.log('❌ generateImages DOES NOT EXIST in request body');
+      console.log("❌ generateImages DOES NOT EXIST in request body");
     }
-    console.log('🔍 === DEBUG END ===');
+    console.log("🔍 === DEBUG END ===");
     // Support both single keyword (backward compat) and multiple keywords
     const keywords = body.keywords || (body.keyword ? [body.keyword] : []);
-    const { 
-      websiteId, 
-      userId, 
-      targetWordCount = 2000, 
-      articleNumber = 1, 
+    const {
+      websiteId,
+      userId,
+      targetWordCount = 2000,
+      articleNumber = 1,
       totalArticles = 1,
       generateImages = true, // Default to false for backward compatibility
-      imageCount = 2 // Default number of images
+      imageCount = 2, // Default number of images
     } = body;
     jobId = body.jobId;
-    console.log('🖼️ Image generation enabled:', generateImages)
- // ========== MORE DEBUGGING ==========
-    console.log('🔄 generateImages after destructuring:', generateImages);
-    console.log('🔄 generateImages actual value for logic:', generateImages);
-    console.log('🔄 Type of generateImages:', typeof generateImages);
+    console.log("🖼️ Image generation enabled:", generateImages);
+    // ========== MORE DEBUGGING ==========
+    console.log("🔄 generateImages after destructuring:", generateImages);
+    console.log("🔄 generateImages actual value for logic:", generateImages);
+    console.log("🔄 Type of generateImages:", typeof generateImages);
     if (keywords.length === 0) {
       return NextResponse.json(
         { error: "At least one keyword is required" },
@@ -221,9 +243,9 @@ export async function POST(request: Request) {
     const userLimit = await getUserArticleLimit(userId);
     if (totalArticles > userLimit) {
       return NextResponse.json(
-        { 
+        {
           error: `Package limit exceeded. Your package allows ${userLimit} articles, but ${totalArticles} were requested.`,
-          packageLimit: userLimit
+          packageLimit: userLimit,
         },
         { status: 403 }
       );
@@ -240,16 +262,22 @@ export async function POST(request: Request) {
     // Select a different keyword for each article
     const selectedKeywordIndex = (articleNumber - 1) % keywords.length;
     const selectedKeyword = keywords[selectedKeywordIndex];
-    const allKeywordsText = keywords.join(', ');
+    const allKeywordsText = keywords.join(", ");
 
-    console.log(`🚀 Generating article ${articleNumber}/${totalArticles} with keywords:`, keywords);
+    console.log(
+      `🚀 Generating article ${articleNumber}/${totalArticles} with keywords:`,
+      keywords
+    );
     console.log(`📌 Selected keyword for meta title: "${selectedKeyword}"`);
-    console.log(`🖼️ Image generation: ${generateImages ? 'ENABLED' : 'disabled'}`);
+    console.log(
+      `🖼️ Image generation: ${generateImages ? "ENABLED" : "disabled"}`
+    );
 
     // ... existing article generation code remains the same ...
-    const variationInstructions = totalArticles > 1 
-      ? `\n\nIMPORTANT: This is article ${articleNumber} of ${totalArticles}. Create a UNIQUE variation that differs from the previous articles. Use a different angle, perspective, or approach while still incorporating all keywords naturally. Vary the structure, examples, and content flow to ensure each article is distinct and valuable.`
-      : '';
+    const variationInstructions =
+      totalArticles > 1
+        ? `\n\nIMPORTANT: This is article ${articleNumber} of ${totalArticles}. Create a UNIQUE variation that differs from the previous articles. Use a different angle, perspective, or approach while still incorporating all keywords naturally. Vary the structure, examples, and content flow to ensure each article is distinct and valuable.`
+        : "";
 
     const prompt = `Generate a comprehensive, in-depth SEO-optimized blog post that naturally incorporates ALL of these keywords: ${allKeywordsText}.${variationInstructions}
 
@@ -266,7 +294,11 @@ CRITICAL REQUIREMENTS:
 - Naturally integrate ALL keywords throughout the content (1-2% density for the selected keyword "${selectedKeyword}", natural mentions for others)
 - Ensure the content flows naturally and doesn't feel keyword-stuffed
 - Comprehensive conclusion with key takeaways and next steps
-${totalArticles > 1 ? '- Create a unique angle or perspective that makes this article stand out from others on the same topic' : ''}
+${
+  totalArticles > 1
+    ? "- Create a unique angle or perspective that makes this article stand out from others on the same topic"
+    : ""
+}
 
 2. CONTENT STRUCTURE (EXPANDED FOR LENGTH):
 - Engaging introduction with hook and problem statement (150-200 words) - naturally include keywords
@@ -277,7 +309,11 @@ ${totalArticles > 1 ? '- Create a unique angle or perspective that makes this ar
 - Add: step-by-step guides, checklists, practical applications
 - Use: bullet points, numbered lists, comparison tables where relevant
 - Comprehensive conclusion summarizing all key points (200-250 words) - naturally reinforce keywords
-${totalArticles > 1 ? '- Vary the section structure and order to create uniqueness' : ''}
+${
+  totalArticles > 1
+    ? "- Vary the section structure and order to create uniqueness"
+    : ""
+}
 
 3. KEYWORD INTEGRATION REQUIREMENTS:
 - The selected keyword "${selectedKeyword}" should appear naturally throughout (1-2% density)
@@ -293,10 +329,16 @@ ${totalArticles > 1 ? '- Vary the section structure and order to create uniquene
 - Provide real-world examples and case studies
 - Offer actionable tips and implementation strategies
 - Compare different approaches or methodologies
-${totalArticles > 1 ? '- Use different examples, case studies, and data points than previous articles' : ''}
+${
+  totalArticles > 1
+    ? "- Use different examples, case studies, and data points than previous articles"
+    : ""
+}
 
 5. METADATA (Generate these EXACTLY as specified):
-- META_TITLE: Create a compelling title (55-60 characters) that includes the keyword "${selectedKeyword}" ${totalArticles > 1 ? 'with a unique angle' : ''}
+- META_TITLE: Create a compelling title (55-60 characters) that includes the keyword "${selectedKeyword}" ${
+      totalArticles > 1 ? "with a unique angle" : ""
+    }
 - META_DESCRIPTION: Write a click-worthy description (150-160 characters) that includes the keyword "${selectedKeyword}" and encourages clicks
 - OG_TITLE: Create a social media optimized title (with emoji if appropriate)
 - OG_DESCRIPTION: Social media friendly description (120-130 characters)
@@ -313,31 +355,37 @@ OG_DESCRIPTION: [Social media description 120-130 chars]`;
 
     // Add timeout wrapper
     const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error('Article generation timeout after 3 minutes')), 180000);
+      setTimeout(
+        () => reject(new Error("Article generation timeout after 3 minutes")),
+        180000
+      );
     });
 
-    const fetchPromise = fetch("https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${qwenApiKey}`,
-      },
-      body: JSON.stringify({
-        model: "qwen-plus",
-        messages: [
-          {
-            role: "system",
-            content: `You are an expert SEO content strategist specializing in long-form, comprehensive articles. Create detailed, well-researched blog posts of ${targetWordCount}+ words that naturally incorporate multiple keywords. Focus on depth, practical value, and natural keyword integration without keyword stuffing.`
-          },
-          {
-            role: "user",
-            content: prompt
-          }
-        ],
-        temperature: 0.7,
-        max_tokens: 4500
-      }),
-    });
+    const fetchPromise = fetch(
+      "https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${qwenApiKey}`,
+        },
+        body: JSON.stringify({
+          model: "qwen-plus",
+          messages: [
+            {
+              role: "system",
+              content: `You are an expert SEO content strategist specializing in long-form, comprehensive articles. Create detailed, well-researched blog posts of ${targetWordCount}+ words that naturally incorporate multiple keywords. Focus on depth, practical value, and natural keyword integration without keyword stuffing.`,
+            },
+            {
+              role: "user",
+              content: prompt,
+            },
+          ],
+          temperature: 0.7,
+          max_tokens: 4500,
+        }),
+      }
+    );
 
     const response = await Promise.race([fetchPromise, timeoutPromise]);
 
@@ -351,7 +399,7 @@ OG_DESCRIPTION: [Social media description 120-130 chars]`;
     }
 
     const data = await response.json();
-    
+
     if (!data.choices || data.choices.length === 0) {
       throw new Error("No response from Qwen API");
     }
@@ -360,9 +408,13 @@ OG_DESCRIPTION: [Social media description 120-130 chars]`;
 
     // Parse the structured response
     const parsedData = parseStructuredResponse(fullResponse, selectedKeyword);
-    
+
     // Generate enhanced metadata
-    const enhancedArticle = generateEnhancedMetadata(parsedData, selectedKeyword, targetWordCount);
+    const enhancedArticle = generateEnhancedMetadata(
+      parsedData,
+      selectedKeyword,
+      targetWordCount
+    );
 
     // NEW: Generate images if requested
     let generatedImages: string[] = [];
@@ -380,58 +432,63 @@ OG_DESCRIPTION: [Social media description 120-130 chars]`;
 
     // Save to Supabase WITH user_id
     const { data: savedArticle, error: dbError } = await supabase
-      .from('articles')
+      .from("articles")
       .insert({
         title: enhancedArticle.title,
         content: enhancedArticle.content,
-        keyword: keywords.join(', '),
-        status: 'draft',
-        date: new Date().toISOString().split('T')[0],
-        preview: enhancedArticle.metaDescription || enhancedArticle.content.substring(0, 150) + '...',
-        
+        keyword: keywords.join(", "),
+        status: "draft",
+        date: new Date().toISOString().split("T")[0],
+        preview:
+          enhancedArticle.metaDescription ||
+          enhancedArticle.content.substring(0, 150) + "...",
+
         // SEO Metadata
         meta_title: enhancedArticle.metaTitle,
         meta_description: enhancedArticle.metaDescription,
         slug: enhancedArticle.slug,
         focus_keyword: selectedKeyword,
-        
+
         // Content Analysis
         reading_time: enhancedArticle.readingTime,
         word_count: enhancedArticle.wordCount,
         content_score: enhancedArticle.contentScore,
         keyword_density: enhancedArticle.keywordDensity,
-        
+
         // Social Media
         og_title: enhancedArticle.ogTitle,
         og_description: enhancedArticle.ogDescription,
         twitter_title: enhancedArticle.twitterTitle,
         twitter_description: enhancedArticle.twitterDescription,
-        
+
         // Internal Organization
         tags: enhancedArticle.tags,
         category: enhancedArticle.category,
-        
+
         // Technical
         estimated_traffic: enhancedArticle.estimatedTraffic,
-        
+
         // NEW: Store generated images
         generated_images: generatedImages,
-        
+
         // Associate with website if provided
         ...(websiteId && { website_id: websiteId }),
-        
+
         // CRITICAL: Associate with user
-        user_id: userId
+        user_id: userId,
       })
       .select()
       .single();
 
     if (dbError) {
-      console.error('Database error:', dbError);
-      throw new Error('Failed to save article to database');
+      console.error("Database error:", dbError);
+      throw new Error("Failed to save article to database");
     }
 
-    console.log("✅ Enhanced article generated and saved to Supabase for user:", userId);
+    console.log(
+      "✅ Enhanced article generated and saved to Supabase for user:",
+      userId
+    );
     console.log("📊 Final word count:", enhancedArticle.wordCount);
     if (generateImages) {
       console.log("🖼️ Images generated:", generatedImages.length);
@@ -444,30 +501,34 @@ OG_DESCRIPTION: [Social media description 120-130 chars]`;
         id: savedArticle.id,
         status: savedArticle.status,
         date: savedArticle.date,
-        generatedImages: generatedImages // Include in response
+        generatedImages: generatedImages, // Include in response
       },
       analysis: {
-        seoReady: enhancedArticle.contentScore >= 70 && enhancedArticle.wordCount >= 1800,
+        seoReady:
+          enhancedArticle.contentScore >= 70 &&
+          enhancedArticle.wordCount >= 1800,
         immediatePublish: enhancedArticle.wordCount >= 1800,
-        wordCountStatus: enhancedArticle.wordCount >= 1800 ? "optimal" : "needs_expansion",
-        recommendations: generateRecommendations(enhancedArticle)
+        wordCountStatus:
+          enhancedArticle.wordCount >= 1800 ? "optimal" : "needs_expansion",
+        recommendations: generateRecommendations(enhancedArticle),
       },
       // NEW: Include image generation summary
-      images: generateImages ? {
-        generated: generatedImages.length,
-        totalRequested: imageCount,
-        urls: generatedImages
-      } : undefined
+      images: generateImages
+        ? {
+            generated: generatedImages.length,
+            totalRequested: imageCount,
+            urls: generatedImages,
+          }
+        : undefined,
     });
-
   } catch (error) {
     console.error("💥 Enhanced article generation error:", error);
-    
+
     return NextResponse.json(
-      { 
+      {
         success: false,
         error: "Failed to generate enhanced article",
-        details: error instanceof Error ? error.message : "Unknown error"
+        details: error instanceof Error ? error.message : "Unknown error",
       },
       { status: 500 }
     );
@@ -482,24 +543,24 @@ OG_DESCRIPTION: [Social media description 120-130 chars]`;
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const websiteId = searchParams.get('websiteId');
-    const userId = searchParams.get('userId');
-    
+    const websiteId = searchParams.get("websiteId");
+    const userId = searchParams.get("userId");
+
     if (!userId) {
       return NextResponse.json(
         { error: "User ID is required" },
         { status: 400 }
       );
     }
-    
+
     let query = supabase
-      .from('articles')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
+      .from("articles")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
 
     if (websiteId) {
-      query = query.eq('website_id', websiteId);
+      query = query.eq("website_id", websiteId);
     }
 
     const { data: articles, error } = await query;
@@ -509,94 +570,98 @@ export async function GET(request: Request) {
     }
 
     // Transform to camelCase for frontend
-    const transformedArticles = articles?.map(article => ({
-      id: article.id,
-      title: article.title,
-      content: article.content,
-      keyword: article.keyword,
-      status: article.status,
-      date: new Date(article.date).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric'
-      }),
-      preview: article.preview,
-      wordCount: article.word_count,
-      metaTitle: article.meta_title,
-      metaDescription: article.meta_description,
-      slug: article.slug,
-      focusKeyword: article.focus_keyword,
-      readingTime: article.reading_time,
-      contentScore: article.content_score,
-      keywordDensity: article.keyword_density,
-      ogTitle: article.og_title,
-      ogDescription: article.og_description,
-      twitterTitle: article.twitter_title,
-      twitterDescription: article.twitter_description,
-      tags: article.tags || [],
-      category: article.category,
-      estimatedTraffic: article.estimated_traffic,
-      generatedAt: article.created_at,
-      // NEW: Include generated images
-      generatedImages: article.generated_images || []
-    })) || [];
+    const transformedArticles =
+      articles?.map((article) => ({
+        id: article.id,
+        title: article.title,
+        content: article.content,
+        keyword: article.keyword,
+        status: article.status,
+        date: new Date(article.date).toLocaleDateString("en-US", {
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+        }),
+        preview: article.preview,
+        wordCount: article.word_count,
+        metaTitle: article.meta_title,
+        metaDescription: article.meta_description,
+        slug: article.slug,
+        focusKeyword: article.focus_keyword,
+        readingTime: article.reading_time,
+        contentScore: article.content_score,
+        keywordDensity: article.keyword_density,
+        ogTitle: article.og_title,
+        ogDescription: article.og_description,
+        twitterTitle: article.twitter_title,
+        twitterDescription: article.twitter_description,
+        tags: article.tags || [],
+        category: article.category,
+        estimatedTraffic: article.estimated_traffic,
+        generatedAt: article.created_at,
+        // NEW: Include generated images
+        generatedImages: article.generated_images || [],
+      })) || [];
 
     return NextResponse.json({
       success: true,
-      articles: transformedArticles
+      articles: transformedArticles,
     });
-
   } catch (error) {
-    console.error('Error fetching articles:', error);
+    console.error("Error fetching articles:", error);
     return NextResponse.json(
-      { error: 'Failed to fetch articles' },
+      { error: "Failed to fetch articles" },
       { status: 500 }
     );
   }
 }
 
-
 // PATCH endpoint with user authorization
 export async function PATCH(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const id = searchParams.get('id');
-    const userId = searchParams.get('userId');
+    const id = searchParams.get("id");
+    const userId = searchParams.get("userId");
     const body = await request.json();
 
     if (!id || !userId) {
-      return NextResponse.json({ error: 'Article ID and User ID are required' }, { status: 400 });
+      return NextResponse.json(
+        { error: "Article ID and User ID are required" },
+        { status: 400 }
+      );
     }
 
     // First verify the article belongs to the user
     const { data: existingArticle, error: fetchError } = await supabase
-      .from('articles')
-      .select('user_id')
-      .eq('id', id)
+      .from("articles")
+      .select("user_id")
+      .eq("id", id)
       .single();
 
     if (fetchError || !existingArticle) {
-      return NextResponse.json({ error: 'Article not found' }, { status: 404 });
+      return NextResponse.json({ error: "Article not found" }, { status: 404 });
     }
 
     if (existingArticle.user_id !== userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
     const { data, error } = await supabase
-      .from('articles')
+      .from("articles")
       .update(body)
-      .eq('id', id)
+      .eq("id", id)
       .select()
       .single();
 
     if (error) throw error;
 
     return NextResponse.json({ success: true, article: data });
-
   } catch (error) {
-    console.error('Error updating article:', error);
-    return NextResponse.json({ error: 'Failed to update article' }, { status: 500 });
+    console.error("Error updating article:", error);
+    return NextResponse.json(
+      { error: "Failed to update article" },
+      { status: 500 }
+    );
   }
 }
 
@@ -604,40 +669,42 @@ export async function PATCH(request: Request) {
 export async function DELETE(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const id = searchParams.get('id');
-    const userId = searchParams.get('userId');
+    const id = searchParams.get("id");
+    const userId = searchParams.get("userId");
 
     if (!id || !userId) {
-      return NextResponse.json({ error: 'Article ID and User ID are required' }, { status: 400 });
+      return NextResponse.json(
+        { error: "Article ID and User ID are required" },
+        { status: 400 }
+      );
     }
 
     // First verify the article belongs to the user
     const { data: existingArticle, error: fetchError } = await supabase
-      .from('articles')
-      .select('user_id')
-      .eq('id', id)
+      .from("articles")
+      .select("user_id")
+      .eq("id", id)
       .single();
 
     if (fetchError || !existingArticle) {
-      return NextResponse.json({ error: 'Article not found' }, { status: 404 });
+      return NextResponse.json({ error: "Article not found" }, { status: 404 });
     }
 
     if (existingArticle.user_id !== userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
-    const { error } = await supabase
-      .from('articles')
-      .delete()
-      .eq('id', id);
+    const { error } = await supabase.from("articles").delete().eq("id", id);
 
     if (error) throw error;
 
     return NextResponse.json({ success: true });
-
   } catch (error) {
-    console.error('Error deleting article:', error);
-    return NextResponse.json({ error: 'Failed to delete article' }, { status: 500 });
+    console.error("Error deleting article:", error);
+    return NextResponse.json(
+      { error: "Failed to delete article" },
+      { status: 500 }
+    );
   }
 }
 
@@ -651,71 +718,87 @@ function parseStructuredResponse(response: string, keyword: string) {
 
   return {
     content: contentMatch ? contentMatch[1].trim() : response,
-    metaTitle: metaTitleMatch ? metaTitleMatch[1].trim() : generateFallbackMetaTitle(keyword),
-    metaDescription: metaDescMatch ? metaDescMatch[1].trim() : generateFallbackMetaDescription(keyword),
-    ogTitle: ogTitleMatch ? ogTitleMatch[1].trim() : generateFallbackOgTitle(keyword),
-    ogDescription: ogDescMatch ? ogDescMatch[1].trim() : generateFallbackOgDescription(keyword)
+    metaTitle: metaTitleMatch
+      ? metaTitleMatch[1].trim()
+      : generateFallbackMetaTitle(keyword),
+    metaDescription: metaDescMatch
+      ? metaDescMatch[1].trim()
+      : generateFallbackMetaDescription(keyword),
+    ogTitle: ogTitleMatch
+      ? ogTitleMatch[1].trim()
+      : generateFallbackOgTitle(keyword),
+    ogDescription: ogDescMatch
+      ? ogDescMatch[1].trim()
+      : generateFallbackOgDescription(keyword),
   };
 }
 
-function generateEnhancedMetadata(parsedData: any, keyword: string, targetWordCount: number): EnhancedArticle {
+function generateEnhancedMetadata(
+  parsedData: any,
+  keyword: string,
+  targetWordCount: number
+): EnhancedArticle {
   const content = parsedData.content;
   const wordCount = content.split(/\s+/).length;
-  
+
   return {
     // Core Content
     title: extractMainTitle(content) || parsedData.metaTitle,
     content: content,
-    
+
     // SEO Metadata
     metaTitle: parsedData.metaTitle,
     metaDescription: parsedData.metaDescription,
     slug: generateSlug(keyword),
     focusKeyword: keyword,
-    
+
     // Content Analysis
     readingTime: calculateReadingTime(wordCount),
     wordCount: wordCount,
     contentScore: calculateContentScore(content, keyword, targetWordCount),
     keywordDensity: calculateKeywordDensity(content, keyword),
-    
+
     // Social Media
     ogTitle: parsedData.ogTitle,
     ogDescription: parsedData.ogDescription,
     twitterTitle: parsedData.ogTitle,
     twitterDescription: parsedData.ogDescription,
-    
+
     // Internal Organization
     tags: generateTags(keyword),
     category: determineCategory(keyword),
-    
+
     // Technical
     generatedAt: new Date().toISOString(),
-    estimatedTraffic: estimateTrafficPotential(keyword)
+    estimatedTraffic: estimateTrafficPotential(keyword),
   };
 }
 
 // Enhanced content scoring that rewards longer articles
-function calculateContentScore(content: string, keyword: string, targetWordCount: number): number {
+function calculateContentScore(
+  content: string,
+  keyword: string,
+  targetWordCount: number
+): number {
   let score = 50; // Base score
-  
+
   const wordCount = content.split(/\s+/).length;
-  
+
   // Reward longer content significantly more for SEO
   if (wordCount >= targetWordCount) score += 25;
   else if (wordCount >= 1800) score += 20;
   else if (wordCount >= 1500) score += 15;
   else if (wordCount >= 1200) score += 10;
   else if (wordCount >= 1000) score += 5;
-  
+
   // Check for headings structure
-  if (content.includes('<h1>')) score += 5;
+  if (content.includes("<h1>")) score += 5;
   if ((content.match(/<h2>/g) || []).length >= 3) score += 10;
   if ((content.match(/<h3>/g) || []).length >= 5) score += 10;
-  
+
   // Check keyword optimization
   if (content.toLowerCase().includes(keyword.toLowerCase())) score += 10;
-  
+
   return Math.min(score, 100);
 }
 
@@ -723,24 +806,28 @@ function calculateContentScore(content: string, keyword: string, targetWordCount
 function generateSlug(keyword: string): string {
   return keyword
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)/g, '')
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "")
     .substring(0, 60);
 }
 
 function generateFallbackMetaTitle(keyword: string): string {
   const currentYear = new Date().getFullYear();
-  const baseTitle = `${keyword.charAt(0).toUpperCase() + keyword.slice(1)} - Complete Guide ${currentYear}`;
-  return baseTitle.length > 60 ? baseTitle.substring(0, 57) + '...' : baseTitle;
+  const baseTitle = `${
+    keyword.charAt(0).toUpperCase() + keyword.slice(1)
+  } - Complete Guide ${currentYear}`;
+  return baseTitle.length > 60 ? baseTitle.substring(0, 57) + "..." : baseTitle;
 }
 
 function generateFallbackMetaDescription(keyword: string): string {
   const baseDesc = `Discover the best strategies and tips for ${keyword}. Learn everything you need to know in our comprehensive guide.`;
-  return baseDesc.length > 160 ? baseDesc.substring(0, 157) + '...' : baseDesc;
+  return baseDesc.length > 160 ? baseDesc.substring(0, 157) + "..." : baseDesc;
 }
 
 function generateFallbackOgTitle(keyword: string): string {
-  return `🚀 ${keyword.charAt(0).toUpperCase() + keyword.slice(1)} - Ultimate Guide`;
+  return `🚀 ${
+    keyword.charAt(0).toUpperCase() + keyword.slice(1)
+  } - Ultimate Guide`;
 }
 
 function generateFallbackOgDescription(keyword: string): string {
@@ -750,11 +837,11 @@ function generateFallbackOgDescription(keyword: string): string {
 function extractMainTitle(content: string): string {
   const h1Match = content.match(/<h1[^>]*>(.*?)<\/h1>/i);
   if (h1Match) return h1Match[1];
-  
+
   const firstH2Match = content.match(/<h2[^>]*>(.*?)<\/h2>/i);
   if (firstH2Match) return firstH2Match[1];
-  
-  return '';
+
+  return "";
 }
 
 function calculateReadingTime(wordCount: number): string {
@@ -764,38 +851,60 @@ function calculateReadingTime(wordCount: number): string {
 
 function calculateKeywordDensity(content: string, keyword: string): number {
   const words = content.toLowerCase().split(/\s+/);
-  const keywordCount = words.filter(word => word.includes(keyword.toLowerCase())).length;
+  const keywordCount = words.filter((word) =>
+    word.includes(keyword.toLowerCase())
+  ).length;
   return Number(((keywordCount / words.length) * 100).toFixed(2));
 }
 
 function generateTags(keyword: string): string[] {
   const baseTags = [keyword];
-  const relatedTerms = keyword.split(' ').slice(0, 3);
+  const relatedTerms = keyword.split(" ").slice(0, 3);
   return [...new Set([...baseTags, ...relatedTerms])].slice(0, 5);
 }
 
 function determineCategory(keyword: string): string {
   // Simple category detection based on keyword
   const lowerKeyword = keyword.toLowerCase();
-  
-  if (lowerKeyword.includes('workout') || lowerKeyword.includes('fitness') || lowerKeyword.includes('exercise')) {
-    return 'fitness';
-  } else if (lowerKeyword.includes('marketing') || lowerKeyword.includes('seo') || lowerKeyword.includes('social')) {
-    return 'marketing';
-  } else if (lowerKeyword.includes('money') || lowerKeyword.includes('finance') || lowerKeyword.includes('investment')) {
-    return 'finance';
-  } else if (lowerKeyword.includes('health') || lowerKeyword.includes('diet') || lowerKeyword.includes('nutrition')) {
-    return 'health';
-  } else if (lowerKeyword.includes('tech') || lowerKeyword.includes('ai') || lowerKeyword.includes('software')) {
-    return 'technology';
+
+  if (
+    lowerKeyword.includes("workout") ||
+    lowerKeyword.includes("fitness") ||
+    lowerKeyword.includes("exercise")
+  ) {
+    return "fitness";
+  } else if (
+    lowerKeyword.includes("marketing") ||
+    lowerKeyword.includes("seo") ||
+    lowerKeyword.includes("social")
+  ) {
+    return "marketing";
+  } else if (
+    lowerKeyword.includes("money") ||
+    lowerKeyword.includes("finance") ||
+    lowerKeyword.includes("investment")
+  ) {
+    return "finance";
+  } else if (
+    lowerKeyword.includes("health") ||
+    lowerKeyword.includes("diet") ||
+    lowerKeyword.includes("nutrition")
+  ) {
+    return "health";
+  } else if (
+    lowerKeyword.includes("tech") ||
+    lowerKeyword.includes("ai") ||
+    lowerKeyword.includes("software")
+  ) {
+    return "technology";
   } else {
-    return 'general';
+    return "general";
   }
 }
 
 function estimateTrafficPotential(keyword: string): number {
   // Simple estimation based on keyword characteristics
-  const wordCount = keyword.split(' ').length;
+  const wordCount = keyword.split(" ").length;
   if (wordCount === 1) return 1000;
   if (wordCount === 2) return 500;
   return 200;
@@ -803,18 +912,26 @@ function estimateTrafficPotential(keyword: string): number {
 
 function generateRecommendations(article: EnhancedArticle): string[] {
   const recommendations = [];
-  
+
   if (article.contentScore < 70) {
-    recommendations.push("Consider adding more subheadings and detailed examples");
+    recommendations.push(
+      "Consider adding more subheadings and detailed examples"
+    );
   }
-  
+
   if (article.keywordDensity < 1) {
-    recommendations.push("Increase keyword density naturally throughout the content");
+    recommendations.push(
+      "Increase keyword density naturally throughout the content"
+    );
   }
-  
+
   if (article.wordCount < 1800) {
-    recommendations.push(`Expand content to reach optimal SEO word count (1800+ words). Current: ${article.wordCount} words`);
+    recommendations.push(
+      `Expand content to reach optimal SEO word count (1800+ words). Current: ${article.wordCount} words`
+    );
   }
-  
-  return recommendations.length > 0 ? recommendations : ["Content is optimized and ready for immediate publishing!"];
+
+  return recommendations.length > 0
+    ? recommendations
+    : ["Content is optimized and ready for immediate publishing!"];
 }
