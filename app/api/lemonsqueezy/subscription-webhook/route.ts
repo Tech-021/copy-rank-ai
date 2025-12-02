@@ -56,12 +56,14 @@ export async function POST(req: Request) {
     // Check variant ID
     if (variantId) {
       const variantIdStr = variantId.toString();
+      const proVar = process.env.NEXT_PUBLIC_LEMON_VARIANT_PRO || '1087280';
+      const premVar = process.env.NEXT_PUBLIC_LEMON_VARIANT_PREMIUM || '1087281';
       // 15 articles tier = pro
-      if (variantIdStr === '1087280') {
+      if (variantIdStr === String(proVar)) {
         return 'pro';
       }
       // 30 articles tier = premium
-      if (variantIdStr === '1087281') {
+      if (variantIdStr === String(premVar)) {
         return 'premium';
       }
     }
