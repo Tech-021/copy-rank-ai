@@ -279,74 +279,79 @@ export async function POST(request: Request) {
         ? `\n\nIMPORTANT: This is article ${articleNumber} of ${totalArticles}. Create a UNIQUE variation that differs from the previous articles. Use a different angle, perspective, or approach while still incorporating all keywords naturally. Vary the structure, examples, and content flow to ensure each article is distinct and valuable.`
         : "";
 
-    const prompt = `Generate a comprehensive, in-depth SEO-optimized blog post that naturally incorporates ALL of these keywords: ${allKeywordsText}.${variationInstructions}
+const prompt = `Generate a comprehensive, in-depth SEO-optimized blog post that naturally incorporates ALL of these keywords: ${allKeywordsText}.${variationInstructions}
 
 ALL KEYWORDS: ${allKeywordsText}
 SELECTED KEYWORD FOR META TITLE: "${selectedKeyword}" (use this keyword in the meta title and description)
 
-CRITICAL REQUIREMENTS:
+CRITICAL REQUIREMENTS - STRICTLY FOLLOW THESE RULES:
 
-1. MAIN CONTENT (${targetWordCount}+ WORDS - THIS IS NON-NEGOTIABLE):
-- Write detailed, well-researched, comprehensive content that naturally weaves in ALL the provided keywords
-- Aim for ${targetWordCount}+ words minimum for SEO optimization
-- Use proper HTML structure with <h1>, <h2>, and <h3> headings
-- Include extensive examples, case studies, and actionable advice
-- Naturally integrate ALL keywords throughout the content (1-2% density for the selected keyword "${selectedKeyword}", natural mentions for others)
-- Ensure the content flows naturally and doesn't feel keyword-stuffed
-- Comprehensive conclusion with key takeaways and next steps
+1. ABSOLUTELY NO EM DASHES (—):
+- **DO NOT USE EM DASHES (—) ANYWHERE IN THE ARTICLE**
+- **USE REGULAR DASHES (-) INSTEAD OF EM DASHES**
+- **Example: Use "marketing - it's" NOT "marketing—it's"**
+- **Example: Use "croissants - rich" NOT "croissants—rich"**
+- **Use commas or parentheses for asides instead of em dashes**
+
+2. NO HTML <m> TAGS:
+- **DO NOT USE <m> TAGS ANYWHERE IN THE ARTICLE**
+- **DO NOT USE <m> OR </m> IN ANY FORM**
+- **ONLY USE STANDARD HTML TAGS: <h1>, <h2>, <h3>, <p>, <ul>, <ol>, <li>, <strong>, <em>**
+- If you need to emphasize text, use <strong> or <em> tags instead
+
+3. HUMAN-LIKE WRITING STYLE:
+- Write in a natural, conversational tone that sounds human-written
+- Avoid AI-sounding phrases like "In conclusion", "Moreover", "Furthermore" at the start of sentences
+- Use contractions: you're, it's, don't, can't, won't, etc.
+- Ask rhetorical questions to engage readers
+- Share personal insights and opinions
+- Vary sentence length and structure
+- Include storytelling elements and real-world examples
+
+4. MAIN CONTENT (${targetWordCount}+ WORDS):
+- Write detailed, comprehensive content with ALL keywords naturally integrated
+- Minimum ${targetWordCount} words for SEO optimization
+- Use ONLY standard HTML structure with <h1>, <h2>, <h3> headings
+- Include examples, case studies, actionable advice
+- Natural keyword density: 1-2% for "${selectedKeyword}", others mentioned naturally
+- No keyword stuffing - content must flow naturally
+- Comprehensive conclusion with practical takeaways
 ${
   totalArticles > 1
-    ? "- Create a unique angle or perspective that makes this article stand out from others on the same topic"
+    ? "- Create unique angle different from previous articles"
     : ""
 }
 
-2. CONTENT STRUCTURE (EXPANDED FOR LENGTH):
-- Engaging introduction with hook and problem statement (150-200 words) - naturally include keywords
-- Background and context section (200-300 words) - naturally mention related keywords
-- 5-7 main sections with multiple subsections (each section 250-400 words)
-- Each section should naturally incorporate relevant keywords from the list
-- Include: statistics, research findings, expert opinions
-- Add: step-by-step guides, checklists, practical applications
-- Use: bullet points, numbered lists, comparison tables where relevant
-- Comprehensive conclusion summarizing all key points (200-250 words) - naturally reinforce keywords
+5. CONTENT STRUCTURE:
+- Engaging introduction with hook (150-200 words)
+- Background and context (200-300 words)
+- 5-7 main sections with subsections (each 250-400 words)
+- Include statistics, research, expert opinions
+- Add step-by-step guides, checklists, practical applications
+- Use bullet points (<ul>), numbered lists (<ol>), tables if relevant
+- Comprehensive conclusion (200-250 words)
 ${
   totalArticles > 1
-    ? "- Vary the section structure and order to create uniqueness"
+    ? "- Vary structure and examples for uniqueness"
     : ""
 }
 
-3. KEYWORD INTEGRATION REQUIREMENTS:
-- The selected keyword "${selectedKeyword}" should appear naturally throughout (1-2% density)
-- All other keywords should be naturally woven into relevant sections
-- Keywords should feel organic, not forced
-- Use variations and related terms naturally
-- Ensure content reads naturally for humans while optimizing for SEO
+6. METADATA (Format EXACTLY as below):
+- META_TITLE: Create compelling title (55-60 chars) with "${selectedKeyword}"
+- META_DESCRIPTION: Click-worthy description (150-160 chars) with "${selectedKeyword}"
+- OG_TITLE: Social media title with emoji
+- OG_DESCRIPTION: Social media description (120-130 chars)
 
-4. DEPTH AND DETAIL REQUIREMENTS:
-- Cover the topic from multiple angles and perspectives
-- Include recent data, trends, and developments
-- Address common questions and misconceptions
-- Provide real-world examples and case studies
-- Offer actionable tips and implementation strategies
-- Compare different approaches or methodologies
-${
-  totalArticles > 1
-    ? "- Use different examples, case studies, and data points than previous articles"
-    : ""
-}
-
-5. METADATA (Generate these EXACTLY as specified):
-- META_TITLE: Create a compelling title (55-60 characters) that includes the keyword "${selectedKeyword}" ${
-      totalArticles > 1 ? "with a unique angle" : ""
-    }
-- META_DESCRIPTION: Write a click-worthy description (150-160 characters) that includes the keyword "${selectedKeyword}" and encourages clicks
-- OG_TITLE: Create a social media optimized title (with emoji if appropriate)
-- OG_DESCRIPTION: Social media friendly description (120-130 characters)
+IMPORTANT: 
+- **NO EM DASHES (—) - USE REGULAR DASHES (-)**
+- **NO <m> TAGS - THIS IS NON-NEGOTIABLE**
+- **Content must sound human-written, not AI-generated**
+- **Use only standard HTML tags listed above**
 
 Please format your response EXACTLY as:
 
 CONTENT:
-[Your full article content here with HTML tags - MUST BE ${targetWordCount}+ WORDS and naturally include ALL keywords: ${allKeywordsText}]
+[Your full article content here - NO EM DASHES (—), NO <m> TAGS, ONLY standard HTML, MUST BE ${targetWordCount}+ WORDS]
 
 META_TITLE: [Optimized title 55-60 chars with keyword "${selectedKeyword}"]
 META_DESCRIPTION: [Compelling description 150-160 chars with keyword "${selectedKeyword}"]
@@ -708,7 +713,6 @@ export async function DELETE(request: Request) {
   }
 }
 
-// Helper functions
 function parseStructuredResponse(response: string, keyword: string) {
   const contentMatch = response.match(/CONTENT:\s*([\s\S]*?)(?=META_TITLE:|$)/);
   const metaTitleMatch = response.match(/META_TITLE:\s*(.+)/);
@@ -716,8 +720,26 @@ function parseStructuredResponse(response: string, keyword: string) {
   const ogTitleMatch = response.match(/OG_TITLE:\s*(.+)/);
   const ogDescMatch = response.match(/OG_DESCRIPTION:\s*(.+)/);
 
+  let content = contentMatch ? contentMatch[1].trim() : response;
+  
+  // ========== REMOVE EM DASHES (—) ==========
+  console.log("🔄 Removing em dashes (—) from content...");
+  
+  // Count em dashes before removal
+  const emDashCount = (content.match(/—/g) || []).length;
+  console.log(`Found ${emDashCount} em dashes in content`);
+  
+  // Remove ALL em dashes (—)
+  content = content.replace(/—/g, ' - ');
+  
+  // Also remove any other special dashes
+  content = content.replace(/–/g, ' - '); // en dash
+  content = content.replace(/―/g, ' - '); // horizontal bar
+  
+  // ========== END EM DASH REMOVAL ==========
+
   return {
-    content: contentMatch ? contentMatch[1].trim() : response,
+    content: content,
     metaTitle: metaTitleMatch
       ? metaTitleMatch[1].trim()
       : generateFallbackMetaTitle(keyword),
