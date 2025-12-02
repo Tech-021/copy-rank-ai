@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader2, Plus, Eye, Trash2, Edit2, BarChart3, Clock, Target, RefreshCw, ArrowUpRight, Image as ImageIcon } from "lucide-react"
 import { getUser } from "@/lib/auth"
 import { getUserPackage } from "@/lib/articleLimits"
+import { createCheckout } from "@/lib/lemonSqueezy"
 import { useRouter } from "next/navigation"
 
 interface Article {
@@ -58,6 +59,9 @@ export function ArticlesTab({ generatedArticles, onArticlesUpdate, websiteId }: 
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null)
   const [currentUser, setCurrentUser] = useState<any>(null)
   const [userPackage, setUserPackage] = useState<'free' | 'pro' | 'premium' | null>(null)
+  const [isPlanDialogOpen, setIsPlanDialogOpen] = useState(false)
+  const [selectedPlanVariantId, setSelectedPlanVariantId] = useState<string | null>(null)
+  const [isCreatingCheckout, setIsCreatingCheckout] = useState(false)
   const router = useRouter()
 
   // Insert generated images between article paragraphs
@@ -350,6 +354,9 @@ export function ArticlesTab({ generatedArticles, onArticlesUpdate, websiteId }: 
                 <h3 className="font-semibold text-blue-900 mb-1">Upgrade Your Plan to Generate More Articles</h3>
                 <p className="text-sm text-blue-700">You're currently on the free plan (3 articles).</p>
               </div>
+              <div>
+                <Button onClick={() => setIsPlanDialogOpen(true)} variant="secondary">Update Plan</Button>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -397,6 +404,97 @@ export function ArticlesTab({ generatedArticles, onArticlesUpdate, websiteId }: 
         <Button variant="outline" onClick={fetchArticles} className="cursor-pointer gap-2">
           <RefreshCw className="w-4 h-4" /> Refresh
         </Button>
+        {/* Update Plan Button - only show if user is not premium */}
+        {userPackage !== 'premium' && (
+          <Dialog open={isPlanDialogOpen} onOpenChange={setIsPlanDialogOpen}>
+            <DialogTrigger asChild>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Update Your Plan</DialogTitle>
+                <DialogDescription>Choose a plan to upgrade your account. After selecting, you'll be redirected to LemonSqueezy to complete the purchase.</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-3">
+                <div>
+                  <label className="text-sm font-medium">Plan</label>
+                  <Select onValueChange={(value) => setSelectedPlanVariantId(value)}>
+                    <SelectTrigger className="w-full h-10">
+                      <SelectValue placeholder="Select a plan" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {/* Variant IDs: prefer env via NEXT_PUBLIC_LEMON_VARIANT_PRO/PREMIUM, fallback to known 1087280/1087281 */}
+                      <SelectItem value={process.env?.NEXT_PUBLIC_LEMONSQUEEZY_CHECKOUT_URL_15 || "" }>Pro — 15 articles</SelectItem>
+                      <SelectItem value={process.env?.NEXT_PUBLIC_LEMONSQUEEZY_CHECKOUT_URL_30 || ""}>Premium — 30 articles</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex gap-2 justify-end">
+                  <Button variant="ghost" onClick={() => setIsPlanDialogOpen(false)}>Cancel</Button>
+                  <Button disabled={isCreatingCheckout} onClick={async () => {
+                    if (!currentUser) {
+                      alert('Please sign in to update your plan.');
+                      return setIsPlanDialogOpen(false);
+                    }
+                    if (!selectedPlanVariantId) {
+                      alert('Please select a plan.');
+                      return;
+                    }
+                    try {
+                      setIsCreatingCheckout(true)
+                      window.location.href = selectedPlanVariantId ?? null;
+                      return // fallback in case popup is blocked
+                      const checkout = await createCheckout(selectedPlanVariantId, currentUser.email, currentUser.user_metadata?.full_name || currentUser.name, currentUser.id);
+                      if (checkout?.url) {
+                        // open the checkout in a new tab
+                        window.open(checkout.url, '_blank')
+                        setIsPlanDialogOpen(false)
+                        // Try to refresh user's package after a short delay in case webhook has already fired
+                        setTimeout(async () => {
+                          try {
+                            const packageType = await getUserPackage(currentUser.id)
+                            setUserPackage(packageType)
+                          } catch (e) {
+                            // ignore
+                          }
+                        }, 5000)
+                      } else {
+                        alert('Failed to create checkout session. Please try again.')
+                      }
+                    } catch (err: any) {
+                      console.error('Create checkout failed', err)
+                      const message = err?.message || err?.error || 'Failed to create checkout session. You can try the public checkout URL instead.'
+                      // Try static public fallback URLs if available
+                      const proVar = process.env.NEXT_PUBLIC_LEMON_VARIANT_PRO || '1087280';
+                      const premVar = process.env.NEXT_PUBLIC_LEMON_VARIANT_PREMIUM || '1087281';
+                      const fallbackUrl15 = process.env.NEXT_PUBLIC_LEMONSQUEEZY_CHECKOUT_URL_15;
+                      const fallbackUrl30 = process.env.NEXT_PUBLIC_LEMONSQUEEZY_CHECKOUT_URL_30;
+                      let fallbackUrl: string | null = null
+                      const selected = String(selectedPlanVariantId)
+                      if (selected === String(proVar) && fallbackUrl15) fallbackUrl = fallbackUrl15
+                      if (selected === String(premVar) && fallbackUrl30) fallbackUrl = fallbackUrl30
+                      // If selected variant matches silver monthly, we can use the 15 article URL as default
+                      const silverVar = process.env.NEXT_PUBLIC_LEMON_VARIANT_SILVER_MONTHLY || ''
+                      if (!fallbackUrl && selected === String(silverVar) && fallbackUrl15) fallbackUrl = fallbackUrl15
+
+                      if (fallbackUrl) {
+                        if (confirm(`${message}\n\nWould you like to open the public checkout URL?`)) {
+                          window.open(fallbackUrl, '_blank')
+                          setIsPlanDialogOpen(false)
+                        }
+                      } else {
+                        alert(message)
+                      }
+                    }
+                    finally {
+                      setIsCreatingCheckout(false)
+                    }
+                  }}>Proceed</Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
