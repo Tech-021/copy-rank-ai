@@ -3,8 +3,9 @@ export interface LemonSqueezyCheckout {
   url: string;
 }
 
-export const createTrialCheckout = async (
-  userEmail: string, 
+export const createCheckout = async (
+  variantId: string | number,
+  userEmail?: string,
   userName?: string,
   userId?: string
 ): Promise<LemonSqueezyCheckout> => {
@@ -15,9 +16,10 @@ export const createTrialCheckout = async (
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
+        variantId,
         userEmail,
         userName,
-        userId
+        userId,
       })
     });
 
