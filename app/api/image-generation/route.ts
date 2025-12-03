@@ -20,11 +20,15 @@ export async function POST(req: Request) {
     // ========== ADD TEXT PREVENTION TO PROMPT ==========
     console.log("🖼️ Original prompt:", prompt.substring(0, 200));
     
-    // Add text prevention instructions to the prompt
-    const textPrevention = "NO TEXT, NO WORDS, NO LETTERS, NO HEADINGS, NO TYPOGRAPHY, NO WRITING, NO LOGOS WITH TEXT. Pure illustration only, no textual elements whatsoever. Image should be completely free of any written content.";
-    prompt = `${prompt}. ${textPrevention}`;
+    // Remove any text-related requests from the original prompt
+    const textKeywords = /\b(text|word|letter|title|heading|caption|label|write|writing|written|typography|font|spell|spelling)\b/gi;
+    const cleanedPrompt = prompt.replace(textKeywords, '');
     
-    console.log("🖼️ Enhanced prompt (no text):", prompt.substring(0, 250));
+    // Add STRONG text prevention instructions
+    const textPrevention = "CRITICAL INSTRUCTION: This must be a purely visual illustration with ZERO text, ZERO words, ZERO letters, ZERO numbers, ZERO characters of any kind. DO NOT generate, render, or include any textual elements, written content, typography, labels, captions, titles, logos with text, watermarks, or readable characters in any language. The image must be 100% text-free and contain only visual imagery.";
+    prompt = `${textPrevention} Create a visual illustration: ${cleanedPrompt}. STRICT REQUIREMENT: NO TEXT ANYWHERE IN THE IMAGE.`;
+    
+    console.log("🖼️ Enhanced prompt (strict no-text):", prompt.substring(0, 250));
     // ========== END TEXT PREVENTION ==========
 
     // clamp n to reasonable bounds
@@ -57,7 +61,7 @@ export async function POST(req: Request) {
       },
       parameters: {
         // ========== ADD NEGATIVE PROMPT ==========
-        negative_prompt: "text, words, letters, typography, writing, headings, titles, captions, logos with text, watermarks, signatures, written text, numbers, symbols, characters, fonts, calligraphy, written content, textual elements, infographic with text",
+        negative_prompt: "text, words, letters, alphabet, numbers, digits, typography, writing, headings, titles, captions, labels, annotations, logos with text, watermarks, signatures, written text, readable text, symbols, characters, fonts, calligraphy, written content, textual elements, infographic with text, subtitles, quotes, speech bubbles, text overlays, branded text, copyright text, any readable characters, legible writing, inscriptions, manuscript, printed text, handwriting, script, written language",
         // ========== END NEGATIVE PROMPT ==========
         prompt_extend: body.prompt_extend ?? true,
         watermark: body.watermark ?? false,
@@ -65,7 +69,7 @@ export async function POST(req: Request) {
         // ========== ADD STYLE GUIDANCE ==========
         style: "illustration", // Force illustration style
         quality: "hd",
-        cfg_scale: 7.5, // Higher guidance scale for better prompt adherence
+        cfg_scale: 9.0, // Maximum guidance scale for strictest prompt adherence and text prevention
         // ========== END STYLE GUIDANCE ==========
       },
     };
