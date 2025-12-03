@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { buildMessages, defaultSampling } from "@/lib/generateArticle";
 import { createClient } from "@supabase/supabase-js";
 import { getUserArticleLimit } from "@/lib/articleLimits";
 
@@ -170,7 +171,7 @@ function extractImagePromptsFromContent(
   }
 
   // 4. Generic fallback prompts based on category
-  const category = determineCategory(keywords[0]);
+  const category = determineCategory(keywords[0]) as keyof typeof categoryPrompts;
   const categoryPrompts = {
     fitness:
       "Professional fitness illustration, active lifestyle, health and wellness, modern graphic style",
@@ -186,7 +187,7 @@ function extractImagePromptsFromContent(
       "Professional blog illustration, content creation, engaging visual concept",
   };
 
-  prompts.push(categoryPrompts[category] || categoryPrompts.general);
+  prompts.push(categoryPrompts[category] ?? categoryPrompts.general);
 
   // Ensure we have unique prompts
   return [...new Set(prompts)].slice(0, 4);
@@ -375,6 +376,15 @@ OG_DESCRIPTION: [Social media description 120-130 chars]`;
       );
     });
 
+    const messages = buildMessages({
+      topic: `SEO article with keywords: ${allKeywordsText}`,
+      audience: "general web readers",
+      words: Math.max(targetWordCount, 800),
+    });
+
+    // Append your strict formatting and requirements to the final user message
+    messages.push({ role: "user", content: prompt });
+
     const fetchPromise = fetch(
       "https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions",
       {
@@ -385,17 +395,11 @@ OG_DESCRIPTION: [Social media description 120-130 chars]`;
         },
         body: JSON.stringify({
           model: "qwen-plus",
-          messages: [
-            {
-              role: "system",
-              content: `You are an expert SEO content strategist specializing in long-form, comprehensive articles. Create detailed, well-researched blog posts of ${targetWordCount}+ words that naturally incorporate multiple keywords. Focus on depth, practical value, and natural keyword integration without keyword stuffing.`,
-            },
-            {
-              role: "user",
-              content: prompt,
-            },
-          ],
-          temperature: 0.7,
+          messages,
+          temperature: defaultSampling.temperature,
+          top_p: defaultSampling.top_p,
+          frequency_penalty: defaultSampling.frequency_penalty,
+          presence_penalty: defaultSampling.presence_penalty,
           max_tokens: 4500,
         }),
       }
