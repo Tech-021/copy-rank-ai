@@ -4,10 +4,11 @@ import { NextResponse } from "next/server";
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-     console.log("DEBUG: /api/image-generation incoming body:", JSON.stringify(body).slice(0, 1000));
-    const prompt = (body.prompt || "").toString().trim();
-    const size = (body.size || "1328*1328").toString(); // Use one of the allowed sizes
+    console.log("DEBUG: /api/image-generation incoming body:", JSON.stringify(body).slice(0, 1000));
+    let prompt = (body.prompt || "").toString().trim();
+    const size = (body.size || "1328*1328").toString();
     let n = Number.isFinite(body.n) ? Number(body.n) : Number(body.n || 1);
+    
     if (!prompt) {
       console.log("DEBUG: missing prompt");
       return NextResponse.json(
@@ -16,12 +17,21 @@ export async function POST(req: Request) {
       );
     }
 
-    // clamp n to reasonable bounds to avoid accidental abuse
+    // ========== ADD TEXT PREVENTION TO PROMPT ==========
+    console.log("🖼️ Original prompt:", prompt.substring(0, 200));
+    
+    // Add text prevention instructions to the prompt
+    const textPrevention = "NO TEXT, NO WORDS, NO LETTERS, NO HEADINGS, NO TYPOGRAPHY, NO WRITING, NO LOGOS WITH TEXT. Pure illustration only, no textual elements whatsoever. Image should be completely free of any written content.";
+    prompt = `${prompt}. ${textPrevention}`;
+    
+    console.log("🖼️ Enhanced prompt (no text):", prompt.substring(0, 250));
+    // ========== END TEXT PREVENTION ==========
+
+    // clamp n to reasonable bounds
     const MAX_N = 4;
     n = Math.max(1, Math.min(MAX_N, isNaN(n) ? 1 : Math.floor(n)));
 
-    // prefer explicit Dashscope key but fall back to QWEN key if that's what you have
-    const apiKey = process.env.QWEN_API_KEY || process.env.QWEN_API_KEY;
+    const apiKey = process.env.QWEN_API_KEY;
     if (!apiKey)
       return NextResponse.json(
         { error: "API key not configured" },
@@ -34,6 +44,7 @@ export async function POST(req: Request) {
     ).replace(/\/$/, "");
     const url = `${base}/services/aigc/multimodal-generation/generation`;
 
+    // ========== ENHANCED PARAMETERS ==========
     const payloadBase = {
       model: "qwen-image-plus",
       input: {
@@ -45,77 +56,91 @@ export async function POST(req: Request) {
         ],
       },
       parameters: {
-        negative_prompt: body.negative_prompt || "",
+        // ========== ADD NEGATIVE PROMPT ==========
+        negative_prompt: "text, words, letters, typography, writing, headings, titles, captions, logos with text, watermarks, signatures, written text, numbers, symbols, characters, fonts, calligraphy, written content, textual elements, infographic with text",
+        // ========== END NEGATIVE PROMPT ==========
         prompt_extend: body.prompt_extend ?? true,
         watermark: body.watermark ?? false,
         size,
+        // ========== ADD STYLE GUIDANCE ==========
+        style: "illustration", // Force illustration style
+        quality: "hd",
+        cfg_scale: 7.5, // Higher guidance scale for better prompt adherence
+        // ========== END STYLE GUIDANCE ==========
       },
     };
+
+    console.log("🖼️ Sending to Qwen with negative_prompt to prevent text");
+    // ========== END ENHANCED PARAMETERS ==========
 
     const images: string[] = [];
     const rawResponses: any[] = [];
 
-    // If n === 1, do single call. If n > 1, loop to request multiple images.
-    // ...existing code...
-for (let i = 0; i < n; i++) {
-  const resp = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify(payloadBase),
-  });
+    for (let i = 0; i < n; i++) {
+      const resp = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify(payloadBase),
+      });
 
-  console.log("DEBUG: provider response status:", resp.status, "ok:", resp.ok);
+      console.log("DEBUG: provider response status:", resp.status, "ok:", resp.ok);
 
-  if (!resp.ok) {
-    // provider returned non-2xx, capture body text for diagnostics
-    const text = await resp.text().catch(() => "<unable to read provider response>");
-    console.error(`DEBUG: provider error (status ${resp.status}):`, text.slice(0, 2000));
-    rawResponses.push({ status: resp.status, body: text });
-    return NextResponse.json(
-      { ok: false, status: resp.status, provider_body: text, rawResponses },
-      { status: resp.status }
-    );
-  }
+      if (!resp.ok) {
+        const text = await resp.text().catch(() => "<unable to read provider response>");
+        console.error(`DEBUG: provider error (status ${resp.status}):`, text.slice(0, 2000));
+        rawResponses.push({ status: resp.status, body: text });
+        return NextResponse.json(
+          { ok: false, status: resp.status, provider_body: text, rawResponses },
+          { status: resp.status }
+        );
+      }
 
-  // resp.ok -> try parse JSON and log its keys
-  let data;
-  try {
-    data = await resp.json();
-    console.log("DEBUG: provider OK response keys:", Object.keys(data));
-  } catch (parseErr) {
-    const text = await resp.text().catch(() => "<unable to read provider response>");
-    console.error("DEBUG: provider response not valid JSON. Text:", text.slice(0, 2000));
-    rawResponses.push({ status: resp.status, body: text });
-    return NextResponse.json({ ok: false, status: resp.status, provider_body: text, rawResponses }, { status: 500 });
-  }
+      let data;
+      try {
+        data = await resp.json();
+        console.log("DEBUG: provider OK response keys:", Object.keys(data));
+      } catch (parseErr) {
+        const text = await resp.text().catch(() => "<unable to read provider response>");
+        console.error("DEBUG: provider response not valid JSON. Text:", text.slice(0, 2000));
+        rawResponses.push({ status: resp.status, body: text });
+        return NextResponse.json({ ok: false, status: resp.status, provider_body: text, rawResponses }, { status: 500 });
+      }
 
-  rawResponses.push(data);
-  const choices = data?.output?.choices || [];
-  for (const choice of choices) {
-    const contentArr = choice?.message?.content || [];
-    for (const item of contentArr) {
-      if (item?.image) images.push(item.image);
+      rawResponses.push(data);
+      const choices = data?.output?.choices || [];
+      for (const choice of choices) {
+        const contentArr = choice?.message?.content || [];
+        for (const item of contentArr) {
+          if (item?.image) {
+            console.log(`✅ Generated image ${i + 1} (hopefully without text)`);
+            images.push(item.image);
+          }
+        }
+      }
+
+      if (images.length === 0 && i === 0) {
+        console.error("DEBUG: provider returned OK but no images in body:", JSON.stringify(data).slice(0, 1200));
+        return NextResponse.json(
+          { ok: false, message: "No images returned", raw: data },
+          { status: 500 }
+        );
+      }
     }
-  }
 
-  if (images.length === 0 && i === 0) {
-    console.error("DEBUG: provider returned OK but no images in body:", JSON.stringify(data).slice(0, 1200));
-    return NextResponse.json(
-      { ok: false, message: "No images returned", raw: data },
-      { status: 500 }
-    );
-  }
-}
-
-    return NextResponse.json({ ok: true, images, raw: rawResponses });
+    return NextResponse.json({ 
+      ok: true, 
+      images, 
+      raw: rawResponses,
+      message: `Generated ${images.length} images with text prevention` 
+    });
   } catch (err) {
+    console.error("💥 Image generation error:", err);
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Unknown error" },
       { status: 500 }
     );
   }
 }
-// ...existing code...

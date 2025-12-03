@@ -79,8 +79,14 @@ async function generateImagesForArticle(
 
     // Generate multiple images based on extracted prompts
     for (let i = 0; i < Math.min(count, imagePrompts.length); i++) {
-      const prompt = imagePrompts[i];
-      console.log(`📸 Generating image ${i + 1} with prompt: "${prompt}"`);
+      let prompt = imagePrompts[i];
+      
+      // ========== ADD TEXT PREVENTION ==========
+      // Add instructions to avoid text in images
+      prompt = `${prompt}. NO TEXT, NO WORDS, NO LETTERS, NO HEADINGS, NO TYPOGRAPHY, NO WRITING, NO LOGOS WITH TEXT. Pure illustration only, no textual elements.`;
+      // ========== END TEXT PREVENTION ==========
+      
+      console.log(`📸 Generating image ${i + 1} with prompt: "${prompt.substring(0, 100)}..."`);
 
       const imageResponse = await fetch(
         `${
@@ -93,8 +99,11 @@ async function generateImagesForArticle(
           },
           body: JSON.stringify({
             prompt: prompt,
-            size: "1328*1328", // CHANGE TO ALLOWED SIZE
+            size: "1328*1328",
             n: 1,
+            // ========== ADD NEGATIVE PROMPT ==========
+            negative_prompt: "text, words, letters, typography, writing, headings, titles, captions, logos with text, watermarks, signatures, written text, numbers, symbols, characters, fonts, calligraphy",
+            // ========== END NEGATIVE PROMPT ==========
           }),
         }
       );
