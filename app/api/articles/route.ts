@@ -6,6 +6,57 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+function buildArticleUrl(baseSiteUrl: string, slug: string): string {
+  const normalizedBase = baseSiteUrl.replace(/\/$/, "");
+  const basePath = process.env.ARTICLE_BASE_PATH || "/articles";
+  const normalizedPath = basePath.startsWith("/") ? basePath : `/${basePath}`;
+  return `${normalizedBase}${normalizedPath}/${slug}`;
+}
+
+async function pingIndexNow(urlList: string[], siteUrl: string) {
+  const key = process.env.INDEXNOW_KEY;
+  if (!key) {
+    console.warn("IndexNow: INDEXNOW_KEY missing; skipping ping");
+    return;
+  }
+
+  const keyLocation =
+    process.env.INDEXNOW_KEY_LOCATION ||
+    `${siteUrl.replace(/\/$/, "")}/${key}.txt`;
+
+  try {
+    const res = await fetch("https://api.indexnow.org/indexnow", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        host: new URL(siteUrl).host,
+        key,
+        keyLocation,
+        urlList,
+      }),
+    });
+
+    const text = await res.text();
+    if (!res.ok) {
+      console.warn("IndexNow ping failed", {
+        status: res.status,
+        statusText: res.statusText,
+        body: text,
+        urls: urlList,
+      });
+    } else {
+      console.log("IndexNow ping success", {
+        urls: urlList,
+        count: urlList.length,
+        status: res.status,
+        body: text,
+      });
+    }
+  } catch (err) {
+    console.warn("IndexNow ping error", err);
+  }
+}
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -255,6 +306,23 @@ export async function PATCH(request: Request) {
       "to status:",
       data.status
     );
+
+    // If article is published, ping IndexNow with the public URL and log results
+    if (data.status === "published" && data.slug) {
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXTAUTH_URL;
+      if (siteUrl) {
+        const articleUrl = buildArticleUrl(siteUrl, data.slug);
+        console.log("IndexNow: preparing to ping", {
+          articleId: data.id,
+          url: articleUrl,
+        });
+        await pingIndexNow([articleUrl], siteUrl);
+      } else {
+        console.warn("IndexNow: missing site URL env; skipping ping", {
+          articleId: data.id,
+        });
+      }
+    }
 
     return NextResponse.json({
       success: true,
