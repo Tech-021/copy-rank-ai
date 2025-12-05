@@ -512,6 +512,14 @@ OG_DESCRIPTION: [Social media description 120-130 chars]`;
       console.log("🖼️ Images generated:", generatedImages.length);
     }
 
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXTAUTH_URL;
+    if (siteUrl && savedArticle.slug) {
+      const articleUrl = buildArticleUrl(siteUrl, savedArticle.slug);
+      await pingIndexNow([articleUrl], siteUrl);
+    } else {
+      console.warn("⚠️ Skipping IndexNow ping: site URL or slug missing");
+    }
+
     return NextResponse.json({
       success: true,
       article: {
@@ -969,4 +977,44 @@ function generateRecommendations(article: EnhancedArticle): string[] {
   return recommendations.length > 0
     ? recommendations
     : ["Content is optimized and ready for immediate publishing!"];
+}
+
+function buildArticleUrl(baseSiteUrl: string, slug: string): string {
+  const normalizedBase = baseSiteUrl.replace(/\/$/, "");
+  const basePath = process.env.ARTICLE_BASE_PATH || "/articles";
+  const normalizedPath = basePath.startsWith("/") ? basePath : `/${basePath}`;
+  return `${normalizedBase}${normalizedPath}/${slug}`;
+}
+
+async function pingIndexNow(urlList: string[], siteUrl: string) {
+  const key = process.env.INDEXNOW_KEY;
+  if (!key) {
+    console.warn("⚠️ INDEXNOW_KEY missing; skipping IndexNow ping");
+    return;
+  }
+
+  const keyLocation =
+    process.env.INDEXNOW_KEY_LOCATION ||
+    `${siteUrl.replace(/\/$/, "")}/${key}.txt`;
+
+  try {
+    const res = await fetch("https://api.indexnow.org/indexnow", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        host: new URL(siteUrl).host,
+        key,
+        keyLocation,
+        urlList,
+      }),
+    });
+
+    if (!res.ok) {
+      console.warn("⚠️ IndexNow ping failed:", res.status, await res.text());
+    } else {
+      console.log("🔔 IndexNow pinged for URLs:", urlList);
+    }
+  } catch (err) {
+    console.warn("⚠️ IndexNow ping error:", err);
+  }
 }
