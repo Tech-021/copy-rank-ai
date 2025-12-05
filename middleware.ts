@@ -69,6 +69,7 @@ export async function middleware(request: NextRequest) {
     '/payment/callback', // Payment callback should also be public
     '/payment/fail', // Payment fail page should be public
     '/about-yourself', // Payment fail page should be public
+    '/articles',
     '/fonts',
     '/fav-icon.ico',
   ]
