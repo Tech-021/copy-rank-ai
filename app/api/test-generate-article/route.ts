@@ -783,16 +783,31 @@ function generateEnhancedMetadata(
 ): EnhancedArticle {
   const content = parsedData.content;
   const wordCount = content.split(/\s+/).length;
+  const titleCandidate =
+    extractMainTitle(content) ||
+    parsedData.metaTitle ||
+    parsedData.ogTitle ||
+    parsedData.twitterTitle ||
+    parsedData.title ||
+    keyword;
+  const title = titleCandidate;
+  const slugSource =
+    extractMainTitle(content) ||
+    parsedData.metaTitle ||
+    parsedData.ogTitle ||
+    parsedData.twitterTitle ||
+    parsedData.title ||
+    titleCandidate;
 
   return {
     // Core Content
-    title: extractMainTitle(content) || parsedData.metaTitle,
+    title,
     content: content,
 
     // SEO Metadata
     metaTitle: parsedData.metaTitle,
     metaDescription: parsedData.metaDescription,
-    slug: generateSlug(keyword),
+    slug: generateSlugFromTitle(slugSource),
     focusKeyword: keyword,
 
     // Content Analysis
@@ -846,9 +861,9 @@ function calculateContentScore(
 }
 
 // Metadata generation helpers
-function generateSlug(keyword: string): string {
-  return keyword
-    .toLowerCase()
+function generateSlugFromTitle(title: string): string {
+  const base = (title || "article").toLowerCase();
+  return base
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "")
     .substring(0, 60);
