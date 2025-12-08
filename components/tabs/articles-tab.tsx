@@ -42,7 +42,6 @@ import {
 import { getUser } from "@/lib/auth";
 import { getUserPackage } from "@/lib/articleLimits";
 import { createCheckout } from "@/lib/lemonSqueezy";
-import { useRouter } from "next/navigation";
 
 interface Article {
   id: string;
@@ -94,7 +93,17 @@ export function ArticlesTab({
     string | null
   >(null);
   const [isCreatingCheckout, setIsCreatingCheckout] = useState(false);
-  const router = useRouter();
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [editForm, setEditForm] = useState({
+    title: "",
+    keyword: "",
+    slug: "",
+    metaTitle: "",
+    metaDescription: "",
+    preview: "",
+    content: "",
+  });
 
   // Insert generated images between article paragraphs
   // Replace your existing renderContentWithImages function with this:
@@ -325,6 +334,20 @@ function renderContentWithImages(
     }
   }, [generatedArticles, onArticlesUpdate]);
 
+  const openEditDialog = (article: Article) => {
+    setSelectedArticle(article);
+    setEditForm({
+      title: article.title || "",
+      keyword: article.keyword || "",
+      slug: article.slug || "",
+      metaTitle: article.metaTitle || "",
+      metaDescription: article.metaDescription || "",
+      preview: article.preview || "",
+      content: article.content || "",
+    });
+    setIsEditDialogOpen(true);
+  };
+
   const handleGenerateArticle = async () => {
     if (!newArticleKeyword.trim() || !currentUser) return;
 
@@ -459,6 +482,54 @@ function renderContentWithImages(
       await fetchArticles();
     } finally {
       setUpdatingStatus(null);
+    }
+  };
+
+  const handleSaveEditedArticle = async () => {
+    if (!selectedArticle) {
+      alert("No article selected to edit");
+      return;
+    }
+    if (!currentUser) {
+      alert("Please log in to edit articles");
+      return;
+    }
+
+    setIsSavingEdit(true);
+
+    try {
+      const response = await fetch(`/api/articles?id=${selectedArticle.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: currentUser.id,
+          title: editForm.title,
+          keyword: editForm.keyword,
+          slug: editForm.slug,
+          metaTitle: editForm.metaTitle,
+          metaDescription: editForm.metaDescription,
+          preview: editForm.preview,
+          content: editForm.content,
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to update article");
+      }
+
+      await fetchArticles();
+      setIsEditDialogOpen(false);
+      setSelectedArticle(null);
+    } catch (error) {
+      console.error("Error updating article:", error);
+      alert(
+        `Failed to update article: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
+    } finally {
+      setIsSavingEdit(false);
     }
   };
 
@@ -923,6 +994,7 @@ function renderContentWithImages(
                       <Button
                         variant="outline"
                         className="cursor-pointer border-gray-300 hover:bg-gray-50 flex-1"
+                        onClick={() => openEditDialog(article)}
                       >
                         <Edit2 className="w-4 h-4 mr-2" />
                         Edit Article
@@ -986,6 +1058,140 @@ function renderContentWithImages(
   </div>
 </CardContent>
       </Card>
+
+      <Dialog
+        open={isEditDialogOpen}
+        onOpenChange={(open) => {
+          setIsEditDialogOpen(open);
+          if (!open) {
+            setSelectedArticle(null);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-[720px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Article</DialogTitle>
+            <DialogDescription>
+              Update the article content and SEO fields, then save your changes.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-foreground">Title</p>
+                <Input
+                  value={editForm.title}
+                  onChange={(e) =>
+                    setEditForm((prev) => ({ ...prev, title: e.target.value }))
+                  }
+                  placeholder="Article title"
+                />
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-foreground">Keyword</p>
+                <Input
+                  value={editForm.keyword}
+                  onChange={(e) =>
+                    setEditForm((prev) => ({ ...prev, keyword: e.target.value }))
+                  }
+                  placeholder="Focus keyword"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-foreground">Slug</p>
+                <Input
+                  value={editForm.slug}
+                  onChange={(e) =>
+                    setEditForm((prev) => ({ ...prev, slug: e.target.value }))
+                  }
+                  placeholder="my-article-slug"
+                />
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-foreground">Preview</p>
+                <textarea
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  rows={3}
+                  value={editForm.preview}
+                  onChange={(e) =>
+                    setEditForm((prev) => ({ ...prev, preview: e.target.value }))
+                  }
+                  placeholder="Short preview shown in listings"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-foreground">Meta Title</p>
+              <Input
+                value={editForm.metaTitle}
+                onChange={(e) =>
+                  setEditForm((prev) => ({ ...prev, metaTitle: e.target.value }))
+                }
+                placeholder="SEO meta title"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-foreground">Meta Description</p>
+              <textarea
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                rows={3}
+                value={editForm.metaDescription}
+                onChange={(e) =>
+                  setEditForm((prev) => ({
+                    ...prev,
+                    metaDescription: e.target.value,
+                  }))
+                }
+                placeholder="SEO meta description"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-foreground">Content (HTML)</p>
+              <textarea
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                rows={10}
+                value={editForm.content}
+                onChange={(e) =>
+                  setEditForm((prev) => ({ ...prev, content: e.target.value }))
+                }
+                placeholder="Article content in HTML"
+              />
+              <p className="text-xs text-muted-foreground">
+                Rich text is stored as HTML. Make sure headings, lists, and paragraphs are valid markup.
+              </p>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsEditDialogOpen(false);
+                  setSelectedArticle(null);
+                }}
+                disabled={isSavingEdit}
+              >
+                Cancel
+              </Button>
+              <Button onClick={handleSaveEditedArticle} disabled={isSavingEdit}>
+                {isSavingEdit ? (
+                  <span className="flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" /> Saving...
+                  </span>
+                ) : (
+                  "Save Changes"
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
