@@ -42,8 +42,12 @@ async function pingIndexNow(urlList: string[], siteUrl: string) {
       statusText: res.statusText,
       body: text,
       urls: urlList,
+      keyLocation,
     });
-    throw new Error(`IndexNow failed: ${res.status} ${res.statusText}`);
+    // Don't throw - log the error but continue
+    // This allows articles to publish even if IndexNow fails
+    // (usually due to domain verification not being complete)
+    return { success: false, status: res.status, error: text };
   }
 
   console.log("IndexNow ping success", {
