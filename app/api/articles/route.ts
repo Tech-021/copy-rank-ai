@@ -13,6 +13,14 @@ function buildArticleUrl(baseSiteUrl: string, slug: string): string {
   return `${normalizedBase}${normalizedPath}/${slug}`;
 }
 
+function slugifyTitle(title: string): string {
+  return (title || "article")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "")
+    .substring(0, 60);
+}
+
 async function pingIndexNow(urlList: string[], siteUrl: string) {
   const key = process.env.INDEXNOW_KEY;
   if (!key) {
@@ -228,6 +236,7 @@ export async function PATCH(request: Request) {
       slug,
       keyword,
       preview,
+      autoSlugFromTitle,
     } = body;
 
     console.log(
@@ -294,6 +303,15 @@ export async function PATCH(request: Request) {
     if (slug !== undefined) updateData.slug = slug;
     if (keyword !== undefined) updateData.keyword = keyword;
     if (preview !== undefined) updateData.preview = preview;
+
+    // Auto-generate slug from title when requested
+    if (autoSlugFromTitle === true && title) {
+      // Force regenerate even if a slug was provided
+      updateData.slug = slugifyTitle(title);
+    } else if (!slug && title && autoSlugFromTitle !== false) {
+      // Default to title-based slug when none provided
+      updateData.slug = slugifyTitle(title);
+    }
 
     // Add published_at if publishing for the first time
     if (status === "published") {
