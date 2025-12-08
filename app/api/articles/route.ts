@@ -218,7 +218,17 @@ export async function PATCH(request: Request) {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
     const body = await request.json();
-    const { status, userId } = body;
+    const {
+      status,
+      userId,
+      title,
+      content,
+      metaTitle,
+      metaDescription,
+      slug,
+      keyword,
+      preview,
+    } = body;
 
     console.log(
       "PATCH Request - ID:",
@@ -247,10 +257,21 @@ export async function PATCH(request: Request) {
       );
     }
 
-    if (!status) {
+    const hasStatusUpdate = typeof status === "string" && status.length > 0;
+    const hasFieldUpdates = [
+      title,
+      content,
+      metaTitle,
+      metaDescription,
+      slug,
+      keyword,
+      preview,
+    ].some((v) => v !== undefined);
+
+    if (!hasStatusUpdate && !hasFieldUpdates) {
       return NextResponse.json(
         {
-          error: "Status is required",
+          error: "No update fields provided",
         },
         { status: 400 }
       );
@@ -258,9 +279,21 @@ export async function PATCH(request: Request) {
 
     // Prepare update data
     const updateData: any = {
-      status: status,
       updated_at: new Date().toISOString(),
     };
+
+    if (hasStatusUpdate) {
+      updateData.status = status;
+    }
+
+    if (title !== undefined) updateData.title = title;
+    if (content !== undefined) updateData.content = content;
+    if (metaTitle !== undefined) updateData.meta_title = metaTitle;
+    if (metaDescription !== undefined)
+      updateData.meta_description = metaDescription;
+    if (slug !== undefined) updateData.slug = slug;
+    if (keyword !== undefined) updateData.keyword = keyword;
+    if (preview !== undefined) updateData.preview = preview;
 
     // Add published_at if publishing for the first time
     if (status === "published") {
