@@ -13,6 +13,14 @@ function buildArticleUrl(baseSiteUrl: string, slug: string): string {
   return `${normalizedBase}${normalizedPath}/${slug}`;
 }
 
+function slugifyTitle(title: string): string {
+  return (title || "article")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "")
+    .substring(0, 60);
+}
+
 async function pingIndexNow(urlList: string[], siteUrl: string) {
   const key = process.env.INDEXNOW_KEY;
   if (!key) {
@@ -218,7 +226,18 @@ export async function PATCH(request: Request) {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
     const body = await request.json();
-    const { status, userId } = body;
+    const {
+      status,
+      userId,
+      title,
+      content,
+      metaTitle,
+      metaDescription,
+      slug,
+      keyword,
+      preview,
+      autoSlugFromTitle,
+    } = body;
 
     console.log(
       "PATCH Request - ID:",
@@ -247,10 +266,21 @@ export async function PATCH(request: Request) {
       );
     }
 
-    if (!status) {
+    const hasStatusUpdate = typeof status === "string" && status.length > 0;
+    const hasFieldUpdates = [
+      title,
+      content,
+      metaTitle,
+      metaDescription,
+      slug,
+      keyword,
+      preview,
+    ].some((v) => v !== undefined);
+
+    if (!hasStatusUpdate && !hasFieldUpdates) {
       return NextResponse.json(
         {
-          error: "Status is required",
+          error: "No update fields provided",
         },
         { status: 400 }
       );
@@ -258,9 +288,30 @@ export async function PATCH(request: Request) {
 
     // Prepare update data
     const updateData: any = {
-      status: status,
       updated_at: new Date().toISOString(),
     };
+
+    if (hasStatusUpdate) {
+      updateData.status = status;
+    }
+
+    if (title !== undefined) updateData.title = title;
+    if (content !== undefined) updateData.content = content;
+    if (metaTitle !== undefined) updateData.meta_title = metaTitle;
+    if (metaDescription !== undefined)
+      updateData.meta_description = metaDescription;
+    if (slug !== undefined) updateData.slug = slug;
+    if (keyword !== undefined) updateData.keyword = keyword;
+    if (preview !== undefined) updateData.preview = preview;
+
+    // Auto-generate slug from title when requested
+    if (autoSlugFromTitle === true && title) {
+      // Force regenerate even if a slug was provided
+      updateData.slug = slugifyTitle(title);
+    } else if (!slug && title && autoSlugFromTitle !== false) {
+      // Default to title-based slug when none provided
+      updateData.slug = slugifyTitle(title);
+    }
 
     // Add published_at if publishing for the first time
     if (status === "published") {
