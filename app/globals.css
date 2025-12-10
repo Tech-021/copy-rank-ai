@@ -24,6 +24,20 @@
   font-style: normal;
 }
 
+@font-face {
+  font-family: 'ABeeZee';
+  src: url('/fonts/ABeeZee/ABeeZee-Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Manrope';
+  src: url('/fonts/Manrope/static/Manrope-Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
 body h1 {
   font-family: 'Space_Grotesk'!important ;
 }
@@ -156,4 +170,12 @@ body {
   body {
     @apply bg-background text-foreground;
   }
+}
+
+.dialog h1 {
+  font-family: 'ABeeZee'!important;
+}
+
+.dialog {
+  font-family: 'Manrope'!important;
 }
