@@ -5,6 +5,8 @@ import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ChevronLeft } from "lucide-react";
+import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "@/components/ui/dialog";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 export default function Dialog1() {
   const [tab, setTab] = useState("tab1");
@@ -17,9 +19,15 @@ export default function Dialog1() {
   const [keyword3, setKeyword3] = useState("");
 
   return (
-    <div className="dialog flex gap-[100px] ">
+    <Dialog>
+      <DialogTrigger>Open</DialogTrigger>
+      <DialogContent className="min-w-[1200px] px-0 py-0 ">
+        <VisuallyHidden>
+          <DialogTitle></DialogTitle>
+        </VisuallyHidden>
+    <div className="dialog flex gap-[60px] w-full">
       {/* Left section */}
-      <div className="relative w-[500px] h-[780px] bg-[linear-gradient(to_top,rgb(31,135,61)_0%,rgb(44,162,74)_100%)] overflow-hidden p-10 flex flex-col gap-10">
+      <div className="relative w-[500px] h-[780px] bg-[linear-gradient(to_top,rgb(31,135,61)_0%,rgb(44,162,74)_100%)] overflow-hidden p-10 flex flex-col gap-10 rounded-l-lg">
         <div>
           <Image src="/dialog_logo.png" alt="" width={50} height={50} />
         </div>
@@ -39,7 +47,7 @@ export default function Dialog1() {
             alt=""
             width={650}
             height={420}
-            className="absolute -right-40 -bottom-58"
+            className="absolute -right-40 -bottom-64"
           />
         </div>
         <Image
@@ -47,7 +55,7 @@ export default function Dialog1() {
           alt=""
           width={968}
           height={558}
-          className="absolute top-92 left-0"
+          className="absolute top-100 left-0"
         />
         <Image
           src="/line2.png"
@@ -66,7 +74,7 @@ export default function Dialog1() {
       </div>
       {/* Right section */}
       <div className="py-10 pr-10 flex flex-col gap-[140px] w-[700px]">
-        <div className="w-full text-right ">
+        <div className="w-[600px] text-right">
           <p className="text-[15px] font-normal text-[#00000080]">
             Having troubles?{" "}
             <span className="text-[#5baf57] font-normal cursor-pointer">
@@ -75,7 +83,7 @@ export default function Dialog1() {
           </p>
         </div>
         {tab === "tab1" && (
-          <div>
+          <div className="flex flex-col gap-60">
             <div className="flex flex-col gap-[30px]">
               <div>
                 <h1 className="text-[#000000B3] text-lg font-normal">
@@ -100,7 +108,7 @@ export default function Dialog1() {
               <div>
                 <button
                   onClick={() => setTab("tab2")}
-                  className="bg-[#5baf57] border border-[#0000001a] text-white px-[60px] py-1 w-[170px] h-[50px] rounded-[10px]"
+                  className="bg-[#5baf57] border border-[#0000001a] text-white px-[60px] py-1 w-[170px] h-[50px] rounded-[10px] cursor-pointer"
                 >
                   Next
                 </button>
@@ -108,6 +116,12 @@ export default function Dialog1() {
               <div>
                 <p className="text-sm text-[#0000004D] font-normal">1 of 3</p>
               </div>
+            </div>
+            <div>
+                <button
+                // onClick={() => setTab('tab2')}
+                className="flex text-[#000000b3] text-[15px] items-center cursor-pointer"
+                ><ChevronLeft />Back</button>
             </div>
           </div>
         )}
@@ -151,7 +165,7 @@ export default function Dialog1() {
               <div>
                 <button
                   onClick={() => setTab("tab3")}
-                  className="bg-[#5baf57] border border-[#0000001a] text-white px-[60px] py-1 w-[170px] h-[50px] rounded-[10px]"
+                  className="bg-[#5baf57] border border-[#0000001a] text-white px-[60px] py-1 w-[170px] h-[50px] rounded-[10px] cursor-pointer"
                 >
                   Next
                 </button>
@@ -163,7 +177,7 @@ export default function Dialog1() {
             <div>
                 <button
                 onClick={() => setTab('tab1')}
-                className="flex text-[#000000b3] text-[15px] items-center"
+                className="flex text-[#000000b3] text-[15px] items-center cursor-pointer"
                 ><ChevronLeft />Back</button>
             </div>
           </div>
@@ -208,7 +222,7 @@ export default function Dialog1() {
               <div>
                 <button
                   onClick={() => setTab("tab3")}
-                  className="bg-[#5baf57] border border-[#0000001a] text-white px-[60px] py-1 w-[170px] h-[50px] rounded-[10px]"
+                  className="bg-[#5baf57] border border-[#0000001a] text-white px-[60px] py-1 w-[170px] h-[50px] rounded-[10px] cursor-pointer"
                 >
                   Submit
                 </button>
@@ -220,12 +234,14 @@ export default function Dialog1() {
             <div>
                 <button
                 onClick={() => setTab('tab2')}
-                className="flex text-[#000000b3] text-[15px] items-center"
+                className="flex text-[#000000b3] text-[15px] items-center cursor-pointer"
                 ><ChevronLeft />Back</button>
             </div>
           </div>
         )}
       </div>
     </div>
+    </DialogContent>
+    </Dialog>
   );
 }
