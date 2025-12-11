@@ -239,12 +239,12 @@ export async function POST(request: Request) {
         console.log(`🔍 Fetching keywords for topic: ${competitorTopic}`);
         const rawKeywords = await fetchKeywordsFromDataForSEO(competitorTopic);
 
-        // Apply filters: 100-500 volume, competition ≤0.3
+        // Apply filters: 100-10000 volume, competition ≤0.3
         const filteredKeywords = filterKeywords(
           rawKeywords,
           70, // maxDifficulty
           100, // minVolume
-          500, // maxVolume
+          10000, // maxVolume (increased from 500)
           0.3 // maxCompetition (low competition)
         );
 
@@ -337,7 +337,7 @@ export async function POST(request: Request) {
     // STEP 4: Sort by search volume (highest first) and limit
     const finalKeywords = uniqueKeywords
       .sort((a, b) => b.search_volume - a.search_volume)
-      .slice(0, 50); // Limit to top 50 keywords
+      .slice(0, 100); // Limit to top 100 keywords (increased from 50)
 
     console.log(`✅ Final keyword count: ${finalKeywords.length}`);
     console.log(
