@@ -1,20 +1,33 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Switch } from "@/components/ui/switch"
-import { Copy, Check, AlertCircle, Loader2, Eye, EyeOff } from "lucide-react"
-import { getUser, updatePassword } from "@/lib/auth"
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Copy, Check, AlertCircle, Loader2, Eye, EyeOff } from "lucide-react";
+import { getUser, updatePassword } from "@/lib/auth";
+import Image from "next/image";
 
 export function SettingsTab() {
   // Mock states (keep as is for other sections)
-  const [apiKey, setApiKey] = useState("sk_live_51234567890abcdefghijklmnop")
-  const [showApiKey, setShowApiKey] = useState(false)
-  const [copiedApiKey, setCopiedApiKey] = useState(false)
+  const [apiKey, setApiKey] = useState("sk_live_51234567890abcdefghijklmnop");
+  const [showApiKey, setShowApiKey] = useState(false);
+  const [copiedApiKey, setCopiedApiKey] = useState(false);
   const [mockSettings, setMockSettings] = useState({
     articlesPerMonth: "30",
     publishingSchedule: "daily",
@@ -22,108 +35,127 @@ export function SettingsTab() {
     emailNotifications: true,
     weeklyReport: true,
     aiModel: "qwen-turbo",
-  })
+  });
 
   // Real states for account section
-  const [currentUser, setCurrentUser] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
-  
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
   // Password change states
-  const [changingPassword, setChangingPassword] = useState(false)
-  const [showChangePassword, setShowChangePassword] = useState(false)
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
   const [passwordData, setPasswordData] = useState({
     currentPassword: "",
     newPassword: "",
-    confirmPassword: ""
-  })
+    confirmPassword: "",
+  });
   const [showPasswords, setShowPasswords] = useState({
     current: false,
     new: false,
-    confirm: false
-  })
-  const [passwordMessage, setPasswordMessage] = useState({ type: "", text: "" })
+    confirm: false,
+  });
+  const [passwordMessage, setPasswordMessage] = useState({
+    type: "",
+    text: "",
+  });
 
   // Get current user on component mount
   useEffect(() => {
     const getCurrentUser = async () => {
-      const { data: user } = await getUser()
-      setCurrentUser(user)
-      setLoading(false)
-    }
-    getCurrentUser()
-  }, [])
+      const { data: user } = await getUser();
+      setCurrentUser(user);
+      setLoading(false);
+    };
+    getCurrentUser();
+  }, []);
 
   // Handle password change
   const handlePasswordChange = async () => {
     if (!passwordData.newPassword || !passwordData.confirmPassword) {
-      setPasswordMessage({ type: "error", text: "Please fill in all password fields" })
-      return
+      setPasswordMessage({
+        type: "error",
+        text: "Please fill in all password fields",
+      });
+      return;
     }
 
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      setPasswordMessage({ type: "error", text: "New passwords do not match" })
-      return
+      setPasswordMessage({ type: "error", text: "New passwords do not match" });
+      return;
     }
 
     if (passwordData.newPassword.length < 6) {
-      setPasswordMessage({ type: "error", text: "Password must be at least 6 characters" })
-      return
+      setPasswordMessage({
+        type: "error",
+        text: "Password must be at least 6 characters",
+      });
+      return;
     }
 
     try {
-      setChangingPassword(true)
-      setPasswordMessage({ type: "", text: "" })
+      setChangingPassword(true);
+      setPasswordMessage({ type: "", text: "" });
 
       // Use your existing updatePassword function from auth.ts
-      const { data, error } = await updatePassword(passwordData.newPassword)
+      const { data, error } = await updatePassword(passwordData.newPassword);
 
       if (error) {
-        setPasswordMessage({ type: "error", text: error.message || "Failed to update password" })
-        return
+        setPasswordMessage({
+          type: "error",
+          text: error.message || "Failed to update password",
+        });
+        return;
       }
 
-      setPasswordMessage({ type: "success", text: "Password updated successfully!" })
-      
+      setPasswordMessage({
+        type: "success",
+        text: "Password updated successfully!",
+      });
+
       // Reset form
       setPasswordData({
         currentPassword: "",
         newPassword: "",
-        confirmPassword: ""
-      })
-      setShowChangePassword(false)
-      
+        confirmPassword: "",
+      });
+      setShowChangePassword(false);
     } catch (error) {
-      setPasswordMessage({ type: "error", text: "An unexpected error occurred" })
+      setPasswordMessage({
+        type: "error",
+        text: "An unexpected error occurred",
+      });
     } finally {
-      setChangingPassword(false)
+      setChangingPassword(false);
     }
-  }
+  };
 
   // Mock handlers (keep as is)
   const handleCopyApiKey = () => {
-    navigator.clipboard.writeText(apiKey)
-    setCopiedApiKey(true)
-    setTimeout(() => setCopiedApiKey(false), 2000)
-  }
+    navigator.clipboard.writeText(apiKey);
+    setCopiedApiKey(true);
+    setTimeout(() => setCopiedApiKey(false), 2000);
+  };
 
   const handleMockSettingChange = (key: string, value: string | boolean) => {
-    setMockSettings((prev) => ({ ...prev, [key]: value }))
-  }
+    setMockSettings((prev) => ({ ...prev, [key]: value }));
+  };
 
   const maskApiKey = (key: string) => {
-    const visible = key.slice(-8)
-    return `${"*".repeat(key.length - 8)}${visible}`
-  }
+    const visible = key.slice(-8);
+    return `${"*".repeat(key.length - 8)}${visible}`;
+  };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-primary" />
+          <div className="animate-spin">
+            <Image src="/loader.png" alt="" width={92} height={92} />
+          </div>
           <p className="text-muted-foreground">Loading settings...</p>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -137,18 +169,26 @@ export function SettingsTab() {
         <CardContent className="space-y-6">
           <div className="grid md:grid-cols-2 gap-6">
             <div>
-              <label className="text-sm font-medium text-foreground">Email Address</label>
-              <Input 
-                type="email" 
-                value={currentUser?.email || "Loading..."} 
-                disabled 
-                className="mt-1 bg-input border-border/40" 
+              <label className="text-sm font-medium text-foreground">
+                Email Address
+              </label>
+              <Input
+                type="email"
+                value={currentUser?.email || "Loading..."}
+                disabled
+                className="mt-1 bg-input border-border/40"
               />
             </div>
             <div>
-              <label className="text-sm font-medium text-foreground">Account Plan</label>
+              <label className="text-sm font-medium text-foreground">
+                Account Plan
+              </label>
               <div className="mt-1 flex items-center gap-2">
-                <Input value="Free Plan" disabled className="bg-input border-border/40" />
+                <Input
+                  value="Free Plan"
+                  disabled
+                  className="bg-input border-border/40"
+                />
                 <Badge className="bg-green-100 text-green-700">Active</Badge>
               </div>
             </div>
@@ -157,8 +197,8 @@ export function SettingsTab() {
           {/* Password Change Section */}
           <div className="pt-4 border-t border-border/40">
             {!showChangePassword ? (
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className="cursor-pointer border-border/40 bg-transparent"
                 onClick={() => setShowChangePassword(true)}
               >
@@ -168,12 +208,19 @@ export function SettingsTab() {
               <div className="space-y-4">
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm font-medium text-foreground">New Password</label>
+                    <label className="text-sm font-medium text-foreground">
+                      New Password
+                    </label>
                     <div className="relative mt-1">
                       <Input
                         type={showPasswords.new ? "text" : "password"}
                         value={passwordData.newPassword}
-                        onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
+                        onChange={(e) =>
+                          setPasswordData((prev) => ({
+                            ...prev,
+                            newPassword: e.target.value,
+                          }))
+                        }
                         placeholder="Enter new password"
                         className="bg-input border-border/40 pr-10"
                       />
@@ -182,7 +229,12 @@ export function SettingsTab() {
                         variant="ghost"
                         size="sm"
                         className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                        onClick={() => setShowPasswords(prev => ({ ...prev, new: !prev.new }))}
+                        onClick={() =>
+                          setShowPasswords((prev) => ({
+                            ...prev,
+                            new: !prev.new,
+                          }))
+                        }
                       >
                         {showPasswords.new ? (
                           <EyeOff className="h-4 w-4" />
@@ -194,12 +246,19 @@ export function SettingsTab() {
                   </div>
 
                   <div>
-                    <label className="text-sm font-medium text-foreground">Confirm Password</label>
+                    <label className="text-sm font-medium text-foreground">
+                      Confirm Password
+                    </label>
                     <div className="relative mt-1">
                       <Input
                         type={showPasswords.confirm ? "text" : "password"}
                         value={passwordData.confirmPassword}
-                        onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                        onChange={(e) =>
+                          setPasswordData((prev) => ({
+                            ...prev,
+                            confirmPassword: e.target.value,
+                          }))
+                        }
                         placeholder="Confirm new password"
                         className="bg-input border-border/40 pr-10"
                       />
@@ -208,7 +267,12 @@ export function SettingsTab() {
                         variant="ghost"
                         size="sm"
                         className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                        onClick={() => setShowPasswords(prev => ({ ...prev, confirm: !prev.confirm }))}
+                        onClick={() =>
+                          setShowPasswords((prev) => ({
+                            ...prev,
+                            confirm: !prev.confirm,
+                          }))
+                        }
                       >
                         {showPasswords.confirm ? (
                           <EyeOff className="h-4 w-4" />
@@ -221,11 +285,13 @@ export function SettingsTab() {
                 </div>
 
                 {passwordMessage.text && (
-                  <div className={`p-3 rounded-lg text-sm ${
-                    passwordMessage.type === "error" 
-                      ? "bg-red-50 text-red-800 border border-red-200" 
-                      : "bg-green-50 text-green-800 border border-green-200"
-                  }`}>
+                  <div
+                    className={`p-3 rounded-lg text-sm ${
+                      passwordMessage.type === "error"
+                        ? "bg-red-50 text-red-800 border border-red-200"
+                        : "bg-green-50 text-green-800 border border-green-200"
+                    }`}
+                  >
                     {passwordMessage.text}
                   </div>
                 )}
@@ -238,7 +304,14 @@ export function SettingsTab() {
                   >
                     {changingPassword ? (
                       <>
-                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                        <div className="animate-spin">
+                          <Image
+                            src="/loader.png"
+                            alt=""
+                            width={92}
+                            height={92}
+                          />
+                        </div>
                         Updating...
                       </>
                     ) : (
@@ -248,13 +321,13 @@ export function SettingsTab() {
                   <Button
                     variant="outline"
                     onClick={() => {
-                      setShowChangePassword(false)
-                      setPasswordMessage({ type: "", text: "" })
+                      setShowChangePassword(false);
+                      setPasswordMessage({ type: "", text: "" });
                       setPasswordData({
                         currentPassword: "",
                         newPassword: "",
-                        confirmPassword: ""
-                      })
+                        confirmPassword: "",
+                      });
                     }}
                     className="cursor-pointer border-border/40 bg-transparent"
                   >
@@ -272,11 +345,15 @@ export function SettingsTab() {
       <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
         <CardHeader>
           <CardTitle>API Configuration</CardTitle>
-          <CardDescription>Manage your API keys for integrations</CardDescription>
+          <CardDescription>
+            Manage your API keys for integrations
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <label className="text-sm font-medium text-foreground">API Key</label>
+            <label className="text-sm font-medium text-foreground">
+              API Key
+            </label>
             <div className="mt-1 flex gap-2">
               <Input
                 type={showApiKey ? "text" : "password"}
@@ -312,12 +389,16 @@ export function SettingsTab() {
               </Button>
             </div>
             <p className="text-xs text-muted-foreground mt-2">
-              Keep this key secret. Never share it publicly or commit it to version control.
+              Keep this key secret. Never share it publicly or commit it to
+              version control.
             </p>
           </div>
 
           <div className="pt-4 border-t border-border/40">
-            <Button variant="outline" className="cursor-pointer border-border/40 bg-transparent">
+            <Button
+              variant="outline"
+              className="cursor-pointer border-border/40 bg-transparent"
+            >
               Regenerate API Key
             </Button>
           </div>
@@ -328,15 +409,21 @@ export function SettingsTab() {
       <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
         <CardHeader>
           <CardTitle>Content Generation</CardTitle>
-          <CardDescription>Configure how articles are generated and published</CardDescription>
+          <CardDescription>
+            Configure how articles are generated and published
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid md:grid-cols-2 gap-6">
             <div>
-              <label className="text-sm font-medium text-foreground">Articles Per Month</label>
+              <label className="text-sm font-medium text-foreground">
+                Articles Per Month
+              </label>
               <Select
                 value={mockSettings.articlesPerMonth}
-                onValueChange={(value) => handleMockSettingChange("articlesPerMonth", value)}
+                onValueChange={(value) =>
+                  handleMockSettingChange("articlesPerMonth", value)
+                }
               >
                 <SelectTrigger className="mt-1 bg-input border-border/40">
                   <SelectValue />
@@ -370,17 +457,23 @@ export function SettingsTab() {
             </div> */}
 
             <div>
-              <label className="text-sm font-medium text-foreground">Publishing Schedule</label>
+              <label className="text-sm font-medium text-foreground">
+                Publishing Schedule
+              </label>
               <Select
                 value={mockSettings.publishingSchedule}
-                onValueChange={(value) => handleMockSettingChange("publishingSchedule", value)}
+                onValueChange={(value) =>
+                  handleMockSettingChange("publishingSchedule", value)
+                }
               >
                 <SelectTrigger className="mt-1 bg-input border-border/40">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="daily">Daily</SelectItem>
-                  <SelectItem value="every-other-day">Every Other Day</SelectItem>
+                  <SelectItem value="every-other-day">
+                    Every Other Day
+                  </SelectItem>
                   <SelectItem value="weekly">Weekly</SelectItem>
                   <SelectItem value="manual">Manual</SelectItem>
                 </SelectContent>
@@ -388,13 +481,19 @@ export function SettingsTab() {
             </div>
 
             <div>
-              <label className="text-sm font-medium text-foreground">Auto-Publish</label>
+              <label className="text-sm font-medium text-foreground">
+                Auto-Publish
+              </label>
               <div className="mt-1 flex items-center gap-3 p-3 rounded-lg border border-border/40 bg-muted/20">
                 <Switch
                   checked={mockSettings.autoPublish}
-                  onCheckedChange={(value) => handleMockSettingChange("autoPublish", value)}
+                  onCheckedChange={(value) =>
+                    handleMockSettingChange("autoPublish", value)
+                  }
                 />
-                <span className="text-sm text-muted-foreground">{mockSettings.autoPublish ? "Enabled" : "Disabled"}</span>
+                <span className="text-sm text-muted-foreground">
+                  {mockSettings.autoPublish ? "Enabled" : "Disabled"}
+                </span>
               </div>
             </div>
           </div>
@@ -404,7 +503,8 @@ export function SettingsTab() {
             <div className="text-sm text-yellow-800">
               <p className="font-medium">Auto-publish is disabled by default</p>
               <p className="text-xs mt-1">
-                Enable this only if you want articles to be automatically published without review.
+                Enable this only if you want articles to be automatically
+                published without review.
               </p>
             </div>
           </div>
@@ -499,5 +599,5 @@ export function SettingsTab() {
         </CardContent>
       </Card> */}
     </div>
-  )
+  );
 }
