@@ -693,7 +693,6 @@ export function ArticlesTab({
           <div className="animate-spin">
             <Image src="/loader.png" alt="" width={92} height={92} />
           </div>
-          <p className="text-muted-foreground">Loading articles...</p>
         </div>
       </div>
     );
