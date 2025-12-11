@@ -133,6 +133,42 @@ export function AnalyzeTab({
     }
   };
 
+const validateTab1 = () => {
+  if (!websiteName.trim()) {
+    toast.showToast({
+      title: "Missing Website URL",
+      description: "Please enter your website URL to continue.",
+      type: "error",
+    });
+    return false;
+  }
+  return true;
+};
+
+const validateTab2 = () => {
+  if (!competitor1.trim() || !competitor2.trim() || !competitor3.trim()) {
+    toast.showToast({
+      title: "Missing Competitors",
+      description: "Please enter all 3 competitors to continue.",
+      type: "error",
+    });
+    return false;
+  }
+  return true;
+};
+
+const validateTab3 = () => {
+  if (!keyword1.trim() || !keyword2.trim() || !keyword3.trim()) {
+    toast.showToast({
+      title: "Missing Keywords",
+      description: "Please enter all 3 keywords before submitting.",
+      type: "error",
+    });
+    return false;
+  }
+  return true;
+};
+
   const handleSubmitOnboarding = async () => {
     setIsSubmitting(true);
 
@@ -223,7 +259,6 @@ export function AnalyzeTab({
         </CardHeader>
         <CardContent>
           <Button
-            onClick={() => setIsDialogOpen(true)}
             className="cursor-pointer bg-primary hover:bg-primary/90 text-primary-foreground gap-2"
           >
             Add Your Website
@@ -318,7 +353,10 @@ export function AnalyzeTab({
               </div>
               <div>
                 <button
-                  onClick={() => setTab("tab2")}
+                  onClick={() => {
+                    if(validateTab1())
+                    setTab("tab2")
+                  }}
                   className="bg-[#5baf57] border border-[#0000001a] text-white px-[60px] py-1 w-[170px] h-[50px] rounded-[10px] cursor-pointer"
                 >
                   Next
@@ -375,7 +413,10 @@ export function AnalyzeTab({
               </div>
               <div>
                 <button
-                  onClick={() => setTab("tab3")}
+                  onClick={() => {
+                    if (validateTab2())
+                    setTab("tab3")
+                  }}
                   className="bg-[#5baf57] border border-[#0000001a] text-white px-[60px] py-1 w-[170px] h-[50px] rounded-[10px] cursor-pointer"
                 >
                   Next
@@ -432,10 +473,18 @@ export function AnalyzeTab({
               </div>
               <div>
                 <button
-                  onClick={() => setTab("tab3")}
+                  onClick={() => {
+                    if (validateTab3())
+                    handleSubmitOnboarding}}
+                  disabled={!canProceed || isSubmitting}
                   className="bg-[#5baf57] border border-[#0000001a] text-white px-[60px] py-1 w-[170px] h-[50px] rounded-[10px] cursor-pointer"
                 >
-                  Submit
+                  {isSubmitting ? (
+                    <div className="flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Setting up...
+                  </div>
+                  ) : ("Submit")}
                 </button>
               </div>
               <div>
