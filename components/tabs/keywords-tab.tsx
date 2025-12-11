@@ -202,10 +202,55 @@ export function KeywordsTab({ websiteId: initialWebsiteId, onArticlesGenerated }
         keywordsArray = [];
       }
 
-      setKeywords(keywordsArray)
+      // Fetch 4-5 additional related keywords from API
+      if (data.website?.topic && keywordsArray.length > 0) {
+        try {
+          console.log(`📊 Fetching 4-5 additional related keywords for topic: ${data.website.topic}`)
+          
+          const relatedResponse = await fetch('/api/keyword', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              topic: data.website.topic,
+              websiteUrl: data.website.url,
+              maxDifficulty: 60,
+              minVolume: 100,
+              maxVolume: 5000,
+              limit: 5
+            })
+          })
+
+          if (relatedResponse.ok) {
+            const relatedData = await relatedResponse.json()
+            
+            if (relatedData.success && Array.isArray(relatedData.keywords)) {
+              // Filter out duplicates
+              const newKeywords = relatedData.keywords.filter(
+                (newKw: any) => !keywordsArray.some(
+                  (existing: any) => existing.keyword.toLowerCase() === newKw.keyword.toLowerCase()
+                )
+              ).slice(0, 5)
+              
+              const combinedKeywords = [...keywordsArray, ...newKeywords]
+              setKeywords(combinedKeywords)
+              console.log(`✅ Added ${newKeywords.length} related keywords - Total: ${combinedKeywords.length}`)
+            } else {
+              setKeywords(keywordsArray)
+            }
+          } else {
+            setKeywords(keywordsArray)
+          }
+        } catch (relatedErr) {
+          console.warn('⚠️ Failed to fetch related keywords, showing base keywords only:', relatedErr)
+          setKeywords(keywordsArray)
+        }
+      } else {
+        setKeywords(keywordsArray)
+      }
+
       // Reset selected keywords when new keywords are loaded
       setSelectedKeywords(new Set())
-      console.log(`✅ Total keywords loaded: ${keywordsArray.length}`)
+      console.log(`✅ Total keywords loaded and displayed`)
 
     } catch (err) {
       console.error('Error fetching keywords:', err)
