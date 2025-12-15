@@ -10,6 +10,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Loader2, Trash2, ExternalLink, Users, ChevronDown } from "lucide-react";
+import { Loader2, Trash2, ExternalLink, Users, ChevronDown } from "lucide-react";
 import { supabase } from "@/lib/client";
 import { useToast } from "@/components/ui/toast";
 import {
@@ -298,7 +299,18 @@ const validateTab3 = () => {
         </div>
       </div>
       
+      
 
+      /* 🔵 Skeletons — show while loading */
+      // {showSkeletons && (
+      //   <div className="space-y-4">
+      //     {[1, 2, 3].map((i) => (
+      //       <Card key={i} className="border-border/40 bg-card/50 backdrop-blur-sm">
+      //         <CardContent className="pt-6">
+      //           <div className="flex items-start justify-between">
+      //             <div className="flex-1 space-y-3">
+      //               <Skeleton className="h-4 w-40 bg-gray-300" />
+      //               <Skeleton className="h-4 w-32 bg-gray-300" />
       /* 🔵 Skeletons — show while loading */
       // {showSkeletons && (
       //   <div className="space-y-4">
@@ -314,10 +326,27 @@ const validateTab3 = () => {
       //                 <Skeleton className="h-4 w-20 bg-gray-300" />
       //                 <Skeleton className="h-4 w-24 bg-gray-300" />
       //               </div>
+      //               <div className="flex gap-4 mt-3">
+      //                 <Skeleton className="h-4 w-20 bg-gray-300" />
+      //                 <Skeleton className="h-4 w-24 bg-gray-300" />
+      //               </div>
 
       //               <Skeleton className="h-3 w-24 bg-gray-300" />
       //             </div>
+      //               <Skeleton className="h-3 w-24 bg-gray-300" />
+      //             </div>
 
+      //             <div className="flex items-center gap-2">
+      //               <Skeleton className="h-8 w-24 rounded bg-gray-300" />
+      //               <Skeleton className="h-8 w-24 rounded bg-gray-300" />
+      //               <Skeleton className="h-8 w-10 rounded bg-gray-300" />
+      //             </div>
+      //           </div>
+      //         </CardContent>
+      //       </Card>
+      //     ))}
+      //   </div>
+      // )}
       //             <div className="flex items-center gap-2">
       //               <Skeleton className="h-8 w-24 rounded bg-gray-300" />
       //               <Skeleton className="h-8 w-24 rounded bg-gray-300" />
@@ -337,7 +366,39 @@ const validateTab3 = () => {
       //     <h3 className="text-lg font-semibold text-foreground">
       //       Your Websites
       //     </h3>
+      /* Real websites */
+      // {websites.length > 0 && (
+      //   <div className="space-y-4">
+      //     <h3 className="text-lg font-semibold text-foreground">
+      //       Your Websites
+      //     </h3>
 
+      //     {websites.map((site) => (
+      //       <Card
+      //         key={site.id}
+      //         className="border-border/40 bg-card/50 backdrop-blur-sm"
+      //       >
+      //         <CardContent className="pt-6">
+      //           <div className="flex items-start justify-between">
+      //             <div className="flex-1">
+      //               <p className="font-medium text-foreground">{site.url}</p>
+      //               <p className="text-sm text-muted-foreground mt-1">
+      //                 {site.isAnalyzing ? (
+      //                   <span className="flex items-center gap-2">
+      //                     <div className="animate-spin">
+      //                       <Image
+      //                         src="/loader.png"
+      //                         alt=""
+      //                         width={92}
+      //                         height={92}
+      //                       />
+      //                     </div>
+      //                     Detecting topic...
+      //                   </span>
+      //                 ) : (
+      //                   <>Topic: {site.topic}</>
+      //                 )}
+      //               </p>
       //     {websites.map((site) => (
       //       <Card
       //         key={site.id}
@@ -373,6 +434,14 @@ const validateTab3 = () => {
       //                     </span>
       //                     <span>Keywords</span>
       //                   </p>
+      //               {!site.isAnalyzing && site.keywords && (
+      //                 <div className="flex gap-4 mt-3">
+      //                   <p className="text-sm text-muted-foreground flex items-center gap-1">
+      //                     <span className="font-medium">
+      //                       {getKeywordsCount(site.keywords)}
+      //                     </span>
+      //                     <span>Keywords</span>
+      //                   </p>
 
       //                   {getCompetitorsCount(site.keywords) > 0 && (
       //                     <p className="text-sm text-muted-foreground flex items-center gap-1">
@@ -385,7 +454,24 @@ const validateTab3 = () => {
       //                   )}
       //                 </div>
       //               )}
+      //                   {getCompetitorsCount(site.keywords) > 0 && (
+      //                     <p className="text-sm text-muted-foreground flex items-center gap-1">
+      //                       <Users className="w-3 h-3" />
+      //                       <span className="font-medium">
+      //                         {getCompetitorsCount(site.keywords)}
+      //                       </span>
+      //                       <span>Competitors</span>
+      //                     </p>
+      //                   )}
+      //                 </div>
+      //               )}
 
+      //               {site.created_at && (
+      //                 <p className="text-xs text-muted-foreground mt-2">
+      //                   Added: {new Date(site.created_at).toLocaleDateString()}
+      //                 </p>
+      //               )}
+      //             </div>
       //               {site.created_at && (
       //                 <p className="text-xs text-muted-foreground mt-2">
       //                   Added: {new Date(site.created_at).toLocaleDateString()}
@@ -405,7 +491,47 @@ const validateTab3 = () => {
       //                     <ExternalLink className="w-4 h-4" />
       //                     View Keywords
       //                   </Button>
+      //             <div className="flex items-center gap-2">
+      //               {!site.isAnalyzing && site.keywords && (
+      //                 <>
+      //                   <Button
+      //                     onClick={() => onViewKeywords(site.id)}
+      //                     variant="outline"
+      //                     size="sm"
+      //                     className="cursor-pointer gap-2"
+      //                   >
+      //                     <ExternalLink className="w-4 h-4" />
+      //                     View Keywords
+      //                   </Button>
 
+      //                   {getCompetitorsCount(site.keywords) > 0 && (
+      //                     <Button
+      //                       onClick={() => onViewCompetitors(site.id)}
+      //                       variant="outline"
+      //                       size="sm"
+      //                       className="cursor-pointer gap-2 bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 hover:text-blue-800"
+      //                     >
+      //                       <Users className="w-4 h-4" />
+      //                       View Competitors
+      //                     </Button>
+      //                   )}
+      //                 </>
+      //               )}
+      //               <Button
+      //                 onClick={() => handleRemoveWebsite(site.id)}
+      //                 variant="ghost"
+      //                 size="sm"
+      //                 className="cursor-pointer text-muted-foreground hover:text-destructive"
+      //               >
+      //                 <Trash2 className="w-4 h-4" />
+      //               </Button>
+      //             </div>
+      //           </div>
+      //         </CardContent>
+      //       </Card>
+      //     ))}
+      //   </div>
+      // )}
       //                   {getCompetitorsCount(site.keywords) > 0 && (
       //                     <Button
       //                       onClick={() => onViewCompetitors(site.id)}
