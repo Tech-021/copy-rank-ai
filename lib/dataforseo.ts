@@ -1,3 +1,5 @@
+import { log } from "node:console";
+
 export interface KeywordData {
   keyword: string;
   search_volume: number;
@@ -185,6 +187,7 @@ export async function fetchKeywordOverview(keywords: string[]): Promise<KeywordD
   }
 
   const auth = Buffer.from(`${apiLogin}:${apiPassword}`).toString("base64");
+  console.log(auth);
   const results: KeywordData[] = [];
 
   for (const keyword of keywords) {

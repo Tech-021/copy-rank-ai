@@ -46,6 +46,7 @@ import { getUser } from "@/lib/auth";
 import { getUserPackage } from "@/lib/articleLimits";
 import { createCheckout } from "@/lib/lemonSqueezy";
 import { useToast } from "@/components/ui/toast";
+import Image from "next/image";
 
 interface Article {
   id: string;
@@ -583,7 +584,8 @@ export function ArticlesTab({
 
       toast.showToast({
         title: "Success!",
-        description: data.message || "Article submitted to search engines for indexing",
+        description:
+          data.message || "Article submitted to search engines for indexing",
         type: "success",
       });
     } catch (error) {
@@ -688,8 +690,9 @@ export function ArticlesTab({
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-primary" />
-          <p className="text-muted-foreground">Loading articles...</p>
+          <div className="animate-spin">
+            <Image src="/loader.png" alt="" width={92} height={92} />
+          </div>
         </div>
       </div>
     );
@@ -1133,7 +1136,8 @@ export function ArticlesTab({
                                           );
                                           toast.showToast({
                                             title: "Copied!",
-                                            description: "URL copied to clipboard",
+                                            description:
+                                              "URL copied to clipboard",
                                             type: "success",
                                           });
                                         }}
@@ -1226,7 +1230,14 @@ export function ArticlesTab({
                       <SelectTrigger className="w-32 h-9 text-sm">
                         <SelectValue>
                           {updatingStatus === article.id ? (
-                            <Loader2 className="w-3 h-3 animate-spin inline" />
+                            <div className="animate-spin">
+                              <Image
+                                src="/loader.png"
+                                alt=""
+                                width={92}
+                                height={92}
+                              />
+                            </div>
                           ) : (
                             getStatusDisplayText(article.status)
                           )}
@@ -1250,7 +1261,14 @@ export function ArticlesTab({
                         disabled={indexingArticle === article.id}
                       >
                         {indexingArticle === article.id ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <div className="animate-spin">
+                            <Image
+                              src="/loader.png"
+                              alt=""
+                              width={92}
+                              height={92}
+                            />
+                          </div>
                         ) : (
                           <Globe className="w-4 h-4" />
                         )}
@@ -1412,7 +1430,10 @@ export function ArticlesTab({
               <Button onClick={handleSaveEditedArticle} disabled={isSavingEdit}>
                 {isSavingEdit ? (
                   <span className="flex items-center gap-2">
-                    <Loader2 className="w-4 h-4 animate-spin" /> Saving...
+                    <div className="animate-spin">
+                      <Image src="/loader.png" alt="" width={92} height={92} />
+                    </div>{" "}
+                    Saving...
                   </span>
                 ) : (
                   "Save Changes"

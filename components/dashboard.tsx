@@ -8,6 +8,7 @@ import { KeywordsTab } from "@/components/tabs/keywords-tab"
 import { ArticlesTab } from "@/components/tabs/articles-tab"
 import { SettingsTab } from "@/components/tabs/settings-tab"
 import { CompetitorsTab } from "@/components/tabs/competitors-tab" // NEW: Import CompetitorsTab
+import Image from "next/image"
 
 interface DashboardProps {
   onLogout: () => void
@@ -21,51 +22,39 @@ export function Dashboard({ onLogout, userEmail }: DashboardProps) {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b border-border/40 backdrop-blur-sm sticky top-0 z-50">
+      <header className="backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-              <Sparkles className="w-5 h-5 text-primary-foreground" />
+          <div className="flex items-center justify-center gap-16">
+            <div className="w-full h-full rounded-xl bg-primary flex items-center justify-center">
+              <Image src="/logo.png" alt="" width={50} height={50} />
             </div>
-            <span className="font-bold text-lg text-foreground">Viral SEO AI</span>
-          </div>
-          <div className="flex items-center gap-4">
-            {userEmail && (
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-                  <span className="text-xs font-semibold text-primary">{userEmail.charAt(0).toUpperCase()}</span>
-                </div>
-                <span className="text-sm text-muted-foreground hidden sm:inline">{userEmail}</span>
-              </div>
-            )}
-            <Button onClick={onLogout} variant="outline" className="cursor-pointer border-border/40 bg-transparent gap-2">
-              <LogOut className="w-4 h-4" />
-              <span className="hidden sm:inline">Sign Out</span>
-            </Button>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Tabs */}
-        <div className="flex gap-4 mb-8 border-b border-border/40 overflow-x-auto">
+            <div className="flex gap-4 bg-[rgb(247,247,247)] p-1.5 rounded-full">
           <button
             onClick={() => setActiveTab("analyze")}
-            className={`cursor-pointer px-4 py-2 font-medium transition-colors whitespace-nowrap ${
+            className={`cursor-pointer px-6.5 py-3.5 text-[13px] font-medium transition-colors whitespace-nowrap ${
               activeTab === "analyze"
-                ? "text-primary border-b-2 border-primary"
-                : "text-muted-foreground hover:text-foreground"
+                ? "text-white bg-black rounded-full"
+                : "text-[#00000080]"
             }`}
           >
-            Analyze Your Website
+            Dashboard
+          </button>
+          <button
+            onClick={() => setActiveTab("articles")}
+            className={`cursor-pointer px-6.5 py-3.5 text-[13px] font-medium transition-colors whitespace-nowrap ${
+              activeTab === "articles"
+                ? "text-white bg-black rounded-full"
+                : "text-[#00000080] "
+            }`}
+          >
+            Blogs
           </button>
           <button
             onClick={() => setActiveTab("keywords")}
-            className={`cursor-pointer px-4 py-2 font-medium transition-colors whitespace-nowrap ${
+            className={`cursor-pointer px-6.5 py-3.5 text-[13px] font-medium transition-colors whitespace-nowrap ${
               activeTab === "keywords"
-                ? "text-primary border-b-2 border-primary"
-                : "text-muted-foreground hover:text-foreground"
+                ? "text-white bg-black rounded-full"
+                : "text-[#00000080] "
             }`}
           >
             Keywords
@@ -73,35 +62,40 @@ export function Dashboard({ onLogout, userEmail }: DashboardProps) {
           {/* NEW: Competitors Tab */}
           <button
             onClick={() => setActiveTab("competitors")}
-            className={`cursor-pointer px-4 py-2 font-medium transition-colors whitespace-nowrap ${
+            className={`cursor-pointer px-6.5 py-3.5 text-[13px] font-medium transition-colors whitespace-nowrap ${
               activeTab === "competitors"
-                ? "text-primary border-b-2 border-primary"
-                : "text-muted-foreground hover:text-foreground"
+                ? "text-white bg-black rounded-full"
+                : "text-[#00000080] "
             }`}
           >
             Add Your Competitors
           </button>
           <button
-            onClick={() => setActiveTab("articles")}
-            className={`cursor-pointer px-4 py-2 font-medium transition-colors whitespace-nowrap ${
-              activeTab === "articles"
-                ? "text-primary border-b-2 border-primary"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            Articles
-          </button>
-          <button
             onClick={() => setActiveTab("settings")}
-            className={`cursor-pointer px-4 py-2 font-medium transition-colors whitespace-nowrap ${
+           className={`cursor-pointer px-6.5 py-3.5 text-[13px] font-medium transition-colors whitespace-nowrap ${
               activeTab === "settings"
-                ? "text-primary border-b-2 border-primary"
-                : "text-muted-foreground hover:text-foreground"
+                ? "text-white bg-black rounded-full"
+                : "text-[#00000080] "
             }`}
           >
             Settings
           </button>
         </div>
+          </div>
+          <div className="flex items-center gap-4">
+            {userEmail && (
+              <div className="flex items-center border rounded-full py-1.5 pl-6 pr-1.5  gap-2">
+                  <span className="text-sm text-muted-foreground hidden sm:inline">{userEmail}</span>
+                <Image src="/profileimg.png" alt="" width={50} height={50} />
+              </div>
+            )}
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Tabs */}
 
         {/* Tab Content */}
         {activeTab === "analyze" && (
