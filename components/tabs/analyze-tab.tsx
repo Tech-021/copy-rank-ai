@@ -24,8 +24,15 @@ import { Skeleton } from "../ui/skeleton";
 import Image from "next/image";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { ChevronLeft } from "lucide-react";
-import { Select, SelectContent } from "../ui/select";
-import { SelectItem } from "../ui/select2";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
 
 interface AnalyzeTabProps {
   onViewKeywords: (websiteId: string) => void;
@@ -258,12 +265,18 @@ const validateTab3 = () => {
         <p>Turn competitor keywords into SEO-ready long blog posts in one click.</p>
         </div>
         <div className="flex border border-[#0000001a] rounded-xl w-[165px] px-3.5 py-4 ">
-          <Select defaultValue="www.delani.pro"> <ChevronDown  />
-          <SelectContent>
-            <SelectItem value="www.delani.pro">www.delani.pro</SelectItem>
-            <SelectItem value="www.delium.pro">www.delium.pro</SelectItem>
-          </SelectContent>
-          </Select>
+          <Select defaultValue="www.delani.pro">
+  <SelectTrigger>
+    <SelectValue placeholder="Select a website" />
+  </SelectTrigger>
+  <SelectContent>
+    <SelectGroup>
+      <SelectItem value="www.delani.pro">www.delani.pro</SelectItem>
+      <SelectItem value="www.delium.pro">www.delium.pro</SelectItem>
+    </SelectGroup>
+  </SelectContent>
+</Select>
+
         </div>
         </div>
         <div>
