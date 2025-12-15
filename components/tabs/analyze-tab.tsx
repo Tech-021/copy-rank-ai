@@ -9,8 +9,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Loader2, Trash2, ExternalLink, Users, ChevronDown } from "lucide-react";
-import { Loader2, Trash2, ExternalLink, Users, ChevronDown } from "lucide-react";
 import { supabase } from "@/lib/client";
 import { useToast } from "@/components/ui/toast";
 import {
