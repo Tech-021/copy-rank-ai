@@ -283,90 +283,203 @@ export async function POST(request: Request) {
       `🖼️ Image generation: ${generateImages ? "ENABLED" : "disabled"}`
     );
 
-    // ... existing article generation code remains the same ...
     const variationInstructions =
       totalArticles > 1
-        ? `\n\nIMPORTANT: This is article ${articleNumber} of ${totalArticles}. Create a UNIQUE variation that differs from the previous articles. Use a different angle, perspective, or approach while still incorporating all keywords naturally. Vary the structure, examples, and content flow to ensure each article is distinct and valuable.`
+        ? `\n\nIMPORTANT: This is article ${articleNumber} of ${totalArticles}. Create a UNIQUE variation with a different angle, perspective, or approach. Use different examples, structure, and content flow. Avoid repeating previous article variations.`
         : "";
 
-const prompt = `Generate a comprehensive, in-depth SEO-optimized blog post that naturally incorporates ALL of these keywords: ${allKeywordsText}.${variationInstructions}
+const prompt = `You are an expert SEO content strategist and writer.
 
-ALL KEYWORDS: ${allKeywordsText}
-SELECTED KEYWORD FOR META TITLE: "${selectedKeyword}" (use this keyword in the meta title and description)
+Your task: Write a **high-performing SEO article** on the topic:
+→ ${selectedKeyword}
 
-CRITICAL REQUIREMENTS - STRICTLY FOLLOW THESE RULES:
+Target reader:
+→ General web audience interested in ${selectedKeyword}
 
-1. ABSOLUTELY NO EM DASHES (—):
-- **DO NOT USE EM DASHES (—) ANYWHERE IN THE ARTICLE**
-- **USE REGULAR DASHES (-) INSTEAD OF EM DASHES**
-- **Example: Use "marketing - it's" NOT "marketing—it's"**
-- **Example: Use "croissants - rich" NOT "croissants—rich"**
-- **Use commas or parentheses for asides instead of em dashes**
+Business goal:
+→ Comprehensive guide that drives organic traffic and positions the site as an authority
 
-2. NO HTML <m> TAGS:
-- **DO NOT USE <m> TAGS ANYWHERE IN THE ARTICLE**
-- **DO NOT USE <m> OR </m> IN ANY FORM**
-- **ONLY USE STANDARD HTML TAGS: <h1>, <h2>, <h3>, <p>, <ul>, <ol>, <li>, <strong>, <em>**
-- If you need to emphasize text, use <strong> or <em> tags instead
+Primary keyword:
+→ "${selectedKeyword}"
 
-3. HUMAN-LIKE WRITING STYLE:
-- Write in a natural, conversational tone that sounds human-written
-- Avoid AI-sounding phrases like "In conclusion", "Moreover", "Furthermore" at the start of sentences
-- Use contractions: you're, it's, don't, can't, won't, etc.
-- Ask rhetorical questions to engage readers
-- Share personal insights and opinions
-- Vary sentence length and structure
-- Include storytelling elements and real-world examples
+Secondary / related keywords:
+→ ${allKeywordsText}
 
-4. MAIN CONTENT (${targetWordCount}+ WORDS):
-- Write detailed, comprehensive content with ALL keywords naturally integrated
-- Minimum ${targetWordCount} words for SEO optimization
-- Use ONLY standard HTML structure with <h1>, <h2>, <h3> headings
-- Include examples, case studies, actionable advice
-- Natural keyword density: 1-2% for "${selectedKeyword}", others mentioned naturally
-- No keyword stuffing - content must flow naturally
-- Comprehensive conclusion with practical takeaways
-${
+Target length:
+→ ${targetWordCount}–${Math.floor(targetWordCount * 1.3)} words
+
+Writing style:
+→ Clear, practical, friendly but expert, no fluff, natural and human-written${
   totalArticles > 1
-    ? "- Create unique angle different from previous articles"
+    ? ", UNIQUE angle different from previous articles"
     : ""
 }
 
-5. CONTENT STRUCTURE:
-- Engaging introduction with hook (150-200 words)
-- Background and context (200-300 words)
-- 5-7 main sections with subsections (each 250-400 words)
-- Include statistics, research, expert opinions
-- Add step-by-step guides, checklists, practical applications
-- Use bullet points (<ul>), numbered lists (<ol>), tables if relevant
-- Comprehensive conclusion (200-250 words)
-${
-  totalArticles > 1
-    ? "- Vary structure and examples for uniqueness"
-    : ""
-}
+---
 
-6. METADATA (Format EXACTLY as below):
-- META_TITLE: Create compelling title (55-60 chars) with "${selectedKeyword}"
-- META_DESCRIPTION: Click-worthy description (150-160 chars) with "${selectedKeyword}"
-- OG_TITLE: Social media title with emoji
-- OG_DESCRIPTION: Social media description (120-130 chars)
+## THINK FIRST (SEARCH INTENT + ANGLE)
 
-IMPORTANT: 
-- **NO EM DASHES (—) - USE REGULAR DASHES (-)**
-- **NO <m> TAGS - THIS IS NON-NEGOTIABLE**
-- **Content must sound human-written, not AI-generated**
-- **Use only standard HTML tags listed above**
+Before writing, apply these principles:
 
-Please format your response EXACTLY as:
+- Determine the **dominant search intent** for "${selectedKeyword}" (informational, commercial investigation, etc.).
+- Select the best **content type** (guide, how-to, comparison, checklist).
+- Choose the main **content angle** (for beginners, step-by-step, 2025 updated, practical framework).
+- Align structure, depth, and examples to **fully satisfy** that intent.
+- Cover all key subtopics competitors usually hit for this keyword.
 
-CONTENT:
-[Your full article content here - NO EM DASHES (—), NO <m> TAGS, ONLY standard HTML, MUST BE ${targetWordCount}+ WORDS]
+Do not show this reasoning, just apply it in the article.
 
-META_TITLE: [Optimized title 55-60 chars with keyword "${selectedKeyword}"]
-META_DESCRIPTION: [Compelling description 150-160 chars with keyword "${selectedKeyword}"]
-OG_TITLE: [Social media title with emoji]
-OG_DESCRIPTION: [Social media description 120-130 chars]`;
+---
+
+## OUTPUT FORMAT - CRITICAL
+
+Output EXACTLY in this format:
+
+SEO_TITLE: [55-60 character title including "${selectedKeyword}"]
+URL_SLUG: /[short-keyword-phrase]
+META_DESCRIPTION: [150-160 character description including "${selectedKeyword}"]
+
+[Full article content below - NO EM DASHES, NO <m> TAGS, MUST BE ${targetWordCount}+ WORDS]
+
+---
+
+## ARTICLE STRUCTURE (HTML HIERARCHY)
+
+Use **HTML tags** with proper hierarchy:
+- **<h1>**: Main title/heading (only one)
+- **<h2>**: Main sections (5-7 sections)
+- **<h3>**: Subsections under H2s
+- **<p>**: Body paragraphs (2-4 sentences each)
+- **<ul>**: Bulleted lists for tips/features
+- **<ol>**: Numbered lists for steps
+- **<li>**: List items
+- **<strong>**: Bold emphasis for key terms
+- **<em>**: Italic emphasis
+- **<table>**: For comparisons (if needed)
+
+NEVER USE: <m>, </m>, em dashes (—), or any other special tags.
+
+---
+
+## ARTICLE BLUEPRINT
+
+1. **<h1>**: [Your main SEO title - include "${selectedKeyword}"]
+
+2. **Introduction <h2>**: Hook + Problem Statement + Promise + Preview (120-200 words)
+   - Name the reader's problem/goal in plain language
+   - State what they'll learn
+   - Include "${selectedKeyword}" naturally
+   - Avoid fluff, get to the point
+
+3. **3-5 Main Content <h2> Sections** (250-400 words each):
+   - <h3> subsections for steps, frameworks, or categories
+   - Use <ul> or <ol> where appropriate
+   - Include real examples, statistics, expert insights
+   - Answer "People Also Ask" style questions
+   - Natural keyword integration (1-2% density for "${selectedKeyword}", others naturally)
+
+4. **Best Practices & Common Mistakes <h2>**
+   - List common pitfalls
+   - Provide actionable solutions
+   - Use <ul> or <ol>
+
+5. **Tools, Templates, or Examples <h2>** (if relevant)
+   - Practical resources
+   - Step-by-step guides
+   - Case studies
+
+6. **FAQ <h2>**: 3-6 Common Questions
+   - Format: **Q: [Question]** / **A: [Answer in 1-3 sentences]**
+   - Use real search terminology
+   - Make answers self-contained
+
+7. **Conclusion & Next Steps <h2>**: (200-250 words)
+   - Summarize key takeaways
+   - Call-to-action (invite to newsletter, demo, related article, etc.)
+   - Practical next steps
+
+---
+
+## CRITICAL WRITING REQUIREMENTS
+
+1. **NO EM DASHES (—)**:
+   - Replace with regular dashes: -
+   - Use commas or parentheses for asides
+   - Example: "marketing - it works" NOT "marketing—it works"
+
+2. **NO <m> TAGS**:
+   - NEVER use <m> or </m> tags
+   - Use only standard HTML tags listed above
+
+3. **HUMAN-LIKE TONE**:
+   - Natural, conversational writing
+   - Use contractions: you're, it's, don't, can't
+   - Ask rhetorical questions
+   - Avoid AI phrases: "In conclusion", "Moreover", "Furthermore" at sentence starts
+   - Include practical details & real-world examples
+   - Vary sentence length and structure
+
+4. **KEYWORD STRATEGY**:
+   - Include "${selectedKeyword}" in introduction
+   - Use in relevant <h2>/<h3> headings naturally
+   - Maintain 1-2% density for "${selectedKeyword}"
+   - Integrate secondary keywords naturally
+   - Prioritize readability over keyword stuffing
+
+5. **MINIMUM WORD COUNT**:
+   - Article MUST be **${targetWordCount}+ words**
+   - Comprehensive, not shallow
+
+6. **MEDIA SUGGESTIONS**:
+   - Include text like: [Add image: description of visual]
+   - Place under relevant headings
+   - Describe practical visuals only
+
+7. **INTERNAL/EXTERNAL LINKS**:
+   - Suggest links with descriptions, don't invent URLs
+   - Example: "[Link to industry study on X]"
+   - Example: "[Internal link to our guide on Y]"
+
+8. **E-E-A-T & TRUST**:
+   - Speak like someone with real experience
+   - Add practical, insider details
+   - When making claims, note: "[Backed by research/studies]"
+   - Don't fabricate specific statistics
+   - End with credibility note: "This guide is written from the perspective of a practitioner with experience in ${selectedKeyword}."
+
+---
+
+## FORMATTING FOR SCANNABILITY
+
+- Use **strong** tags sparingly for key terms and takeaways
+- Make content skimmable: clear headings, frequent breaks
+- Mobile-friendly: short paragraphs, avoid ultra-long lines
+- Optional callout blocks:
+  > **Pro tip:** [Real practical advice]
+  > **Warning:** [Important caution]
+
+---
+
+## DO NOT SHOW REASONING
+
+Just output the finished article. No explanations, just the content.${variationInstructions}
+
+---
+
+## FINAL CHECKLIST BEFORE RESPONDING
+
+✓ SEO_TITLE, URL_SLUG, META_DESCRIPTION on separate lines first
+✓ Article content uses ONLY: <h1>, <h2>, <h3>, <p>, <ul>, <ol>, <li>, <strong>, <em>, <table>
+✓ NO EM DASHES (—) anywhere - use regular dashes (-)
+✓ NO <m> tags
+✓ ${targetWordCount}+ words
+✓ "${selectedKeyword}" in intro, headings, naturally throughout
+✓ FAQ section included
+✓ Human-like tone, contractions used, conversational
+✓ No AI-sounding phrases
+✓ Credibility note at end
+✓ CTA included
+✓ Practical examples & real-world context`;
 
     // Add timeout wrapper
     const timeoutPromise = new Promise<never>((_, reject) => {
@@ -735,13 +848,36 @@ export async function DELETE(request: Request) {
 }
 
 function parseStructuredResponse(response: string, keyword: string) {
-  const contentMatch = response.match(/CONTENT:\s*([\s\S]*?)(?=META_TITLE:|$)/);
-  const metaTitleMatch = response.match(/META_TITLE:\s*(.+)/);
-  const metaDescMatch = response.match(/META_DESCRIPTION:\s*(.+)/);
-  const ogTitleMatch = response.match(/OG_TITLE:\s*(.+)/);
-  const ogDescMatch = response.match(/OG_DESCRIPTION:\s*(.+)/);
-
-  let content = contentMatch ? contentMatch[1].trim() : response;
+  // Parse new format: SEO_TITLE, URL_SLUG, META_DESCRIPTION, then content
+  const seoTitleMatch = response.match(/SEO_TITLE:\s*(.+?)(?:\n|$)/);
+  const urlSlugMatch = response.match(/URL_SLUG:\s*(.+?)(?:\n|$)/);
+  const metaDescMatch = response.match(/META_DESCRIPTION:\s*(.+?)(?:\n|$)/);
+  
+  // Extract content - everything after META_DESCRIPTION line, skipping the separator line
+  const metaDescIndex = response.indexOf("META_DESCRIPTION:");
+  let content = "";
+  
+  if (metaDescIndex !== -1) {
+    // Find the end of the META_DESCRIPTION line
+    const endOfMetaDesc = response.indexOf("\n", metaDescIndex);
+    if (endOfMetaDesc !== -1) {
+      // Skip past the separator line (---) if it exists
+      const afterMetaDesc = response.substring(endOfMetaDesc + 1);
+      const separatorIndex = afterMetaDesc.indexOf("---");
+      
+      if (separatorIndex !== -1) {
+        content = afterMetaDesc.substring(separatorIndex + 3).trim();
+      } else {
+        content = afterMetaDesc.trim();
+      }
+    }
+  }
+  
+  // Fallback: if no new format found, try old format
+  if (!content) {
+    const contentMatch = response.match(/CONTENT:\s*([\s\S]*?)(?=META_TITLE:|$)/);
+    content = contentMatch ? contentMatch[1].trim() : response;
+  }
   
   // ========== REMOVE EM DASHES (—) ==========
   console.log("🔄 Removing em dashes (—) from content...");
@@ -759,14 +895,25 @@ function parseStructuredResponse(response: string, keyword: string) {
   
   // ========== END EM DASH REMOVAL ==========
 
+  // Extract meta title from SEO_TITLE or fall back to old format
+  let metaTitle = seoTitleMatch
+    ? seoTitleMatch[1].trim()
+    : (response.match(/META_TITLE:\s*(.+)/) ? response.match(/META_TITLE:\s*(.+)/)![1].trim() : generateFallbackMetaTitle(keyword));
+
+  // Extract meta description from new or old format
+  let metaDescription = metaDescMatch
+    ? metaDescMatch[1].trim()
+    : (response.match(/META_DESCRIPTION:\s*(.+)/) ? response.match(/META_DESCRIPTION:\s*(.+)/)![1].trim() : generateFallbackMetaDescription(keyword));
+
+  // Extract OG title and description (old format support)
+  const ogTitleMatch = response.match(/OG_TITLE:\s*(.+)/);
+  const ogDescMatch = response.match(/OG_DESCRIPTION:\s*(.+)/);
+
   return {
     content: content,
-    metaTitle: metaTitleMatch
-      ? metaTitleMatch[1].trim()
-      : generateFallbackMetaTitle(keyword),
-    metaDescription: metaDescMatch
-      ? metaDescMatch[1].trim()
-      : generateFallbackMetaDescription(keyword),
+    metaTitle: metaTitle,
+    metaDescription: metaDescription,
+    slug: urlSlugMatch ? urlSlugMatch[1].trim() : generateSlugFromTitle(metaTitle),
     ogTitle: ogTitleMatch
       ? ogTitleMatch[1].trim()
       : generateFallbackOgTitle(keyword),
@@ -787,17 +934,8 @@ function generateEnhancedMetadata(
     extractMainTitle(content) ||
     parsedData.metaTitle ||
     parsedData.ogTitle ||
-    parsedData.twitterTitle ||
-    parsedData.title ||
     keyword;
   const title = titleCandidate;
-  const slugSource =
-    extractMainTitle(content) ||
-    parsedData.metaTitle ||
-    parsedData.ogTitle ||
-    parsedData.twitterTitle ||
-    parsedData.title ||
-    titleCandidate;
 
   return {
     // Core Content
@@ -807,7 +945,7 @@ function generateEnhancedMetadata(
     // SEO Metadata
     metaTitle: parsedData.metaTitle,
     metaDescription: parsedData.metaDescription,
-    slug: generateSlugFromTitle(slugSource),
+    slug: parsedData.slug || generateSlugFromTitle(parsedData.metaTitle || title),
     focusKeyword: keyword,
 
     // Content Analysis
