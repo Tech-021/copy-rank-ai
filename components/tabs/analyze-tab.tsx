@@ -9,7 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Loader2, Trash2, ExternalLink, Users } from "lucide-react";
+import { Loader2, Trash2, ExternalLink, Users, ChevronDown } from "lucide-react";
 import { supabase } from "@/lib/client";
 import { useToast } from "@/components/ui/toast";
 import {
@@ -24,6 +24,8 @@ import { Skeleton } from "../ui/skeleton";
 import Image from "next/image";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { ChevronLeft } from "lucide-react";
+import { Select, SelectContent } from "../ui/select";
+import { SelectItem } from "../ui/select2";
 
 interface AnalyzeTabProps {
   onViewKeywords: (websiteId: string) => void;
@@ -250,7 +252,22 @@ const validateTab3 = () => {
 
   return (
     <div className="space-y-6">
-      <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
+      <div className="flex items-center justify-between">
+        <div>
+        <h2 className="text-3xl font-normal">Performance overview</h2>
+        <p>Turn competitor keywords into SEO-ready long blog posts in one click.</p>
+        </div>
+        <div className="flex border border-[#0000001a] rounded-xl w-[165px] px-3.5 py-4 ">
+          <Select defaultValue="www.delani.pro"> <ChevronDown  />
+          <SelectContent>
+            <SelectItem value="www.delani.pro">www.delani.pro</SelectItem>
+            <SelectItem value="www.delium.pro">www.delium.pro</SelectItem>
+          </SelectContent>
+          </Select>
+        </div>
+        </div>
+        <div>
+          <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
         <CardHeader>
           <CardTitle>Add Website</CardTitle>
           <CardDescription>
@@ -265,380 +282,144 @@ const validateTab3 = () => {
           </Button>
         </CardContent>
       </Card>
-
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-      <DialogContent className="min-w-[1200px] px-0 py-0 max-h-[600px] overflow-y-scroll overflow-x-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        <VisuallyHidden>
-          <DialogTitle></DialogTitle>
-        </VisuallyHidden>
-    <div className="dialog flex gap-[60px] w-full">
-      {/* Left section */}
-      <div className="relative w-[500px] h-[780px] bg-[linear-gradient(to_top,rgb(31,135,61)_0%,rgb(44,162,74)_100%)] overflow-hidden p-10 flex flex-col gap-10 rounded-l-lg">
-        <div>
-          <Image src="/dialog_logo.png" alt="" width={50} height={50} />
         </div>
-        <div className="flex flex-col gap-4 relative items-center justify-center mt-14">
-          <h1 className="text-white font-normal text-[38px]">
-            A few clicks away <br />
-            from generating your <br />
-            SEO optimized blogs
-          </h1>
-          <p className="text-white font-normal text-sm max-w-lg">
-            Instantly analyze your niche, target high-volume keywords, and{" "}
-            <br />
-            publish content that converts.
-          </p>
-          <Image
-            src="/dialog_bg.png"
-            alt=""
-            width={650}
-            height={420}
-            className="absolute -right-40 -bottom-64"
-          />
-        </div>
-        <Image
-          src="/line1.png"
-          alt=""
-          width={968}
-          height={558}
-          className="absolute top-100 left-0"
-        />
-        <Image
-          src="/line2.png"
-          alt=""
-          width={682}
-          height={398}
-          className="absolute top-82 left-0"
-        />
-        <Image
-          src="/line3.png"
-          alt=""
-          width={1148}
-          height={662}
-          className="absolute top-16 left-0"
-        />
       </div>
-      {/* Right section */}
-      <div className="py-10 pr-10 flex flex-col gap-[140px] w-[700px]">
-        <div className="w-[600px] text-right">
-          <p className="text-[15px] font-normal text-[#00000080]">
-            Having troubles?{" "}
-            <span className="text-[#5baf57] font-normal cursor-pointer">
-              Get Help
-            </span>
-          </p>
-        </div>
-        {tab === "tab1" && (
-          <div className="flex flex-col gap-60">
-            <div className="flex flex-col gap-[30px]">
-              <div>
-                <h1 className="text-[#000000B3] text-lg font-normal">
-                  Website URL
-                </h1>
-                <p className="text-[15px] text-[#00000080] font-normal">
-                  Start with your domain
-                </p>
-              </div>
-              <div className="space-y-5">
-                {/* Website Name */}
-                <div>
-                  <Input
-                    type="text"
-                    placeholder="Enter your website URL"
-                    value={websiteName}
-                    onChange={(e) => setWebsiteName(e.target.value)}
-                    className="w-[500px] h-[50px] border border-solid border-[#0000001a] focus-visible:border focus-visible:border-[#0000001a] focus-visible:ring-0 placeholder:text-[#0000004d]"
-                  />
-                </div>
-              </div>
-              <div>
-                <button
-                  onClick={() => {
-                    if(validateTab1())
-                    setTab("tab2")
-                  }}
-                  className="bg-[#5baf57] border border-[#0000001a] text-white px-[60px] py-1 w-[170px] h-[50px] rounded-[10px] cursor-pointer"
-                >
-                  Next
-                </button>
-              </div>
-              <div>
-                <p className="text-sm text-[#0000004D] font-normal">1 of 3</p>
-              </div>
-            </div>
-            <div>
-                <button
-                // onClick={() => setTab('tab2')}
-                className="flex text-[#000000b3] text-[15px] items-center cursor-pointer"
-                ><ChevronLeft />Back</button>
-            </div>
-          </div>
-        )}
-        {tab === "tab2" && (
-          <div className="flex flex-col gap-30">
-            <div className="flex flex-col gap-[30px]">
-              <div>
-                <h1 className="text-[#000000B3] text-lg font-normal">
-                  Top 3 Competitiors
-                </h1>
-                <p className="text-[15px] text-[#00000080] font-normal">
-                  Who are you Beating
-                </p>
-              </div>
-              <div className="space-y-5">
-                {/* Competitors Name */}
-                <div className="space-y-2">
-                  <Input
-                    type="text"
-                    placeholder="Competitor 1"
-                    value={competitor1}
-                    onChange={(e) => setCompetitor1(e.target.value)}
-                    className="w-[500px] h-[50px] border border-solid border-[#0000001a] focus-visible:border focus-visible:border-[#0000001a] focus-visible:ring-0 placeholder:text-[#0000004d]"
-                  />
-                  <Input
-                    type="text"
-                    placeholder="Competitor 2"
-                    value={competitor2}
-                    onChange={(e) => setCompetitor2(e.target.value)}
-                    className="w-[500px] h-[50px] border border-solid border-[#0000001a] focus-visible:border focus-visible:border-[#0000001a] focus-visible:ring-0 placeholder:text-[#0000004d]"
-                  />
-                  <Input
-                    type="text"
-                    placeholder="Competitor 3"
-                    value={competitor3}
-                    onChange={(e) => setCompetitor3(e.target.value)}
-                    className="w-[500px] h-[50px] border border-solid border-[#0000001a] focus-visible:border focus-visible:border-[#0000001a] focus-visible:ring-0 placeholder:text-[#0000004d]"
-                  />
-                </div>
-              </div>
-              <div>
-                <button
-                  onClick={() => {
-                    if (validateTab2())
-                    setTab("tab3")
-                  }}
-                  className="bg-[#5baf57] border border-[#0000001a] text-white px-[60px] py-1 w-[170px] h-[50px] rounded-[10px] cursor-pointer"
-                >
-                  Next
-                </button>
-              </div>
-              <div>
-                <p className="text-sm text-[#0000004D] font-normal">2 of 3</p>
-              </div>
-            </div>
-            <div>
-                <button
-                onClick={() => setTab('tab1')}
-                className="flex text-[#000000b3] text-[15px] items-center cursor-pointer"
-                ><ChevronLeft />Back</button>
-            </div>
-          </div>
-        )}
-        {tab === "tab3" && (
-          <div className="flex flex-col gap-30">
-            <div className="flex flex-col gap-[30px]">
-              <div>
-                <h1 className="text-[#000000B3] text-lg font-normal">
-                  Keywords
-                </h1>
-                <p className="text-[15px] text-[#00000080] font-normal">
-                  What do you want rank for?
-                </p>
-              </div>
-              <div className="space-y-5">
-                {/* Website Name */}
-                <div className="space-y-2">
-                  <Input
-                    type="text"
-                    placeholder="Keyword 1"
-                    value={keyword1}
-                    onChange={(e) => setKeyword1(e.target.value)}
-                    className="w-[500px] h-[50px] border border-solid border-[#0000001a] focus-visible:border focus-visible:border-[#0000001a] focus-visible:ring-0 placeholder:text-[#0000004d]"
-                  />
-                  <Input
-                    type="text"
-                    placeholder="Keyword 2"
-                    value={keyword2}
-                    onChange={(e) => setKeyword2(e.target.value)}
-                    className="w-[500px] h-[50px] border border-solid border-[#0000001a] focus-visible:border focus-visible:border-[#0000001a] focus-visible:ring-0 placeholder:text-[#0000004d]"
-                  />
-                  <Input
-                    type="text"
-                    placeholder="Keyword 3"
-                    value={keyword3}
-                    onChange={(e) => setKeyword3(e.target.value)}
-                    className="w-[500px] h-[50px] border border-solid border-[#0000001a] focus-visible:border focus-visible:border-[#0000001a] focus-visible:ring-0 placeholder:text-[#0000004d]"
-                  />
-                </div>
-              </div>
-              <div>
-                <button
-                  onClick={() => {
-                    if (validateTab3())
-                    handleSubmitOnboarding}}
-                  disabled={!canProceed || isSubmitting}
-                  className="bg-[#5baf57] border border-[#0000001a] text-white px-[60px] py-1 w-[170px] h-[50px] rounded-[10px] cursor-pointer"
-                >
-                  {isSubmitting ? (
-                    <div className="flex items-center gap-2">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Setting up...
-                  </div>
-                  ) : ("Submit")}
-                </button>
-              </div>
-              <div>
-                <p className="text-sm text-[#0000004D] font-normal">3 of 3</p>
-              </div>
-            </div>
-            <div>
-                <button
-                onClick={() => setTab('tab2')}
-                className="flex text-[#000000b3] text-[15px] items-center cursor-pointer"
-                ><ChevronLeft />Back</button>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-    </DialogContent>
-    </Dialog>
+      
 
-      {/* 🔵 Skeletons — show while loading */}
-      {showSkeletons && (
-        <div className="space-y-4">
-          {[1, 2, 3].map((i) => (
-            <Card key={i} className="border-border/40 bg-card/50 backdrop-blur-sm">
-              <CardContent className="pt-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1 space-y-3">
-                    <Skeleton className="h-4 w-40 bg-gray-300" />
-                    <Skeleton className="h-4 w-32 bg-gray-300" />
+      /* 🔵 Skeletons — show while loading */
+      // {showSkeletons && (
+      //   <div className="space-y-4">
+      //     {[1, 2, 3].map((i) => (
+      //       <Card key={i} className="border-border/40 bg-card/50 backdrop-blur-sm">
+      //         <CardContent className="pt-6">
+      //           <div className="flex items-start justify-between">
+      //             <div className="flex-1 space-y-3">
+      //               <Skeleton className="h-4 w-40 bg-gray-300" />
+      //               <Skeleton className="h-4 w-32 bg-gray-300" />
 
-                    <div className="flex gap-4 mt-3">
-                      <Skeleton className="h-4 w-20 bg-gray-300" />
-                      <Skeleton className="h-4 w-24 bg-gray-300" />
-                    </div>
+      //               <div className="flex gap-4 mt-3">
+      //                 <Skeleton className="h-4 w-20 bg-gray-300" />
+      //                 <Skeleton className="h-4 w-24 bg-gray-300" />
+      //               </div>
 
-                    <Skeleton className="h-3 w-24 bg-gray-300" />
-                  </div>
+      //               <Skeleton className="h-3 w-24 bg-gray-300" />
+      //             </div>
 
-                  <div className="flex items-center gap-2">
-                    <Skeleton className="h-8 w-24 rounded bg-gray-300" />
-                    <Skeleton className="h-8 w-24 rounded bg-gray-300" />
-                    <Skeleton className="h-8 w-10 rounded bg-gray-300" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+      //             <div className="flex items-center gap-2">
+      //               <Skeleton className="h-8 w-24 rounded bg-gray-300" />
+      //               <Skeleton className="h-8 w-24 rounded bg-gray-300" />
+      //               <Skeleton className="h-8 w-10 rounded bg-gray-300" />
+      //             </div>
+      //           </div>
+      //         </CardContent>
+      //       </Card>
+      //     ))}
+      //   </div>
+      // )}
 
 
-      {/* Real websites */}
-      {websites.length > 0 && (
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-foreground">
-            Your Websites
-          </h3>
+      /* Real websites */
+      // {websites.length > 0 && (
+      //   <div className="space-y-4">
+      //     <h3 className="text-lg font-semibold text-foreground">
+      //       Your Websites
+      //     </h3>
 
-          {websites.map((site) => (
-            <Card
-              key={site.id}
-              className="border-border/40 bg-card/50 backdrop-blur-sm"
-            >
-              <CardContent className="pt-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <p className="font-medium text-foreground">{site.url}</p>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {site.isAnalyzing ? (
-                        <span className="flex items-center gap-2">
-                          <div className="animate-spin">
-                            <Image
-                              src="/loader.png"
-                              alt=""
-                              width={92}
-                              height={92}
-                            />
-                          </div>
-                          Detecting topic...
-                        </span>
-                      ) : (
-                        <>Topic: {site.topic}</>
-                      )}
-                    </p>
+      //     {websites.map((site) => (
+      //       <Card
+      //         key={site.id}
+      //         className="border-border/40 bg-card/50 backdrop-blur-sm"
+      //       >
+      //         <CardContent className="pt-6">
+      //           <div className="flex items-start justify-between">
+      //             <div className="flex-1">
+      //               <p className="font-medium text-foreground">{site.url}</p>
+      //               <p className="text-sm text-muted-foreground mt-1">
+      //                 {site.isAnalyzing ? (
+      //                   <span className="flex items-center gap-2">
+      //                     <div className="animate-spin">
+      //                       <Image
+      //                         src="/loader.png"
+      //                         alt=""
+      //                         width={92}
+      //                         height={92}
+      //                       />
+      //                     </div>
+      //                     Detecting topic...
+      //                   </span>
+      //                 ) : (
+      //                   <>Topic: {site.topic}</>
+      //                 )}
+      //               </p>
 
-                    {!site.isAnalyzing && site.keywords && (
-                      <div className="flex gap-4 mt-3">
-                        <p className="text-sm text-muted-foreground flex items-center gap-1">
-                          <span className="font-medium">
-                            {getKeywordsCount(site.keywords)}
-                          </span>
-                          <span>Keywords</span>
-                        </p>
+      //               {!site.isAnalyzing && site.keywords && (
+      //                 <div className="flex gap-4 mt-3">
+      //                   <p className="text-sm text-muted-foreground flex items-center gap-1">
+      //                     <span className="font-medium">
+      //                       {getKeywordsCount(site.keywords)}
+      //                     </span>
+      //                     <span>Keywords</span>
+      //                   </p>
 
-                        {getCompetitorsCount(site.keywords) > 0 && (
-                          <p className="text-sm text-muted-foreground flex items-center gap-1">
-                            <Users className="w-3 h-3" />
-                            <span className="font-medium">
-                              {getCompetitorsCount(site.keywords)}
-                            </span>
-                            <span>Competitors</span>
-                          </p>
-                        )}
-                      </div>
-                    )}
+      //                   {getCompetitorsCount(site.keywords) > 0 && (
+      //                     <p className="text-sm text-muted-foreground flex items-center gap-1">
+      //                       <Users className="w-3 h-3" />
+      //                       <span className="font-medium">
+      //                         {getCompetitorsCount(site.keywords)}
+      //                       </span>
+      //                       <span>Competitors</span>
+      //                     </p>
+      //                   )}
+      //                 </div>
+      //               )}
 
-                    {site.created_at && (
-                      <p className="text-xs text-muted-foreground mt-2">
-                        Added: {new Date(site.created_at).toLocaleDateString()}
-                      </p>
-                    )}
-                  </div>
+      //               {site.created_at && (
+      //                 <p className="text-xs text-muted-foreground mt-2">
+      //                   Added: {new Date(site.created_at).toLocaleDateString()}
+      //                 </p>
+      //               )}
+      //             </div>
 
-                  <div className="flex items-center gap-2">
-                    {!site.isAnalyzing && site.keywords && (
-                      <>
-                        <Button
-                          onClick={() => onViewKeywords(site.id)}
-                          variant="outline"
-                          size="sm"
-                          className="cursor-pointer gap-2"
-                        >
-                          <ExternalLink className="w-4 h-4" />
-                          View Keywords
-                        </Button>
+      //             <div className="flex items-center gap-2">
+      //               {!site.isAnalyzing && site.keywords && (
+      //                 <>
+      //                   <Button
+      //                     onClick={() => onViewKeywords(site.id)}
+      //                     variant="outline"
+      //                     size="sm"
+      //                     className="cursor-pointer gap-2"
+      //                   >
+      //                     <ExternalLink className="w-4 h-4" />
+      //                     View Keywords
+      //                   </Button>
 
-                        {getCompetitorsCount(site.keywords) > 0 && (
-                          <Button
-                            onClick={() => onViewCompetitors(site.id)}
-                            variant="outline"
-                            size="sm"
-                            className="cursor-pointer gap-2 bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 hover:text-blue-800"
-                          >
-                            <Users className="w-4 h-4" />
-                            View Competitors
-                          </Button>
-                        )}
-                      </>
-                    )}
-                    <Button
-                      onClick={() => handleRemoveWebsite(site.id)}
-                      variant="ghost"
-                      size="sm"
-                      className="cursor-pointer text-muted-foreground hover:text-destructive"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
-    </div>
+      //                   {getCompetitorsCount(site.keywords) > 0 && (
+      //                     <Button
+      //                       onClick={() => onViewCompetitors(site.id)}
+      //                       variant="outline"
+      //                       size="sm"
+      //                       className="cursor-pointer gap-2 bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 hover:text-blue-800"
+      //                     >
+      //                       <Users className="w-4 h-4" />
+      //                       View Competitors
+      //                     </Button>
+      //                   )}
+      //                 </>
+      //               )}
+      //               <Button
+      //                 onClick={() => handleRemoveWebsite(site.id)}
+      //                 variant="ghost"
+      //                 size="sm"
+      //                 className="cursor-pointer text-muted-foreground hover:text-destructive"
+      //               >
+      //                 <Trash2 className="w-4 h-4" />
+      //               </Button>
+      //             </div>
+      //           </div>
+      //         </CardContent>
+      //       </Card>
+      //     ))}
+      //   </div>
+      // )}
   );
 }
