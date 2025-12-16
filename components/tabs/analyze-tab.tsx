@@ -31,6 +31,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useRouter } from "next/navigation";
 
 
 interface AnalyzeTabProps {
@@ -85,7 +86,7 @@ export function AnalyzeTab({
   const [keyword2, setKeyword2] = useState("");
   const [keyword3, setKeyword3] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [tab, setTab] = useState("tab1");
+  const [open, setOpen] = useState(false)
 
   const loadUserWebsites = async () => {
     try {
@@ -337,14 +338,16 @@ const validateTab3 = () => {
                   <p className="text-xs text-[#00000080] font-normal">www.delani.com</p>
                 </div>
                 </div>
-                <div className="w-[34px] h-[34px] bg-[#00000000] rounded-xl flex items-center justify-center">
+                <div className="w-[34px] h-[34px] bg-[#00000000] rounded-xl flex items-center justify-center cursor-pointer">
                   <Image src="/menudots.png" alt="" width={3} height={17} />
                 </div>
               </div>
-              <div className="flex items-center justify-between border px-4 pb-4 pt-5 rounded-b-xl border-[#0000001a] w-[400px]">
-                <div className="flex items-center gap-5">
-                <div className="bg-[rgb(247,247,247)] w-[34px] h-[34px] flex items-center justify-center rounded-[10px]">
-                  <Plus width={20} height={20} className="text-[#65b361]" />
+              <div 
+              onClick={() => setOpen(true)}
+              className="flex items-center justify-between border px-4 pb-4 pt-5 rounded-b-xl border-[#0000001a] w-[400px] cursor-pointer">
+                <div className="flex items-center gap-5 cursor-pointer">
+                <div className="bg-[rgb(247,247,247)] w-[34px] h-[34px] flex items-center justify-center rounded-[10px] cursor-pointer">
+                  <Plus width={20} height={20} className="text-[#65b361] cursor-pointer " />
                 </div>
                 <div>
                   <p className="text-sm text-[#000000b3] font-normal">Add Website</p>
@@ -366,7 +369,7 @@ const validateTab3 = () => {
                   <p className="text-xs text-[#00000080] font-normal">www.lander.studio and 2 others</p>
                 </div>
                 </div>
-                <div className="w-[34px] h-[34px] bg-[#00000000] rounded-xl flex items-center justify-center">
+                <div className="w-[34px] h-[34px] bg-[#00000000] rounded-xl flex items-center justify-center cursor-pointer">
                   <Image src="/menudots.png" alt="" width={3} height={17} />
                 </div>
               </div>
@@ -396,19 +399,19 @@ const validateTab3 = () => {
                   <p className="text-xs text-[#00000080] font-normal">Finish them to start ranking.</p>
                 </div>
                 </div>
-                <div className=" bg-[#00000000] rounded-xl flex items-center justify-center">
-                  <Button className="border ">View</Button>
-                </div>
+                  <Button className="border bg-transparent hover:bg-transparent text-[#00000080] border-[#0000001a] cursor-pointer">View</Button>
               </div>
               <div className="flex items-center justify-between border px-4 pb-4 pt-5 rounded-b-xl border-[#0000001a]">
                 <div className="flex items-center gap-5">
-                <div className="bg-[rgb(247,247,247)] w-[34px] h-[34px] flex items-center justify-center rounded-[10px]">
-                  <Plus width={20} height={20} className="text-[#65b361]" />
+                <div className="bg-[rgb(247,247,247)] w-[30px] h-[30px] flex items-center justify-center rounded-[10px]">
+                  <Image src="/actionimg2.png" alt="" width={24} height={24} />
                 </div>
                 <div>
-                  <p className="text-sm text-[#000000b3] font-normal">Add Competitor</p>
+                  <p className="text-sm text-[#000000b3] font-normal">Publishing is paused</p>
+                  <p className="text-xs text-[#00000080] font-normal">Turn on auto-publish to ship faster.</p>
                 </div>
                 </div>
+                  <Button className="border bg-transparent hover:bg-transparent text-[#00000080] border-[#0000001a] cursor-pointer">View</Button>
               </div>
             </CardContent>
           </Card>
