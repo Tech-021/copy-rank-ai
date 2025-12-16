@@ -60,6 +60,9 @@ interface Article {
 interface AnalyzeTabProps {
   onViewKeywords: (websiteId: string) => void;
   onViewCompetitors: (websiteId: string) => void;
+  generatedArticles?: Article[];
+  onArticlesUpdate?: (articles: Article[]) => void;
+  websiteId?: string;
 }
 
 interface Website {
@@ -94,6 +97,9 @@ const getCompetitorsCount = (keywordsData: any): number => {
 export function AnalyzeTab({
   onViewKeywords,
   onViewCompetitors,
+  generatedArticles,
+  onArticlesUpdate,
+  websiteId,
 }: AnalyzeTabProps) {
   const [websites, setWebsites] = useState<Website[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -110,6 +116,122 @@ export function AnalyzeTab({
   const [keyword3, setKeyword3] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [open, setOpen] = useState(false)
+   const [articles, setArticles] = useState<Article[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
+    const [newArticleKeyword, setNewArticleKeyword] = useState("");
+    const [newArticleDate, setNewArticleDate] = useState("");
+    const [filterStatus, setFilterStatus] = useState("all");
+    const [filterStartDate, setFilterStartDate] = useState("2-feb-2025");
+    const [filterEndDate, setFilterEndDate] = useState("4-mar-2025");
+    const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
+    const [currentUser, setCurrentUser] = useState<any>(null);
+    const [userPackage, setUserPackage] = useState<
+      "free" | "pro" | "premium" | null
+    >(null);
+    const [isPlanDialogOpen, setIsPlanDialogOpen] = useState(false);
+    const [selectedPlanVariantId, setSelectedPlanVariantId] = useState<
+      string | null
+    >(null);
+    const [isCreatingCheckout, setIsCreatingCheckout] = useState(false);
+    const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+    const [isSavingEdit, setIsSavingEdit] = useState(false);
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [isDeleteCompletedDialogOpen, setIsDeleteCompletedDialogOpen] =
+      useState(false);
+    const [isPublishing, setIsPublishing] = useState(false);
+    const [publishSuccess, setPublishSuccess] = useState(false);
+    const [indexingArticle, setIndexingArticle] = useState<string | null>(null);
+    const [editForm, setEditForm] = useState({
+      title: "",
+      keyword: "",
+      slug: "",
+      metaTitle: "",
+      metaDescription: "",
+      preview: "",
+      content: "",
+    });
+    const mockArticles: Article[] = [
+      {
+        id: "1",
+        title: "Why Framer is Changing How We Think About Web Development",
+        preview:
+          "Explore how Framer is reshaping web development, with real examples, web design insights, and practical web development tips for modern creators.",
+        keyword: [
+          "web design",
+          "framer",
+          "web development",
+          "technology tutorial",
+          "web development guide",
+        ],
+        status: "DRAFT",
+        date: "2025-01-27",
+        wordCount: 2500,
+        content: "<p>Framer is revolutionizing web development...</p>",
+        metaTitle: "Framer Web Development Guide",
+        metaDescription: "Learn how Framer is changing web development",
+        tags: ["web design", "framer", "web development", "technology tutorial"],
+        generatedImages: ["/aimg1.png"],
+      },
+      {
+        id: "2",
+        title: "Why Framer Changed How I Think About Web Design",
+        preview:
+          "Explore how Framer is reshaping web development, with real examples, web design insights, and practical web development tips for modern creators.",
+        keyword: [
+          "web design",
+          "framer",
+          "web development",
+          "technology tutorial",
+          "web development guide",
+        ],
+        status: "DRAFT",
+        date: "2025-02-02",
+        wordCount: 1800,
+        content: "<p>Web design has evolved...</p>",
+        metaTitle: "Web Design with Framer",
+        metaDescription: "Discover new web design techniques",
+       tags: ["web design", "framer", "web development", "technology tutorial"],
+        generatedImages: ["/aimg2.png"],
+      },
+      {
+        id: "3",
+        title: "How I Learned Web Design - Why Framer Changed Everything",
+        preview:
+          "Explore how Framer is reshaping web development, with real examples, web design insights, and practical web development tips for modern creators.",
+        keyword: [
+          "web design",
+          "framer",
+          "web development",
+          "technology tutorial",
+          "web development guide",
+        ],
+        status: "UPLOADED",
+        date: "2025-03-04",
+        wordCount: 2100,
+        content: "<p>Learning web design...</p>",
+        metaTitle: "Learning Web Design",
+        metaDescription: "Master web design skills",
+        tags: ["web design", "framer", "web development", "technology tutorial"],
+        generatedImages: ["aimg3.png"],
+      },
+      {
+        id: "4",
+        title: "Why Framer is Changing How We Think About Web Development",
+        preview:
+          "Explore how Framer is reshaping web development, with real examples, web design insights, and practical web development tips for modern creators.",
+        keyword: ["web design", "framer", "web development"],
+        status: "UPLOADED",
+        date: "2025-01-27",
+        wordCount: 2500,
+        content: "<p>Framer innovations...</p>",
+        metaTitle: "Framer Guide",
+        metaDescription: "Complete Framer tutorial",
+       tags: ["web design", "framer", "web development", "technology tutorial"],
+        generatedImages: ["/aimg1.png"],
+      },
+    ];
 
   const loadUserWebsites = async () => {
     try {
@@ -165,41 +287,6 @@ export function AnalyzeTab({
     }
   };
 
-const validateTab1 = () => {
-  if (!websiteName.trim()) {
-    toast.showToast({
-      title: "Missing Website URL",
-      description: "Please enter your website URL to continue.",
-      type: "error",
-    });
-    return false;
-  }
-  return true;
-};
-
-const validateTab2 = () => {
-  if (!competitor1.trim() || !competitor2.trim() || !competitor3.trim()) {
-    toast.showToast({
-      title: "Missing Competitors",
-      description: "Please enter all 3 competitors to continue.",
-      type: "error",
-    });
-    return false;
-  }
-  return true;
-};
-
-const validateTab3 = () => {
-  if (!keyword1.trim() || !keyword2.trim() || !keyword3.trim()) {
-    toast.showToast({
-      title: "Missing Keywords",
-      description: "Please enter all 3 keywords before submitting.",
-      type: "error",
-    });
-    return false;
-  }
-  return true;
-};
 
   const handleSubmitOnboarding = async () => {
     setIsSubmitting(true);
@@ -266,15 +353,6 @@ const validateTab3 = () => {
       setIsSubmitting(false);
     }
   };
-
-  const canProceed =
-    websiteName.trim() &&
-    competitor1.trim() &&
-    competitor2.trim() &&
-    competitor3.trim() &&
-    keyword1.trim() &&
-    keyword2.trim() &&
-    keyword3.trim();
 
   useEffect(() => {
     loadUserWebsites();
