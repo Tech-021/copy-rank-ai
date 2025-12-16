@@ -22,7 +22,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "../ui/skeleton";
 import Image from "next/image";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
-import { ChevronLeft, Plus } from "lucide-react";
+import { Badge, ChevronLeft, Plus } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -258,7 +258,8 @@ const validateTab3 = () => {
   }, []);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 flex items-center gap-5">
+    <div className="space-y-6 flex-1">
       <div className="flex items-center justify-between">
         <div>
         <h2 className="text-3xl font-normal">Performance overview</h2>
@@ -416,267 +417,98 @@ const validateTab3 = () => {
             </CardContent>
           </Card>
       </div>
-      
-      
+      <div className="space-y-3 flex-1">
+  {mockArticles.length === 0 ? (
+    <div className="text-center py-12 text-gray-400">
+      <p className="text-sm">No articles found</p>
+    </div>
+  ) : (
+    mockArticles.map((article) => (
+      <div
+        key={article.id}
+        onClick={() => setSelectedArticle(article)}
+        className={`relative flex gap-3 p-3 bg-gray-100 border rounded-lg cursor-pointer hover:border-gray-300 hover:shadow-sm transition-all ${
+          selectedArticle?.id === article.id
+            ? "border-gray-200 bg-[#F7F7F7]"
+            : "border-gray-100"
+        }`}
+      >
+        {/* Thumbnail */}
+        <img
+          src={article.generatedImages?.[0] || "/article-image.jpg"}
+          alt={article.title}
+          className="w-20 h-20 rounded object-cover flex-shrink-0"
+        />
 
-      /* 🔵 Skeletons — show while loading */
-      // {showSkeletons && (
-      //   <div className="space-y-4">
-      //     {[1, 2, 3].map((i) => (
-      //       <Card key={i} className="border-border/40 bg-card/50 backdrop-blur-sm">
-      //         <CardContent className="pt-6">
-      //           <div className="flex items-start justify-between">
-      //             <div className="flex-1 space-y-3">
-      //               <Skeleton className="h-4 w-40 bg-gray-300" />
-      //               <Skeleton className="h-4 w-32 bg-gray-300" />
-      /* 🔵 Skeletons — show while loading */
-      // {showSkeletons && (
-      //   <div className="space-y-4">
-      //     {[1, 2, 3].map((i) => (
-      //       <Card key={i} className="border-border/40 bg-card/50 backdrop-blur-sm">
-      //         <CardContent className="pt-6">
-      //           <div className="flex items-start justify-between">
-      //             <div className="flex-1 space-y-3">
-      //               <Skeleton className="h-4 w-40 bg-gray-300" />
-      //               <Skeleton className="h-4 w-32 bg-gray-300" />
+        {/* Main Content Column */}
+        <div className="flex flex-col min-w-0 flex-1">
+          {/* Title + Meta */}
+          <div className="flex justify-between gap-2">
+            <div className="min-w-0">
+              <h4 className="font-medium text-gray-900 text-sm line-clamp-2">
+                {article.title}
+              </h4>
 
-      //               <div className="flex gap-4 mt-3">
-      //                 <Skeleton className="h-4 w-20 bg-gray-300" />
-      //                 <Skeleton className="h-4 w-24 bg-gray-300" />
-      //               </div>
-      //               <div className="flex gap-4 mt-3">
-      //                 <Skeleton className="h-4 w-20 bg-gray-300" />
-      //                 <Skeleton className="h-4 w-24 bg-gray-300" />
-      //               </div>
+              <div className="flex items-center gap-1 mt-1">
+                <Image
+                  src="/clock.png"
+                  height={13}
+                  width={13}
+                  alt="icon"
+                />
+                <p className="text-xs text-gray-500">
+                  11 minutes read
+                </p>
+              </div>
 
-      //               <Skeleton className="h-3 w-24 bg-gray-300" />
-      //             </div>
-      //               <Skeleton className="h-3 w-24 bg-gray-300" />
-      //             </div>
+              <Badge
+                className={`mt-2 text-xs font-medium w-fit ${
+                  article.status === "UPLOADED"
+                    ? "bg-transparent text-green-700 border border-green-600"
+                    : "bg-gray-100 text-gray-600 border border-gray-800"
+                }`}
+              >
+                {article.status}
+              </Badge>
+            </div>
 
-      //             <div className="flex items-center gap-2">
-      //               <Skeleton className="h-8 w-24 rounded bg-gray-300" />
-      //               <Skeleton className="h-8 w-24 rounded bg-gray-300" />
-      //               <Skeleton className="h-8 w-10 rounded bg-gray-300" />
-      //             </div>
-      //           </div>
-      //         </CardContent>
-      //       </Card>
-      //     ))}
-      //   </div>
-      // )}
-      //             <div className="flex items-center gap-2">
-      //               <Skeleton className="h-8 w-24 rounded bg-gray-300" />
-      //               <Skeleton className="h-8 w-24 rounded bg-gray-300" />
-      //               <Skeleton className="h-8 w-10 rounded bg-gray-300" />
-      //             </div>
-      //           </div>
-      //         </CardContent>
-      //       </Card>
-      //     ))}
-      //   </div>
-      // )}
+            {/* Edit Button */}
+            {selectedArticle?.id !== article.id && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-gray-400 hover:text-gray-700 h-8 w-8 p-0 flex-shrink-0"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  openEditDialog(article);
+                }}
+              >
+                Edit
+              </Button>
+            )}
+          </div>
 
+          {/* Preview (FULL WIDTH, NOT under image) */}
+          <p className="text-xs text-gray-500 line-clamp-2 mt-2">
+            {article.preview}
+          </p>
 
-      /* Real websites */
-      // {websites.length > 0 && (
-      //   <div className="space-y-4">
-      //     <h3 className="text-lg font-semibold text-foreground">
-      //       Your Websites
-      //     </h3>
-      /* Real websites */
-      // {websites.length > 0 && (
-      //   <div className="space-y-4">
-      //     <h3 className="text-lg font-semibold text-foreground">
-      //       Your Websites
-      //     </h3>
-
-      //     {websites.map((site) => (
-      //       <Card
-      //         key={site.id}
-      //         className="border-border/40 bg-card/50 backdrop-blur-sm"
-      //       >
-      //         <CardContent className="pt-6">
-      //           <div className="flex items-start justify-between">
-      //             <div className="flex-1">
-      //               <p className="font-medium text-foreground">{site.url}</p>
-      //               <p className="text-sm text-muted-foreground mt-1">
-      //                 {site.isAnalyzing ? (
-      //                   <span className="flex items-center gap-2">
-      //                     <div className="animate-spin">
-      //                       <Image
-      //                         src="/loader.png"
-      //                         alt=""
-      //                         width={92}
-      //                         height={92}
-      //                       />
-      //                     </div>
-      //                     Detecting topic...
-      //                   </span>
-      //                 ) : (
-      //                   <>Topic: {site.topic}</>
-      //                 )}
-      //               </p>
-      //     {websites.map((site) => (
-      //       <Card
-      //         key={site.id}
-      //         className="border-border/40 bg-card/50 backdrop-blur-sm"
-      //       >
-      //         <CardContent className="pt-6">
-      //           <div className="flex items-start justify-between">
-      //             <div className="flex-1">
-      //               <p className="font-medium text-foreground">{site.url}</p>
-      //               <p className="text-sm text-muted-foreground mt-1">
-      //                 {site.isAnalyzing ? (
-      //                   <span className="flex items-center gap-2">
-      //                     <div className="animate-spin">
-      //                       <Image
-      //                         src="/loader.png"
-      //                         alt=""
-      //                         width={92}
-      //                         height={92}
-      //                       />
-      //                     </div>
-      //                     Detecting topic...
-      //                   </span>
-      //                 ) : (
-      //                   <>Topic: {site.topic}</>
-      //                 )}
-      //               </p>
-
-      //               {!site.isAnalyzing && site.keywords && (
-      //                 <div className="flex gap-4 mt-3">
-      //                   <p className="text-sm text-muted-foreground flex items-center gap-1">
-      //                     <span className="font-medium">
-      //                       {getKeywordsCount(site.keywords)}
-      //                     </span>
-      //                     <span>Keywords</span>
-      //                   </p>
-      //               {!site.isAnalyzing && site.keywords && (
-      //                 <div className="flex gap-4 mt-3">
-      //                   <p className="text-sm text-muted-foreground flex items-center gap-1">
-      //                     <span className="font-medium">
-      //                       {getKeywordsCount(site.keywords)}
-      //                     </span>
-      //                     <span>Keywords</span>
-      //                   </p>
-
-      //                   {getCompetitorsCount(site.keywords) > 0 && (
-      //                     <p className="text-sm text-muted-foreground flex items-center gap-1">
-      //                       <Users className="w-3 h-3" />
-      //                       <span className="font-medium">
-      //                         {getCompetitorsCount(site.keywords)}
-      //                       </span>
-      //                       <span>Competitors</span>
-      //                     </p>
-      //                   )}
-      //                 </div>
-      //               )}
-      //                   {getCompetitorsCount(site.keywords) > 0 && (
-      //                     <p className="text-sm text-muted-foreground flex items-center gap-1">
-      //                       <Users className="w-3 h-3" />
-      //                       <span className="font-medium">
-      //                         {getCompetitorsCount(site.keywords)}
-      //                       </span>
-      //                       <span>Competitors</span>
-      //                     </p>
-      //                   )}
-      //                 </div>
-      //               )}
-
-      //               {site.created_at && (
-      //                 <p className="text-xs text-muted-foreground mt-2">
-      //                   Added: {new Date(site.created_at).toLocaleDateString()}
-      //                 </p>
-      //               )}
-      //             </div>
-      //               {site.created_at && (
-      //                 <p className="text-xs text-muted-foreground mt-2">
-      //                   Added: {new Date(site.created_at).toLocaleDateString()}
-      //                 </p>
-      //               )}
-      //             </div>
-
-      //             <div className="flex items-center gap-2">
-      //               {!site.isAnalyzing && site.keywords && (
-      //                 <>
-      //                   <Button
-      //                     onClick={() => onViewKeywords(site.id)}
-      //                     variant="outline"
-      //                     size="sm"
-      //                     className="cursor-pointer gap-2"
-      //                   >
-      //                     <ExternalLink className="w-4 h-4" />
-      //                     View Keywords
-      //                   </Button>
-      //             <div className="flex items-center gap-2">
-      //               {!site.isAnalyzing && site.keywords && (
-      //                 <>
-      //                   <Button
-      //                     onClick={() => onViewKeywords(site.id)}
-      //                     variant="outline"
-      //                     size="sm"
-      //                     className="cursor-pointer gap-2"
-      //                   >
-      //                     <ExternalLink className="w-4 h-4" />
-      //                     View Keywords
-      //                   </Button>
-
-      //                   {getCompetitorsCount(site.keywords) > 0 && (
-      //                     <Button
-      //                       onClick={() => onViewCompetitors(site.id)}
-      //                       variant="outline"
-      //                       size="sm"
-      //                       className="cursor-pointer gap-2 bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 hover:text-blue-800"
-      //                     >
-      //                       <Users className="w-4 h-4" />
-      //                       View Competitors
-      //                     </Button>
-      //                   )}
-      //                 </>
-      //               )}
-      //               <Button
-      //                 onClick={() => handleRemoveWebsite(site.id)}
-      //                 variant="ghost"
-      //                 size="sm"
-      //                 className="cursor-pointer text-muted-foreground hover:text-destructive"
-      //               >
-      //                 <Trash2 className="w-4 h-4" />
-      //               </Button>
-      //             </div>
-      //           </div>
-      //         </CardContent>
-      //       </Card>
-      //     ))}
-      //   </div>
-      // )}
-      //                   {getCompetitorsCount(site.keywords) > 0 && (
-      //                     <Button
-      //                       onClick={() => onViewCompetitors(site.id)}
-      //                       variant="outline"
-      //                       size="sm"
-      //                       className="cursor-pointer gap-2 bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 hover:text-blue-800"
-      //                     >
-      //                       <Users className="w-4 h-4" />
-      //                       View Competitors
-      //                     </Button>
-      //                   )}
-      //                 </>
-      //               )}
-      //               <Button
-      //                 onClick={() => handleRemoveWebsite(site.id)}
-      //                 variant="ghost"
-      //                 size="sm"
-      //                 className="cursor-pointer text-muted-foreground hover:text-destructive"
-      //               >
-      //                 <Trash2 className="w-4 h-4" />
-      //               </Button>
-      //             </div>
-      //           </div>
-      //         </CardContent>
-      //       </Card>
-      //     ))}
-      //   </div>
-      // )}
+          {/* Tags */}
+          <div className="flex gap-1 flex-wrap mt-2">
+            {article.tags?.slice(0, 5).map((tag) => (
+              <span
+                key={tag}
+                className="text-xs bg-gray-200  text-gray-600 px-2 py-0.5 rounded-2xl border border-gray-200"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+    ))
+  )}
+</div>
+     </div> 
   );
 }
