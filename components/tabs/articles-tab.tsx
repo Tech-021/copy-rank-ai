@@ -2,6 +2,9 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { Stepper } from "@/components/ui/stepper";
+
 import {
   Card,
   CardContent,
@@ -11,6 +14,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+
 import {
   Dialog,
   DialogContent,
@@ -25,7 +29,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@/components/ui/select3";
 import {
   Loader2,
   Plus,
@@ -52,8 +56,8 @@ interface Article {
   id: string;
   title: string;
   content: string;
-  keyword: string;
-  status: "draft" | "scheduled" | "published";
+  keyword: string[];
+  status: "draft" | "scheduled" | "published" | "UPLOADED" | "DRAFT";
   date: string;
   preview: string;
   wordCount: number;
@@ -88,6 +92,9 @@ export function ArticlesTab({
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
   const [newArticleKeyword, setNewArticleKeyword] = useState("");
   const [newArticleDate, setNewArticleDate] = useState("");
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [filterStartDate, setFilterStartDate] = useState("2-feb-2025");
+  const [filterEndDate, setFilterEndDate] = useState("4-mar-2025");
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [userPackage, setUserPackage] = useState<
@@ -100,6 +107,11 @@ export function ArticlesTab({
   const [isCreatingCheckout, setIsCreatingCheckout] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeleteCompletedDialogOpen, setIsDeleteCompletedDialogOpen] =
+    useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [publishSuccess, setPublishSuccess] = useState(false);
   const [indexingArticle, setIndexingArticle] = useState<string | null>(null);
   const toast = useToast();
   const [editForm, setEditForm] = useState({
@@ -111,6 +123,123 @@ export function ArticlesTab({
     preview: "",
     content: "",
   });
+  const mockArticles: Article[] = [
+    {
+      id: "1",
+      title: "Why Framer is Changing How We Think About Web Development",
+      preview:
+        "Explore how Framer is reshaping web development, with real examples, web design insights, and practical web development tips for modern creators.",
+      keyword: [
+        "web design",
+        "framer",
+        "web development",
+        "technology tutorial",
+        "web development guide",
+      ],
+      status: "DRAFT",
+      date: "2025-01-27",
+      wordCount: 2500,
+      content: "<p>Framer is revolutionizing web development...</p>",
+      metaTitle: "Framer Web Development Guide",
+      metaDescription: "Learn how Framer is changing web development",
+      tags: ["web design", "framer", "web development", "technology tutorial"],
+      generatedImages: ["/aimg1.png"],
+    },
+    {
+      id: "2",
+      title: "Why Framer Changed How I Think About Web Design",
+      preview:
+        "Explore how Framer is reshaping web development, with real examples, web design insights, and practical web development tips for modern creators.",
+      keyword: [
+        "web design",
+        "framer",
+        "web development",
+        "technology tutorial",
+        "web development guide",
+      ],
+      status: "DRAFT",
+      date: "2025-02-02",
+      wordCount: 1800,
+      content: "<p>Web design has evolved...</p>",
+      metaTitle: "Web Design with Framer",
+      metaDescription: "Discover new web design techniques",
+     tags: ["web design", "framer", "web development", "technology tutorial"],
+      generatedImages: ["/aimg2.png"],
+    },
+    {
+      id: "3",
+      title: "How I Learned Web Design - Why Framer Changed Everything",
+      preview:
+        "Explore how Framer is reshaping web development, with real examples, web design insights, and practical web development tips for modern creators.",
+      keyword: [
+        "web design",
+        "framer",
+        "web development",
+        "technology tutorial",
+        "web development guide",
+      ],
+      status: "UPLOADED",
+      date: "2025-03-04",
+      wordCount: 2100,
+      content: "<p>Learning web design...</p>",
+      metaTitle: "Learning Web Design",
+      metaDescription: "Master web design skills",
+      tags: ["web design", "framer", "web development", "technology tutorial"],
+      generatedImages: ["aimg3.png"],
+    },
+    {
+      id: "4",
+      title: "Why Framer is Changing How We Think About Web Development",
+      preview:
+        "Explore how Framer is reshaping web development, with real examples, web design insights, and practical web development tips for modern creators.",
+      keyword: ["web design", "framer", "web development"],
+      status: "UPLOADED",
+      date: "2025-01-27",
+      wordCount: 2500,
+      content: "<p>Framer innovations...</p>",
+      metaTitle: "Framer Guide",
+      metaDescription: "Complete Framer tutorial",
+     tags: ["web design", "framer", "web development", "technology tutorial"],
+      generatedImages: ["/aimg1.png"],
+    },
+  ];
+
+  // Then add filtering logic
+  const filteredArticles = mockArticles.filter((article) => {
+    if (filterStatus !== "all" && article.status !== filterStatus) {
+      return false;
+    }
+    return true;
+  });
+  const handlePublish = async () => {
+    setIsPublishing(true);
+    try {
+      // Simulate publishing delay
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      setPublishSuccess(true);
+
+      // Show success message
+      toast.showToast({
+        title: "Published!",
+        description: "Your article has been published successfully.",
+        type: "success",
+      });
+
+      // Reset and close after 1.5 seconds
+      setTimeout(() => {
+        setIsPublishing(false);
+        setPublishSuccess(false);
+        setSelectedArticle(null);
+      }, 1500);
+    } catch (error) {
+      setIsPublishing(false);
+      toast.showToast({
+        title: "Error",
+        description: "Failed to publish article",
+        type: "error",
+      });
+    }
+  };
 
   // Helper to build article URL
   const getArticleUrl = (slug: string) => {
@@ -353,7 +482,9 @@ export function ArticlesTab({
     setSelectedArticle(article);
     setEditForm({
       title: article.title || "",
-      keyword: article.keyword || "",
+      keyword: Array.isArray(article.keyword)
+        ? article.keyword.join(", ")
+        : article.keyword || "",
       slug: article.slug || "",
       metaTitle: article.metaTitle || "",
       metaDescription: article.metaDescription || "",
@@ -700,6 +831,508 @@ export function ArticlesTab({
 
   return (
     <div className="space-y-6">
+      <div>
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-2xl text-gray-700 font-medium">Blogs</h2>
+            <p className="text-gray-500 text-sm">
+              Create, review, and publish your AI-generated posts.
+            </p>
+          </div>
+          <Select>
+            <SelectTrigger className="w-40 h-9 border-gray-200">
+              <SelectValue placeholder={websiteId || "www.delani.pro"} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={websiteId || "www.delani.pro"}>
+                {websiteId || "www.delani.pro"}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Create a Ranking Post Section */}
+        <Card className="border-gray-200 bg-white">
+          <CardContent className="pt-2">
+            <div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                Create a Ranking Post
+              </h3>
+              <p className="text-sm text-gray-500 mb-4">
+                Turn competitor keywords into SEO-ready blog posts in one click.
+              </p>
+              <Button className="bg-black cursor-pointer px-8 text-white hover:bg-gray-900">
+                Create Post
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Stats Grid */}
+        <div className="flex mt-5  text-sm">
+          <Select defaultValue="all">
+            <SelectTrigger className="w-auto border-0 bg-transparent px-0 py-0 text-gray-600 hover:text-gray-900 focus:ring-0 focus:ring-offset-0">
+              <SelectValue placeholder="All" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All</SelectItem>
+              <SelectItem value="published">Published</SelectItem>
+              <SelectItem value="draft">Draft</SelectItem>
+              <SelectItem value="scheduled">Scheduled</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <span className="text-gray-300"></span>
+
+          <Select defaultValue="27-jan-2025">
+            <SelectTrigger className="w-auto border-0 bg-transparent px-0 py-0 text-gray-600 hover:text-gray-900 focus:ring-0 focus:ring-offset-0">
+              <SelectValue placeholder="27-Jan, 2025" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="27-jan-2025">2Feb, 2025</SelectItem>
+              <SelectItem value="26-jan-2025">2Feb, 2025</SelectItem>
+              <SelectItem value="25-jan-2025">2Feb, 2025</SelectItem>
+              <SelectItem value="24-jan-2025">2Feb, 2025</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <span className="text-gray-300"></span>
+
+          <Select defaultValue="4-mar-2025">
+            <SelectTrigger className="w-auto border-0 bg-transparent px-0 py-0 text-gray-600 hover:text-gray-900 focus:ring-0 focus:ring-offset-0">
+              <SelectValue placeholder="4 Mar, 2025" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="4-mar-2025">4 Mar, 2025</SelectItem>
+              <SelectItem value="3-mar-2025">3 Mar, 2025</SelectItem>
+              <SelectItem value="2-mar-2025">2 Mar, 2025</SelectItem>
+              <SelectItem value="1-mar-2025">1 Mar, 2025</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Main Layout - Articles + Preview */}
+        <div className="flex gap-6 h-auto overflow-hidden">
+          {/* Left Side - Articles List */}
+       <div className="space-y-3 pr-2">
+  {mockArticles.length === 0 ? (
+    <div className="text-center py-12 text-gray-400">
+      <p className="text-sm">No articles found</p>
+    </div>
+  ) : (
+    mockArticles.map((article) => (
+      <div
+        key={article.id}
+        onClick={() => setSelectedArticle(article)}
+        className={`relative flex gap-3 p-3 bg-gray-100 border rounded-lg cursor-pointer hover:border-gray-300 hover:shadow-sm transition-all ${
+          selectedArticle?.id === article.id
+            ? "border-gray-200 bg-[#F7F7F7]"
+            : "border-gray-100"
+        }`}
+      >
+        {/* Thumbnail */}
+        <img
+          src={article.generatedImages?.[0] || "/article-image.jpg"}
+          alt={article.title}
+          className="w-20 h-20 rounded object-cover flex-shrink-0"
+        />
+
+        {/* Main Content Column */}
+        <div className="flex flex-col min-w-0 flex-1">
+          {/* Title + Meta */}
+          <div className="flex justify-between gap-2">
+            <div className="min-w-0">
+              <h4 className="font-medium text-gray-900 text-sm line-clamp-2">
+                {article.title}
+              </h4>
+
+              <div className="flex items-center gap-1 mt-1">
+                <Image
+                  src="/clock.png"
+                  height={13}
+                  width={13}
+                  alt="icon"
+                />
+                <p className="text-xs text-gray-500">
+                  11 minutes read
+                </p>
+              </div>
+
+              <Badge
+                className={`mt-2 text-xs font-medium w-fit ${
+                  article.status === "UPLOADED"
+                    ? "bg-transparent text-green-700 border border-green-600"
+                    : "bg-gray-100 text-gray-600 border border-gray-800"
+                }`}
+              >
+                {article.status}
+              </Badge>
+            </div>
+
+            {/* Edit Button */}
+            {selectedArticle?.id !== article.id && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-gray-400 hover:text-gray-700 h-8 w-8 p-0 flex-shrink-0"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  openEditDialog(article);
+                }}
+              >
+                Edit
+              </Button>
+            )}
+          </div>
+
+          {/* Preview (FULL WIDTH, NOT under image) */}
+          <p className="text-xs text-gray-500 line-clamp-2 mt-2">
+            {article.preview}
+          </p>
+
+          {/* Tags */}
+          <div className="flex gap-1 flex-wrap mt-2">
+            {article.tags?.slice(0, 5).map((tag) => (
+              <span
+                key={tag}
+                className="text-xs bg-gray-200  text-gray-600 px-2 py-0.5 rounded-2xl border border-gray-200"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+    ))
+  )}
+</div>
+
+          {/* Right Side - Edit/Preview Panel */}
+          {selectedArticle && (
+            <div className=" max-w-[640px]  bg-white rounded-[9px] border-l border-gray-200 overflow-hidden flex flex-col">
+              {/* Header */}
+              <div className="flex items-center justify-between p-4 border-b border-gray-200 flex-shrink-0">
+                <span className="text-sm font-semibold text-gray-700">
+                  EDIT POST
+                </span>
+                <button
+                  onClick={() => setSelectedArticle(null)}
+                  className="text-gray-400 hover:text-gray-600 text-xl leading-none font-bold"
+                >
+                  ×
+                </button>
+              </div>
+
+              {/* Scrollable Content */}
+              <div className="flex-1 overflow-y-auto">
+                <div className=" space-y-4 p-4">
+                  {/* Title */}
+                  <div className="flex gap-3">
+                    <label className="block text-xs mt-1 font-semibold text-gray-700 ">
+                      Title
+                    </label>
+                    <h4>{selectedArticle.title || ""}</h4>
+                  </div>
+
+                  {/* Keywords */}
+                  <div className="flex gap-1">
+                    <label className="block mt-1 text-xs font-semibold text-gray-700">
+                      Keywords:
+                    </label>
+
+                    <div className="flex  gap-2">
+                      {selectedArticle.keyword.length > 0 ? (
+                        selectedArticle.keyword.map((keyword, index) => (
+                          <span
+                            key={index}
+                            className="px-1 py-1  rounded-full text-xs font-medium bg-gray-100 text-gray-600 border border-gray-300 inline-block"
+                          >
+                            {keyword}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-xs text-gray-500">
+                          No keywords
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {/* Word Count */}
+                  <div className="flex gap-3">
+                    <div className="flex items-center gap-1">
+                      <Image
+                        src="/smallclock.png"
+                        alt="reading time icon"
+                        height={16}
+                        width={16}
+                        priority
+                      />
+                      <p className="text-green-500 text-xs">11 minutes read</p>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Image
+                        src="/Union.png"
+                        alt="word count icon"
+                        height={16}
+                        width={16}
+                        priority
+                      />
+                      <p className="text-green-500 text-xs">2,408 words</p>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Image
+                        src="/Union (1).png"
+                        alt="content score icon"
+                        height={16}
+                        width={16}
+                        priority
+                      />
+                      <p className="text-green-500 text-xs">
+                        100% content score
+                      </p>
+                    </div>
+                  </div>
+                  {/* Preview Text */}
+                  <div>
+                    {/* <label className="block text-xs font-semibold text-gray-700 mb-2">
+                      Preview
+                    </label> */}
+                    {/* <p className="text-xs text-gray-600 leading-relaxed bg-gray-50 p-3 rounded border border-gray-200">
+                      {selectedArticle.preview}
+                    </p> */}
+                  </div>
+
+                  {/* SEO Preview */}
+                  <div>
+                    <div className="bg-white border border-gray-200 p-4 rounded-lg shadow-sm">
+                      <label className="block text-[15px]  text-gray-700 mb-2">
+                        SEO Preview
+                      </label>
+                      <p className="text-blue-600 font-medium text-sm mb-2 line-clamp-2">
+                        Web Development in 2024: Framer, Design, and the Future
+                      </p>
+                      <p className="text-gray-600 text-xs leading-relaxed line-clamp-3">
+                        Explore how Framer is reshaping web development, with
+                        real examples, web design insights, and practical web
+                        development tips for modern creators.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Tags */}
+                </div>
+                <div className="border-b border-gray-200 " />
+                <div className="p-4">
+                  <h4 className="text-2xl">
+                    Web Development in 2024: Framer,
+                    <br /> Design, and the Future
+                  </h4>
+                  <p className="text-[14px] mt-3 text-gray-700 leading-relaxed">
+                    I was sitting in a Lahore café last winter, sipping chai
+                    while a freelance designer across from me pulled up her
+                    portfolio on an iPad. She hadn’t coded a single line. Yet
+                    her site had
+                    <br /> smooth scroll animations, interactive forms, and a
+                    checkout flow that felt like Shopify. “I
+                    <br /> built it in Framer,” she said, shrugging. I nearly
+                    dropped my cup. That moment stuck with me - here was someone
+                    redefining what it means to do web development without
+                    touching a code editor.
+                    <br />
+                    It made me rethink everything I assumed about modern web
+                    design. For years, we've
+                    <br /> treated web development as a rigid path: learn HTML,
+                    CSS, JavaScript, fight with frameworks, deploy via CLI. But
+                    tools like Framer are flipping the script. They’re not
+                    <br /> replacing developers - they’re expanding who gets to
+                    build. And honestly, isn’t that the
+                    <br />
+                    point of technology? To make powerful things accessible?
+                    <br />
+                    If you’ve been wondering how to stay relevant in a world
+                    where no-code is rising, or if you're still writing vanilla
+                    JavaScript for every project, this guide is for you. We’re
+                    not here to
+                    <br />
+                    debate whether no-code kills jobs. We’re here to explore how
+                    tools like Framer are
+                    <br /> reshaping the landscape of web development - and how
+                    you can use them to work smarter, faster, and with more
+                    creativity.
+                    <br />
+                    <br />
+                    The Shift: From Code-First to Design-First Web Development
+                    <br /> Remember when web design meant slicing Photoshop
+                    files and handing them off to developers? That process died
+                    slowly, replaced by collaborative workflows and shared
+                    tools. But now, the separation between design and code is
+                    blurring even more. Framer sits right at the center of that
+                    shift. It started as a prototyping tool but evolved into a
+                    full-stack visual builder that publishes React-based sites.
+                    This isn’t just about dragging and dropping buttons. Framer
+                    lets you build responsive layouts, add interactions, connect
+                    databases, and even handle user authentication - all within
+                    a UI that feels familiar to anyone who’s used Figma or
+                    Webflow. And because it outputs clean React code, it’s not a
+                    dead-end tool. You can export and customize further if
+                    needed. So why does this matter? Because it challenges the
+                    old hierarchy in web development. Instead of design being a
+                    static mockup, it becomes a living, functional prototype.
+                    Want to test a new navigation flow? You tweak it in Framer
+                    and publish a live version in minutes. No back-and-forth
+                    with developers. No waiting for pull requests. Just instant
+                    feedback. But here’s the catch: this doesn’t eliminate the
+                    need for solid web development skills. In fact, it raises
+                    the bar. Now you’re expected to understand not just code,
+                    but UX, performance, and accessibility - all while moving
+                    fast. That’s where smart web development tips come into
+                    play. You can’t just rely on the tool. You have to know when
+                    to step in and optimize. Two Real Examples: When Framer
+                    Shined (and When It Didn’t) Let’s talk real projects. A
+                    startup in Islamabad wanted a landing page for their AI
+                    note-taking app. They needed something sleek, fast, and
+                    packed with micro-interactions to showcase their product.
+                    Their dev team was small, and timelines were tight. Instead
+                    of building from scratch in Next.js, they used Framer.
+                  </p>
+                </div>
+              </div>
+
+              {/* Footer Actions */}
+              <div className="border-t border-gray-200 p-4 bg-white flex gap-2 flex-shrink-0">
+                <Button
+                  className="flex-1 bg-black text-white font-medium hover:bg-gray-900 h-10 text-sm rounded disabled:opacity-60"
+                  onClick={handlePublish}
+                  disabled={isPublishing}
+                >
+                  {isPublishing ? (
+                    publishSuccess ? (
+                      <div className="flex items-center justify-center gap-2">
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={3}
+                            d="M5 13l4 4L19 7"
+                          />
+                        </svg>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center gap-2">
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      </div>
+                    )
+                  ) : (
+                    "Publish"
+                  )}
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="h-9 w-14 p-0 rounded-sm text-red-500 bg-red-500 hover:text-red-700 hover:bg-red-50"
+                  onClick={() => setIsDeleteDialogOpen(true)}
+                >
+                  <Image src="/bin.png" height={11} width={11} alt="icon" />
+                </Button>
+
+                <Dialog
+                  open={isDeleteDialogOpen}
+                  onOpenChange={setIsDeleteDialogOpen}
+                >
+                  <DialogContent className="sm:max-w-[550px] text-center p-0 border-0">
+                    <VisuallyHidden>
+                      <DialogTitle>Confirm delete</DialogTitle>
+                    </VisuallyHidden>
+
+                    <div className="flex flex-col items-center gap-4 py-8 px-6">
+                      <h2 className="text-2xl  text-gray-900">
+                        Confirm delete
+                      </h2>
+                      <div className=" flex items-center justify-center">
+                        <Image
+                          src="/deletedocument.png"
+                          height={60}
+                          width={60}
+                          alt="delete"
+                          className="text-red-500 mt-6 "
+                        />
+                      </div>
+                      <div></div>
+                    </div>
+
+                    <div className="flex gap-3 px-6 pb-6">
+                      <Button
+                        className="flex-1 h-11  bg-red-500 hover:bg-red-600 text-white font-medium"
+                        onClick={() => {
+                          setIsDeleteDialogOpen(false);
+                          setTimeout(() => {
+                            setIsDeleteCompletedDialogOpen(true);
+                          }, 300);
+                        }}
+                      >
+                        Delete
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="flex-1 h-11 text-gray-700 bg-gray-200 border-gray-200 hover:bg-gray-50"
+                        onClick={() => setIsDeleteDialogOpen(false)}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+
+                <Dialog
+                  open={isDeleteCompletedDialogOpen}
+                  onOpenChange={setIsDeleteCompletedDialogOpen}
+                >
+                  <DialogContent className="sm:max-w-[550px] text-center p-0 border-0">
+                    <VisuallyHidden>
+                      <DialogTitle>Delete completed</DialogTitle>
+                    </VisuallyHidden>
+
+                    <div className="flex flex-col items-center  gap-4 py-8 px-6">
+                      <h2 className="text-2xl  text-gray-900">Completed!</h2>
+                      <div className=" flex items-center justify-center">
+                        <Image
+                          src="/check.png"
+                          alt="icon"
+                          height={81}
+                          width={81}
+                          className="mt-9"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="px-6 pb-6">
+                      <Button
+                        className="w-full h-11 bg-green-600 hover:bg-green-600 text-white font-medium rounded-lg"
+                        onClick={() => {
+                          setIsDeleteCompletedDialogOpen(false);
+                          toast.showToast({
+                            title: "Article deleted",
+                            description:
+                              "The article has been permanently deleted.",
+                            type: "success",
+                          });
+                        }}
+                      >
+                        Done
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
       {userPackage === "free" && (
         <Card className="border-blue-200 bg-linear-to-r from-blue-50 to-indigo-50">
           <CardContent className="pt-6">
