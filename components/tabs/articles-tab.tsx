@@ -163,7 +163,7 @@ export function ArticlesTab({
       content: "<p>Web design has evolved...</p>",
       metaTitle: "Web Design with Framer",
       metaDescription: "Discover new web design techniques",
-      tags: ["design", "framer", "tutorial"],
+     tags: ["web design", "framer", "web development", "technology tutorial"],
       generatedImages: ["/aimg2.png"],
     },
     {
@@ -184,7 +184,7 @@ export function ArticlesTab({
       content: "<p>Learning web design...</p>",
       metaTitle: "Learning Web Design",
       metaDescription: "Master web design skills",
-      tags: ["learning", "design", "web"],
+      tags: ["web design", "framer", "web development", "technology tutorial"],
       generatedImages: ["aimg3.png"],
     },
     {
@@ -199,7 +199,7 @@ export function ArticlesTab({
       content: "<p>Framer innovations...</p>",
       metaTitle: "Framer Guide",
       metaDescription: "Complete Framer tutorial",
-      tags: ["web design", "framer", "code"],
+     tags: ["web design", "framer", "web development", "technology tutorial"],
       generatedImages: ["/aimg1.png"],
     },
   ];
@@ -914,107 +914,98 @@ export function ArticlesTab({
         {/* Main Layout - Articles + Preview */}
         <div className="flex gap-6 h-auto overflow-hidden">
           {/* Left Side - Articles List */}
-          <div className="flex-1 space-y-3  pr-2">
-            {mockArticles.length === 0 ? (
-              <div className="text-center py-12 text-gray-400">
-                <p className="text-sm">No articles found</p>
+       <div className="space-y-3 pr-2">
+  {mockArticles.length === 0 ? (
+    <div className="text-center py-12 text-gray-400">
+      <p className="text-sm">No articles found</p>
+    </div>
+  ) : (
+    mockArticles.map((article) => (
+      <div
+        key={article.id}
+        onClick={() => setSelectedArticle(article)}
+        className={`relative flex gap-3 p-3 bg-gray-100 border rounded-lg cursor-pointer hover:border-gray-300 hover:shadow-sm transition-all ${
+          selectedArticle?.id === article.id
+            ? "border-gray-200 bg-[#F7F7F7]"
+            : "border-gray-100"
+        }`}
+      >
+        {/* Thumbnail */}
+        <img
+          src={article.generatedImages?.[0] || "/article-image.jpg"}
+          alt={article.title}
+          className="w-20 h-20 rounded object-cover flex-shrink-0"
+        />
+
+        {/* Main Content Column */}
+        <div className="flex flex-col min-w-0 flex-1">
+          {/* Title + Meta */}
+          <div className="flex justify-between gap-2">
+            <div className="min-w-0">
+              <h4 className="font-medium text-gray-900 text-sm line-clamp-2">
+                {article.title}
+              </h4>
+
+              <div className="flex items-center gap-1 mt-1">
+                <Image
+                  src="/clock.png"
+                  height={13}
+                  width={13}
+                  alt="icon"
+                />
+                <p className="text-xs text-gray-500">
+                  11 minutes read
+                </p>
               </div>
-            ) : (
-              mockArticles.map((article) => (
-                <div
-                  key={article.id}
-                  onClick={() => setSelectedArticle(article)}
-                  className={`flex gap-3 p-3 bg-gray-100 border rounded-lg cursor-pointer hover:border-gray-300 hover:shadow-sm transition-all ${
-                    selectedArticle?.id === article.id
-                      ? "border-gray-200 bg-[#F7F7F7]"
-                      : "border-gray-100"
-                  }`}
-                >
-                  {/* Thumbnail */}
-                  <div className="flex-shrink-0">
-                    <img
-                      src={article.generatedImages?.[0] || "/article-image.jpg"}
-                      alt={article.title}
-                      className="w-20 h-20 rounded object-cover"
-                    />
-                  </div>
 
-                  {/* Content */}
-                  <div className="flex-1 min-w-0">
-                    {/* Status Badge */}
-                    <div className="mb-1 flex flex-col">
-                      <h4 className="font-medium text-gray-900 text-sm line-clamp-2 mb-1">
-                        {article.title}
-                      </h4>
-                      <div className="flex gap-1">
-                        <Image
-                          src="/clock.png"
-                          height={13.2}
-                          alt="icon"
-                          width={13.2}
-                        />
-                        <p className="text-xs text-gray-500">11 minutes read</p>
-                      </div>
+              <Badge
+                className={`mt-2 text-xs font-medium w-fit ${
+                  article.status === "UPLOADED"
+                    ? "bg-transparent text-green-700 border border-green-600"
+                    : "bg-gray-100 text-gray-600 border border-gray-800"
+                }`}
+              >
+                {article.status}
+              </Badge>
+            </div>
 
-                      <Badge
-                        className={`text-xs mt-2 font-medium ${
-                          article.status === "UPLOADED"
-                            ? "bg-transparent text-green-700 border border-green-600"
-                            : article.status === "scheduled"
-                            ? "bg-blue-100 text-blue-700 border border-blue-200"
-                            : "bg-gray-100 text-gray-600 border border-gray-800"
-                        }`}
-                      >
-                        {article.status.charAt(0).toUpperCase() +
-                          article.status.slice(1)}
-                      </Badge>
-                    </div>
-
-                    {/* Title */}
-
-                    {/* Preview */}
-                    <p className="text-xs text-gray-500 line-clamp-2 mb-2">
-                      {article.preview}
-                    </p>
-
-                    {/* Tags */}
-                    <div className="flex gap-1 flex-wrap">
-                      {article.tags?.slice(0, 3).map((tag) => (
-                        <span
-                          key={tag}
-                          className="text-xs bg-gray-50 text-gray-600 px-2 py-0.5 rounded border border-gray-200"
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                      {article.tags && article.tags.length > 3 && (
-                        <span className="text-xs text-gray-500 px-1">
-                          +{article.tags.length - 3}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Edit Button */}
-                  {/* Edit Button */}
-                  {selectedArticle?.id !== article.id && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="flex-shrink-0 text-gray-400 hover:text-gray-700 h-8 w-8 p-0"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedArticle(null);
-                        openEditDialog(article);
-                      }}
-                    >
-                      Edit
-                    </Button>
-                  )}
-                </div>
-              ))
+            {/* Edit Button */}
+            {selectedArticle?.id !== article.id && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-gray-400 hover:text-gray-700 h-8 w-8 p-0 flex-shrink-0"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  openEditDialog(article);
+                }}
+              >
+                Edit
+              </Button>
             )}
           </div>
+
+          {/* Preview (FULL WIDTH, NOT under image) */}
+          <p className="text-xs text-gray-500 line-clamp-2 mt-2">
+            {article.preview}
+          </p>
+
+          {/* Tags */}
+          <div className="flex gap-1 flex-wrap mt-2">
+            {article.tags?.slice(0, 5).map((tag) => (
+              <span
+                key={tag}
+                className="text-xs bg-gray-200  text-gray-600 px-2 py-0.5 rounded-2xl border border-gray-200"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+    ))
+  )}
+</div>
 
           {/* Right Side - Edit/Preview Panel */}
           {selectedArticle && (
@@ -1209,27 +1200,37 @@ export function ArticlesTab({
 
               {/* Footer Actions */}
               <div className="border-t border-gray-200 p-4 bg-white flex gap-2 flex-shrink-0">
-               <Button
-  className="flex-1 bg-black text-white font-medium hover:bg-gray-900 h-10 text-sm rounded disabled:opacity-60"
-  onClick={handlePublish}
-  disabled={isPublishing}
->
-  {isPublishing ? (
-    publishSuccess ? (
-      <div className="flex items-center justify-center gap-2">
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-        </svg>
-      </div>
-    ) : (
-      <div className="flex items-center justify-center gap-2">
-        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-      </div>
-    )
-  ) : (
-    "Publish"
-  )}
-</Button>
+                <Button
+                  className="flex-1 bg-black text-white font-medium hover:bg-gray-900 h-10 text-sm rounded disabled:opacity-60"
+                  onClick={handlePublish}
+                  disabled={isPublishing}
+                >
+                  {isPublishing ? (
+                    publishSuccess ? (
+                      <div className="flex items-center justify-center gap-2">
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={3}
+                            d="M5 13l4 4L19 7"
+                          />
+                        </svg>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center gap-2">
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      </div>
+                    )
+                  ) : (
+                    "Publish"
+                  )}
+                </Button>
                 <Button
                   variant="ghost"
                   className="h-9 w-14 p-0 rounded-sm text-red-500 bg-red-500 hover:text-red-700 hover:bg-red-50"
