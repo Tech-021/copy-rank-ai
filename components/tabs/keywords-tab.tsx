@@ -26,6 +26,7 @@ import {
   Filter,
   Loader2,
   ExternalLink,
+  ChevronDown,
 } from "lucide-react";
 import { useToast } from "../ui/toast";
 import { getUser } from "@/lib/auth";
@@ -47,6 +48,8 @@ interface Keyword {
   competition: number;
   selected?: boolean;
   is_target_keyword?: boolean;
+  post_status?: "Live" | "Draft" | "No Plan";
+  traffic_potential?: string;
 }
 
 interface Website {
@@ -87,6 +90,89 @@ interface Article {
   estimatedTraffic?: number;
 }
 
+// Mock data for development
+const MOCK_KEYWORDS: Keyword[] = [
+  {
+    id: "1",
+    keyword: "web development",
+    search_volume: 27100,
+    difficulty: 62,
+    cpc: 15.5,
+    competition: 0.65,
+    post_status: "Live",
+    traffic_potential: "4.2k/mo",
+  },
+  {
+    id: "2",
+    keyword: "web design",
+    search_volume: 12300,
+    difficulty: 58,
+    cpc: 12.8,
+    competition: 0.72,
+    post_status: "Draft",
+    traffic_potential: "3.8k/mo",
+  },
+  {
+    id: "3",
+    keyword: "frame templates",
+    search_volume: 8400,
+    difficulty: 32,
+    cpc: 8.2,
+    competition: 0.45,
+    post_status: "No Plan",
+    traffic_potential: "1.9k/mo",
+  },
+  {
+    id: "4",
+    keyword: "responsive design",
+    search_volume: 19200,
+    difficulty: 68,
+    cpc: 18.3,
+    competition: 0.78,
+    post_status: "Live",
+    traffic_potential: "5.1k/mo",
+  },
+  {
+    id: "5",
+    keyword: "UI components",
+    search_volume: 5600,
+    difficulty: 45,
+    cpc: 11.2,
+    competition: 0.52,
+    post_status: "Draft",
+    traffic_potential: "2.3k/mo",
+  },
+  {
+    id: "6",
+    keyword: "CSS frameworks",
+    search_volume: 14200,
+    difficulty: 72,
+    cpc: 14.9,
+    competition: 0.81,
+    post_status: "No Plan",
+    traffic_potential: "3.5k/mo",
+  },
+  {
+    id: "7",
+    keyword: "web hosting",
+    search_volume: 33400,
+    difficulty: 78,
+    cpc: 22.1,
+    competition: 0.89,
+    post_status: "Live",
+    traffic_potential: "6.2k/mo",
+  },
+];
+
+const MOCK_WEBSITE_DATA: WebsiteData = {
+  website: {
+    id: "demo-site",
+    url: "www.dellars.pro",
+    topic: "Web Development",
+  },
+  keywords: MOCK_KEYWORDS,
+};
+
 export function KeywordsTab({
   websiteId: initialWebsiteId,
   onArticlesGenerated,
@@ -107,10 +193,9 @@ export function KeywordsTab({
   const [sortBy, setSortBy] = useState<string>("volume-desc");
   const [selectedKeywords, setSelectedKeywords] = useState<Set<number>>(
     new Set()
-  ); // FIX: Use useState properly
+  );
   const toast = useToast();
 
-  // Get current user on component mount
   useEffect(() => {
     const fetchCurrentUser = async () => {
       try {
@@ -129,39 +214,26 @@ export function KeywordsTab({
     fetchCurrentUser();
   }, []);
 
-  // Load user websites if no websiteId is provided
   const loadUserWebsites = async () => {
     try {
       setLoadingWebsites(true);
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      // TODO: Replace with real API when ready
+      // const { data: { user } } = await supabase.auth.getUser();
+      // if (!user) { setError("Please log in to view keywords"); return; }
+      // const { data, error } = await supabase.from("websites")...
 
-      if (!user) {
-        setError("Please log in to view keywords");
-        return;
-      }
+      // Using mock data for now
+      const mockWebsites: Website[] = [
+        {
+          id: "demo-site",
+          url: "www.dellars.pro",
+          topic: "Web Development",
+        },
+      ];
 
-      const { data, error } = await supabase
-        .from("websites")
-        .select("id, url, topic, created_at")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
-
-      if (error) {
-        console.error("Error loading websites:", error);
-        setError("Failed to load websites");
-        return;
-      }
-
-      if (data && data.length > 0) {
-        setWebsites(data);
-        // Auto-select first website if no websiteId was provided
-        if (!selectedWebsiteId) {
-          setSelectedWebsiteId(data[0].id);
-        }
-      } else {
-        setError("No websites found. Add a website in the Analyze tab first.");
+      setWebsites(mockWebsites);
+      if (!selectedWebsiteId) {
+        setSelectedWebsiteId(mockWebsites[0].id);
       }
     } catch (error) {
       console.error("Error loading websites:", error);
@@ -171,7 +243,6 @@ export function KeywordsTab({
     }
   };
 
-  // Load websites on mount if no websiteId provided
   useEffect(() => {
     if (!initialWebsiteId) {
       loadUserWebsites();
@@ -180,7 +251,6 @@ export function KeywordsTab({
     }
   }, [initialWebsiteId]);
 
-  // Fetch keywords when selectedWebsiteId changes
   useEffect(() => {
     console.log("🔍 KeywordsTab - selectedWebsiteId:", selectedWebsiteId);
 
@@ -199,43 +269,17 @@ export function KeywordsTab({
       setError(null);
       console.log(`🔍 Fetching keywords for website: ${selectedWebsiteId}`);
 
-      const response = await fetch(`/api/keyword/${selectedWebsiteId}`);
+      // TODO: Replace with real API when ready
+      // const response = await fetch(`/api/keyword/${selectedWebsiteId}`);
+      // const data = await response.json();
 
-      if (!response.ok) {
-        if (response.status === 404) {
-          throw new Error("Website not found");
-        }
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      if (!data.success) {
-        throw new Error(data.error || "Failed to fetch keywords");
-      }
+      // Using mock data for now
+      const data = MOCK_WEBSITE_DATA;
 
       setWebsiteData(data);
-
-      // Handle both old and new data formats
-      let keywordsArray = [];
-
-      if (Array.isArray(data.keywords)) {
-        // Old format: direct array of keywords
-        keywordsArray = data.keywords;
-        console.log(`✅ Loaded ${keywordsArray.length} keywords (old format)`);
-      } else if (data.keywords && Array.isArray(data.keywords.keywords)) {
-        // New format: object with keywords array inside
-        keywordsArray = data.keywords.keywords;
-        console.log(`✅ Loaded ${keywordsArray.length} keywords (new format)`);
-      } else {
-        console.warn("❌ Unexpected keywords format:", data.keywords);
-        keywordsArray = [];
-      }
-
-      setKeywords(keywordsArray);
-      // Reset selected keywords when new keywords are loaded
+      setKeywords(data.keywords || []);
       setSelectedKeywords(new Set());
-      console.log(`✅ Total keywords loaded: ${keywordsArray.length}`);
+      console.log(`✅ Total keywords loaded: ${data.keywords.length}`);
     } catch (err) {
       console.error("Error fetching keywords:", err);
       setError(err instanceof Error ? err.message : "Failed to load keywords");
@@ -244,7 +288,6 @@ export function KeywordsTab({
     }
   };
 
-  // Move filteredAndSortedKeywords BEFORE generateContentFromKeywords
   const filteredAndSortedKeywords = useMemo(() => {
     const filtered = keywords.filter((kw) => {
       const matchesSearch = kw.keyword
@@ -289,17 +332,29 @@ export function KeywordsTab({
 
   const generateContentFromKeywords = async () => {
     if (!selectedKeywords || selectedKeywords.size === 0) {
-      alert("Please select at least one keyword to generate content.");
+      toast.showToast({
+        title: "No keywords selected",
+        description: "Please select at least one keyword to generate content.",
+        type: "error",
+      });
       return;
     }
 
     if (!currentUser) {
-      alert("Please log in to generate content.");
+      toast.showToast({
+        title: "Not logged in",
+        description: "Please log in to generate content.",
+        type: "error",
+      });
       return;
     }
 
     if (!filteredAndSortedKeywords || filteredAndSortedKeywords.length === 0) {
-      alert("No keywords available to generate content.");
+      toast.showToast({
+        title: "No keywords available",
+        description: "No keywords available to generate content.",
+        type: "error",
+      });
       return;
     }
 
@@ -311,102 +366,66 @@ export function KeywordsTab({
         .filter(Boolean);
 
       if (selectedKeywordTexts.length === 0) {
-        alert("No valid keywords selected.");
+        toast.showToast({
+          title: "Invalid selection",
+          description: "No valid keywords selected.",
+          type: "error",
+        });
         setGeneratingContent(false);
         return;
       }
 
-      // Get user's package limit
-      const userLimit = await getUserArticleLimit(currentUser.id);
-      const totalArticles = userLimit;
+      // TODO: Replace with real API when ready
+      // const userLimit = await getUserArticleLimit(currentUser.id);
+      // const response = await fetch("/api/test-generate-article", {
+      //   method: "POST",
+      //   headers: { "Content-Type": "application/json" },
+      //   body: JSON.stringify({
+      //     keywords: selectedKeywordTexts,
+      //     userId: currentUser.id,
+      //     websiteId: selectedWebsiteId,
+      //   }),
+      // });
 
-      console.log(
-        `🚀 Generating ${totalArticles} articles (package limit) with keywords:`,
-        selectedKeywordTexts
-      );
-      console.log("👤 Current user ID:", currentUser.id);
-
-      const generatedArticles: Article[] = [];
-
-      for (let i = 0; i < totalArticles; i++) {
-        console.log(`📄 Generating article ${i + 1}/${totalArticles}...`);
-
-        const response = await fetch("/api/test-generate-article", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            keywords: selectedKeywordTexts,
-            userId: currentUser.id,
-            websiteId: selectedWebsiteId,
-            articleNumber: i + 1,
-            totalArticles: totalArticles,
+      // Mock content generation for now
+      const generatedArticles: Article[] = selectedKeywordTexts.map(
+        (keyword, i) => ({
+          id: `article-${i}`,
+          title: `Complete Guide to ${keyword}`,
+          content: `This is a comprehensive guide about ${keyword}...`,
+          keyword,
+          status: "Draft" as const,
+          date: new Date().toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
           }),
-        });
-
-        if (!response.ok) {
-          console.error(`Failed to generate article ${i + 1}`);
-          continue;
-        }
-
-        const data = await response.json();
-
-        if (data.success && data.article) {
-          const newArticle: Article = {
-            id: data.article.id,
-            title: data.article.title,
-            content: data.article.content,
-            keyword: selectedKeywordTexts.join(", "),
-            status: "Draft",
-            date: new Date().toLocaleDateString("en-US", {
-              year: "numeric",
-              month: "short",
-              day: "numeric",
-            }),
-            preview:
-              data.article.metaDescription ||
-              data.article.content.substring(0, 150) + "...",
-            wordCount: data.article.wordCount,
-            metaTitle: data.article.metaTitle,
-            metaDescription: data.article.metaDescription,
-            readingTime: data.article.readingTime,
-            contentScore: data.article.contentScore,
-            keywordDensity: data.article.keywordDensity,
-            tags: data.article.tags,
-            category: data.article.category,
-            estimatedTraffic: data.article.estimatedTraffic,
-          };
-
-          generatedArticles.push(newArticle);
-          console.log(`✅ Generated article ${i + 1}/${totalArticles}`);
-        }
-
-        if (i < totalArticles - 1) {
-          await new Promise((resolve) => setTimeout(resolve, 500));
-        }
-      }
+          preview: `Learn everything you need to know about ${keyword}...`,
+          wordCount: 2500,
+          metaTitle: `${keyword} - Complete Guide`,
+          metaDescription: `Comprehensive guide to ${keyword}. Learn best practices and tips.`,
+          readingTime: "12 min",
+          contentScore: 85,
+          keywordDensity: 2.5,
+        })
+      );
 
       if (onArticlesGenerated && generatedArticles.length > 0) {
         onArticlesGenerated(generatedArticles);
       }
 
-      console.log(
-        `✅ Generated ${generatedArticles.length} articles with keywords:`,
-        selectedKeywordTexts
-      );
-
       setSelectedKeywords(new Set());
 
       toast.showToast({
-        title: `Successfully generated ${generatedArticles.length} articles with ${selectedKeywordTexts.length} keywords! Check the Articles tab.`,
+        title: `Generated ${generatedArticles.length} articles`,
+        description: `Successfully created content for ${selectedKeywordTexts.length} keywords! Check the Articles tab.`,
         type: "success",
         duration: 5000,
       });
     } catch (error) {
       console.error("Error generating content:", error);
       toast.showToast({
-        title: "Failed to generate content",
+        title: "Generation failed",
         description: "Please try again.",
         type: "error",
       });
@@ -464,31 +483,37 @@ export function KeywordsTab({
     else return "High";
   };
 
+  const getPostStatusColor = (status?: string) => {
+    switch (status) {
+      case "Live":
+        return "bg-green-100 text-green-700 border-green-200";
+      case "Draft":
+        return "bg-gray-100 text-gray-700 border-gray-200";
+      case "No Plan":
+        return "bg-orange-100 text-orange-700 border-orange-200";
+      default:
+        return "bg-gray-100 text-gray-700 border-gray-200";
+    }
+  };
+
+  // Calculate stats
   const stats = {
-    totalKeywords: filteredAndSortedKeywords.length,
-    avgVolume: Math.round(
-      filteredAndSortedKeywords.reduce((sum, kw) => sum + kw.search_volume, 0) /
-        Math.max(filteredAndSortedKeywords.length, 1)
-    ),
-    avgCpc: (
-      filteredAndSortedKeywords.reduce((sum, kw) => sum + kw.cpc, 0) /
-      Math.max(filteredAndSortedKeywords.length, 1)
-    ).toFixed(2),
-    avgDifficulty: Math.round(
-      filteredAndSortedKeywords.reduce((sum, kw) => sum + kw.difficulty, 0) /
-        Math.max(filteredAndSortedKeywords.length, 1)
-    ),
+    totalKeywords: keywords.length,
+    highPotential: keywords.filter((kw) => kw.difficulty <= 40).length,
+    withContent: keywords.filter((kw) => kw.post_status === "Live" || kw.post_status === "Draft").length,
+    withoutContent: keywords.filter((kw) => kw.post_status === "No Plan").length,
   };
 
   const exportKeywords = () => {
     const csvContent = [
-      ["Keyword", "Search Volume", "Difficulty", "CPC", "Competition"],
+      ["Keyword", "Search Volume", "Difficulty", "CPC", "Competition", "Status"],
       ...filteredAndSortedKeywords.map((kw) => [
         kw.keyword,
         kw.search_volume,
         kw.difficulty,
         `$${kw.cpc.toFixed(2)}`,
         kw.competition.toFixed(2),
+        kw.post_status || "N/A",
       ]),
     ]
       .map((row) => row.join(","))
@@ -508,9 +533,9 @@ export function KeywordsTab({
   if (loadingWebsites) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-          <div className="animate-spin">
-            <Image src="/loader.png" alt="" width={92} height={92} />
-          </div>
+        <div className="animate-spin">
+          <Image src="/loader.png" alt="Loading" width={92} height={92} />
+        </div>
       </div>
     );
   }
@@ -519,8 +544,8 @@ export function KeywordsTab({
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
-          <BarChart3 className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-          <p className="text-destructive mb-4">{error}</p>
+          <BarChart3 className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+          <p className="text-red-600 mb-4">{error}</p>
           <Button onClick={loadUserWebsites} variant="outline">
             Try Again
           </Button>
@@ -533,23 +558,10 @@ export function KeywordsTab({
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
-          <div className="animate-spin">
-            <Image src="/loader.png" alt="" width={92} height={92} />
+          <div className="animate-spin mb-4">
+            <Image src="/loader.png" alt="Loading" width={92} height={92} />
           </div>
-          <p className="text-muted-foreground">Loading keywords...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error && selectedWebsiteId) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <p className="text-destructive mb-4">{error}</p>
-          <Button onClick={fetchKeywords} variant="outline">
-            Try Again
-          </Button>
+          <p className="text-gray-600">Loading keywords...</p>
         </div>
       </div>
     );
@@ -559,8 +571,8 @@ export function KeywordsTab({
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
-          <p className="text-muted-foreground mb-4">No website data found</p>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-gray-600 mb-2">No website data found</p>
+          <p className="text-sm text-gray-500">
             Please select a website from the list above.
           </p>
         </div>
@@ -569,347 +581,291 @@ export function KeywordsTab({
   }
 
   return (
-    <div className="space-y-6">
-      {/* Website Selector Pills */}
-      {websites.length > 0 && (
-        <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
-          <CardHeader>
-            <CardTitle>Select Website</CardTitle>
-            <CardDescription>
-              Choose a website to view its keywords
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2">
-              {websites.map((website) => (
-                <Button
-                  key={website.id}
-                  variant={
-                    selectedWebsiteId === website.id ? "default" : "outline"
-                  }
-                  onClick={() => setSelectedWebsiteId(website.id)}
-                  className={`cursor-pointer ${
-                    selectedWebsiteId === website.id
-                      ? "bg-primary text-primary-foreground"
-                      : "border-border/40 hover:bg-accent"
-                  }`}
-                >
-                  {website.url}
-                  {selectedWebsiteId === website.id && (
-                    <Badge className="ml-2 bg-primary-foreground/20 text-primary-foreground">
-                      Active
-                    </Badge>
-                  )}
-                </Button>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+    <div className="space-y-6 pb-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Keywords</h1>
+          <p className="text-sm text-gray-600 mt-1">Track the keywords driving your traffic</p>
+        </div>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            className="gap-2 border-gray-200 hover:bg-gray-50"
+            onClick={exportKeywords}
+          >
+            <Download className="w-4 h-4" />
+            Import CSV
+          </Button>
+          <Button
+            variant="outline"
+            className="gap-2 border-gray-200 hover:bg-gray-50"
+          >
+            Sync from Competitors
+            <ChevronDown className="w-4 h-4" />
+          </Button>
+          <Button
+            variant="outline"
+            className="gap-2 border-gray-200 hover:bg-gray-50"
+            onClick={() => window.open(websiteData.website.url, "_blank")}
+          >
+            <ExternalLink className="w-4 h-4" />
+            www.dellars.pro
+          </Button>
+        </div>
+      </div>
 
-      {/* Website Info Header */}
-      <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
-        <CardContent className="pt-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">
-                SEO Keywords
-              </h1>
-              <div className="flex items-center gap-4 mt-2">
-                <p className="text-sm text-muted-foreground">
-                  <span className="font-medium">Website:</span>{" "}
-                  {websiteData.website.url}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  <span className="font-medium">Topic:</span>{" "}
-                  {websiteData.website.topic}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  <span className="font-medium">Total Keywords:</span>{" "}
-                  {keywords.length}
-                </p>
-              </div>
-            </div>
-            <Button
-              variant="outline"
-              className="cursor-pointer border-border/40 gap-2"
-              onClick={() => window.open(websiteData.website.url, "_blank")}
-            >
-              <ExternalLink className="w-4 h-4" />
-              Visit Website
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Stats Cards */}
-      <div className="grid md:grid-cols-4 gap-4">
-        <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total Keywords</p>
-                <p className="text-2xl font-bold text-foreground">
-                  {stats.totalKeywords}
-                </p>
-              </div>
-              <BarChart3 className="w-8 h-8 text-primary/40" />
-            </div>
+      {/* Stats Cards - Pixel Perfect */}
+      <div className="grid grid-cols-4 gap-4">
+        <Card className="border border-gray-200 bg-white shadow-sm">
+          <CardContent className="pt-5 pb-5">
+            <p className="text-xs font-medium text-gray-600 uppercase tracking-wide mb-2">
+              Total Keywords
+            </p>
+            <p className="text-4xl font-bold text-gray-900">{stats.totalKeywords}</p>
           </CardContent>
         </Card>
 
-        <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Avg. Volume</p>
-                <p className="text-2xl font-bold text-foreground">
-                  {stats.avgVolume.toLocaleString()}
-                </p>
-              </div>
-              <TrendingUp className="w-8 h-8 text-accent/40" />
-            </div>
+        <Card className="border border-gray-200 bg-white shadow-sm">
+          <CardContent className="pt-5 pb-5">
+            <p className="text-xs font-medium text-gray-600 uppercase tracking-wide mb-2">
+              High Potential Keywords
+            </p>
+            <p className="text-4xl font-bold text-gray-900">{stats.highPotential}</p>
           </CardContent>
         </Card>
 
-        <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Avg. CPC</p>
-                <p className="text-2xl font-bold text-foreground">
-                  ${stats.avgCpc}
-                </p>
-              </div>
-              <Filter className="w-8 h-8 text-primary/40" />
-            </div>
+        <Card className="border border-gray-200 bg-white shadow-sm">
+          <CardContent className="pt-5 pb-5">
+            <p className="text-xs font-medium text-gray-600 uppercase tracking-wide mb-2">
+              With Content
+            </p>
+            <p className="text-4xl font-bold text-gray-900">{stats.withContent}</p>
           </CardContent>
         </Card>
 
-        <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Avg. Difficulty</p>
-                <p className="text-2xl font-bold text-foreground">
-                  {stats.avgDifficulty}/100
-                </p>
-              </div>
-              <BarChart3 className="w-8 h-8 text-yellow-500/40" />
-            </div>
+        <Card className="border border-gray-200 bg-white shadow-sm">
+          <CardContent className="pt-5 pb-5">
+            <p className="text-xs font-medium text-gray-600 uppercase tracking-wide mb-2">
+              Without Content
+            </p>
+            <p className="text-4xl font-bold text-gray-900">{stats.withoutContent}</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Filters and Search */}
-      <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
-        <CardHeader>
-          <CardTitle>Keyword Analysis</CardTitle>
-          <CardDescription>
-            Analyze and filter keywords for {websiteData.website.topic}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex flex-col md:flex-row gap-3">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="Search keywords..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 bg-input border-border/40"
-              />
+      {/* Filters and Table */}
+      <Card className="border border-gray-200 bg-white shadow-sm">
+        <CardContent className="pt-6">
+          {/* Filter Controls */}
+          <div className="flex flex-col gap-4 mb-5">
+            <div className="flex gap-3 items-end">
+              <div className="flex-1 relative">
+                <label className="text-xs font-medium text-gray-700 block mb-2">
+                  Search Keywords
+                </label>
+                <Search className="absolute left-3 top-10 transform w-4 h-4 text-gray-400" />
+                <Input
+                  placeholder="Search keywords..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 bg-white border-gray-200 h-9 text-sm"
+                />
+              </div>
+
+              <div className="w-40">
+                <label className="text-xs font-medium text-gray-700 block mb-2">
+                  Difficulty
+                </label>
+                <Select
+                  value={difficultyFilter}
+                  onValueChange={setDifficultyFilter}
+                >
+                  <SelectTrigger className="w-full bg-white border-gray-200 h-9 text-sm">
+                    <SelectValue placeholder="All" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All</SelectItem>
+                    <SelectItem value="Low">Low</SelectItem>
+                    <SelectItem value="Medium">Medium</SelectItem>
+                    <SelectItem value="High">High</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="w-48">
+                <label className="text-xs font-medium text-gray-700 block mb-2">
+                  Sort by
+                </label>
+                <Select value={sortBy} onValueChange={setSortBy}>
+                  <SelectTrigger className="w-full bg-white border-gray-200 h-9 text-sm">
+                    <SelectValue placeholder="Volume" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="volume-desc">Volume (High to Low)</SelectItem>
+                    <SelectItem value="volume-asc">Volume (Low to High)</SelectItem>
+                    <SelectItem value="difficulty-asc">Difficulty (Easy)</SelectItem>
+                    <SelectItem value="difficulty-desc">Difficulty (Hard)</SelectItem>
+                    <SelectItem value="cpc-desc">CPC (High to Low)</SelectItem>
+                    <SelectItem value="cpc-asc">CPC (Low to High)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <Button
+                size="sm"
+                className="gap-2 bg-gray-100 text-gray-900 hover:bg-gray-200 border border-gray-200 h-9"
+              >
+                <Filter className="w-4 h-4" />
+                Filters
+              </Button>
             </div>
-
-            <Select
-              value={difficultyFilter}
-              onValueChange={setDifficultyFilter}
-            >
-              <SelectTrigger className="w-full md:w-40 bg-input border-border/40">
-                <SelectValue placeholder="Difficulty" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Difficulties</SelectItem>
-                <SelectItem value="Low">Low</SelectItem>
-                <SelectItem value="Medium">Medium</SelectItem>
-                <SelectItem value="High">High</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-full md:w-48 bg-input border-border/40">
-                <SelectValue placeholder="Sort by" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="volume-desc">
-                  Volume (High to Low)
-                </SelectItem>
-                <SelectItem value="volume-asc">Volume (Low to High)</SelectItem>
-                <SelectItem value="difficulty-asc">
-                  Difficulty (Easy to Hard)
-                </SelectItem>
-                <SelectItem value="difficulty-desc">
-                  Difficulty (Hard to Easy)
-                </SelectItem>
-                <SelectItem value="cpc-desc">CPC (High to Low)</SelectItem>
-                <SelectItem value="cpc-asc">CPC (Low to High)</SelectItem>
-                <SelectItem value="competition-asc">
-                  Competition (Low to High)
-                </SelectItem>
-                <SelectItem value="competition-desc">
-                  Competition (High to Low)
-                </SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Button
-              variant="outline"
-              className="cursor-pointer border-border/40 gap-2 bg-transparent"
-              onClick={exportKeywords}
-            >
-              <Download className="w-4 h-4" />
-              Export CSV
-            </Button>
           </div>
 
-          <div className="border border-border/40 rounded-lg overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-border/40 bg-muted/30">
-                    <th className="px-4 py-3 text-left">
+          {/* Table */}
+          <div className="border border-gray-200 rounded-lg overflow-hidden">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-gray-200 bg-gray-50">
+                  <th className="px-4 py-3 text-left w-12">
+                    <input
+                      type="checkbox"
+                      checked={
+                        selectedKeywords &&
+                        selectedKeywords.size ===
+                          filteredAndSortedKeywords.length &&
+                        filteredAndSortedKeywords.length > 0
+                      }
+                      onChange={toggleSelectAll}
+                      className="rounded border-gray-300 text-blue-600 cursor-pointer"
+                    />
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                    Keyword
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                    Search Volume
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                    Difficulty
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                    Competition
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                    Post Status
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                    Traffic Potential
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                    Action
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredAndSortedKeywords.map((keyword, index) => (
+                  <tr
+                    key={keyword.id || index}
+                    className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
+                  >
+                    <td className="px-4 py-3">
                       <input
                         type="checkbox"
                         checked={
-                          selectedKeywords &&
-                          selectedKeywords.size ===
-                            filteredAndSortedKeywords.length &&
-                          filteredAndSortedKeywords.length > 0
+                          selectedKeywords
+                            ? selectedKeywords.has(index)
+                            : false
                         }
-                        onChange={toggleSelectAll}
-                        className="rounded"
+                        onChange={() => toggleKeywordSelection(index)}
+                        className="rounded border-gray-300 text-blue-600 cursor-pointer"
                       />
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
-                      Keyword
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
-                      Search Volume
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
-                      Difficulty
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
-                      CPC
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
-                      Competition
-                    </th>
+                    </td>
+                    <td className="px-4 py-3">
+                      <p className="text-sm font-medium text-gray-900">
+                        {keyword.keyword}
+                      </p>
+                    </td>
+                    <td className="px-4 py-3">
+                      <p className="text-sm font-medium text-gray-900">
+                        {keyword.search_volume.toLocaleString()}
+                      </p>
+                    </td>
+                    <td className="px-4 py-3">
+                      <Badge
+                        className={`${getDifficultyColor(keyword.difficulty)} text-xs font-medium border`}
+                      >
+                        {getDifficultyText(keyword.difficulty)}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-3">
+                      <Badge
+                        className={`${getCompetitionColor(keyword.competition)} text-xs font-medium border`}
+                      >
+                        {getCompetitionText(keyword.competition)}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-3">
+                      <Badge
+                        className={`${getPostStatusColor(keyword.post_status)} text-xs font-medium border`}
+                      >
+                        {keyword.post_status || "—"}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-3">
+                      <p className="text-sm text-gray-700">
+                        {keyword.traffic_potential || "—"}
+                      </p>
+                    </td>
+                    <td className="px-4 py-3">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-xs border-gray-200 hover:bg-gray-100"
+                      >
+                        Edit
+                      </Button>
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {filteredAndSortedKeywords.map((keyword, index) => (
-                    <tr
-                      key={index}
-                      className="border-b border-border/40 hover:bg-muted/20 transition-colors"
-                    >
-                      <td className="px-4 py-3">
-                        <input
-                          type="checkbox"
-                          checked={
-                            selectedKeywords
-                              ? selectedKeywords.has(index)
-                              : false
-                          }
-                          onChange={() => toggleKeywordSelection(index)}
-                          className="rounded"
-                        />
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <p className="font-medium text-foreground">
-                            {keyword.keyword}
-                          </p>
-                          {keyword.is_target_keyword && (
-                            <Badge className="bg-blue-100 text-blue-700 border-blue-200 text-xs">
-                              Targeted
-                            </Badge>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <p className="text-foreground font-medium">
-                          {keyword.search_volume.toLocaleString()}
-                        </p>
-                      </td>
-                      <td className="px-4 py-3">
-                        <Badge
-                          className={getDifficultyColor(keyword.difficulty)}
-                        >
-                          {getDifficultyText(keyword.difficulty)} (
-                          {keyword.difficulty})
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-3">
-                        <p className="text-foreground font-medium">
-                          ${keyword.cpc.toFixed(2)}
-                        </p>
-                      </td>
-                      <td className="px-4 py-3">
-                        <Badge
-                          className={getCompetitionColor(keyword.competition)}
-                        >
-                          {getCompetitionText(keyword.competition)} (
-                          {(keyword.competition * 100).toFixed(0)}%)
-                        </Badge>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                ))}
+              </tbody>
+            </table>
           </div>
 
           {filteredAndSortedKeywords.length === 0 && (
-            <div className="text-center py-8 text-muted-foreground">
+            <div className="text-center py-8 text-gray-500">
               No keywords found matching your filters.
             </div>
           )}
 
+          {/* Selection Bar */}
           {selectedKeywords && selectedKeywords.size > 0 && (
-            <div className="flex items-center justify-between p-4 bg-primary/5 rounded-lg border border-primary/20">
-              <p className="text-sm font-medium text-foreground">
+            <div className="mt-5 flex items-center justify-between p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <p className="text-sm font-semibold text-gray-900">
                 {selectedKeywords.size} keyword
                 {selectedKeywords.size !== 1 ? "s" : ""} selected
               </p>
               <div className="flex gap-2">
                 <Button
-                  variant="outline"
                   size="sm"
-                  className="cursor-pointer border-border/40 bg-transparent"
+                  variant="outline"
+                  className="border-gray-200 bg-white hover:bg-gray-50 text-sm"
                 >
-                  Add to Campaign
+                  Add Keywords
                 </Button>
                 <Button
                   size="sm"
-                  className="cursor-pointer bg-primary hover:bg-primary/90 text-primary-foreground"
+                  className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium"
                   onClick={generateContentFromKeywords}
                   disabled={generatingContent}
                 >
                   {generatingContent ? (
                     <>
-                      <div className="animate-spin">
-                        <Image
-                          src="/loader.png"
-                          alt=""
-                          width={92}
-                          height={92}
-                        />
-                      </div>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                       Generating...
                     </>
                   ) : (
-                    "Generate Content Ideas"
+                    "Create Post"
                   )}
                 </Button>
               </div>
