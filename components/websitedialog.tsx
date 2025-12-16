@@ -16,7 +16,7 @@ interface MyDialogProps {
   onOpenChange: (open: boolean) => void
 }
 
-export default function Dialog1({ open, onOpenChange }: MyDialogProps) {
+export function Dialog1({ open, onOpenChange }: MyDialogProps) {
   const [tab, setTab] = useState("tab1");
   const toast = useToast();
   const [ isDialogOpen, setIsDialogOpen ] = useState(true)

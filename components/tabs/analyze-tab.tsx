@@ -22,7 +22,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "../ui/skeleton";
 import Image from "next/image";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
-import { Badge, ChevronLeft, Plus } from "lucide-react";
+import { ChevronLeft, Plus } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -32,7 +32,30 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useRouter } from "next/navigation";
+import { Dialog1 } from "@/components/websitedialog"
 
+interface Article {
+  id: string;
+  title: string;
+  content: string;
+  keyword: string[];
+  status: "draft" | "scheduled" | "published" | "UPLOADED" | "DRAFT";
+  date: string;
+  preview: string;
+  wordCount: number;
+  metaTitle?: string;
+  metaDescription?: string;
+  slug?: string;
+  focusKeyword?: string;
+  readingTime?: string;
+  contentScore?: number;
+  keywordDensity?: number;
+  tags?: string[];
+  category?: string;
+  generatedAt?: string;
+  estimatedTraffic?: number;
+  generatedImages?: string[];
+}
 
 interface AnalyzeTabProps {
   onViewKeywords: (websiteId: string) => void;
@@ -258,8 +281,8 @@ const validateTab3 = () => {
   }, []);
 
   return (
-    <div className="space-y-6 flex items-center gap-5">
-    <div className="space-y-6 flex-1">
+    <div className="space-y-6">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
         <h2 className="text-3xl font-normal">Performance overview</h2>
@@ -417,98 +440,7 @@ const validateTab3 = () => {
             </CardContent>
           </Card>
       </div>
-      <div className="space-y-3 flex-1">
-  {mockArticles.length === 0 ? (
-    <div className="text-center py-12 text-gray-400">
-      <p className="text-sm">No articles found</p>
-    </div>
-  ) : (
-    mockArticles.map((article) => (
-      <div
-        key={article.id}
-        onClick={() => setSelectedArticle(article)}
-        className={`relative flex gap-3 p-3 bg-gray-100 border rounded-lg cursor-pointer hover:border-gray-300 hover:shadow-sm transition-all ${
-          selectedArticle?.id === article.id
-            ? "border-gray-200 bg-[#F7F7F7]"
-            : "border-gray-100"
-        }`}
-      >
-        {/* Thumbnail */}
-        <img
-          src={article.generatedImages?.[0] || "/article-image.jpg"}
-          alt={article.title}
-          className="w-20 h-20 rounded object-cover flex-shrink-0"
-        />
-
-        {/* Main Content Column */}
-        <div className="flex flex-col min-w-0 flex-1">
-          {/* Title + Meta */}
-          <div className="flex justify-between gap-2">
-            <div className="min-w-0">
-              <h4 className="font-medium text-gray-900 text-sm line-clamp-2">
-                {article.title}
-              </h4>
-
-              <div className="flex items-center gap-1 mt-1">
-                <Image
-                  src="/clock.png"
-                  height={13}
-                  width={13}
-                  alt="icon"
-                />
-                <p className="text-xs text-gray-500">
-                  11 minutes read
-                </p>
-              </div>
-
-              <Badge
-                className={`mt-2 text-xs font-medium w-fit ${
-                  article.status === "UPLOADED"
-                    ? "bg-transparent text-green-700 border border-green-600"
-                    : "bg-gray-100 text-gray-600 border border-gray-800"
-                }`}
-              >
-                {article.status}
-              </Badge>
-            </div>
-
-            {/* Edit Button */}
-            {selectedArticle?.id !== article.id && (
-              <Button
-                size="sm"
-                variant="ghost"
-                className="text-gray-400 hover:text-gray-700 h-8 w-8 p-0 flex-shrink-0"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  openEditDialog(article);
-                }}
-              >
-                Edit
-              </Button>
-            )}
-          </div>
-
-          {/* Preview (FULL WIDTH, NOT under image) */}
-          <p className="text-xs text-gray-500 line-clamp-2 mt-2">
-            {article.preview}
-          </p>
-
-          {/* Tags */}
-          <div className="flex gap-1 flex-wrap mt-2">
-            {article.tags?.slice(0, 5).map((tag) => (
-              <span
-                key={tag}
-                className="text-xs bg-gray-200  text-gray-600 px-2 py-0.5 rounded-2xl border border-gray-200"
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
-        </div>
-      </div>
-    ))
-  )}
-</div>
+      <Dialog1 open={open} onOpenChange={setOpen}  />
      </div> 
   );
 }
