@@ -50,6 +50,10 @@ body {
   font-family: 'Space_Grotesk'!important;
 }
 
+p {
+  font-family: 'ABeeZee';
+}
+
 :root {
   /* Updated color scheme for modern SaaS aesthetic with deep blue primary and vibrant accents */
   --background: oklch(0.98 0 0);

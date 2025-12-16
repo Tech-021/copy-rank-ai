@@ -22,7 +22,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "../ui/skeleton";
 import Image from "next/image";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, Plus } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -261,40 +261,157 @@ const validateTab3 = () => {
       <div className="flex items-center justify-between">
         <div>
         <h2 className="text-3xl font-normal">Performance overview</h2>
-        <p>Turn competitor keywords into SEO-ready long blog posts in one click.</p>
+        <p className="text-[#00000080] text-sm mt-2">Turn competitor keywords into SEO-ready long blog posts in one click.</p>
         </div>
-        <div className="flex border border-[#0000001a] rounded-xl w-[165px] px-3.5 py-4 ">
-          <Select defaultValue="www.delani.pro">
-  <SelectTrigger>
-    <SelectValue placeholder="Select a website" />
-  </SelectTrigger>
-  <SelectContent>
-    <SelectGroup>
-      <SelectItem value="www.delani.pro">www.delani.pro</SelectItem>
-      <SelectItem value="www.delium.pro">www.delium.pro</SelectItem>
-    </SelectGroup>
-  </SelectContent>
-</Select>
+        <div className="">
+          <Select defaultValue="a">
+              <SelectTrigger className="h-10 bg-transparent rounded-[8px] focus-visible:outline-none focus-visible:ring-0 border-[#0000001a] focus-visible:border-[#0000001a] focus:outline-none cursor-pointer outline-none active:outline-none px-3.5 py-2.5 text-[#00000080]">
+                <SelectValue placeholder="Enter your website" /> 
+              </SelectTrigger>
+              <SelectContent className="cursor-pointer">
+                <SelectItem value="a" className="cursor-pointer data-[state=checked]:text-[#00000080] data-[state=checked]:opacity-40 border-b rounded-none border-[#0000001a]">www.delani.pro</SelectItem>
+                <SelectItem value="b" className="cursor-pointer data-[state=checked]:text-[#00000080] data-[state=checked]:opacity-40">www.delium.pro</SelectItem>
+              </SelectContent>
+            </Select>
 
         </div>
         </div>
-        <div>
-          <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
-        <CardHeader>
-          <CardTitle>Add Website</CardTitle>
-          <CardDescription>
-            Add your website with competitors and keywords to get started
-          </CardDescription>
+        <div className="flex items-center">
+          <Card className="border-border/40 bg-white rounded-none rounded-l-xl backdrop-blur-sm w-[222px] h-[174px]">
+        <CardHeader className="flex items-center justify-between">
+          <CardTitle className="text-sm font-normal text-[#00000080]">Articles Generated </CardTitle>
+          <Image src="/dashboardcardimg1.png" alt="" width={20} height={20} />
         </CardHeader>
         <CardContent>
-          <Button
-            className="cursor-pointer bg-primary hover:bg-primary/90 text-primary-foreground gap-2"
-          >
-            Add Your Website
-          </Button>
+          <p className="text-[#000000b3] text-4xl font-bold mt-12">3</p>
+        </CardContent>
+      </Card>
+      <Card className="border-border/40 bg-white rounded-none backdrop-blur-sm w-[222px] h-[174px]">
+        <CardHeader className="flex items-center justify-between">
+          <CardTitle className="text-sm font-normal text-[#00000080]">Articles Live </CardTitle>
+          <Image src="/dashboardcardimg2.png" alt="" width={20} height={20} />
+        </CardHeader>
+        <CardContent>
+          <p className="text-[#000000b3] text-4xl font-bold mt-12">11</p>
+        </CardContent>
+      </Card>
+      <Card className="border-border/40 bg-white rounded-none backdrop-blur-sm w-[222px] h-[174px]">
+        <CardHeader className="flex items-center justify-between">
+          <CardTitle className="text-sm font-normal text-[#00000080]">Est. Traffic Potential </CardTitle>
+          <Image src="/dashboardcardimg3.png" alt="" width={20} height={20} />
+        </CardHeader>
+        <CardContent>
+          <p className="text-[#000000b3] text-4xl font-bold mt-12">23,000</p>
+        </CardContent>
+      </Card>
+      <Card className="border-border/40 bg-white rounded-none rounded-r-xl backdrop-blur-sm w-[222px] h-[174px]">
+        <CardHeader className="flex items-center justify-between">
+          <CardTitle className="text-sm font-normal text-[#00000080]">Keyword Tracked </CardTitle>
+          <Image src="/dashboardcardimg4.png" alt="" width={20} height={20} />
+        </CardHeader>
+        <CardContent>
+          <p className="text-[#000000b3] text-4xl font-bold mt-12">7</p>
         </CardContent>
       </Card>
         </div>
+        <div>
+          <Card className="bg-transparent p-5 mt-5">
+            <CardTitle>Create a Ranking Post</CardTitle>
+            <CardDescription>Turn competitor keywords into SEO ready blog posts in one click.</CardDescription>
+            <CardContent className="px-0">
+              <Button className="text-base font-normal text-white bg-black px-[60px] py-1 w-[170px] h-[50px] border border-[#00000080] rounded-[10px] hover:bg-transparent hover:text-[#00000080] cursor-pointer ">Create Post</Button>
+            </CardContent>
+          </Card>
+        </div>
+        <div className="flex items-center gap-5">
+          <Card className="bg-transparent px-4 py-5 ">
+            <CardTitle className="text-lg font-normal text-[#000000b3] ml-4">Your Websites</CardTitle>
+            <CardContent>
+              <div className="flex items-center justify-between border px-4 pb-4 pt-5 rounded-t-xl border-[#0000001a] w-[400px]">
+                <div className="flex items-center gap-5">
+                <div className="bg-[rgb(247,247,247)] w-[34px] h-[34px] flex items-center justify-center rounded-[10px]">
+                  <Image src="/globe.png" alt="" width={20} height={20} />
+                </div>
+                <div>
+                  <p className="text-sm text-[#000000b3] font-normal">1 website</p>
+                  <p className="text-xs text-[#00000080] font-normal">www.delani.com</p>
+                </div>
+                </div>
+                <div className="w-[34px] h-[34px] bg-[#00000000] rounded-xl flex items-center justify-center">
+                  <Image src="/menudots.png" alt="" width={3} height={17} />
+                </div>
+              </div>
+              <div className="flex items-center justify-between border px-4 pb-4 pt-5 rounded-b-xl border-[#0000001a] w-[400px]">
+                <div className="flex items-center gap-5">
+                <div className="bg-[rgb(247,247,247)] w-[34px] h-[34px] flex items-center justify-center rounded-[10px]">
+                  <Plus width={20} height={20} className="text-[#65b361]" />
+                </div>
+                <div>
+                  <p className="text-sm text-[#000000b3] font-normal">Add Website</p>
+                </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="bg-transparent px-4 py-5 ">
+            <CardTitle className="text-lg font-normal text-[#000000b3] ml-4">SEO Competitors</CardTitle>
+            <CardContent>
+              <div className="flex items-center justify-between border px-4 pb-4 pt-5 rounded-t-xl border-[#0000001a] w-[400px]">
+                <div className="flex items-center gap-5">
+                <div className="bg-[rgb(247,247,247)] w-[34px] h-[34px] flex items-center justify-center rounded-[10px]">
+                  <Image src="/globe.png" alt="" width={20} height={20} />
+                </div>
+                <div>
+                  <p className="text-sm text-[#000000b3] font-normal">3 Competitors</p>
+                  <p className="text-xs text-[#00000080] font-normal">www.lander.studio and 2 others</p>
+                </div>
+                </div>
+                <div className="w-[34px] h-[34px] bg-[#00000000] rounded-xl flex items-center justify-center">
+                  <Image src="/menudots.png" alt="" width={3} height={17} />
+                </div>
+              </div>
+              <div className="flex items-center justify-between border px-4 pb-4 pt-5 rounded-b-xl border-[#0000001a] w-[400px]">
+                <div className="flex items-center gap-5">
+                <div className="bg-[rgb(247,247,247)] w-[34px] h-[34px] flex items-center justify-center rounded-[10px]">
+                  <Plus width={20} height={20} className="text-[#65b361]" />
+                </div>
+                <div>
+                  <p className="text-sm text-[#000000b3] font-normal">Add Competitor</p>
+                </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+        <Card className="bg-transparent px-4 py-5 ">
+            <CardTitle className="text-lg font-normal text-[#000000b3] ml-4">Actions Required</CardTitle>
+            <CardContent>
+              <div className="flex items-center justify-between border px-4 pb-4 pt-5 rounded-t-xl border-[#0000001a]">
+                <div className="flex items-center gap-5">
+                <div className="bg-[rgb(247,247,247)] w-[30px] h-[30px] flex items-center justify-center rounded-[10px]">
+                  <Image src="/actionimg1.png" alt="" width={18} height={26} className="rounded-[3px]" />
+                </div>
+                <div>
+                  <p className="text-sm text-[#000000b3] font-normal">2 posts drafts waiting for review</p>
+                  <p className="text-xs text-[#00000080] font-normal">Finish them to start ranking.</p>
+                </div>
+                </div>
+                <div className=" bg-[#00000000] rounded-xl flex items-center justify-center">
+                  <Button className="border ">View</Button>
+                </div>
+              </div>
+              <div className="flex items-center justify-between border px-4 pb-4 pt-5 rounded-b-xl border-[#0000001a]">
+                <div className="flex items-center gap-5">
+                <div className="bg-[rgb(247,247,247)] w-[34px] h-[34px] flex items-center justify-center rounded-[10px]">
+                  <Plus width={20} height={20} className="text-[#65b361]" />
+                </div>
+                <div>
+                  <p className="text-sm text-[#000000b3] font-normal">Add Competitor</p>
+                </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
       </div>
       
       
