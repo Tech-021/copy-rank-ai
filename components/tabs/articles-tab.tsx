@@ -1333,7 +1333,7 @@ export function ArticlesTab({
         </div>
       </div>
 
-      {userPackage === "free" && (
+      {/* {userPackage === "free" && (
         <Card className="border-blue-200 bg-linear-to-r from-blue-50 to-indigo-50">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
@@ -1356,9 +1356,9 @@ export function ArticlesTab({
             </div>
           </CardContent>
         </Card>
-      )}
+      )} */}
 
-      <div className="grid md:grid-cols-4 gap-4">
+      {/* <div className="grid md:grid-cols-4 gap-4">
         <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
           <CardContent className="pt-6">
             <div>
@@ -1400,7 +1400,7 @@ export function ArticlesTab({
             </div>
           </CardContent>
         </Card>
-      </div>
+      </div> */}
 
       <div className="flex gap-4">
         <Button

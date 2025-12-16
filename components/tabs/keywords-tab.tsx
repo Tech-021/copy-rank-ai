@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { RefreshCw } from "lucide-react";
+import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -35,7 +37,7 @@ import { getUserArticleLimit } from "@/lib/articleLimits";
 import Image from "next/image";
 
 interface KeywordsTabProps {
-  websiteId?: string | null;
+  websiteId?: string;
   onArticlesGenerated?: (articles: any[]) => void;
 }
 
@@ -43,6 +45,7 @@ interface Keyword {
   id?: string;
   keyword: string;
   search_volume: number;
+  websiteId?: string;
   difficulty: number;
   cpc: number;
   competition: number;
@@ -73,6 +76,7 @@ interface Article {
   title: string;
   content: string;
   keyword: string;
+
   status: "Published" | "Scheduled" | "Draft";
   date: string;
   preview: string;
@@ -176,6 +180,7 @@ const MOCK_WEBSITE_DATA: WebsiteData = {
 export function KeywordsTab({
   websiteId: initialWebsiteId,
   onArticlesGenerated,
+  websiteId,
 }: KeywordsTabProps) {
   const [selectedWebsiteId, setSelectedWebsiteId] = useState<string | null>(
     initialWebsiteId || null
@@ -500,13 +505,23 @@ export function KeywordsTab({
   const stats = {
     totalKeywords: keywords.length,
     highPotential: keywords.filter((kw) => kw.difficulty <= 40).length,
-    withContent: keywords.filter((kw) => kw.post_status === "Live" || kw.post_status === "Draft").length,
-    withoutContent: keywords.filter((kw) => kw.post_status === "No Plan").length,
+    withContent: keywords.filter(
+      (kw) => kw.post_status === "Live" || kw.post_status === "Draft"
+    ).length,
+    withoutContent: keywords.filter((kw) => kw.post_status === "No Plan")
+      .length,
   };
 
   const exportKeywords = () => {
     const csvContent = [
-      ["Keyword", "Search Volume", "Difficulty", "CPC", "Competition", "Status"],
+      [
+        "Keyword",
+        "Search Volume",
+        "Difficulty",
+        "CPC",
+        "Competition",
+        "Status",
+      ],
       ...filteredAndSortedKeywords.map((kw) => [
         kw.keyword,
         kw.search_volume,
@@ -585,71 +600,126 @@ export function KeywordsTab({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Keywords</h1>
-          <p className="text-sm text-gray-600 mt-1">Track the keywords driving your traffic</p>
+          <h2 className="text-2xl text-gray-700 font-medium">Keywords</h2>
+          <p className="text-sm text-gray-600 mt-1">
+            Track the keywords driving your traffic
+          </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex ">
           <Button
             variant="outline"
-            className="gap-2 border-gray-200 hover:bg-gray-50"
+            className="gap-2 text-gray-500 border-gray-200 rounded-r-none hover:bg-gray-50"
             onClick={exportKeywords}
           >
-            <Download className="w-4 h-4" />
-            Import CSV
+            Add Keywords
+            <Plus className="w-4 h-4" />
           </Button>
           <Button
             variant="outline"
-            className="gap-2 border-gray-200 hover:bg-gray-50"
+            className="gap-2 text-gray-500 border-gray-200 rounded-none hover:bg-gray-50"
+            onClick={exportKeywords}
+          >
+            Import CSV
+            <Download className="w-4 h-4" />
+          </Button>
+          <Button
+            variant="outline"
+            className="gap-2 text-gray-500 border-gray-200 rounded-l-none hover:bg-gray-50"
           >
             Sync from Competitors
-            <ChevronDown className="w-4 h-4" />
+            <RefreshCw className="w-4 h-4" />
           </Button>
-          <Button
-            variant="outline"
-            className="gap-2 border-gray-200 hover:bg-gray-50"
-            onClick={() => window.open(websiteData.website.url, "_blank")}
-          >
-            <ExternalLink className="w-4 h-4" />
-            www.dellars.pro
-          </Button>
+          <div className="flex ml-5">
+            <Select>
+              <SelectTrigger className="w-38 h-9 border-gray-200">
+                <SelectValue placeholder={websiteId || "www.delani.pro"} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={websiteId || "www.delani.pro"}>
+                  {websiteId || "www.delani.pro"}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
 
       {/* Stats Cards - Pixel Perfect */}
-      <div className="grid grid-cols-4 gap-4">
-        <Card className="border border-gray-200 bg-white shadow-sm">
-          <CardContent className="pt-5 pb-5">
-            <p className="text-xs font-medium text-gray-600 uppercase tracking-wide mb-2">
-              Total Keywords
+      <div className="grid grid-cols-4 ">
+        <Card className="border rounded-r-none border-gray-200 bg-white shadow-sm">
+          <CardContent className="flex flex-col justify-start gap-8">
+            <div className="flex justify-between">
+              <p className="text-xs font-medium text-gray-600 uppercase tracking-wide ">
+                Total Keywords
+              </p>
+            <Image
+            src="/stats1.svg"
+            alt="icon"
+            height={15}
+            width={19.5}            
+            />
+            </div>
+            <p className="text-4xl flex items-end font-bold  text-gray-900">
+              7
             </p>
-            <p className="text-4xl font-bold text-gray-900">{stats.totalKeywords}</p>
           </CardContent>
         </Card>
 
-        <Card className="border border-gray-200 bg-white shadow-sm">
-          <CardContent className="pt-5 pb-5">
-            <p className="text-xs font-medium text-gray-600 uppercase tracking-wide mb-2">
+        <Card className="border rounded-none border-gray-200 bg-white shadow-sm">
+          <CardContent className="flex flex-col justify-start gap-8">
+            <div className="flex justify-between">
+            <p className="text-xs font-medium text-gray-600 uppercase tracking-wide ">
               High Potential Keywords
             </p>
-            <p className="text-4xl font-bold text-gray-900">{stats.highPotential}</p>
+             <Image
+            src="/stats2.svg"
+            alt="icon"
+            height={15}
+            width={19.5}            
+            />
+            
+            </div>
+            <p className="text-4xl font-bold text-gray-900">
+            3
+            </p>
           </CardContent>
         </Card>
 
-        <Card className="border border-gray-200 bg-white shadow-sm">
-          <CardContent className="pt-5 pb-5">
-            <p className="text-xs font-medium text-gray-600 uppercase tracking-wide mb-2">
+        <Card className="border rounded-none border-gray-200 bg-white shadow-sm">
+          <CardContent className="flex flex-col justify-start gap-8">
+            <div className="flex justify-between">
+            <p className="text-xs font-medium text-gray-600 uppercase tracking-wide ">
               With Content
             </p>
-            <p className="text-4xl font-bold text-gray-900">{stats.withContent}</p>
+             <Image
+            src="/stats3.svg"
+            alt="icon"
+            height={15}
+            width={19.5}            
+            />
+
+            </div>
+            <p className="text-4xl font-bold text-gray-900">
+            4
+            </p>
           </CardContent>
         </Card>
 
-        <Card className="border border-gray-200 bg-white shadow-sm">
-          <CardContent className="pt-5 pb-5">
-            <p className="text-xs font-medium text-gray-600 uppercase tracking-wide mb-2">
+        <Card className="border rounded-l-none border-gray-200 bg-white shadow-sm">
+          <CardContent className="flex flex-col justify-start gap-8">
+            <div className="flex justify-between">
+            <p className="text-xs font-medium text-gray-600 uppercase tracking-wide ">
               Without Content
             </p>
-            <p className="text-4xl font-bold text-gray-900">{stats.withoutContent}</p>
+            <Image
+            src="/stats4.svg"
+            alt="icon"
+            height={15}
+            width={19.5}            
+            />            </div>
+            <p className="text-4xl font-bold text-gray-900">
+            
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -702,10 +772,18 @@ export function KeywordsTab({
                     <SelectValue placeholder="Volume" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="volume-desc">Volume (High to Low)</SelectItem>
-                    <SelectItem value="volume-asc">Volume (Low to High)</SelectItem>
-                    <SelectItem value="difficulty-asc">Difficulty (Easy)</SelectItem>
-                    <SelectItem value="difficulty-desc">Difficulty (Hard)</SelectItem>
+                    <SelectItem value="volume-desc">
+                      Volume (High to Low)
+                    </SelectItem>
+                    <SelectItem value="volume-asc">
+                      Volume (Low to High)
+                    </SelectItem>
+                    <SelectItem value="difficulty-asc">
+                      Difficulty (Easy)
+                    </SelectItem>
+                    <SelectItem value="difficulty-desc">
+                      Difficulty (Hard)
+                    </SelectItem>
                     <SelectItem value="cpc-desc">CPC (High to Low)</SelectItem>
                     <SelectItem value="cpc-asc">CPC (Low to High)</SelectItem>
                   </SelectContent>
@@ -773,9 +851,7 @@ export function KeywordsTab({
                       <input
                         type="checkbox"
                         checked={
-                          selectedKeywords
-                            ? selectedKeywords.has(index)
-                            : false
+                          selectedKeywords ? selectedKeywords.has(index) : false
                         }
                         onChange={() => toggleKeywordSelection(index)}
                         className="rounded border-gray-300 text-blue-600 cursor-pointer"
@@ -793,21 +869,27 @@ export function KeywordsTab({
                     </td>
                     <td className="px-4 py-3">
                       <Badge
-                        className={`${getDifficultyColor(keyword.difficulty)} text-xs font-medium border`}
+                        className={`${getDifficultyColor(
+                          keyword.difficulty
+                        )} text-xs font-medium border`}
                       >
                         {getDifficultyText(keyword.difficulty)}
                       </Badge>
                     </td>
                     <td className="px-4 py-3">
                       <Badge
-                        className={`${getCompetitionColor(keyword.competition)} text-xs font-medium border`}
+                        className={`${getCompetitionColor(
+                          keyword.competition
+                        )} text-xs font-medium border`}
                       >
                         {getCompetitionText(keyword.competition)}
                       </Badge>
                     </td>
                     <td className="px-4 py-3">
                       <Badge
-                        className={`${getPostStatusColor(keyword.post_status)} text-xs font-medium border`}
+                        className={`${getPostStatusColor(
+                          keyword.post_status
+                        )} text-xs font-medium border`}
                       >
                         {keyword.post_status || "—"}
                       </Badge>
