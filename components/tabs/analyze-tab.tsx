@@ -1,182 +1,366 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Loader2, Trash2, ExternalLink, Users } from "lucide-react"
-import { supabase } from "@/lib/client"
-import { useToast } from "@/components/ui/toast"
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { supabase } from "@/lib/client";
+import { useToast } from "@/components/ui/toast";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Skeleton } from "../ui/skeleton"
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Skeleton } from "../ui/skeleton";
+import Image from "next/image";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { ChevronLeft, Plus } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useRouter } from "next/navigation";
+import { Dialog1 } from "@/components/websitedialog"
+
+interface Article {
+  id: string;
+  title: string;
+  content: string;
+  keyword: string[];
+  status: "draft" | "scheduled" | "published" | "UPLOADED" | "DRAFT";
+  date: string;
+  preview: string;
+  wordCount: number;
+  metaTitle?: string;
+  metaDescription?: string;
+  slug?: string;
+  focusKeyword?: string;
+  readingTime?: string;
+  contentScore?: number;
+  keywordDensity?: number;
+  tags?: string[];
+  category?: string;
+  generatedAt?: string;
+  estimatedTraffic?: number;
+  generatedImages?: string[];
+}
 
 interface AnalyzeTabProps {
-  onViewKeywords: (websiteId: string) => void
-  onViewCompetitors: (websiteId: string) => void
+  onViewKeywords: (websiteId: string) => void;
+  onViewCompetitors: (websiteId: string) => void;
 }
 
 interface Website {
-  id: string
-  url: string
-  topic: string
-  keywords: any
-  isAnalyzing?: boolean
-  user_id?: string
-  created_at?: string
+  id: string;
+  url: string;
+  topic: string;
+  keywords: any;
+  isAnalyzing?: boolean;
+  user_id?: string;
+  created_at?: string;
+}
+
+interface AnalyticsData {
+  articlesGenerated: number;
+  articlesLive: number;
+  estimatedTraffic: number;
+  keywordsTracked: number;
+  draftArticles: number;
+  totalCompetitors: number;
 }
 
 const getKeywordsCount = (keywordsData: any): number => {
-  if (!keywordsData) return 0
+  if (!keywordsData) return 0;
   if (keywordsData.keywords && Array.isArray(keywordsData.keywords)) {
-    return keywordsData.keywords.length
+    return keywordsData.keywords.length;
   }
   if (Array.isArray(keywordsData)) {
-    return keywordsData.length
+    return keywordsData.length;
   }
-  return 0
-}
+  return 0;
+};
 
 const getCompetitorsCount = (keywordsData: any): number => {
-  if (!keywordsData) return 0
+  if (!keywordsData) return 0;
   if (keywordsData.competitors && Array.isArray(keywordsData.competitors)) {
-    return keywordsData.competitors.length
+    return keywordsData.competitors.length;
   }
-  return 0
-}
+  return 0;
+};
 
-export function AnalyzeTab({ onViewKeywords, onViewCompetitors }: AnalyzeTabProps) {
-  const [websites, setWebsites] = useState<Website[]>([])
-  const [isLoading, setIsLoading] = useState(false)
-  const [showSkeletons, setShowSkeletons] = useState(false)
-  const toast = useToast()
+export function AnalyzeTab({
+  onViewKeywords,
+  onViewCompetitors,
+}: AnalyzeTabProps) {
+  const [websites, setWebsites] = useState<Website[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showSkeletons, setShowSkeletons] = useState(false);
+  const toast = useToast();
 
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [websiteName, setWebsiteName] = useState("")
-  const [competitor1, setCompetitor1] = useState("")
-  const [competitor2, setCompetitor2] = useState("")
-  const [competitor3, setCompetitor3] = useState("")
-  const [keyword1, setKeyword1] = useState("")
-  const [keyword2, setKeyword2] = useState("")
-  const [keyword3, setKeyword3] = useState("")
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [websiteName, setWebsiteName] = useState("");
+  const [competitor1, setCompetitor1] = useState("");
+  const [competitor2, setCompetitor2] = useState("");
+  const [competitor3, setCompetitor3] = useState("");
+  const [keyword1, setKeyword1] = useState("");
+  const [keyword2, setKeyword2] = useState("");
+  const [keyword3, setKeyword3] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [open, setOpen] = useState(false)
+
+  const [analytics, setAnalytics] = useState<AnalyticsData>({
+    articlesGenerated: 0,
+    articlesLive: 0,
+    estimatedTraffic: 0,
+    keywordsTracked: 0,
+    draftArticles: 0,
+    totalCompetitors: 0,
+  });
+
+  const [selectedWebsiteId, setSelectedWebsiteId] = useState<string | null>(null);
+
+  const fetchAnalytics = async (userId: string, websiteId?: string | null) => {
+    try {
+      let articlesQuery = supabase
+        .from("articles")
+        .select("status, estimated_traffic, keyword, word_count")
+        .eq("user_id", userId);
+
+      if (websiteId) {
+        articlesQuery = articlesQuery.eq("website_id", websiteId);
+      }
+
+      const { data: articles, error: articlesError } = await articlesQuery;
+
+      if (articlesError) throw articlesError;
+
+      const articlesGenerated = articles?.length || 0;
+      const articlesLive = articles?.filter(a => a.status === "published" || a.status === "UPLOADED").length || 0;
+      const draftArticles = articles?.filter(a => a.status === "draft" || a.status === "DRAFT").length || 0;
+      
+      const estimatedTraffic = articles?.reduce((sum, article) => {
+        return sum + (article.estimated_traffic || 0);
+      }, 0) || 0;
+
+      const allKeywords = new Set<string>();
+      articles?.forEach(article => {
+        if (typeof article.keyword === 'string') {
+          article.keyword.split(',').forEach(k => allKeywords.add(k.trim()));
+        }
+      });
+      const keywordsTracked = allKeywords.size;
+
+      let websitesQuery = supabase
+        .from("websites")
+        .select("keywords")
+        .eq("user_id", userId);
+
+      if (websiteId) {
+        websitesQuery = websitesQuery.eq("id", websiteId);
+      }
+
+      const { data: websitesData, error: websitesError } = await websitesQuery;
+
+      if (websitesError) throw websitesError;
+
+      let totalCompetitors = 0;
+      websitesData?.forEach(website => {
+        const competitorCount = getCompetitorsCount(website.keywords);
+        totalCompetitors += competitorCount;
+      });
+
+      setAnalytics({
+        articlesGenerated,
+        articlesLive,
+        estimatedTraffic,
+        keywordsTracked,
+        draftArticles,
+        totalCompetitors,
+      });
+    } catch (error) {
+      console.error("Error fetching analytics:", error);
+    }
+  };
 
   const loadUserWebsites = async () => {
     try {
-      setShowSkeletons(true)
+      setShowSkeletons(true);
 
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
 
       const { data, error } = await supabase
         .from("websites")
         .select("*")
         .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
+        .order("created_at", { ascending: false });
 
       if (error) {
-        console.error("Error loading websites:", error)
-        return
+        console.error("Error loading websites:", error);
+        return;
       }
 
       if (data) {
-        setWebsites(data)
+        setWebsites(data);
+        if (data.length > 0 && !selectedWebsiteId) {
+          setSelectedWebsiteId(data[0].id);
+        }
       }
+
+      await fetchAnalytics(user.id, selectedWebsiteId);
     } catch (error) {
-      console.error("Error loading websites:", error)
+      console.error("Error loading websites:", error);
     } finally {
-      setTimeout(() => setShowSkeletons(false), 700)
+      setTimeout(() => setShowSkeletons(false), 700);
     }
-  }
+  };
 
   const deleteWebsiteFromDB = async (id: string) => {
-    const { error } = await supabase.from("websites").delete().eq("id", id)
-    if (error) throw error
-  }
+    const { error } = await supabase.from("websites").delete().eq("id", id);
+    if (error) throw error;
+  };
 
   const handleRemoveWebsite = async (id: string) => {
     try {
-      await deleteWebsiteFromDB(id)
-      setWebsites(websites.filter((site) => site.id !== id))
+      await deleteWebsiteFromDB(id);
+      setWebsites(websites.filter((site) => site.id !== id));
 
       toast.showToast({
         title: "Website Removed",
         description: "Website has been removed from your list",
         type: "success",
-      })
+      });
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        await fetchAnalytics(user.id, selectedWebsiteId);
+      }
     } catch (error) {
       toast.showToast({
         title: "Delete Failed",
         description: "Failed to remove website. Please try again.",
         type: "error",
-      })
+      });
     }
+  };
+
+const validateTab1 = () => {
+  if (!websiteName.trim()) {
+    toast.showToast({
+      title: "Missing Website URL",
+      description: "Please enter your website URL to continue.",
+      type: "error",
+    });
+    return false;
   }
+  return true;
+};
+
+const validateTab2 = () => {
+  if (!competitor1.trim() || !competitor2.trim() || !competitor3.trim()) {
+    toast.showToast({
+      title: "Missing Competitors",
+      description: "Please enter all 3 competitors to continue.",
+      type: "error",
+    });
+    return false;
+  }
+  return true;
+};
+
+const validateTab3 = () => {
+  if (!keyword1.trim() || !keyword2.trim() || !keyword3.trim()) {
+    toast.showToast({
+      title: "Missing Keywords",
+      description: "Please enter all 3 keywords before submitting.",
+      type: "error",
+    });
+    return false;
+  }
+  return true;
+};
 
   const handleSubmitOnboarding = async () => {
-    setIsSubmitting(true)
+    setIsSubmitting(true);
 
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) {
         toast.showToast({
           title: "Authentication Required",
           description: "Please log in to continue",
           type: "error",
-        })
-        setIsSubmitting(false)
-        return
+        });
+        setIsSubmitting(false);
+        return;
       }
 
       const onboardingData = {
         clientDomain: websiteName.trim(),
-        competitors: [competitor1.trim(), competitor2.trim(), competitor3.trim()],
+        competitors: [
+          competitor1.trim(),
+          competitor2.trim(),
+          competitor3.trim(),
+        ],
         targetKeywords: [keyword1.trim(), keyword2.trim(), keyword3.trim()],
-        userId: user.id
-      }
+        userId: user.id,
+      };
 
-      const response = await fetch('/api/onboarding', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(onboardingData)
-      })
+      const response = await fetch("/api/onboarding", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(onboardingData),
+      });
 
-      const data = await response.json()
-      if (!response.ok || !data.success) throw new Error(data.error || 'Onboarding failed')
+      const data = await response.json();
+      if (!response.ok || !data.success)
+        throw new Error(data.error || "Onboarding failed");
 
-      setIsDialogOpen(false)
+      setIsDialogOpen(false);
 
-      setWebsiteName("")
-      setCompetitor1("")
-      setCompetitor2("")
-      setCompetitor3("")
-      setKeyword1("")
-      setKeyword2("")
-      setKeyword3("")
+      setWebsiteName("");
+      setCompetitor1("");
+      setCompetitor2("");
+      setCompetitor3("");
+      setKeyword1("");
+      setKeyword2("");
+      setKeyword3("");
 
-      await loadUserWebsites()
+      await loadUserWebsites();
 
       toast.showToast({
         title: "Website Added Successfully!",
         description: `Found ${data.totalKeywords} keywords. 3 articles are being generated in the background.`,
         type: "success",
-      })
-
+      });
     } catch (error) {
       toast.showToast({
         title: "Failed to Add Website",
-        description: error instanceof Error ? error.message : 'Unknown error',
+        description: error instanceof Error ? error.message : "Unknown error",
         type: "error",
-      })
+      });
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
+  };
 
   const canProceed =
     websiteName.trim() &&
@@ -185,255 +369,225 @@ export function AnalyzeTab({ onViewKeywords, onViewCompetitors }: AnalyzeTabProp
     competitor3.trim() &&
     keyword1.trim() &&
     keyword2.trim() &&
-    keyword3.trim()
+    keyword3.trim();
+
+  const handleWebsiteChange = async (websiteId: string) => {
+    setSelectedWebsiteId(websiteId);
+    
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    
+    if (user) {
+      await fetchAnalytics(user.id, websiteId);
+    }
+  };
 
   useEffect(() => {
-    loadUserWebsites()
-  }, [])
+    loadUserWebsites();
+  }, []);
+
+  useEffect(() => {
+    const refreshAnalytics = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      
+      if (user) {
+        await fetchAnalytics(user.id, selectedWebsiteId);
+      }
+    };
+
+    if (selectedWebsiteId !== null) {
+      refreshAnalytics();
+    }
+  }, [selectedWebsiteId]);
 
   return (
     <div className="space-y-6">
-      <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
-        <CardHeader>
-          <CardTitle>Add Website</CardTitle>
-          <CardDescription>Add your website with competitors and keywords to get started</CardDescription>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+        <h2 className="text-3xl font-normal">Performance overview</h2>
+        <p className="text-[#00000080] text-sm mt-2">Turn competitor keywords into SEO-ready long blog posts in one click.</p>
+        </div>
+        <div className="">
+          <Select 
+            value={selectedWebsiteId || undefined} 
+            onValueChange={handleWebsiteChange}
+          >
+              <SelectTrigger className="h-10 bg-transparent rounded-[8px] focus-visible:outline-none focus-visible:ring-0 border-[#0000001a] focus-visible:border-[#0000001a] focus:outline-none cursor-pointer outline-none active:outline-none px-3.5 py-2.5 text-[#00000080]">
+                <SelectValue placeholder="Select your website" /> 
+              </SelectTrigger>
+              <SelectContent className="cursor-pointer">
+                {websites.map((website, index) => (
+                  <SelectItem 
+                    key={website.id} 
+                    value={website.id} 
+                    className={`cursor-pointer data-[state=checked]:text-[#00000080] data-[state=checked]:opacity-40 ${index < websites.length - 1 ? 'border-b rounded-none border-[#0000001a]' : ''}`}
+                  >
+                    {website.url}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+        </div>
+        </div>
+        <div className="flex items-center">
+          <Card className="border-border/40 bg-white rounded-none rounded-l-xl backdrop-blur-sm w-[222px] h-[174px]">
+        <CardHeader className="flex items-center justify-between">
+          <CardTitle className="text-sm font-normal text-[#00000080]">Articles Generated </CardTitle>
+          <Image src="/dashboardcardimg1.png" alt="" width={20} height={20} />
         </CardHeader>
         <CardContent>
-          <Button
-            onClick={() => setIsDialogOpen(true)}
-            className="cursor-pointer bg-primary hover:bg-primary/90 text-primary-foreground gap-2"
-          >
-            Add Your Website
-          </Button>
+          <div className="text-[#000000b3] text-4xl font-bold mt-12">
+            {showSkeletons ? <Skeleton className="h-10 w-16" /> : analytics.articlesGenerated}
+          </div>
         </CardContent>
       </Card>
-
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-lg p-0 overflow-hidden rounded-xl shadow-lg border border-border/50 bg-white">
-          <div className="px-10 py-8">
-            <DialogHeader className="mb-6 text-center">
-              <DialogTitle className="text-2xl text-center font-semibold text-gray-800">
-                Tell us about your product
-              </DialogTitle>
-            </DialogHeader>
-
-            {/* Form Fields */}
-            <div className="space-y-5">
-              {/* Website Name */}
-              <div className="space-y-2">
-                <Label className="text-sm text-gray-700 font-medium">
-                  Website URL
-                </Label>
-                <Input
-                  type="text"
-                  placeholder="Enter your website URL"
-                  value={websiteName}
-                  onChange={(e) => setWebsiteName(e.target.value)}
-                  className="w-full border-gray-300 focus:border-[#4a5fd8] focus:ring-[#4a5fd8]"
-                />
-              </div>
-
-              {/* Competitors */}
-              <div className="space-y-2">
-                <Label className="text-sm text-gray-700 font-medium">
-                  Top 3 Competitors
-                </Label>
-                <div className="space-y-2">
-                  <Input
-                    type="text"
-                    placeholder="Competitor 1"
-                    value={competitor1}
-                    onChange={(e) => setCompetitor1(e.target.value)}
-                    className="w-full border-gray-300 focus:border-[#4a5fd8] focus:ring-[#4a5fd8]"
-                  />
-                  <Input
-                    type="text"
-                    placeholder="Competitor 2"
-                    value={competitor2}
-                    onChange={(e) => setCompetitor2(e.target.value)}
-                    className="w-full border-gray-300 focus:border-[#4a5fd8] focus:ring-[#4a5fd8]"
-                  />
-                  <Input
-                    type="text"
-                    placeholder="Competitor 3"
-                    value={competitor3}
-                    onChange={(e) => setCompetitor3(e.target.value)}
-                    className="w-full border-gray-300 focus:border-[#4a5fd8] focus:ring-[#4a5fd8]"
-                  />
-                </div>
-              </div>
-
-              {/* Keywords */}
-              <div className="space-y-2">
-                <Label className="text-sm text-gray-700 font-medium">
-                  Top 3 Keywords
-                </Label>
-                <div className="space-y-2">
-                  <Input
-                    type="text"
-                    placeholder="Keyword 1"
-                    value={keyword1}
-                    onChange={(e) => setKeyword1(e.target.value)}
-                    className="w-full border-gray-300 focus:border-[#4a5fd8] focus:ring-[#4a5fd8]"
-                  />
-                  <Input
-                    type="text"
-                    placeholder="Keyword 2"
-                    value={keyword2}
-                    onChange={(e) => setKeyword2(e.target.value)}
-                    className="w-full border-gray-300 focus:border-[#4a5fd8] focus:ring-[#4a5fd8]"
-                  />
-                  <Input
-                    type="text"
-                    placeholder="Keyword 3"
-                    value={keyword3}
-                    onChange={(e) => setKeyword3(e.target.value)}
-                    className="w-full border-gray-300 focus:border-[#4a5fd8] focus:ring-[#4a5fd8]"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="flex justify-end mt-8">
-              <Button
-                onClick={handleSubmitOnboarding}
-                disabled={!canProceed || isSubmitting}
-                className="px-6 bg-[#4a5fd8] hover:bg-[#3d52c7] text-white rounded-md shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isSubmitting ? (
-                  <div className="flex items-center gap-2">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Setting up...
-                  </div>
-                ) : (
-                  "Submit"
-                )}
-              </Button>
-            </div>
+      <Card className="border-border/40 bg-white rounded-none backdrop-blur-sm w-[222px] h-[174px]">
+        <CardHeader className="flex items-center justify-between">
+          <CardTitle className="text-sm font-normal text-[#00000080]">Articles Live </CardTitle>
+          <Image src="/dashboardcardimg2.png" alt="" width={20} height={20} />
+        </CardHeader>
+        <CardContent>
+          <div className="text-[#000000b3] text-4xl font-bold mt-12">
+            {showSkeletons ? <Skeleton className="h-10 w-16" /> : analytics.articlesLive}
           </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* 🔵 Skeletons — show while loading */}
-      {showSkeletons && (
-        <div className="space-y-4">
-          {[1, 2, 3].map((i) => (
-            <Card key={i} className="border-border/40 bg-card/50 backdrop-blur-sm">
-              <CardContent className="pt-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1 space-y-3">
-                    <Skeleton className="h-4 w-40 bg-gray-300" />
-                    <Skeleton className="h-4 w-32 bg-gray-300" />
-
-                    <div className="flex gap-4 mt-3">
-                      <Skeleton className="h-4 w-20 bg-gray-300" />
-                      <Skeleton className="h-4 w-24 bg-gray-300" />
-                    </div>
-
-                    <Skeleton className="h-3 w-24 bg-gray-300" />
+        </CardContent>
+      </Card>
+      <Card className="border-border/40 bg-white rounded-none backdrop-blur-sm w-[222px] h-[174px]">
+        <CardHeader className="flex items-center justify-between">
+          <CardTitle className="text-sm font-normal text-[#00000080]">Est. Traffic Potential </CardTitle>
+          <Image src="/dashboardcardimg3.png" alt="" width={20} height={20} />
+        </CardHeader>
+        <CardContent>
+          <div className="text-[#000000b3] text-4xl font-bold mt-12">
+            {showSkeletons ? <Skeleton className="h-10 w-24" /> : analytics.estimatedTraffic.toLocaleString()}
+          </div>
+        </CardContent>
+      </Card>
+      <Card className="border-border/40 bg-white rounded-none rounded-r-xl backdrop-blur-sm w-[222px] h-[174px]">
+        <CardHeader className="flex items-center justify-between">
+          <CardTitle className="text-sm font-normal text-[#00000080]">Keyword Tracked </CardTitle>
+          <Image src="/dashboardcardimg4.png" alt="" width={20} height={20} />
+        </CardHeader>
+        <CardContent>
+          <div className="text-[#000000b3] text-4xl font-bold mt-12">
+            {showSkeletons ? <Skeleton className="h-10 w-16" /> : analytics.keywordsTracked}
+          </div>
+        </CardContent>
+      </Card>
+        </div>
+        <div>
+          <Card className="bg-transparent p-5 mt-5">
+            <CardTitle>Create a Ranking Post</CardTitle>
+            <CardDescription>Turn competitor keywords into SEO ready blog posts in one click.</CardDescription>
+            <CardContent className="px-0">
+              <Button className="text-base font-normal text-white bg-black px-[60px] py-1 w-[170px] h-[50px] border border-[#00000080] rounded-[10px] hover:bg-transparent hover:text-[#00000080] cursor-pointer ">Create Post</Button>
+            </CardContent>
+          </Card>
+        </div>
+        <div className="flex items-center gap-5">
+          <Card className="bg-transparent px-4 py-5 ">
+            <CardTitle className="text-lg font-normal text-[#000000b3] ml-4">Your Websites</CardTitle>
+            <CardContent>
+              {websites.length > 0 && (
+                <div className="flex items-center justify-between border px-4 pb-4 pt-5 rounded-t-xl border-[#0000001a] w-[400px]">
+                  <div className="flex items-center gap-5">
+                  <div className="bg-[rgb(247,247,247)] w-[34px] h-[34px] flex items-center justify-center rounded-[10px]">
+                    <Image src="/globe.png" alt="" width={20} height={20} />
                   </div>
-
-                  <div className="flex items-center gap-2">
-                    <Skeleton className="h-8 w-24 rounded bg-gray-300" />
-                    <Skeleton className="h-8 w-24 rounded bg-gray-300" />
-                    <Skeleton className="h-8 w-10 rounded bg-gray-300" />
+                  <div>
+                    <p className="text-sm text-[#000000b3] font-normal">{websites.length} website{websites.length > 1 ? 's' : ''}</p>
+                    <p className="text-xs text-[#00000080] font-normal">{websites[0]?.url}{websites.length > 1 ? ` and ${websites.length - 1} other${websites.length > 2 ? 's' : ''}` : ''}</p>
+                  </div>
+                  </div>
+                  <div className="w-[34px] h-[34px] bg-[#00000000] rounded-xl flex items-center justify-center cursor-pointer">
+                    <Image src="/menudots.png" alt="" width={3} height={17} />
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
-
-      {/* Real websites */}
-      {websites.length > 0 && (
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-foreground">Your Websites</h3>
-
-          {websites.map((site) => (
-            <Card key={site.id} className="border-border/40 bg-card/50 backdrop-blur-sm">
-              <CardContent className="pt-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-
-                    <p className="font-medium text-foreground">{site.url}</p>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {site.isAnalyzing ? (
-                        <span className="flex items-center gap-2">
-                          <Loader2 className="w-3 h-3 animate-spin" />
-                          Detecting topic...
-                        </span>
-                      ) : (
-                        <>Topic: {site.topic}</>
-                      )}
-                    </p>
-
-                    {!site.isAnalyzing && site.keywords && (
-                      <div className="flex gap-4 mt-3">
-                        <p className="text-sm text-muted-foreground flex items-center gap-1">
-                          <span className="font-medium">{getKeywordsCount(site.keywords)}</span>
-                          <span>Keywords</span>
-                        </p>
-
-                        {getCompetitorsCount(site.keywords) > 0 && (
-                          <p className="text-sm text-muted-foreground flex items-center gap-1">
-                            <Users className="w-3 h-3" />
-                            <span className="font-medium">{getCompetitorsCount(site.keywords)}</span>
-                            <span>Competitors</span>
-                          </p>
-                        )}
-                      </div>
-                    )}
-
-                    {site.created_at && (
-                      <p className="text-xs text-muted-foreground mt-2">
-                        Added: {new Date(site.created_at).toLocaleDateString()}
-                      </p>
-                    )}
+              )}
+              <div 
+              onClick={() => setOpen(true)}
+              className={`flex items-center justify-between border px-4 pb-4 pt-5 ${websites.length > 0 ? 'rounded-b-xl' : 'rounded-xl'} border-[#0000001a] w-[400px] cursor-pointer`}>
+                <div className="flex items-center gap-5 cursor-pointer">
+                <div className="bg-[rgb(247,247,247)] w-[34px] h-[34px] flex items-center justify-center rounded-[10px] cursor-pointer">
+                  <Plus width={20} height={20} className="text-[#65b361] cursor-pointer " />
+                </div>
+                <div>
+                  <p className="text-sm text-[#000000b3] font-normal">Add Website</p>
+                </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="bg-transparent px-4 py-5 ">
+            <CardTitle className="text-lg font-normal text-[#000000b3] ml-4">SEO Competitors</CardTitle>
+            <CardContent>
+              {analytics.totalCompetitors > 0 && (
+                <div className="flex items-center justify-between border px-4 pb-4 pt-5 rounded-t-xl border-[#0000001a] w-[400px]">
+                  <div className="flex items-center gap-5">
+                  <div className="bg-[rgb(247,247,247)] w-[34px] h-[34px] flex items-center justify-center rounded-[10px]">
+                    <Image src="/globe.png" alt="" width={20} height={20} />
                   </div>
-
-                  <div className="flex items-center gap-2">
-                    {!site.isAnalyzing && site.keywords && (
-                      <>
-                        <Button
-                          onClick={() => onViewKeywords(site.id)}
-                          variant="outline"
-                          size="sm"
-                          className="cursor-pointer gap-2"
-                        >
-                          <ExternalLink className="w-4 h-4" />
-                          View Keywords
-                        </Button>
-
-                        {getCompetitorsCount(site.keywords) > 0 && (
-                          <Button
-                            onClick={() => onViewCompetitors(site.id)}
-                            variant="outline"
-                            size="sm"
-                            className="cursor-pointer gap-2 bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 hover:text-blue-800"
-                          >
-                            <Users className="w-4 h-4" />
-                            View Competitors
-                          </Button>
-                        )}
-                      </>
-                    )}
-                    <Button
-                      onClick={() => handleRemoveWebsite(site.id)}
-                      variant="ghost"
-                      size="sm"
-                      className="cursor-pointer text-muted-foreground hover:text-destructive"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                  <div>
+                    <p className="text-sm text-[#000000b3] font-normal">{analytics.totalCompetitors} Competitor{analytics.totalCompetitors > 1 ? 's' : ''}</p>
+                    <p className="text-xs text-[#00000080] font-normal">Tracked across your websites</p>
+                  </div>
+                  </div>
+                  <div className="w-[34px] h-[34px] bg-[#00000000] rounded-xl flex items-center justify-center cursor-pointer">
+                    <Image src="/menudots.png" alt="" width={3} height={17} />
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
+              )}
+              <div className={`flex items-center justify-between border px-4 pb-4 pt-5 ${analytics.totalCompetitors > 0 ? 'rounded-b-xl' : 'rounded-xl'} border-[#0000001a] w-[400px]`}>
+                <div className="flex items-center gap-5">
+                <div className="bg-[rgb(247,247,247)] w-[34px] h-[34px] flex items-center justify-center rounded-[10px]">
+                  <Plus width={20} height={20} className="text-[#65b361]" />
+                </div>
+                <div>
+                  <p className="text-sm text-[#000000b3] font-normal">Add Competitor</p>
+                </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
-      )}
-    </div>
-  )
+        <Card className="bg-transparent px-4 py-5 ">
+            <CardTitle className="text-lg font-normal text-[#000000b3] ml-4">Actions Required</CardTitle>
+            <CardContent>
+              {analytics.draftArticles > 0 && (
+                <div className="flex items-center justify-between border px-4 pb-4 pt-5 rounded-t-xl border-[#0000001a]">
+                  <div className="flex items-center gap-5">
+                  <div className="bg-[rgb(247,247,247)] w-[30px] h-[30px] flex items-center justify-center rounded-[10px]">
+                    <Image src="/actionimg1.png" alt="" width={18} height={26} className="rounded-[3px]" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-[#000000b3] font-normal">{analytics.draftArticles} post{analytics.draftArticles > 1 ? 's' : ''} draft{analytics.draftArticles > 1 ? 's' : ''} waiting for review</p>
+                    <p className="text-xs text-[#00000080] font-normal">Finish them to start ranking.</p>
+                  </div>
+                  </div>
+                    <Button className="border bg-transparent hover:bg-transparent text-[#00000080] border-[#0000001a] cursor-pointer">View</Button>
+                </div>
+              )}
+              <div className={`flex items-center justify-between border px-4 pb-4 pt-5 ${analytics.draftArticles > 0 ? 'rounded-b-xl' : 'rounded-xl'} border-[#0000001a]`}>
+                <div className="flex items-center gap-5">
+                <div className="bg-[rgb(247,247,247)] w-[30px] h-[30px] flex items-center justify-center rounded-[10px]">
+                  <Image src="/actionimg2.png" alt="" width={24} height={24} />
+                </div>
+                <div>
+                  <p className="text-sm text-[#000000b3] font-normal">Publishing is paused</p>
+                  <p className="text-xs text-[#00000080] font-normal">Turn on auto-publish to ship faster.</p>
+                </div>
+                </div>
+                  <Button className="border bg-transparent hover:bg-transparent text-[#00000080] border-[#0000001a] cursor-pointer">View</Button>
+              </div>
+            </CardContent>
+          </Card>
+      </div>
+      <Dialog1 open={open} onOpenChange={setOpen}  />
+     </div> 
+  );
 }

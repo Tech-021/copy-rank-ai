@@ -9,6 +9,7 @@ import { LandingPage } from "@/components/landing-page"
 import { Dashboard } from "@/components/dashboard"
 import { LoginPage } from "@/components/login-page"
 import { SignUpPage } from "@/components/signup-page"
+import Image from "next/image"
 
 export default function Home() {
   const [authState, setAuthState] = useState<"landing" | "login" | "signup" | "dashboard">("landing")
@@ -156,7 +157,7 @@ export default function Home() {
   if (isCheckingSubscription) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin"><Image src="/loader.png" alt="" width={92} height={92} /></div>
       </div>
     )
   }
