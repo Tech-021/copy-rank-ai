@@ -3,6 +3,11 @@
 import { useState, useMemo, useEffect } from "react";
 import { RefreshCw } from "lucide-react";
 import { Plus } from "lucide-react";
+import { CreatePostDialog } from "@/components/ui/CreatePostDialog";
+import { ImportCSVDialog } from "@/components/ui/ImportCSVDialog";
+import { SyncCompetitorsDialog } from "@/components/ui/SyncCompetitorsDialog";
+import { AddKeywordsDialog } from "@/components/ui/AddKeywordsDialog";
+
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -11,6 +16,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -126,46 +137,46 @@ const MOCK_KEYWORDS: Keyword[] = [
     post_status: "No Plan",
     traffic_potential: "1.9k/mo",
   },
-  {
-    id: "4",
-    keyword: "responsive design",
-    search_volume: 19200,
-    difficulty: 68,
-    cpc: 18.3,
-    competition: 0.78,
-    post_status: "Live",
-    traffic_potential: "5.1k/mo",
-  },
-  {
-    id: "5",
-    keyword: "UI components",
-    search_volume: 5600,
-    difficulty: 45,
-    cpc: 11.2,
-    competition: 0.52,
-    post_status: "Draft",
-    traffic_potential: "2.3k/mo",
-  },
-  {
-    id: "6",
-    keyword: "CSS frameworks",
-    search_volume: 14200,
-    difficulty: 72,
-    cpc: 14.9,
-    competition: 0.81,
-    post_status: "No Plan",
-    traffic_potential: "3.5k/mo",
-  },
-  {
-    id: "7",
-    keyword: "web hosting",
-    search_volume: 33400,
-    difficulty: 78,
-    cpc: 22.1,
-    competition: 0.89,
-    post_status: "Live",
-    traffic_potential: "6.2k/mo",
-  },
+  // {
+  //   id: "4",
+  //   keyword: "responsive design",
+  //   search_volume: 19200,
+  //   difficulty: 68,
+  //   cpc: 18.3,
+  //   competition: 0.78,
+  //   post_status: "Live",
+  //   traffic_potential: "5.1k/mo",
+  // },
+  // {
+  //   id: "5",
+  //   keyword: "UI components",
+  //   search_volume: 5600,
+  //   difficulty: 45,
+  //   cpc: 11.2,
+  //   competition: 0.52,
+  //   post_status: "Draft",
+  //   traffic_potential: "2.3k/mo",
+  // },
+  // {
+  //   id: "6",
+  //   keyword: "CSS frameworks",
+  //   search_volume: 14200,
+  //   difficulty: 72,
+  //   cpc: 14.9,
+  //   competition: 0.81,
+  //   post_status: "No Plan",
+  //   traffic_potential: "3.5k/mo",
+  // },
+  // {
+  //   id: "7",
+  //   keyword: "web hosting",
+  //   search_volume: 33400,
+  //   difficulty: 78,
+  //   cpc: 22.1,
+  //   competition: 0.89,
+  //   post_status: "Live",
+  //   traffic_potential: "6.2k/mo",
+  // },
 ];
 
 const MOCK_WEBSITE_DATA: WebsiteData = {
@@ -193,13 +204,40 @@ export function KeywordsTab({
   const [error, setError] = useState<string | null>(null);
   const [generatingContent, setGeneratingContent] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [difficultyFilter, setDifficultyFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("volume-desc");
   const [selectedKeywords, setSelectedKeywords] = useState<Set<number>>(
     new Set()
   );
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [dialogCompleted, setDialogCompleted] = useState(false);
+  const [showImportDialog, setShowImportDialog] = useState(false);
+  const [showSyncDialog, setShowSyncDialog] = useState(false);
+  const [showAddKeywordsDialog, setShowAddKeywordsDialog] = useState(false);
   const toast = useToast();
+
+  // Handle dialog completion timing
+  useEffect(() => {
+    if (showCreateDialog && !dialogCompleted && generatingContent) {
+      const timer = setTimeout(() => {
+        setDialogCompleted(true);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [showCreateDialog, dialogCompleted, generatingContent]);
+
+  // Handle dialog closing
+  useEffect(() => {
+    if (dialogCompleted) {
+      const timer = setTimeout(() => {
+        setShowCreateDialog(false);
+        setDialogCompleted(false);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [dialogCompleted]);
 
   useEffect(() => {
     const fetchCurrentUser = async () => {
@@ -336,47 +374,29 @@ export function KeywordsTab({
   }, [keywords, searchQuery, difficultyFilter, sortBy]);
 
   const generateContentFromKeywords = async () => {
+    // Open dialog immediately without validation toasts
+    setGeneratingContent(true);
+    setShowCreateDialog(true);
+    setDialogCompleted(false);
+
     if (!selectedKeywords || selectedKeywords.size === 0) {
-      toast.showToast({
-        title: "No keywords selected",
-        description: "Please select at least one keyword to generate content.",
-        type: "error",
-      });
       return;
     }
 
     if (!currentUser) {
-      toast.showToast({
-        title: "Not logged in",
-        description: "Please log in to generate content.",
-        type: "error",
-      });
       return;
     }
 
     if (!filteredAndSortedKeywords || filteredAndSortedKeywords.length === 0) {
-      toast.showToast({
-        title: "No keywords available",
-        description: "No keywords available to generate content.",
-        type: "error",
-      });
       return;
     }
 
     try {
-      setGeneratingContent(true);
-
       const selectedKeywordTexts = Array.from(selectedKeywords)
         .map((index) => filteredAndSortedKeywords[index]?.keyword)
         .filter(Boolean);
 
       if (selectedKeywordTexts.length === 0) {
-        toast.showToast({
-          title: "Invalid selection",
-          description: "No valid keywords selected.",
-          type: "error",
-        });
-        setGeneratingContent(false);
         return;
       }
 
@@ -420,20 +440,8 @@ export function KeywordsTab({
       }
 
       setSelectedKeywords(new Set());
-
-      toast.showToast({
-        title: `Generated ${generatedArticles.length} articles`,
-        description: `Successfully created content for ${selectedKeywordTexts.length} keywords! Check the Articles tab.`,
-        type: "success",
-        duration: 5000,
-      });
     } catch (error) {
       console.error("Error generating content:", error);
-      toast.showToast({
-        title: "Generation failed",
-        description: "Please try again.",
-        type: "error",
-      });
     } finally {
       setGeneratingContent(false);
     }
@@ -545,6 +553,30 @@ export function KeywordsTab({
     URL.revokeObjectURL(url);
   };
 
+  const handleImportCSV = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const csv = e.target?.result as string;
+      const lines = csv.split("\n");
+      const importedKeywords: string[] = [];
+
+      // Skip header, parse each line
+      for (let i = 1; i < lines.length; i++) {
+        if (lines[i].trim()) {
+          const keyword = lines[i].split(",")[0]?.trim();
+          if (keyword) importedKeywords.push(keyword);
+        }
+      }
+
+      // Here you would typically add these keywords to your database
+      console.log("Imported keywords:", importedKeywords);
+      // TODO: Replace with actual toast notification when toast API is finalized
+      // toast?.success(`Successfully imported ${importedKeywords.length} keywords`);
+      setShowImportDialog(false);
+    };
+    reader.readAsText(file);
+  };
+
   if (loadingWebsites) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -609,7 +641,7 @@ export function KeywordsTab({
           <Button
             variant="outline"
             className="gap-2 text-gray-500 border-gray-200 rounded-r-none hover:bg-gray-50"
-            onClick={exportKeywords}
+            onClick={() => setShowAddKeywordsDialog(true)}
           >
             Add Keywords
             <Plus className="w-4 h-4" />
@@ -617,7 +649,7 @@ export function KeywordsTab({
           <Button
             variant="outline"
             className="gap-2 text-gray-500 border-gray-200 rounded-none hover:bg-gray-50"
-            onClick={exportKeywords}
+            onClick={() => setShowImportDialog(true)}
           >
             Import CSV
             <Download className="w-4 h-4" />
@@ -625,6 +657,7 @@ export function KeywordsTab({
           <Button
             variant="outline"
             className="gap-2 text-gray-500 border-gray-200 rounded-l-none hover:bg-gray-50"
+            onClick={() => setShowSyncDialog(true)}
           >
             Sync from Competitors
             <RefreshCw className="w-4 h-4" />
@@ -652,12 +685,7 @@ export function KeywordsTab({
               <p className="text-xs font-medium text-gray-600 uppercase tracking-wide ">
                 Total Keywords
               </p>
-            <Image
-            src="/stats1.svg"
-            alt="icon"
-            height={15}
-            width={19.5}            
-            />
+              <Image src="/stats1.svg" alt="icon" height={15} width={19.5} />
             </div>
             <p className="text-4xl flex items-end font-bold  text-gray-900">
               7
@@ -668,298 +696,309 @@ export function KeywordsTab({
         <Card className="border rounded-none border-gray-200 bg-white shadow-sm">
           <CardContent className="flex flex-col justify-start gap-8">
             <div className="flex justify-between">
-            <p className="text-xs font-medium text-gray-600 uppercase tracking-wide ">
-              High Potential Keywords
-            </p>
-             <Image
-            src="/stats2.svg"
-            alt="icon"
-            height={15}
-            width={19.5}            
-            />
-            
+              <p className="text-xs font-medium text-gray-600 uppercase tracking-wide ">
+                High Potential Keywords
+              </p>
+              <Image src="/stats2.svg" alt="icon" height={15} width={19.5} />
             </div>
-            <p className="text-4xl font-bold text-gray-900">
-            3
-            </p>
+            <p className="text-4xl font-bold text-gray-900">3</p>
           </CardContent>
         </Card>
 
         <Card className="border rounded-none border-gray-200 bg-white shadow-sm">
           <CardContent className="flex flex-col justify-start gap-8">
             <div className="flex justify-between">
-            <p className="text-xs font-medium text-gray-600 uppercase tracking-wide ">
-              With Content
-            </p>
-             <Image
-            src="/stats3.svg"
-            alt="icon"
-            height={15}
-            width={19.5}            
-            />
-
+              <p className="text-xs font-medium text-gray-600 uppercase tracking-wide ">
+                With Content
+              </p>
+              <Image src="/stats3.svg" alt="icon" height={15} width={19.5} />
             </div>
-            <p className="text-4xl font-bold text-gray-900">
-            4
-            </p>
+            <p className="text-4xl font-bold text-gray-900">4</p>
           </CardContent>
         </Card>
 
         <Card className="border rounded-l-none border-gray-200 bg-white shadow-sm">
           <CardContent className="flex flex-col justify-start gap-8">
             <div className="flex justify-between">
-            <p className="text-xs font-medium text-gray-600 uppercase tracking-wide ">
-              Without Content
-            </p>
-            <Image
-            src="/stats4.svg"
-            alt="icon"
-            height={15}
-            width={19.5}            
-            />            </div>
-            <p className="text-4xl font-bold text-gray-900">
-            3
-            </p>
+              <p className="text-xs font-medium text-gray-600 uppercase tracking-wide ">
+                Without Content
+              </p>
+              <Image src="/stats4.svg" alt="icon" height={15} width={19.5} />{" "}
+            </div>
+            <p className="text-4xl font-bold text-gray-900">3</p>
           </CardContent>
         </Card>
       </div>
-        <div className="flex justify-end">
-          <Button className="px-6 cursor-pointer bg-gray-500">
-            create post 
-          </Button>
+      <div className="flex items-center justify-between w-full">
+        {/* LEFT */}
+        <div className="flex items-center gap-6 text-sm text-gray-500">
+          <button className="flex items-center gap-1 hover:text-gray-700">
+            Filters
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+              <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" />
+            </svg>
+          </button>
+
+          <button className="flex items-center gap-1 hover:text-gray-700">
+            Sort By
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+              <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" />
+            </svg>
+          </button>
+          <div className="relative w-full max-w-[210px]">
+            <Input
+              type="text"
+              placeholder="Search Keywords"
+              className="h-9  pr-3 bg-gray-50 border-gray-200 text-sm placeholder:text-gray-400 focus-visible:ring-1 focus-visible:ring-gray-300"
+            />
+            <Search className="absolute left-46 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          </div>
         </div>
 
+        {/* CENTER */}
+        <div className=" ">
+          {/* <div className="relative">
+      <input
+        type="text"
+        placeholder="Search Keywords"
+        className="w-full h-9 rounded-md border border-gray-200 bg-gray-50 pl-9 pr-3 text-sm placeholder-gray-400"
+      />
+    </div> */}
+        </div>
+
+        {/* RIGHT */}
+        <button 
+          onClick={generateContentFromKeywords}
+          className="h-9 px-8 rounded-md bg-gray-400 hover:bg-black text-white text-sm transition-colors"
+        >
+          Create Post
+        </button>
+      </div>
+
       {/* Filters and Table */}
-      <Card className="border border-gray-200 bg-white shadow-sm">
-        <CardContent className="pt-6">
-          {/* Filter Controls */}
-          <div className="flex flex-col gap-4 mb-5">
-            <div className="flex gap-3 items-end">
-              <div className="flex-1 relative">
-                <label className="text-xs font-medium text-gray-700 block mb-2">
-                  Search Keywords
-                </label>
-                <Search className="absolute left-3 top-10 transform w-4 h-4 text-gray-400" />
-                <Input
-                  placeholder="Search keywords..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 bg-white border-gray-200 h-9 text-sm"
+
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <table className="w-full border-collapse">
+          {/* ================= HEADER ================= */}
+          <thead>
+            <tr className="border-b border-gray-200 bg-white">
+              <th className="px-4 py-4 text-left w-10">
+                <input
+                  type="checkbox"
+                  className="w-4 h-4 rounded border-gray-300 focus:ring-0"
                 />
-              </div>
+              </th>
+              <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
+                Keyword
+              </th>
+              <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
+                Search Volume
+              </th>
+              <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
+                Difficulty
+              </th>
+              <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
+                Competition
+              </th>
+              <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
+                Post Status
+              </th>
+              <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
+                Traffic Potential
+              </th>
+              <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
+                Action
+              </th>
+            </tr>
+          </thead>
 
-              <div className="w-40">
-                <label className="text-xs font-medium text-gray-700 block mb-2">
-                  Difficulty
-                </label>
-                <Select
-                  value={difficultyFilter}
-                  onValueChange={setDifficultyFilter}
-                >
-                  <SelectTrigger className="w-full bg-white border-gray-200 h-9 text-sm">
-                    <SelectValue placeholder="All" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                    <SelectItem value="Low">Low</SelectItem>
-                    <SelectItem value="Medium">Medium</SelectItem>
-                    <SelectItem value="High">High</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+          {/* ================= BODY ================= */}
+          <tbody>
+            <tr>
+              <td colSpan={8} className="px-2 py-6 bg-gray-50">
+                {/* INNER CARD */}
+                <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
+                  <table className="w-full ">
+                    <tbody>
+                      {/* -------- Row 1 -------- */}
+                      <tr className="border-b border-gray-200 hover:bg-gray-50">
+                        <td className="px-4 py-3 w-10">
+                          <input
+                            className="w-4 h-4 rounded border-gray-300"
+                            type="checkbox"
+                          />
+                        </td>
+                        <td className="px-4 py-3 text-sm">web development</td>
+                        <td className="px-4 py-3 text-sm">27,100</td>
+                        <td className="px-4 py-3 text-sm">Medium</td>
+                        <td className="px-4 py-3 text-sm">Low</td>
+                        <td className="pl-15 py-3">
+                          <span className="px-3 py-1 text-xs rounded-md bg-green-500 text-white">
+                            Live
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-sm">4.2k/mo</td>
+                        <td className="px-4 py-3">
+                          <div className="flex justify-end">
+                            <Button
+                              variant={"outline"}
+                              className="border rounded-r-none bg-transparent border-gray-200 rounded-l-md px-8 h-8 text-xs"
+                            >
+                              Edit
+                            </Button>
+                            <Button
+                              variant={"outline"}
+                              className="border border-l-0 rounded-l-none bg-transparent border-gray-200 rounded-r-md w-8 h-8 p-0 flex items-center justify-center hover:bg-gray-50"
+                            >
+                              <ChevronDown className="w-4 h-4 text-gray-600" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
 
-              <div className="w-48">
-                <label className="text-xs font-medium text-gray-700 block mb-2">
-                  Sort by
-                </label>
-                <Select value={sortBy} onValueChange={setSortBy}>
-                  <SelectTrigger className="w-full bg-white border-gray-200 h-9 text-sm">
-                    <SelectValue placeholder="Volume" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="volume-desc">
-                      Volume (High to Low)
-                    </SelectItem>
-                    <SelectItem value="volume-asc">
-                      Volume (Low to High)
-                    </SelectItem>
-                    <SelectItem value="difficulty-asc">
-                      Difficulty (Easy)
-                    </SelectItem>
-                    <SelectItem value="difficulty-desc">
-                      Difficulty (Hard)
-                    </SelectItem>
-                    <SelectItem value="cpc-desc">CPC (High to Low)</SelectItem>
-                    <SelectItem value="cpc-asc">CPC (Low to High)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+                      {/* -------- Row 2 -------- */}
+                      <tr className="border-b border-gray-200 hover:bg-gray-50">
+                        <td className="px-4 py-3">
+                          <input
+                            className="w-4 h-4 rounded border-gray-300"
+                            type="checkbox"
+                          />
+                        </td>
+                        <td className="px-4 py-3 text-sm">web design</td>
+                        <td className="px-4 py-3 text-sm">12,300</td>
+                        <td className="px-4 py-3 text-sm">Medium</td>
+                        <td className="px-4 py-3 text-sm">Medium</td>
+                        <td className="pl-15 py-3">
+                          <span className="px-3 py-1 text-xs rounded-md bg-gray-300 text-gray-700">
+                            Draft
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-sm ">3.6k/mo</td>
+                        <td className="px-4 py-3">
+                          <div className="flex justify-end">
+                            <Button
+                              variant={"outline"}
+                              className="border bg-transparent rounded-r-none border-gray-200 rounded-l-md px-8 h-8 text-xs"
+                            >
+                              Edit
+                            </Button>
+                            <Button
+                              variant={"outline"}
+                              className="border bg-transparent rounded-l-none border-l-0 border-gray-200 rounded-r-md w-8 h-8"
+                            >
+                              ⌄
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
 
-              <Button
-                size="sm"
-                className="gap-2 bg-gray-100 text-gray-900 hover:bg-gray-200 border border-gray-200 h-9"
-              >
-                <Filter className="w-4 h-4" />
-                Filters
-              </Button>
-            </div>
+                      {/* -------- Row 3 -------- */}
+                      <tr className="hover:bg-gray-50">
+                        <td className="px-4 py-3">
+                          <input
+                            className="w-4 h-4 rounded border-gray-300"
+                            type="checkbox"
+                          />
+                        </td>
+                        <td className="px-4 py-3 text-sm">framer templates</td>
+                        <td className="px-4 py-3 text-sm">8,400</td>
+                        <td className="px-4 py-3 text-sm">Low</td>
+                        <td className="px-4 py-3 text-sm">Medium</td>
+                        <td className="pl-15 py-3">
+                          <span className="px-3 py-1 text-xs rounded-md bg-gray-300 text-gray-700">
+                            No Post
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-sm">1.9k/mo</td>
+                        <td className="px-4 py-3">
+                          <div className="flex justify-end">
+                            <Button
+                              variant={"outline"}
+                              className="border  rounded-r-none bg-transparent border-gray-200 rounded-l-md px-8 h-8 text-xs"
+                            >
+                              Edit
+                            </Button>
+                            <Button
+                              variant={"outline"}
+                              className="rounded-l-none border bg-transparent border-l-0 border-gray-200 rounded-r-md w-8 h-8"
+                            >
+                              ⌄
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      {/* Selection Bar */}
+      {selectedKeywords && selectedKeywords.size > 0 && (
+        <div className="mt-4 flex items-center justify-between p-4 bg-blue-50 rounded-lg border border-blue-200">
+          <p className="text-sm font-medium text-gray-900">
+            {selectedKeywords.size} keyword
+            {selectedKeywords.size !== 1 ? "s" : ""} selected
+          </p>
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-9 px-4 border-gray-200 bg-white hover:bg-gray-50 text-sm font-normal"
+              onClick={() => setShowAddKeywordsDialog(true)}
+            >
+              Add Keywords
+            </Button>
+            <Button
+              size="sm"
+              className="h-9 px-4 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium"
+              onClick={generateContentFromKeywords}
+              disabled={generatingContent}
+            >
+              {generatingContent ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                "Create Post"
+              )}
+            </Button>
           </div>
+        </div>
+      )}
 
-          {/* Table */}
-          <div className="border border-gray-200 rounded-lg overflow-hidden">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-200 bg-gray-50">
-                  <th className="px-4 py-3 text-left w-12">
-                    <input
-                      type="checkbox"
-                      checked={
-                        selectedKeywords &&
-                        selectedKeywords.size ===
-                          filteredAndSortedKeywords.length &&
-                        filteredAndSortedKeywords.length > 0
-                      }
-                      onChange={toggleSelectAll}
-                      className="rounded border-gray-300 text-blue-600 cursor-pointer"
-                    />
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wide">
-                    Keyword
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wide">
-                    Search Volume
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wide">
-                    Difficulty
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wide">
-                    Competition
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wide">
-                    Post Status
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wide">
-                    Traffic Potential
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wide">
-                    Action
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredAndSortedKeywords.map((keyword, index) => (
-                  <tr
-                    key={keyword.id || index}
-                    className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
-                  >
-                    <td className="px-4 py-3">
-                      <input
-                        type="checkbox"
-                        checked={
-                          selectedKeywords ? selectedKeywords.has(index) : false
-                        }
-                        onChange={() => toggleKeywordSelection(index)}
-                        className="rounded border-gray-300 text-blue-600 cursor-pointer"
-                      />
-                    </td>
-                    <td className="px-4 py-3">
-                      <p className="text-sm font-medium text-gray-900">
-                        {keyword.keyword}
-                      </p>
-                    </td>
-                    <td className="px-4 py-3">
-                      <p className="text-sm font-medium text-gray-900">
-                        {keyword.search_volume.toLocaleString()}
-                      </p>
-                    </td>
-                    <td className="px-4 py-3">
-                      <Badge
-                        className={`${getDifficultyColor(
-                          keyword.difficulty
-                        )} text-xs font-medium border`}
-                      >
-                        {getDifficultyText(keyword.difficulty)}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-3">
-                      <Badge
-                        className={`${getCompetitionColor(
-                          keyword.competition
-                        )} text-xs font-medium border`}
-                      >
-                        {getCompetitionText(keyword.competition)}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-3">
-                      <Badge
-                        className={`${getPostStatusColor(
-                          keyword.post_status
-                        )} text-xs font-medium border`}
-                      >
-                        {keyword.post_status || "—"}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-3">
-                      <p className="text-sm text-gray-700">
-                        {keyword.traffic_potential || "—"}
-                      </p>
-                    </td>
-                    <td className="px-4 py-3">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="text-xs border-gray-200 hover:bg-gray-100"
-                      >
-                        Edit
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+      {/* Create Post Dialog */}
+      <CreatePostDialog
+        isOpen={showCreateDialog}
+        isLoading={dialogCompleted}
+        onClose={() => {
+          setShowCreateDialog(false);
+          setDialogCompleted(false);
+        }}
+        onConfirm={() => setShowCreateDialog(false)}
+      />
 
-          {filteredAndSortedKeywords.length === 0 && (
-            <div className="text-center py-8 text-gray-500">
-              No keywords found matching your filters.
-            </div>
-          )}
+      {/* Import CSV Dialog */}
+      <ImportCSVDialog
+        isOpen={showImportDialog}
+        onClose={() => setShowImportDialog(false)}
+        onImport={handleImportCSV}
+      />
 
-          {/* Selection Bar */}
-          {selectedKeywords && selectedKeywords.size > 0 && (
-            <div className="mt-5 flex items-center justify-between p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <p className="text-sm font-semibold text-gray-900">
-                {selectedKeywords.size} keyword
-                {selectedKeywords.size !== 1 ? "s" : ""} selected
-              </p>
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="border-gray-200 bg-white hover:bg-gray-50 text-sm"
-                >
-                  Add Keywords
-                </Button>
-                <Button
-                  size="sm"
-                  className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium"
-                  onClick={generateContentFromKeywords}
-                  disabled={generatingContent}
-                >
-                  {generatingContent ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Generating...
-                    </>
-                  ) : (
-                    "Create Post"
-                  )}
-                </Button>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {/* Sync Competitors Dialog */}
+      <SyncCompetitorsDialog
+        isOpen={showSyncDialog}
+        onClose={() => setShowSyncDialog(false)}
+      />
+
+      {/* Add Keywords Dialog */}
+      <AddKeywordsDialog
+        isOpen={showAddKeywordsDialog}
+        onClose={() => setShowAddKeywordsDialog(false)}
+      />
     </div>
   );
 }
