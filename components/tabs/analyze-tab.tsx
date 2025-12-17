@@ -17,6 +17,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,7 +32,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@/components/ui/selectvisible";
 import { useRouter } from "next/navigation";
 import { Dialog1 } from "@/components/websitedialog";
 
@@ -153,6 +154,7 @@ export function AnalyzeTab({
     preview: "",
     content: "",
   });
+  const [ value, setValue ] = useState("")
 
   const openEditDialog = (article: Article) => {
     setSelectedArticle(article);
@@ -708,6 +710,41 @@ export function AnalyzeTab({
           ))
         )}
       </div>
+      <Dialog>
+        <DialogTrigger>
+          Open
+        </DialogTrigger>
+        <DialogContent className="min-w-[640px]">
+          <VisuallyHidden>
+            <DialogTitle></DialogTitle>
+          </VisuallyHidden>
+          <div>
+            <div className="flex flex-col gap-2.5">
+              <h2 className="font-normal text-black text-3xl ">Choose what to write about</h2>
+              <p className="text-[#00000080] text-[15px] font-normal">Pick a keyword as the focus for this post. </p>
+            </div>
+            <div>
+              <div>
+                <Select
+                value={value}
+                onValueChange={setValue}
+                open={true}
+                onOpenChange={() => {}}
+                >
+                  <SelectTrigger className="w-[558px] h-[50px] border border-[#0000001a] px-3.5 py-1 text-sm font-sans rounded-[10px]">
+                    <SelectValue placeholder="From Competitors" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="c">c</SelectItem>
+                    <SelectItem value="d">d</SelectItem>
+                    <SelectItem value="e">e</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
