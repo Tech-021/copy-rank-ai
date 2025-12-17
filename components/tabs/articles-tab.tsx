@@ -830,17 +830,17 @@ export function ArticlesTab({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 ">
       <div>
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-2xl text-gray-700 font-medium">Blogs</h2>
-            <p className="text-gray-500 text-sm">
+            <p className="text-gray-500 mt-3 text-sm">
               Create, review, and publish your AI-generated posts.
             </p>
           </div>
           <Select>
-            <SelectTrigger className="w-40 h-9 border-gray-200">
+            <SelectTrigger className="w-38 h-9 border-gray-200">
               <SelectValue placeholder={websiteId || "www.delani.pro"} />
             </SelectTrigger>
             <SelectContent>
@@ -852,8 +852,8 @@ export function ArticlesTab({
         </div>
 
         {/* Create a Ranking Post Section */}
-        <Card className="border-gray-200 bg-white">
-          <CardContent className="pt-2">
+        <Card className="border-gray-200 shadow-none bg-transparent">
+          <CardContent className="">
             <div>
               <h3 className="text-lg font-medium text-gray-900 mb-2">
                 Create a Ranking Post
@@ -861,7 +861,7 @@ export function ArticlesTab({
               <p className="text-sm text-gray-500 mb-4">
                 Turn competitor keywords into SEO-ready blog posts in one click.
               </p>
-              <Button className="bg-black cursor-pointer px-8 text-white hover:bg-gray-900">
+              <Button className="bg-black cursor-pointer py-5 px-8 text-white hover:bg-gray-900">
                 Create Post
               </Button>
             </div>
@@ -869,7 +869,7 @@ export function ArticlesTab({
         </Card>
 
         {/* Stats Grid */}
-        <div className="flex mt-5  text-sm">
+        <div className="flex gap-1 mt-5  text-sm">
           <Select defaultValue="all">
             <SelectTrigger className="w-auto border-0 bg-transparent px-0 py-0 text-gray-600 hover:text-gray-900 focus:ring-0 focus:ring-offset-0">
               <SelectValue placeholder="All" />
@@ -921,15 +921,15 @@ export function ArticlesTab({
     </div>
   ) : (
     mockArticles.map((article) => (
-      <div
-        key={article.id}
-        onClick={() => setSelectedArticle(article)}
-        className={`relative flex gap-3 p-3 bg-gray-100 border rounded-lg cursor-pointer hover:border-gray-300 hover:shadow-sm transition-all ${
-          selectedArticle?.id === article.id
-            ? "border-gray-200 bg-[#F7F7F7]"
-            : "border-gray-100"
-        }`}
-      >
+<div
+  key={article.id}
+  onClick={() => setSelectedArticle(article)}
+  className={`relative flex gap-3 p-3 bg-transparent border rounded-lg cursor-pointer hover:border-gray-300 hover:shadow-sm transition-all ${
+    selectedArticle?.id === article.id
+      ? "border-gray-300 bg-gray-500 text-gray-900"
+      : "border-gray-200 rounded-lg"
+  }`}
+>
         {/* Thumbnail */}
         <img
           src={article.generatedImages?.[0] || "/article-image.jpg"}
@@ -1012,7 +1012,7 @@ export function ArticlesTab({
             <div className=" max-w-[640px]  bg-white rounded-[9px] border-l border-gray-200 overflow-hidden flex flex-col">
               {/* Header */}
               <div className="flex items-center justify-between p-4 border-b border-gray-200 flex-shrink-0">
-                <span className="text-sm font-semibold text-gray-700">
+                <span className="text-sm  text-gray-500">
                   EDIT POST
                 </span>
                 <button
@@ -1028,7 +1028,7 @@ export function ArticlesTab({
                 <div className=" space-y-4 p-4">
                   {/* Title */}
                   <div className="flex gap-3">
-                    <label className="block text-xs mt-1 font-semibold text-gray-700 ">
+                    <label className="block text-xs mt-1 text-gray-600 ">
                       Title
                     </label>
                     <h4>{selectedArticle.title || ""}</h4>
@@ -1036,7 +1036,7 @@ export function ArticlesTab({
 
                   {/* Keywords */}
                   <div className="flex gap-1">
-                    <label className="block mt-1 text-xs font-semibold text-gray-700">
+                    <label className="block mt-1 text-xs text-gray-600">
                       Keywords:
                     </label>
 
@@ -1104,7 +1104,7 @@ export function ArticlesTab({
 
                   {/* SEO Preview */}
                   <div>
-                    <div className="bg-white border border-gray-200 p-4 rounded-lg shadow-sm">
+                    <div className="bg-white border border-gray-200 p-9 rounded-lg shadow-sm">
                       <label className="block text-[15px]  text-gray-700 mb-2">
                         SEO Preview
                       </label>

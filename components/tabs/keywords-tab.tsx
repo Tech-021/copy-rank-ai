@@ -718,11 +718,16 @@ export function KeywordsTab({
             width={19.5}            
             />            </div>
             <p className="text-4xl font-bold text-gray-900">
-            
+            3
             </p>
           </CardContent>
         </Card>
       </div>
+        <div className="flex justify-end">
+          <Button className="px-6 cursor-pointer bg-gray-500">
+            create post 
+          </Button>
+        </div>
 
       {/* Filters and Table */}
       <Card className="border border-gray-200 bg-white shadow-sm">
