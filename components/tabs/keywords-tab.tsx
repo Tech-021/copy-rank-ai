@@ -7,6 +7,7 @@ import { CreatePostDialog } from "@/components/ui/CreatePostDialog";
 import { ImportCSVDialog } from "@/components/ui/ImportCSVDialog";
 import { SyncCompetitorsDialog } from "@/components/ui/SyncCompetitorsDialog";
 import { AddKeywordsDialog } from "@/components/ui/AddKeywordsDialog";
+import { DeleteKeywordDialog } from "@/components/ui/DeleteKeywordDialog";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -216,6 +217,8 @@ export function KeywordsTab({
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [showSyncDialog, setShowSyncDialog] = useState(false);
   const [showAddKeywordsDialog, setShowAddKeywordsDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [keywordToDelete, setKeywordToDelete] = useState<{ index: number; keyword: string } | null>(null);
   const toast = useToast();
 
   // Handle dialog completion timing
@@ -577,6 +580,26 @@ export function KeywordsTab({
     reader.readAsText(file);
   };
 
+  const handleDeleteKeyword = (index: number) => {
+    const keyword = filteredAndSortedKeywords[index];
+    if (keyword) {
+      setKeywordToDelete({ index, keyword: keyword.keyword });
+      setShowDeleteDialog(true);
+    }
+  };
+
+  const confirmDeleteKeyword = () => {
+    if (keywordToDelete) {
+      const newKeywords = keywords.filter(
+        (_, idx) => idx !== keywordToDelete.index
+      );
+      setKeywords(newKeywords);
+      setShowDeleteDialog(false);
+      setKeywordToDelete(null);
+      // toast?.success(`Deleted "${keywordToDelete.keyword}"`);
+    }
+  };
+
   if (loadingWebsites) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -828,16 +851,16 @@ export function KeywordsTab({
                             type="checkbox"
                           />
                         </td>
-                        <td className="px-4 py-3 text-sm">web development</td>
-                        <td className="px-4 py-3 text-sm">27,100</td>
-                        <td className="px-4 py-3 text-sm">Medium</td>
-                        <td className="px-4 py-3 text-sm">Low</td>
+                        <td className="px-4 text-gray-500 py-3 text-sm">web development</td>
+                        <td className="px-4 text-gray-500 py-3 text-sm">27,100</td>
+                        <td className="px-4 text-gray-500 py-3 text-sm">Medium</td>
+                        <td className="px-4 text-gray-500 py-3 text-sm">Low</td>
                         <td className="pl-15 py-3">
-                          <span className="px-3 py-1 text-xs rounded-md bg-green-500 text-white">
+                          <span className="px-3 ml-6 py-1 text-xs rounded-md bg-green-500 text-white">
                             Live
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-sm">4.2k/mo</td>
+                        <td className="px-4  ml-2 text-gray-500 py-3 text-sm">4.2k/mo</td>
                         <td className="px-4 py-3">
                           <div className="flex justify-end">
                             <Button
@@ -846,12 +869,24 @@ export function KeywordsTab({
                             >
                               Edit
                             </Button>
-                            <Button
-                              variant={"outline"}
-                              className="border border-l-0 rounded-l-none bg-transparent border-gray-200 rounded-r-md w-8 h-8 p-0 flex items-center justify-center hover:bg-gray-50"
-                            >
-                              <ChevronDown className="w-4 h-4 text-gray-600" />
-                            </Button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant={"outline"}
+                                  className="border border-l-0 rounded-l-none bg-transparent border-gray-200 rounded-r-md w-8 h-8 p-0 flex items-center justify-center hover:bg-gray-50"
+                                >
+                                  <ChevronDown className="w-4 h-4 text-gray-600" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-32">
+                                <DropdownMenuItem
+                                  onClick={() => handleDeleteKeyword(0)}
+                                  className="text-red-600 cursor-pointer"
+                                >
+                                  Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </div>
                         </td>
                       </tr>
@@ -864,16 +899,16 @@ export function KeywordsTab({
                             type="checkbox"
                           />
                         </td>
-                        <td className="px-4 py-3 text-sm">web design</td>
-                        <td className="px-4 py-3 text-sm">12,300</td>
-                        <td className="px-4 py-3 text-sm">Medium</td>
-                        <td className="px-4 py-3 text-sm">Medium</td>
+                        <td className="px-4 text-gray-500 py-3 text-sm">web design</td>
+                        <td className="px-4 text-gray-500 py-3 text-sm">12,300</td>
+                        <td className="px-4 text-gray-500 py-3 text-sm">Medium</td>
+                        <td className="px-4 text-gray-500 py-3 text-sm">Medium</td>
                         <td className="pl-15 py-3">
-                          <span className="px-3 py-1 text-xs rounded-md bg-gray-300 text-gray-700">
+                          <span className="px-3 py-1 ml-5 text-xs rounded-md bg-gray-300 text-gray-700">
                             Draft
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-sm ">3.6k/mo</td>
+                        <td className="px-4 py-3 text-gray-500 text-sm ">3.6k/mo</td>
                         <td className="px-4 py-3">
                           <div className="flex justify-end">
                             <Button
@@ -882,12 +917,24 @@ export function KeywordsTab({
                             >
                               Edit
                             </Button>
-                            <Button
-                              variant={"outline"}
-                              className="border bg-transparent rounded-l-none border-l-0 border-gray-200 rounded-r-md w-8 h-8"
-                            >
-                              ⌄
-                            </Button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant={"outline"}
+                                  className="border bg-transparent rounded-l-none border-l-0 border-gray-200 rounded-r-md w-8 h-8 p-0 flex items-center justify-center hover:bg-gray-50"
+                                >
+                                  <ChevronDown className="w-4 h-4 text-gray-600" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-32">
+                                <DropdownMenuItem
+                                  onClick={() => handleDeleteKeyword(1)}
+                                  className="text-red-600 cursor-pointer"
+                                >
+                                  Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </div>
                         </td>
                       </tr>
@@ -900,16 +947,16 @@ export function KeywordsTab({
                             type="checkbox"
                           />
                         </td>
-                        <td className="px-4 py-3 text-sm">framer templates</td>
-                        <td className="px-4 py-3 text-sm">8,400</td>
-                        <td className="px-4 py-3 text-sm">Low</td>
-                        <td className="px-4 py-3 text-sm">Medium</td>
+                        <td className="px-4 text-gray-500 py-3 text-sm">framer templates</td>
+                        <td className="px-4 text-gray-500 py-3 text-sm">8,400</td>
+                        <td className="px-4 text-gray-500 py-3 text-sm">Low</td>
+                        <td className="px-4 text-gray-500 py-3 text-sm">Medium</td>
                         <td className="pl-15 py-3">
-                          <span className="px-3 py-1 text-xs rounded-md bg-gray-300 text-gray-700">
+                          <span className="px-3 py-1 ml-2 text-xs rounded-md bg-gray-300 text-gray-700">
                             No Post
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-sm">1.9k/mo</td>
+                        <td className="px-4 text-gray-500 py-3 text-sm">1.9k/mo</td>
                         <td className="px-4 py-3">
                           <div className="flex justify-end">
                             <Button
@@ -918,12 +965,24 @@ export function KeywordsTab({
                             >
                               Edit
                             </Button>
-                            <Button
-                              variant={"outline"}
-                              className="rounded-l-none border bg-transparent border-l-0 border-gray-200 rounded-r-md w-8 h-8"
-                            >
-                              ⌄
-                            </Button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant={"outline"}
+                                  className="rounded-l-none border bg-transparent border-l-0 border-gray-200 rounded-r-md w-8 h-8 p-0 flex items-center justify-center hover:bg-gray-50"
+                                >
+                                  <ChevronDown className="w-4 h-4 text-gray-600" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-32">
+                                <DropdownMenuItem
+                                  onClick={() => handleDeleteKeyword(2)}
+                                  className="text-red-600 cursor-pointer"
+                                >
+                                  Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </div>
                         </td>
                       </tr>
@@ -998,6 +1057,17 @@ export function KeywordsTab({
       <AddKeywordsDialog
         isOpen={showAddKeywordsDialog}
         onClose={() => setShowAddKeywordsDialog(false)}
+      />
+
+      {/* Delete Keyword Dialog */}
+      <DeleteKeywordDialog
+        isOpen={showDeleteDialog}
+        keyword={keywordToDelete?.keyword || ""}
+        onClose={() => {
+          setShowDeleteDialog(false);
+          setKeywordToDelete(null);
+        }}
+        onConfirm={confirmDeleteKeyword}
       />
     </div>
   );
