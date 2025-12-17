@@ -46,7 +46,7 @@ export default function PaymentCallbackPage() {
         // Redirect based on subscription status
         if (userData?.subscribe === true) {
           // Successfully subscribed - redirect to about-yourself page
-          router.push('/about-yourself');
+          router.push('/dialog');
         } else if (attempts >= MAX_ATTEMPTS) {
           // Tried too many times, webhook might have failed or payment declined
           router.push('/payment/fail');

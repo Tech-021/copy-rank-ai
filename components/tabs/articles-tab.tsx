@@ -2,6 +2,9 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { Stepper } from "@/components/ui/stepper";
+
 import {
   Card,
   CardContent,
@@ -11,6 +14,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+
 import {
   Dialog,
   DialogContent,
@@ -25,7 +29,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@/components/ui/select3";
 import {
   Loader2,
   Plus,
@@ -46,13 +50,14 @@ import { getUser } from "@/lib/auth";
 import { getUserPackage } from "@/lib/articleLimits";
 import { createCheckout } from "@/lib/lemonSqueezy";
 import { useToast } from "@/components/ui/toast";
+import Image from "next/image";
 
 interface Article {
   id: string;
   title: string;
   content: string;
-  keyword: string;
-  status: "draft" | "scheduled" | "published";
+  keyword: string[];
+  status: "draft" | "scheduled" | "published" | "UPLOADED" | "DRAFT";
   date: string;
   preview: string;
   wordCount: number;
@@ -87,7 +92,11 @@ export function ArticlesTab({
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
   const [newArticleKeyword, setNewArticleKeyword] = useState("");
   const [newArticleDate, setNewArticleDate] = useState("");
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [filterStartDate, setFilterStartDate] = useState("2-feb-2025");
+  const [filterEndDate, setFilterEndDate] = useState("4-mar-2025");
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
+  const [isContentExpanded, setIsContentExpanded] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [userPackage, setUserPackage] = useState<
     "free" | "pro" | "premium" | null
@@ -99,6 +108,11 @@ export function ArticlesTab({
   const [isCreatingCheckout, setIsCreatingCheckout] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeleteCompletedDialogOpen, setIsDeleteCompletedDialogOpen] =
+    useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [publishSuccess, setPublishSuccess] = useState(false);
   const [indexingArticle, setIndexingArticle] = useState<string | null>(null);
   const toast = useToast();
   const [editForm, setEditForm] = useState({
@@ -110,6 +124,50 @@ export function ArticlesTab({
     preview: "",
     content: "",
   });
+
+  // Derived data and helpers
+  const filteredArticles = articles.filter((article) => {
+    if (filterStatus === "all") return true;
+    // Normalize status to lowercase for comparison
+    const status = (article.status || "").toLowerCase();
+    return status === filterStatus;
+  });
+
+  const getReadingTime = (wordCount?: number) => {
+    if (!wordCount) return "—";
+    const minutes = Math.max(1, Math.round(wordCount / 200));
+    return `${minutes} min read`;
+  };
+  const handlePublish = async () => {
+    if (!selectedArticle) return;
+
+    setIsPublishing(true);
+    try {
+      await handleUpdateStatus(selectedArticle.id, "published");
+      setPublishSuccess(true);
+
+      toast.showToast({
+        title: "Published!",
+        description: "Your article has been published successfully.",
+        type: "success",
+      });
+
+      setTimeout(() => {
+        setPublishSuccess(false);
+        setSelectedArticle((prev) =>
+          prev ? { ...prev, status: "published" as const } : prev
+        );
+      }, 1200);
+    } catch (error) {
+      toast.showToast({
+        title: "Error",
+        description: "Failed to publish article",
+        type: "error",
+      });
+    } finally {
+      setIsPublishing(false);
+    }
+  };
 
   // Helper to build article URL
   const getArticleUrl = (slug: string) => {
@@ -352,7 +410,9 @@ export function ArticlesTab({
     setSelectedArticle(article);
     setEditForm({
       title: article.title || "",
-      keyword: article.keyword || "",
+      keyword: Array.isArray(article.keyword)
+        ? article.keyword.join(", ")
+        : article.keyword || "",
       slug: article.slug || "",
       metaTitle: article.metaTitle || "",
       metaDescription: article.metaDescription || "",
@@ -583,7 +643,8 @@ export function ArticlesTab({
 
       toast.showToast({
         title: "Success!",
-        description: data.message || "Article submitted to search engines for indexing",
+        description:
+          data.message || "Article submitted to search engines for indexing",
         type: "success",
       });
     } catch (error) {
@@ -688,8 +749,9 @@ export function ArticlesTab({
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-primary" />
-          <p className="text-muted-foreground">Loading articles...</p>
+          <div className="animate-spin">
+            <Image src="/loader.png" alt="" width={92} height={92} />
+          </div>
         </div>
       </div>
     );
@@ -697,6 +759,540 @@ export function ArticlesTab({
 
   return (
     <div className="space-y-6">
+      <div>
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-2xl text-gray-700 font-medium">Blogs</h2>
+            <p className="text-gray-500 text-sm">
+              Create, review, and publish your AI-generated posts.
+            </p>
+          </div>
+          <Select>
+            <SelectTrigger className="w-40 h-9 border-gray-200">
+              <SelectValue placeholder={websiteId || "www.delani.pro"} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={websiteId || "www.delani.pro"}>
+                {websiteId || "www.delani.pro"}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Create a Ranking Post Section */}
+        <Card className="border-gray-200 bg-white">
+          <CardContent className="pt-2">
+            <div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                Create a Ranking Post
+              </h3>
+              <p className="text-sm text-gray-500 mb-4">
+                Turn competitor keywords into SEO-ready blog posts in one click.
+              </p>
+              <Button className="bg-black cursor-pointer px-8 text-white hover:bg-gray-900">
+                Create Post
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Stats Grid */}
+        <div className="flex mt-5  text-sm">
+          <Select value={filterStatus} onValueChange={setFilterStatus}>
+            <SelectTrigger className="w-auto border-0 bg-transparent px-0 py-0 text-gray-600 hover:text-gray-900 focus:ring-0 focus:ring-offset-0">
+              <SelectValue placeholder="All" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All</SelectItem>
+              <SelectItem value="published">Published</SelectItem>
+              <SelectItem value="draft">Draft</SelectItem>
+              <SelectItem value="scheduled">Scheduled</SelectItem>
+              <SelectItem value="uploaded">Uploaded</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <span className="text-gray-300"></span>
+
+          <Select defaultValue="27-jan-2025">
+            <SelectTrigger className="w-auto border-0 bg-transparent px-0 py-0 text-gray-600 hover:text-gray-900 focus:ring-0 focus:ring-offset-0">
+              <SelectValue placeholder="27-Jan, 2025" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="27-jan-2025">2Feb, 2025</SelectItem>
+              <SelectItem value="26-jan-2025">2Feb, 2025</SelectItem>
+              <SelectItem value="25-jan-2025">2Feb, 2025</SelectItem>
+              <SelectItem value="24-jan-2025">2Feb, 2025</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <span className="text-gray-300"></span>
+
+          <Select defaultValue="4-mar-2025">
+            <SelectTrigger className="w-auto border-0 bg-transparent px-0 py-0 text-gray-600 hover:text-gray-900 focus:ring-0 focus:ring-offset-0">
+              <SelectValue placeholder="4 Mar, 2025" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="4-mar-2025">4 Mar, 2025</SelectItem>
+              <SelectItem value="3-mar-2025">3 Mar, 2025</SelectItem>
+              <SelectItem value="2-mar-2025">2 Mar, 2025</SelectItem>
+              <SelectItem value="1-mar-2025">1 Mar, 2025</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Main Layout - Articles + Preview */}
+        <div className="flex gap-6 h-auto overflow-hidden">
+          {/* Left Side - Articles List */}
+       <div className="space-y-3 pr-2">
+  {filteredArticles.length === 0 ? (
+    <div className="text-center py-12 text-gray-400">
+      <p className="text-sm">No articles found</p>
+    </div>
+  ) : (
+    filteredArticles.map((article) => (
+      <div
+        key={article.id}
+        onClick={() => {
+          setSelectedArticle(article);
+          setIsContentExpanded(false);
+        }}
+        className={`relative flex gap-3 p-3 bg-gray-100 border rounded-lg cursor-pointer hover:border-gray-300 hover:shadow-sm transition-all ${
+          selectedArticle?.id === article.id
+            ? "border-gray-200 bg-[#F7F7F7]"
+            : "border-gray-100"
+        }`}
+      >
+        {/* Thumbnail */}
+        <img
+          src={article.generatedImages?.[0] || "/article-image.jpg"}
+          alt={article.title}
+          className="w-20 h-20 rounded object-cover flex-shrink-0"
+        />
+
+        {/* Main Content Column */}
+        <div className="flex flex-col min-w-0 flex-1">
+          {/* Title + Meta */}
+          <div className="flex justify-between gap-2">
+            <div className="min-w-0">
+              <h4 className="font-medium text-gray-900 text-sm line-clamp-2">
+                {article.title}
+              </h4>
+
+              <div className="flex items-center gap-1 mt-1">
+                <Image
+                  src="/clock.png"
+                  height={13}
+                  width={13}
+                  alt="icon"
+                />
+                <p className="text-xs text-gray-500">
+                  {getReadingTime(article.wordCount)}
+                </p>
+              </div>
+
+              <Badge
+                className={`mt-2 text-xs font-medium w-fit ${
+                  (article.status || "").toLowerCase() === "uploaded"
+                    ? "bg-transparent text-green-700 border border-green-600"
+                    : "bg-gray-100 text-gray-600 border border-gray-800"
+                }`}
+              >
+                {article.status}
+              </Badge>
+            </div>
+
+            {/* Edit Button */}
+            {selectedArticle?.id !== article.id && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-gray-400 hover:text-gray-700 h-8 w-8 p-0 flex-shrink-0"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  openEditDialog(article);
+                }}
+              >
+                Edit
+              </Button>
+            )}
+          </div>
+
+          {/* Preview (FULL WIDTH, NOT under image) */}
+          <p className="text-xs text-gray-500 line-clamp-2 mt-2">
+            {article.preview}
+          </p>
+
+          {/* Tags */}
+          <div className="flex gap-1 flex-wrap mt-2">
+            {article.tags?.slice(0, 5).map((tag) => (
+              <span
+                key={tag}
+                className="text-xs bg-gray-200  text-gray-600 px-2 py-0.5 rounded-2xl border border-gray-200"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+    ))
+  )}
+</div>
+
+          {/* Right Side - Edit/Preview Panel */}
+          {selectedArticle && (
+            <div className=" max-w-[640px]  bg-white rounded-[9px] border-l border-gray-200 overflow-hidden flex flex-col">
+              {/* Header */}
+              <div className="flex items-center justify-between p-4 border-b border-gray-200 flex-shrink-0">
+                <span className="text-sm font-semibold text-gray-700">
+                  EDIT POST
+                </span>
+                <button
+                  onClick={() => setSelectedArticle(null)}
+                  className="text-gray-400 hover:text-gray-600 text-xl leading-none font-bold"
+                >
+                  ×
+                </button>
+              </div>
+
+              {/* Scrollable Content */}
+              <div className="flex-1 overflow-y-auto">
+                <div className=" space-y-4 p-4">
+                  {/* Title */}
+                  <div className="flex gap-3">
+                    <label className="block text-xs mt-1 font-semibold text-gray-700 ">
+                      Title
+                    </label>
+                    <h4>{selectedArticle.title || ""}</h4>
+                  </div>
+
+                  {/* Keywords */}
+                  <div className="flex gap-1">
+                    <label className="block mt-1 text-xs font-semibold text-gray-700">
+                      Keywords:
+                    </label>
+
+                    <div className="flex  gap-2">
+                      {(() => {
+                        const keywords = Array.isArray(selectedArticle.keyword)
+                          ? selectedArticle.keyword
+                          : selectedArticle.keyword
+                          ? String(selectedArticle.keyword)
+                              .split(',')
+                              .map((k) => k.trim())
+                              .filter(Boolean)
+                          : [];
+                        return keywords.length > 0 ? (
+                          keywords.map((keyword, index) => (
+                          <span
+                            key={index}
+                            className="px-1 py-1  rounded-full text-xs font-medium bg-gray-100 text-gray-600 border border-gray-300 inline-block"
+                          >
+                            {keyword}
+                          </span>
+                          ))
+                        ) : (
+                          <span className="text-xs text-gray-500">
+                            No keywords
+                          </span>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                  {/* Word Count */}
+                  <div className="flex gap-3">
+                    <div className="flex items-center gap-1">
+                      <Image
+                        src="/smallclock.png"
+                        alt="reading time icon"
+                        height={16}
+                        width={16}
+                        priority
+                      />
+                      <p className="text-green-500 text-xs">
+                        {getReadingTime(selectedArticle.wordCount)}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Image
+                        src="/Union.png"
+                        alt="word count icon"
+                        height={16}
+                        width={16}
+                        priority
+                      />
+                      <p className="text-green-500 text-xs">
+                        {selectedArticle.wordCount?.toLocaleString() || "—"} words
+                      </p>
+                    </div>
+                    {selectedArticle.contentScore && (
+                      <div className="flex items-center gap-1">
+                        <Image
+                          src="/Union (1).png"
+                          alt="content score icon"
+                          height={16}
+                          width={16}
+                          priority
+                        />
+                        <p className="text-green-500 text-xs">
+                          {selectedArticle.contentScore}% content score
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  {/* Preview Text */}
+                  <div>
+                    {/* <label className="block text-xs font-semibold text-gray-700 mb-2">
+                      Preview
+                    </label> */}
+                    {/* <p className="text-xs text-gray-600 leading-relaxed bg-gray-50 p-3 rounded border border-gray-200">
+                      {selectedArticle.preview}
+                    </p> */}
+                  </div>
+
+                  {/* SEO Preview */}
+                  <div>
+                    <div className="bg-white border border-gray-200 p-4 rounded-lg shadow-sm">
+                      <label className="block text-[15px]  text-gray-700 mb-2">
+                        SEO Preview
+                      </label>
+                      <p className="text-blue-600 font-medium text-sm mb-2 line-clamp-2">
+                        {selectedArticle.metaTitle || selectedArticle.title}
+                      </p>
+                      <p className="text-gray-600 text-xs leading-relaxed line-clamp-3">
+                        {selectedArticle.metaDescription || selectedArticle.preview}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Live URL for published articles */}
+                  {selectedArticle.status === "published" && selectedArticle.slug && (
+                    <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <div className="flex items-start gap-2">
+                        <Globe className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-sm font-semibold text-green-900 mb-1">
+                            Live Article URL
+                          </h4>
+                          <div className="flex items-center gap-2">
+                            <a
+                              href={getArticleUrl(selectedArticle.slug)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs text-blue-600 hover:text-blue-800 hover:underline break-all flex-1"
+                            >
+                              {getArticleUrl(selectedArticle.slug)}
+                            </a>
+                            <button
+                              onClick={() => {
+                                navigator.clipboard.writeText(
+                                  getArticleUrl(selectedArticle.slug!)
+                                );
+                                toast.showToast({
+                                  title: "Copied!",
+                                  description: "URL copied to clipboard",
+                                  type: "success",
+                                });
+                              }}
+                              className="text-green-600 hover:text-green-800 flex-shrink-0"
+                              title="Copy URL"
+                            >
+                              <Copy className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Tags */}
+                </div>
+                <div className="border-b border-gray-200 " />
+                <div className="p-4">
+                  <h4 className="text-2xl mb-4">{selectedArticle.title}</h4>
+                  <div
+                    className={`text-[14px] text-gray-700 leading-relaxed relative ${
+                      isContentExpanded ? "" : "max-h-[400px] overflow-hidden"
+                    }`}
+                  >
+                    {renderContentWithImages(
+                      selectedArticle.content,
+                      selectedArticle.generatedImages || [],
+                      3
+                    )}
+                    {!isContentExpanded && (
+                      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-white to-transparent" />
+                    )}
+                  </div>
+                  <div className="mt-4 flex justify-center">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="cursor-pointer"
+                      onClick={() => setIsContentExpanded((prev) => !prev)}
+                    >
+                      {isContentExpanded ? "Show less" : "Read more"}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer Actions */}
+              <div className="border-t border-gray-200 p-4 bg-white flex gap-2 flex-shrink-0">
+                <Button
+                  className="flex-1 bg-black text-white font-medium hover:bg-gray-900 h-10 text-sm rounded disabled:opacity-60"
+                  onClick={handlePublish}
+                  disabled={isPublishing}
+                >
+                  {isPublishing ? (
+                    publishSuccess ? (
+                      <div className="flex items-center justify-center gap-2">
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={3}
+                            d="M5 13l4 4L19 7"
+                          />
+                        </svg>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center gap-2">
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      </div>
+                    )
+                  ) : (
+                    "Publish"
+                  )}
+                </Button>
+                {selectedArticle.status === "published" && selectedArticle.slug && (
+                  <Button
+                    variant="outline"
+                    className="h-10 px-4 flex items-center gap-2"
+                    onClick={() => handleIndexNow(selectedArticle.id, selectedArticle.slug!)}
+                    disabled={indexingArticle === selectedArticle.id}
+                  >
+                    {indexingArticle === selectedArticle.id ? (
+                      <div className="animate-spin">
+                        <Image src="/loader.png" alt="" width={92} height={92} />
+                      </div>
+                    ) : (
+                      <Globe className="w-4 h-4" />
+                    )}
+                    Index Now
+                  </Button>
+                )}
+                <Button
+                  variant="ghost"
+                  className="h-9 w-14 p-0 rounded-sm text-red-500 bg-red-500 hover:text-red-700 hover:bg-red-50"
+                  onClick={() => setIsDeleteDialogOpen(true)}
+                >
+                  <Image src="/bin.png" height={11} width={11} alt="icon" />
+                </Button>
+
+                <Dialog
+                  open={isDeleteDialogOpen}
+                  onOpenChange={setIsDeleteDialogOpen}
+                >
+                  <DialogContent className="sm:max-w-[550px] text-center p-0 border-0">
+                    <VisuallyHidden>
+                      <DialogTitle>Confirm delete</DialogTitle>
+                    </VisuallyHidden>
+
+                    <div className="flex flex-col items-center gap-4 py-8 px-6">
+                      <h2 className="text-2xl  text-gray-900">
+                        Confirm delete
+                      </h2>
+                      <div className=" flex items-center justify-center">
+                        <Image
+                          src="/deletedocument.png"
+                          height={60}
+                          width={60}
+                          alt="delete"
+                          className="text-red-500 mt-6 "
+                        />
+                      </div>
+                      <div></div>
+                    </div>
+
+                    <div className="flex gap-3 px-6 pb-6">
+                      <Button
+                        className="flex-1 h-11  bg-red-500 hover:bg-red-600 text-white font-medium"
+                        onClick={async () => {
+                          if (selectedArticle) {
+                            setIsDeleteDialogOpen(false);
+                            await handleDeleteArticle(selectedArticle.id);
+                            setSelectedArticle(null);
+                            setTimeout(() => {
+                              setIsDeleteCompletedDialogOpen(true);
+                            }, 300);
+                          }
+                        }}
+                      >
+                        Delete
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="flex-1 h-11 text-gray-700 bg-gray-200 border-gray-200 hover:bg-gray-50"
+                        onClick={() => setIsDeleteDialogOpen(false)}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+
+                <Dialog
+                  open={isDeleteCompletedDialogOpen}
+                  onOpenChange={setIsDeleteCompletedDialogOpen}
+                >
+                  <DialogContent className="sm:max-w-[550px] text-center p-0 border-0">
+                    <VisuallyHidden>
+                      <DialogTitle>Delete completed</DialogTitle>
+                    </VisuallyHidden>
+
+                    <div className="flex flex-col items-center  gap-4 py-8 px-6">
+                      <h2 className="text-2xl  text-gray-900">Completed!</h2>
+                      <div className=" flex items-center justify-center">
+                        <Image
+                          src="/check.png"
+                          alt="icon"
+                          height={81}
+                          width={81}
+                          className="mt-9"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="px-6 pb-6">
+                      <Button
+                        className="w-full h-11 bg-green-600 hover:bg-green-600 text-white font-medium rounded-lg"
+                        onClick={() => {
+                          setIsDeleteCompletedDialogOpen(false);
+                          toast.showToast({
+                            title: "Article deleted",
+                            description:
+                              "The article has been permanently deleted.",
+                            type: "success",
+                          });
+                        }}
+                      >
+                        Done
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
       {userPackage === "free" && (
         <Card className="border-blue-200 bg-linear-to-r from-blue-50 to-indigo-50">
           <CardContent className="pt-6">
@@ -722,58 +1318,8 @@ export function ArticlesTab({
         </Card>
       )}
 
-      <div className="grid md:grid-cols-4 gap-4">
-        <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
-          <CardContent className="pt-6">
-            <div>
-              <p className="text-sm text-muted-foreground">Total Articles</p>
-              <p className="text-2xl font-bold text-foreground">
-                {stats.total}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
-          <CardContent className="pt-6">
-            <div>
-              <p className="text-sm text-muted-foreground">Published</p>
-              <p className="text-2xl font-bold text-green-600">
-                {stats.published}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
-          <CardContent className="pt-6">
-            <div>
-              <p className="text-sm text-muted-foreground">Scheduled</p>
-              <p className="text-2xl font-bold text-blue-600">
-                {stats.scheduled}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
-          <CardContent className="pt-6">
-            <div>
-              <p className="text-sm text-muted-foreground">Drafts</p>
-              <p className="text-2xl font-bold text-gray-600">{stats.draft}</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
+     
       <div className="flex gap-4">
-        <Button
-          variant="outline"
-          onClick={fetchArticles}
-          className="cursor-pointer gap-2"
-        >
-          <RefreshCw className="w-4 h-4" /> Refresh
-        </Button>
         {/* Update Plan Button - only show if user is not premium */}
         {userPackage !== "premium" && (
           <Dialog open={isPlanDialogOpen} onOpenChange={setIsPlanDialogOpen}>
@@ -928,353 +1474,7 @@ export function ArticlesTab({
         )}
       </div>
 
-      <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
-        <CardHeader>
-          <CardTitle>Generated Articles</CardTitle>
-          <CardDescription>
-            SEO-optimized articles with AI-generated images
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {articles.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <p>No articles found.</p>
-                <p className="text-sm mt-2">
-                  Generate your first article using the button above.
-                </p>
-              </div>
-            ) : (
-              articles.map((article) => (
-                <div
-                  key={article.id}
-                  className="p-4 rounded-lg border border-border/40 hover:border-primary/30 transition-colors bg-background/50"
-                >
-                  <div className="flex flex-col md:flex-row md:items-start justify-between mb-3">
-                    <div className="flex-1 mb-3 md:mb-0">
-                      <h3 className="font-semibold text-foreground mb-1 text-lg">
-                        {article.title}
-                      </h3>
-                      <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
-                        {article.preview}
-                      </p>
-
-                      <div className="flex flex-col sm:flex-row flex-wrap gap-3 text-sm text-muted-foreground mb-3">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">Keyword:</span>
-                          <span className="px-2 py-1 bg-primary/10 text-primary rounded text-xs font-medium">
-                            {article.keyword}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">Words:</span>
-                          <span>{article.wordCount.toLocaleString()}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">Date:</span>
-                          <span>{article.date}</span>
-                        </div>
-                        {article.readingTime && (
-                          <div className="flex items-center gap-2">
-                            <Clock className="w-3 h-3" />
-                            <span>{article.readingTime}</span>
-                          </div>
-                        )}
-                        {article.contentScore && (
-                          <div
-                            className={`flex items-center gap-2 ${getContentScoreColor(
-                              article.contentScore
-                            )}`}
-                          >
-                            <BarChart3 className="w-3 h-3" />
-                            <span>Score: {article.contentScore}%</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Live URL for published articles */}
-                      {article.status === "published" && article.slug && (
-                        <div className="flex items-center gap-2 mt-2 p-2 bg-green-50 border border-green-200 rounded text-sm">
-                          <Globe className="w-4 h-4 text-green-600 flex-shrink-0" />
-                          <span className="font-medium text-green-700">
-                            Live URL:
-                          </span>
-                          <a
-                            href={getArticleUrl(article.slug)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-600 hover:text-blue-800 hover:underline truncate flex-1"
-                          >
-                            {getArticleUrl(article.slug)}
-                          </a>
-                          <button
-                            onClick={() => {
-                              navigator.clipboard.writeText(
-                                getArticleUrl(article.slug!)
-                              );
-                              toast.showToast({
-                                title: "Copied!",
-                                description: "URL copied to clipboard",
-                                type: "success",
-                              });
-                            }}
-                            className="text-green-600 hover:text-green-800 flex-shrink-0"
-                            title="Copy URL"
-                          >
-                            <Copy className="w-4 h-4" />
-                          </button>
-                        </div>
-                      )}
-
-                      <div className="hidden">{/* spacing placeholder */}</div>
-                      <br />
-                      {article.tags && article.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mb-3">
-                          {article.tags.slice(0, 3).map((tag, index) => (
-                            <Badge
-                              key={index}
-                              variant="secondary"
-                              className="text-xs"
-                            >
-                              {tag}
-                            </Badge>
-                          ))}
-                          {article.tags.length > 3 && (
-                            <Badge variant="outline" className="text-xs">
-                              +{article.tags.length - 3} more
-                            </Badge>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                    <Badge
-                      className={`${getStatusStyles(
-                        article.status
-                      )} border self-start`}
-                    >
-                      {getStatusDisplayText(article.status)}
-                    </Badge>
-                  </div>
-
-                  <div className="flex items-center gap-3 pt-3 border-t border-border/40">
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button variant="outline" size="sm" className="gap-2">
-                          <Eye className="w-4 h-4" /> Preview
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto p-0">
-                        <div className="p-6">
-                          <DialogHeader className="mb-6">
-                            <DialogTitle className="text-2xl font-bold text-gray-900 mb-2">
-                              {article.title}
-                            </DialogTitle>
-                            <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium">Keyword:</span>
-                                <Badge
-                                  variant="outline"
-                                  className="bg-blue-50 text-blue-700"
-                                >
-                                  {article.keyword}
-                                </Badge>
-                              </div>
-                              {article.readingTime && (
-                                <div className="flex items-center gap-2">
-                                  <Clock className="w-4 h-4" />
-                                  <span>{article.readingTime}</span>
-                                </div>
-                              )}
-                              {article.wordCount && (
-                                <div className="flex items-center gap-2">
-                                  <span>
-                                    {article.wordCount.toLocaleString()} words
-                                  </span>
-                                </div>
-                              )}
-                              {article.contentScore && (
-                                <div
-                                  className={`flex items-center gap-2 ${getContentScoreColor(
-                                    article.contentScore
-                                  )}`}
-                                >
-                                  <BarChart3 className="w-4 h-4" />
-                                  <span className="font-medium">
-                                    Content Score: {article.contentScore}%
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-                          </DialogHeader>
-
-                          <div className="space-y-6">
-                            {/* Live URL Section - Only for published articles */}
-                            {article.status === "published" && article.slug && (
-                              <div className="p-4 bg-green-50 rounded-lg border border-green-200">
-                                <div className="flex items-start gap-3">
-                                  <Globe className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                                  <div className="flex-1 min-w-0">
-                                    <h4 className="font-semibold text-green-900 mb-2">
-                                      Live Article URL
-                                    </h4>
-                                    <div className="flex items-center gap-2">
-                                      <a
-                                        href={getArticleUrl(article.slug)}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-blue-600 hover:text-blue-800 hover:underline text-sm break-all flex-1"
-                                      >
-                                        {getArticleUrl(article.slug)}
-                                      </a>
-                                      <button
-                                        onClick={() => {
-                                          navigator.clipboard.writeText(
-                                            getArticleUrl(article.slug!)
-                                          );
-                                          toast.showToast({
-                                            title: "Copied!",
-                                            description: "URL copied to clipboard",
-                                            type: "success",
-                                          });
-                                        }}
-                                        className="p-2 text-green-600 hover:text-green-800 hover:bg-green-100 rounded flex-shrink-0"
-                                        title="Copy URL"
-                                      >
-                                        <Copy className="w-4 h-4" />
-                                      </button>
-                                    </div>
-                                    <p className="text-xs text-green-700 mt-2">
-                                      This article is live and indexed by search
-                                      engines
-                                    </p>
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-
-                            {/* SEO Preview Section */}
-                            {(article.metaTitle || article.metaDescription) && (
-                              <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                                <h4 className="font-semibold text-gray-900 mb-3 text-lg">
-                                  SEO Preview
-                                </h4>
-                                <div className="space-y-2">
-                                  {article.metaTitle && (
-                                    <p className="text-blue-600 font-medium text-lg leading-tight hover:underline cursor-pointer">
-                                      {article.metaTitle}
-                                    </p>
-                                  )}
-                                  {article.metaDescription && (
-                                    <p className="text-gray-700 text-sm leading-relaxed">
-                                      {article.metaDescription}
-                                    </p>
-                                  )}
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Article Content Section */}
-                            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-                              <div className="p-6">
-                                <div className="prose prose-sm sm:prose-base lg:prose-lg max-w-none">
-                                  {/* FIXED: Use renderContentWithImages function instead of dangerouslySetInnerHTML */}
-                                  {renderContentWithImages(
-                                    article.content,
-                                    article.generatedImages || []
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Action Buttons */}
-                            <div className="flex gap-3 pt-6 border-t border-gray-200">
-                              <Button
-                                variant="outline"
-                                className="cursor-pointer border-gray-300 hover:bg-gray-50"
-                                onClick={() => openEditDialog(article)}
-                              >
-                                <Edit2 className="w-4 h-4 mr-2" />
-                                Edit Article
-                              </Button>
-                              <Button
-                                className="cursor-pointer bg-primary hover:bg-primary/90 text-white flex-1"
-                                onClick={() =>
-                                  handleUpdateStatus(article.id, "published")
-                                }
-                                disabled={article.status === "published"}
-                              >
-                                {article.status === "published"
-                                  ? "Already Published"
-                                  : "Publish Now"}
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
-
-                    <Select
-                      value={article.status}
-                      onValueChange={(value) =>
-                        handleUpdateStatus(
-                          article.id,
-                          value as "draft" | "scheduled" | "published"
-                        )
-                      }
-                      disabled={updatingStatus === article.id}
-                    >
-                      <SelectTrigger className="w-32 h-9 text-sm">
-                        <SelectValue>
-                          {updatingStatus === article.id ? (
-                            <Loader2 className="w-3 h-3 animate-spin inline" />
-                          ) : (
-                            getStatusDisplayText(article.status)
-                          )}
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="draft">Draft</SelectItem>
-                        <SelectItem value="scheduled">Scheduled</SelectItem>
-                        <SelectItem value="published">Published</SelectItem>
-                      </SelectContent>
-                    </Select>
-
-                    {article.status === "published" && article.slug && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="gap-2"
-                        onClick={() =>
-                          handleIndexNow(article.id, article.slug!)
-                        }
-                        disabled={indexingArticle === article.id}
-                      >
-                        {indexingArticle === article.id ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Globe className="w-4 h-4" />
-                        )}
-                        Index Now
-                      </Button>
-                    )}
-
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-muted-foreground hover:text-destructive ml-auto"
-                      onClick={() => handleDeleteArticle(article.id)}
-                      disabled={updatingStatus === article.id}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
+     
       <Dialog
         open={isEditDialogOpen}
         onOpenChange={(open) => {
@@ -1412,7 +1612,10 @@ export function ArticlesTab({
               <Button onClick={handleSaveEditedArticle} disabled={isSavingEdit}>
                 {isSavingEdit ? (
                   <span className="flex items-center gap-2">
-                    <Loader2 className="w-4 h-4 animate-spin" /> Saving...
+                    <div className="animate-spin">
+                      <Image src="/loader.png" alt="" width={92} height={92} />
+                    </div>{" "}
+                    Saving...
                   </span>
                 ) : (
                   "Save Changes"
