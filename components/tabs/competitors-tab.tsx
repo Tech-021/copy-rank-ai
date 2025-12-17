@@ -1,14 +1,35 @@
 // components/tabs/competitors-tab.tsx
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Search, ExternalLink, TrendingUp, Users, Target, BarChart3, Loader2 } from "lucide-react"
-import { supabase } from "@/lib/client"
+import { useState, useEffect } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Search,
+  ExternalLink,
+  TrendingUp,
+  Users,
+  Target,
+  BarChart3,
+  Loader2,
+} from "lucide-react";
+import { supabase } from "@/lib/client";
+import Image from "next/image";
 
 interface CompetitorsTabProps {
   websiteId: string | null;
@@ -54,131 +75,146 @@ interface WebsiteData {
   };
 }
 
-export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabProps) {
-  const [selectedWebsiteId, setSelectedWebsiteId] = useState<string | null>(initialWebsiteId)
-  const [websites, setWebsites] = useState<Website[]>([])
-  const [websiteData, setWebsiteData] = useState<WebsiteData | null>(null)
-  const [competitors, setCompetitors] = useState<Competitor[]>([])
-  const [loading, setLoading] = useState(true)
-  const [loadingWebsites, setLoadingWebsites] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [searchQuery, setSearchQuery] = useState("")
-  const [qualityFilter, setQualityFilter] = useState<string>("all")
-  const [sortBy, setSortBy] = useState<string>("overlap-desc")
+export function CompetitorsTab({
+  websiteId: initialWebsiteId,
+}: CompetitorsTabProps) {
+  const [selectedWebsiteId, setSelectedWebsiteId] = useState<string | null>(
+    initialWebsiteId
+  );
+  const [websites, setWebsites] = useState<Website[]>([]);
+  const [websiteData, setWebsiteData] = useState<WebsiteData | null>(null);
+  const [competitors, setCompetitors] = useState<Competitor[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadingWebsites, setLoadingWebsites] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [qualityFilter, setQualityFilter] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<string>("overlap-desc");
 
   // Load user websites if no websiteId is provided
   const loadUserWebsites = async () => {
     try {
-      setLoadingWebsites(true)
-      const { data: { user } } = await supabase.auth.getUser()
+      setLoadingWebsites(true);
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
       if (!user) {
-        setError("Please log in to view competitors")
-        return
+        setError("Please log in to view competitors");
+        return;
       }
 
       const { data, error } = await supabase
         .from("websites")
         .select("id, url, topic, created_at")
         .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
+        .order("created_at", { ascending: false });
 
       if (error) {
-        console.error("Error loading websites:", error)
-        setError("Failed to load websites")
-        return
+        console.error("Error loading websites:", error);
+        setError("Failed to load websites");
+        return;
       }
 
       if (data && data.length > 0) {
-        setWebsites(data)
+        setWebsites(data);
         // Auto-select first website if no websiteId was provided
         if (!selectedWebsiteId) {
-          setSelectedWebsiteId(data[0].id)
+          setSelectedWebsiteId(data[0].id);
         }
       } else {
-        setError("No websites found. Add a website in the Analyze tab first.")
+        setError("No websites found. Add a website in the Analyze tab first.");
       }
     } catch (error) {
-      console.error("Error loading websites:", error)
-      setError("Failed to load websites")
+      console.error("Error loading websites:", error);
+      setError("Failed to load websites");
     } finally {
-      setLoadingWebsites(false)
+      setLoadingWebsites(false);
     }
-  }
+  };
 
   // Load websites on mount if no websiteId provided
   useEffect(() => {
     if (!initialWebsiteId) {
-      loadUserWebsites()
+      loadUserWebsites();
     } else {
-      setSelectedWebsiteId(initialWebsiteId)
+      setSelectedWebsiteId(initialWebsiteId);
     }
-  }, [initialWebsiteId])
+  }, [initialWebsiteId]);
 
   // Fetch competitors when selectedWebsiteId changes
   useEffect(() => {
     if (selectedWebsiteId) {
-      fetchCompetitors()
+      fetchCompetitors();
     } else if (!loadingWebsites) {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [selectedWebsiteId])
+  }, [selectedWebsiteId]);
 
   const fetchCompetitors = async () => {
     if (!selectedWebsiteId) return;
-    
+
     try {
-      setLoading(true)
-      setError(null)
-      console.log(`🔍 Fetching competitors for website: ${selectedWebsiteId}`)
-      
-      const response = await fetch(`/api/keyword/${selectedWebsiteId}`)
-      
+      setLoading(true);
+      setError(null);
+      console.log(`🔍 Fetching competitors for website: ${selectedWebsiteId}`);
+
+      const response = await fetch(`/api/keyword/${selectedWebsiteId}`);
+
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
-      const data = await response.json()
-      
+
+      const data = await response.json();
+
       if (!data.success) {
-        throw new Error(data.error || "Failed to fetch competitors")
+        throw new Error(data.error || "Failed to fetch competitors");
       }
 
       // Extract competitors from the API response
-      let competitorsData: Competitor[] = []
-      
+      let competitorsData: Competitor[] = [];
+
       // Check for competitors in fullData (new format from onboarding)
-      if (data.fullData && data.fullData.competitors && Array.isArray(data.fullData.competitors)) {
-        competitorsData = data.fullData.competitors
-        console.log(`✅ Loaded ${competitorsData.length} competitors from fullData`)
+      if (
+        data.fullData &&
+        data.fullData.competitors &&
+        Array.isArray(data.fullData.competitors)
+      ) {
+        competitorsData = data.fullData.competitors;
+        console.log(
+          `✅ Loaded ${competitorsData.length} competitors from fullData`
+        );
       } else if (data.metadata?.hasCompetitors) {
-        console.log('⚠️ Metadata indicates competitors but fullData not found')
-        competitorsData = []
+        console.log("⚠️ Metadata indicates competitors but fullData not found");
+        competitorsData = [];
       }
-      
+
       setWebsiteData({
         website: data.website,
         competitors: competitorsData,
-        metadata: data.metadata
-      })
-      setCompetitors(competitorsData)
-      
-      console.log(`✅ Total competitors loaded: ${competitorsData.length}`)
-      
+        metadata: data.metadata,
+      });
+      setCompetitors(competitorsData);
+
+      console.log(`✅ Total competitors loaded: ${competitorsData.length}`);
     } catch (err) {
-      console.error('Error fetching competitors:', err)
-      setError(err instanceof Error ? err.message : "Failed to load competitors")
+      console.error("Error fetching competitors:", err);
+      setError(
+        err instanceof Error ? err.message : "Failed to load competitors"
+      );
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   // Helper function to check if competitor is in new format (from onboarding)
   const isNewFormat = (competitor: Competitor | undefined): boolean => {
     if (!competitor) return false; // Handle undefined/null
-    return competitor.keywords_count !== undefined || 
-           (competitor.keywords !== undefined && competitor.topic !== undefined)
-  }
+    return (
+      competitor.keywords_count !== undefined ||
+      (competitor.keywords !== undefined && competitor.topic !== undefined)
+    );
+  };
 
   // Helper function to get display values for new format
   const getCompetitorDisplayData = (competitor: Competitor) => {
@@ -186,18 +222,22 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
       // New format: show topic, keywords count, and keywords list
       return {
         domain: competitor.domain,
-        topic: competitor.topic || 'Unknown',
-        keywordsCount: competitor.keywords_count || competitor.keywords?.length || 0,
+        topic: competitor.topic || "Unknown",
+        keywordsCount:
+          competitor.keywords_count || competitor.keywords?.length || 0,
         keywords: competitor.keywords || [],
         success: competitor.success !== false,
-        error: competitor.error
-      }
+        error: competitor.error,
+      };
     } else {
       // Old format: use existing fields
       return {
         domain: competitor.domain,
-        topic: 'N/A',
-        keywordsCount: competitor.organic_traffic?.total_keywords || competitor.common_keywords || 0,
+        topic: "N/A",
+        keywordsCount:
+          competitor.organic_traffic?.total_keywords ||
+          competitor.common_keywords ||
+          0,
         keywords: [],
         success: true,
         error: null,
@@ -205,108 +245,141 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
         commonKeywords: competitor.common_keywords,
         organicTraffic: competitor.organic_traffic,
         competitiveOverlap: competitor.competitive_overlap,
-        serpOverlapQuality: competitor.serp_overlap_quality
-      }
+        serpOverlapQuality: competitor.serp_overlap_quality,
+      };
     }
-  }
+  };
 
   const filteredAndSortedCompetitors = competitors
-    .filter(competitor => {
-      const displayData = getCompetitorDisplayData(competitor)
-      const matchesSearch = displayData.domain.toLowerCase().includes(searchQuery.toLowerCase())
-      
+    .filter((competitor) => {
+      const displayData = getCompetitorDisplayData(competitor);
+      const matchesSearch = displayData.domain
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase());
+
       if (isNewFormat(competitor)) {
         // For new format, filter by topic or domain
-        const matchesTopic = displayData.topic.toLowerCase().includes(searchQuery.toLowerCase())
-        return matchesSearch || matchesTopic
+        const matchesTopic = displayData.topic
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase());
+        return matchesSearch || matchesTopic;
       } else {
         // For old format, use existing quality filter
-        return matchesSearch && 
-               (qualityFilter === "all" || competitor.serp_overlap_quality === qualityFilter)
+        return (
+          matchesSearch &&
+          (qualityFilter === "all" ||
+            competitor.serp_overlap_quality === qualityFilter)
+        );
       }
     })
     .sort((a, b) => {
-      const aData = getCompetitorDisplayData(a)
-      const bData = getCompetitorDisplayData(b)
-      
+      const aData = getCompetitorDisplayData(a);
+      const bData = getCompetitorDisplayData(b);
+
       if (isNewFormat(a) && isNewFormat(b)) {
         // Sort new format by keywords count
         switch (sortBy) {
           case "overlap-desc":
-            return bData.keywordsCount - aData.keywordsCount
+            return bData.keywordsCount - aData.keywordsCount;
           case "overlap-asc":
-            return aData.keywordsCount - bData.keywordsCount
+            return aData.keywordsCount - bData.keywordsCount;
           default:
-            return 0
+            return 0;
         }
       } else {
         // Use existing sort logic for old format
         switch (sortBy) {
           case "overlap-desc":
-            return (b.common_keywords || 0) - (a.common_keywords || 0)
+            return (b.common_keywords || 0) - (a.common_keywords || 0);
           case "overlap-asc":
-            return (a.common_keywords || 0) - (b.common_keywords || 0)
+            return (a.common_keywords || 0) - (b.common_keywords || 0);
           case "position-asc":
-            return (a.avg_position || 0) - (b.avg_position || 0)
+            return (a.avg_position || 0) - (b.avg_position || 0);
           case "position-desc":
-            return (b.avg_position || 0) - (a.avg_position || 0)
+            return (b.avg_position || 0) - (a.avg_position || 0);
           case "traffic-desc":
-            return (b.organic_traffic?.estimated_traffic_value || 0) - (a.organic_traffic?.estimated_traffic_value || 0)
+            return (
+              (b.organic_traffic?.estimated_traffic_value || 0) -
+              (a.organic_traffic?.estimated_traffic_value || 0)
+            );
           case "traffic-asc":
-            return (a.organic_traffic?.estimated_traffic_value || 0) - (b.organic_traffic?.estimated_traffic_value || 0)
+            return (
+              (a.organic_traffic?.estimated_traffic_value || 0) -
+              (b.organic_traffic?.estimated_traffic_value || 0)
+            );
           default:
-            return 0
+            return 0;
         }
       }
-    })
+    });
 
   const getQualityColor = (quality: string) => {
     switch (quality) {
-      case "High": return "bg-green-100 text-green-700 border-green-200"
-      case "Medium": return "bg-yellow-100 text-yellow-700 border-yellow-200"
-      case "Low": return "bg-red-100 text-red-700 border-red-200"
-      default: return "bg-gray-100 text-gray-700 border-gray-200"
+      case "High":
+        return "bg-green-100 text-green-700 border-green-200";
+      case "Medium":
+        return "bg-yellow-100 text-yellow-700 border-yellow-200";
+      case "Low":
+        return "bg-red-100 text-red-700 border-red-200";
+      default:
+        return "bg-gray-100 text-gray-700 border-gray-200";
     }
-  }
+  };
 
   const getPositionColor = (position: number) => {
-    if (position <= 10) return "text-green-600"
-    if (position <= 30) return "text-yellow-600"
-    return "text-red-600"
-  }
+    if (position <= 10) return "text-green-600";
+    if (position <= 30) return "text-yellow-600";
+    return "text-red-600";
+  };
 
   const formatNumber = (num: number) => {
-    if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M'
-    if (num >= 1000) return (num / 1000).toFixed(1) + 'K'
-    return num.toString()
-  }
+    if (num >= 1000000) return (num / 1000000).toFixed(1) + "M";
+    if (num >= 1000) return (num / 1000).toFixed(1) + "K";
+    return num.toString();
+  };
 
   const formatCurrency = (num: number) => {
-    if (num >= 1000000) return '$' + (num / 1000000).toFixed(1) + 'M'
-    if (num >= 1000) return '$' + (num / 1000).toFixed(1) + 'K'
-    return '$' + num.toString()
-  }
+    if (num >= 1000000) return "$" + (num / 1000000).toFixed(1) + "M";
+    if (num >= 1000) return "$" + (num / 1000).toFixed(1) + "K";
+    return "$" + num.toString();
+  };
 
   const stats = {
     totalCompetitors: competitors.length,
-    avgOverlap: competitors.length > 0 && isNewFormat(competitors[0])
-      ? Math.round(competitors.reduce((sum, c) => sum + (c.keywords_count || c.keywords?.length || 0), 0) / Math.max(competitors.length, 1))
-      : Math.round(competitors.reduce((sum, c) => sum + (c.common_keywords || 0), 0) / Math.max(competitors.length, 1)),
-    avgPosition: competitors.length > 0 && isNewFormat(competitors[0])
-      ? "N/A"
-      : (competitors.reduce((sum, c) => sum + (c.avg_position || 0), 0) / Math.max(competitors.length, 1)).toFixed(1),
-    highQualityCount: competitors.filter(c => !isNewFormat(c) && c.serp_overlap_quality === "High").length
-  }
+    avgOverlap:
+      competitors.length > 0 && isNewFormat(competitors[0])
+        ? Math.round(
+            competitors.reduce(
+              (sum, c) => sum + (c.keywords_count || c.keywords?.length || 0),
+              0
+            ) / Math.max(competitors.length, 1)
+          )
+        : Math.round(
+            competitors.reduce((sum, c) => sum + (c.common_keywords || 0), 0) /
+              Math.max(competitors.length, 1)
+          ),
+    avgPosition:
+      competitors.length > 0 && isNewFormat(competitors[0])
+        ? "N/A"
+        : (
+            competitors.reduce((sum, c) => sum + (c.avg_position || 0), 0) /
+            Math.max(competitors.length, 1)
+          ).toFixed(1),
+    highQualityCount: competitors.filter(
+      (c) => !isNewFormat(c) && c.serp_overlap_quality === "High"
+    ).length,
+  };
 
   if (loadingWebsites) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-primary" />
-          <p className="text-muted-foreground">Loading websites...</p>
+          <div className="animate-spin">
+            <Image src="/loader.png" alt="" width={92} height={92} />
+          </div>
         </div>
       </div>
-    )
+    );
   }
 
   if (error && !selectedWebsiteId && websites.length === 0) {
@@ -320,18 +393,20 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
           </Button>
         </div>
       </div>
-    )
+    );
   }
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-primary" />
+          <div className="animate-spin">
+            <Image src="/loader.png" alt="" width={92} height={92} />
+          </div>
           <p className="text-muted-foreground">Loading competitors...</p>
         </div>
       </div>
-    )
+    );
   }
 
   if (error) {
@@ -344,7 +419,7 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
           </Button>
         </div>
       </div>
-    )
+    );
   }
 
   if (!websiteData || competitors.length === 0) {
@@ -356,16 +431,12 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
           <p className="text-sm text-muted-foreground">
             This website doesn't have competitor analysis data yet.
           </p>
-          <Button 
-            onClick={fetchCompetitors} 
-            variant="outline" 
-            className="mt-4"
-          >
+          <Button onClick={fetchCompetitors} variant="outline" className="mt-4">
             Refresh
           </Button>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -375,14 +446,18 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
         <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
           <CardHeader>
             <CardTitle>Select Website</CardTitle>
-            <CardDescription>Choose a website to view its competitors</CardDescription>
+            <CardDescription>
+              Choose a website to view its competitors
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-2">
               {websites.map((website) => (
                 <Button
                   key={website.id}
-                  variant={selectedWebsiteId === website.id ? "default" : "outline"}
+                  variant={
+                    selectedWebsiteId === website.id ? "default" : "outline"
+                  }
                   onClick={() => setSelectedWebsiteId(website.id)}
                   className={`cursor-pointer ${
                     selectedWebsiteId === website.id
@@ -408,23 +483,28 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
         <CardContent className="pt-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-foreground">SEO Competitors</h1>
+              <h1 className="text-2xl font-bold text-foreground">
+                SEO Competitors
+              </h1>
               <div className="flex items-center gap-4 mt-2">
                 <p className="text-sm text-muted-foreground">
-                  <span className="font-medium">Website:</span> {websiteData.website.url}
+                  <span className="font-medium">Website:</span>{" "}
+                  {websiteData.website.url}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  <span className="font-medium">Topic:</span> {websiteData.website.topic}
+                  <span className="font-medium">Topic:</span>{" "}
+                  {websiteData.website.topic}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  <span className="font-medium">Total Competitors:</span> {competitors.length}
+                  <span className="font-medium">Total Competitors:</span>{" "}
+                  {competitors.length}
                 </p>
               </div>
             </div>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               className="cursor-pointer border-border/40 gap-2"
-              onClick={() => window.open(websiteData.website.url, '_blank')}
+              onClick={() => window.open(websiteData.website.url, "_blank")}
             >
               <ExternalLink className="w-4 h-4" />
               Visit Website
@@ -439,8 +519,12 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Total Competitors</p>
-                <p className="text-2xl font-bold text-foreground">{stats.totalCompetitors}</p>
+                <p className="text-sm text-muted-foreground">
+                  Total Competitors
+                </p>
+                <p className="text-2xl font-bold text-foreground">
+                  {stats.totalCompetitors}
+                </p>
               </div>
               <Users className="w-8 h-8 text-primary/40" />
             </div>
@@ -451,8 +535,12 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Avg. Keyword Overlap</p>
-                <p className="text-2xl font-bold text-foreground">{formatNumber(stats.avgOverlap)}</p>
+                <p className="text-sm text-muted-foreground">
+                  Avg. Keyword Overlap
+                </p>
+                <p className="text-2xl font-bold text-foreground">
+                  {formatNumber(stats.avgOverlap)}
+                </p>
               </div>
               <Target className="w-8 h-8 text-accent/40" />
             </div>
@@ -464,7 +552,9 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Avg. Position</p>
-                <p className="text-2xl font-bold text-foreground">{stats.avgPosition}</p>
+                <p className="text-2xl font-bold text-foreground">
+                  {stats.avgPosition}
+                </p>
               </div>
               <TrendingUp className="w-8 h-8 text-yellow-500/40" />
             </div>
@@ -476,7 +566,9 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">High Quality</p>
-                <p className="text-2xl font-bold text-foreground">{stats.highQualityCount}</p>
+                <p className="text-2xl font-bold text-foreground">
+                  {stats.highQualityCount}
+                </p>
               </div>
               <BarChart3 className="w-8 h-8 text-green-500/40" />
             </div>
@@ -522,12 +614,24 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
                 <SelectValue placeholder="Sort by" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="overlap-desc">Overlap (High to Low)</SelectItem>
-                <SelectItem value="overlap-asc">Overlap (Low to High)</SelectItem>
-                <SelectItem value="position-asc">Position (Best to Worst)</SelectItem>
-                <SelectItem value="position-desc">Position (Worst to Best)</SelectItem>
-                <SelectItem value="traffic-desc">Traffic (High to Low)</SelectItem>
-                <SelectItem value="traffic-asc">Traffic (Low to High)</SelectItem>
+                <SelectItem value="overlap-desc">
+                  Overlap (High to Low)
+                </SelectItem>
+                <SelectItem value="overlap-asc">
+                  Overlap (Low to High)
+                </SelectItem>
+                <SelectItem value="position-asc">
+                  Position (Best to Worst)
+                </SelectItem>
+                <SelectItem value="position-desc">
+                  Position (Worst to Best)
+                </SelectItem>
+                <SelectItem value="traffic-desc">
+                  Traffic (High to Low)
+                </SelectItem>
+                <SelectItem value="traffic-asc">
+                  Traffic (Low to High)
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -535,66 +639,102 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
           {/* Competitors Grid */}
           <div className="grid gap-4">
             {filteredAndSortedCompetitors.map((competitor, index) => {
-              const displayData = getCompetitorDisplayData(competitor)
-              const isNew = isNewFormat(competitor)
-              
+              const displayData = getCompetitorDisplayData(competitor);
+              const isNew = isNewFormat(competitor);
+
               return (
-                <Card key={competitor.domain} className="border-border/40 bg-card/50 backdrop-blur-sm">
+                <Card
+                  key={competitor.domain}
+                  className="border-border/40 bg-card/50 backdrop-blur-sm"
+                >
                   <CardContent className="pt-6">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-3">
-                          <h3 className="font-semibold text-foreground text-lg">{displayData.domain}</h3>
+                          <h3 className="font-semibold text-foreground text-lg">
+                            {displayData.domain}
+                          </h3>
                           {isNew ? (
                             <Badge className="bg-blue-100 text-blue-700 border-blue-200">
                               {displayData.topic}
                             </Badge>
                           ) : (
-                            <Badge className={getQualityColor(competitor.serp_overlap_quality || "Low")}>
+                            <Badge
+                              className={getQualityColor(
+                                competitor.serp_overlap_quality || "Low"
+                              )}
+                            >
                               {competitor.serp_overlap_quality} Quality
                             </Badge>
                           )}
                           {displayData.success === false && (
-                            <Badge variant="outline" className="text-red-600 border-red-300">
+                            <Badge
+                              variant="outline"
+                              className="text-red-600 border-red-300"
+                            >
                               Failed
                             </Badge>
                           )}
                         </div>
-                        
+
                         {isNew ? (
                           // New format display
                           <div className="space-y-3">
                             <div className="grid md:grid-cols-2 gap-4">
                               <div>
-                                <p className="text-sm text-muted-foreground">Topic</p>
-                                <p className="text-lg font-bold text-foreground">{displayData.topic}</p>
+                                <p className="text-sm text-muted-foreground">
+                                  Topic
+                                </p>
+                                <p className="text-lg font-bold text-foreground">
+                                  {displayData.topic}
+                                </p>
                               </div>
                               <div>
-                                <p className="text-sm text-muted-foreground">Keywords Found</p>
-                                <p className="text-lg font-bold text-foreground">{displayData.keywordsCount}</p>
+                                <p className="text-sm text-muted-foreground">
+                                  Keywords Found
+                                </p>
+                                <p className="text-lg font-bold text-foreground">
+                                  {displayData.keywordsCount}
+                                </p>
                               </div>
                             </div>
-                            
-                            {displayData.keywords && displayData.keywords.length > 0 && (
-                              <div>
-                                <p className="text-sm text-muted-foreground mb-2">Keywords:</p>
-                                <div className="flex flex-wrap gap-2">
-                                  {displayData.keywords.slice(0, 10).map((kw: any, idx: number) => (
-                                    <Badge key={idx} variant="outline" className="text-xs">
-                                      {typeof kw === 'string' ? kw : kw.keyword}
-                                    </Badge>
-                                  ))}
-                                  {displayData.keywords.length > 10 && (
-                                    <Badge variant="outline" className="text-xs">
-                                      +{displayData.keywords.length - 10} more
-                                    </Badge>
-                                  )}
+
+                            {displayData.keywords &&
+                              displayData.keywords.length > 0 && (
+                                <div>
+                                  <p className="text-sm text-muted-foreground mb-2">
+                                    Keywords:
+                                  </p>
+                                  <div className="flex flex-wrap gap-2">
+                                    {displayData.keywords
+                                      .slice(0, 10)
+                                      .map((kw: any, idx: number) => (
+                                        <Badge
+                                          key={idx}
+                                          variant="outline"
+                                          className="text-xs"
+                                        >
+                                          {typeof kw === "string"
+                                            ? kw
+                                            : kw.keyword}
+                                        </Badge>
+                                      ))}
+                                    {displayData.keywords.length > 10 && (
+                                      <Badge
+                                        variant="outline"
+                                        className="text-xs"
+                                      >
+                                        +{displayData.keywords.length - 10} more
+                                      </Badge>
+                                    )}
+                                  </div>
                                 </div>
-                              </div>
-                            )}
-                            
+                              )}
+
                             {displayData.error && (
-                              <p className="text-sm text-red-600">Error: {displayData.error}</p>
+                              <p className="text-sm text-red-600">
+                                Error: {displayData.error}
+                              </p>
                             )}
                           </div>
                         ) : (
@@ -602,61 +742,96 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
                           <>
                             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                               <div>
-                                <p className="text-sm text-muted-foreground">Keyword Overlap</p>
+                                <p className="text-sm text-muted-foreground">
+                                  Keyword Overlap
+                                </p>
                                 <p className="text-lg font-bold text-foreground">
-                                  {formatNumber(competitor.common_keywords || 0)}
+                                  {formatNumber(
+                                    competitor.common_keywords || 0
+                                  )}
                                 </p>
                                 <p className="text-xs text-muted-foreground">
                                   {competitor.competitive_overlap}% overlap
                                 </p>
                               </div>
-                              
+
                               <div>
-                                <p className="text-sm text-muted-foreground">Avg. Position</p>
-                                <p className={`text-lg font-bold ${getPositionColor(competitor.avg_position || 0)}`}>
-                                  #{competitor.avg_position?.toFixed(1) || 'N/A'}
+                                <p className="text-sm text-muted-foreground">
+                                  Avg. Position
                                 </p>
-                                <p className="text-xs text-muted-foreground">SERP position</p>
+                                <p
+                                  className={`text-lg font-bold ${getPositionColor(
+                                    competitor.avg_position || 0
+                                  )}`}
+                                >
+                                  #
+                                  {competitor.avg_position?.toFixed(1) || "N/A"}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  SERP position
+                                </p>
                               </div>
-                              
+
                               <div>
-                                <p className="text-sm text-muted-foreground">Estimated Traffic</p>
-                                <p className="text-lg font-bold text-foreground">
-                                  {formatCurrency(competitor.organic_traffic?.estimated_traffic_value || 0)}
+                                <p className="text-sm text-muted-foreground">
+                                  Estimated Traffic
                                 </p>
-                                <p className="text-xs text-muted-foreground">Traffic value</p>
+                                <p className="text-lg font-bold text-foreground">
+                                  {formatCurrency(
+                                    competitor.organic_traffic
+                                      ?.estimated_traffic_value || 0
+                                  )}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  Traffic value
+                                </p>
                               </div>
-                              
+
                               <div>
-                                <p className="text-sm text-muted-foreground">Top Positions</p>
-                                <p className="text-lg font-bold text-foreground">
-                                  {formatNumber(competitor.organic_traffic?.top_3_positions || 0)}
+                                <p className="text-sm text-muted-foreground">
+                                  Top Positions
                                 </p>
-                                <p className="text-xs text-muted-foreground">Top 3 rankings</p>
+                                <p className="text-lg font-bold text-foreground">
+                                  {formatNumber(
+                                    competitor.organic_traffic
+                                      ?.top_3_positions || 0
+                                  )}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  Top 3 rankings
+                                </p>
                               </div>
                             </div>
-                            
+
                             <div className="flex gap-2">
                               <Badge variant="outline" className="text-xs">
-                                Total Keywords: {formatNumber(competitor.organic_traffic?.total_keywords || 0)}
+                                Total Keywords:{" "}
+                                {formatNumber(
+                                  competitor.organic_traffic?.total_keywords ||
+                                    0
+                                )}
                               </Badge>
                               <Badge variant="outline" className="text-xs">
-                                Top 10: {formatNumber(competitor.organic_traffic?.top_10_positions || 0)}
+                                Top 10:{" "}
+                                {formatNumber(
+                                  competitor.organic_traffic
+                                    ?.top_10_positions || 0
+                                )}
                               </Badge>
                             </div>
                           </>
                         )}
                       </div>
-                      
+
                       <Button
                         variant="outline"
                         size="sm"
                         className="cursor-pointer gap-2 ml-4"
                         onClick={() => {
-                          const url = displayData.domain.startsWith('http') 
-                            ? displayData.domain 
-                            : `https://${displayData.domain}`
-                          window.open(url, '_blank')
+                          const url = displayData.domain.startsWith("http")
+                            ? displayData.domain
+                            : `https://${displayData.domain}`;
+                          window.open(url, "_blank");
                         }}
                       >
                         <ExternalLink className="w-4 h-4" />
@@ -665,7 +840,7 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
                     </div>
                   </CardContent>
                 </Card>
-              )
+              );
             })}
           </div>
 
@@ -677,5 +852,5 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

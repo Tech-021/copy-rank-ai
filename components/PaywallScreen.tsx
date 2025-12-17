@@ -137,7 +137,7 @@ const PaywallScreen: React.FC<PaywallScreenProps> = ({
                 <div className="space-y-4 mb-8">
                   {features.map((feature, index) => (
                     <div key={index} className="flex items-center space-x-3">
-                      <div className={`flex-shrink-0 ${
+                      <div className={`shrink-0 ${
                         plan.popular ? 'text-blue-600' : 'text-gray-600'
                       }`}>
                         <Check className="w-5 h-5" />
@@ -146,7 +146,7 @@ const PaywallScreen: React.FC<PaywallScreenProps> = ({
                     </div>
                   ))}
                   <div className="flex items-center space-x-3 pt-2 border-t border-gray-200">
-                    <div className={`flex-shrink-0 ${
+                    <div className={`shrink-0 ${
                       plan.popular ? 'text-blue-600' : 'text-gray-600'
                     }`}>
                       <Check className="w-5 h-5" />
