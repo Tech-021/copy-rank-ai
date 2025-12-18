@@ -30,7 +30,7 @@ const PaywallScreen: React.FC<PaywallScreenProps> = ({
     }
 
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
-    const successUrl = `${baseUrl}/payment/callback`;
+    const successUrl = `${baseUrl}/payment/callback?next=/about-yourself`;
     
     const fullCheckoutUrl = `${checkoutUrl}?checkout[email]=${encodeURIComponent(userEmail)}&checkout[custom][user_id]=${encodeURIComponent(userId)}&checkout[product_options][redirect_url]=${encodeURIComponent(successUrl)}`;
     

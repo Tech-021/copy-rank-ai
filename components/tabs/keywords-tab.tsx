@@ -1,6 +1,14 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { RefreshCw } from "lucide-react";
+import { Plus } from "lucide-react";
+import { CreatePostDialog } from "@/components/ui/CreatePostDialog";
+import { ImportCSVDialog } from "@/components/ui/ImportCSVDialog";
+import { SyncCompetitorsDialog } from "@/components/ui/SyncCompetitorsDialog";
+import { AddKeywordsDialog } from "@/components/ui/AddKeywordsDialog";
+import { DeleteKeywordDialog } from "@/components/ui/DeleteKeywordDialog";
+
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -9,6 +17,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -35,7 +49,7 @@ import { getUserArticleLimit } from "@/lib/articleLimits";
 import Image from "next/image";
 
 interface KeywordsTabProps {
-  websiteId?: string | null;
+  websiteId?: string;
   onArticlesGenerated?: (articles: any[]) => void;
 }
 
@@ -43,6 +57,7 @@ interface Keyword {
   id?: string;
   keyword: string;
   search_volume: number;
+  websiteId?: string;
   difficulty: number;
   cpc: number;
   competition: number;
@@ -73,6 +88,7 @@ interface Article {
   title: string;
   content: string;
   keyword: string;
+
   status: "Published" | "Scheduled" | "Draft";
   date: string;
   preview: string;
@@ -95,6 +111,7 @@ interface Article {
 export function KeywordsTab({
   websiteId: initialWebsiteId,
   onArticlesGenerated,
+  websiteId,
 }: KeywordsTabProps) {
   const [selectedWebsiteId, setSelectedWebsiteId] = useState<string | null>(
     initialWebsiteId || null
@@ -105,15 +122,45 @@ export function KeywordsTab({
   const [loading, setLoading] = useState(true);
   const [loadingWebsites, setLoadingWebsites] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loadingUser, setLoadingUser] = useState<boolean>(true);
   const [generatingContent, setGeneratingContent] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [difficultyFilter, setDifficultyFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("volume-desc");
   const [selectedKeywords, setSelectedKeywords] = useState<Set<number>>(
     new Set()
   );
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [dialogCompleted, setDialogCompleted] = useState(false);
+  const [showImportDialog, setShowImportDialog] = useState(false);
+  const [showSyncDialog, setShowSyncDialog] = useState(false);
+  const [showAddKeywordsDialog, setShowAddKeywordsDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [keywordToDelete, setKeywordToDelete] = useState<{ index: number; keyword: string } | null>(null);
   const toast = useToast();
+
+  // Handle dialog completion timing
+  useEffect(() => {
+    if (showCreateDialog && !dialogCompleted && generatingContent) {
+      const timer = setTimeout(() => {
+        setDialogCompleted(true);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [showCreateDialog, dialogCompleted, generatingContent]);
+
+  // Handle dialog closing
+  useEffect(() => {
+    if (dialogCompleted) {
+      const timer = setTimeout(() => {
+        setShowCreateDialog(false);
+        setDialogCompleted(false);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [dialogCompleted]);
 
   useEffect(() => {
     const fetchCurrentUser = async () => {
@@ -121,12 +168,16 @@ export function KeywordsTab({
         const { data: user, error } = await getUser();
         if (error) {
           console.error("Error fetching current user:", error);
+          setCurrentUser(null);
           return;
         }
         setCurrentUser(user);
         console.log("👤 Current user:", user?.id);
       } catch (err) {
         console.error("Failed to get current user:", err);
+        setCurrentUser(null);
+      } finally {
+        setLoadingUser(false);
       }
     };
 
@@ -136,8 +187,8 @@ export function KeywordsTab({
   const loadUserWebsites = async () => {
     try {
       setLoadingWebsites(true);
+      // Don't error if user isn't loaded yet—just return and wait
       if (!currentUser || !currentUser.id) {
-        setError("Please log in to view keywords");
         return;
       }
 
@@ -162,6 +213,7 @@ export function KeywordsTab({
       }));
 
       setWebsites(userWebsites);
+      setError(null);
       if (!selectedWebsiteId && userWebsites.length > 0) {
         setSelectedWebsiteId(userWebsites[0].id);
       }
@@ -174,12 +226,15 @@ export function KeywordsTab({
   };
 
   useEffect(() => {
-    if (!initialWebsiteId) {
-      loadUserWebsites();
-    } else {
+    if (initialWebsiteId) {
       setSelectedWebsiteId(initialWebsiteId);
+    } else if (websiteId) {
+      setSelectedWebsiteId(websiteId);
+    } else if (!loadingUser && currentUser?.id) {
+      // Only load websites after user auth is confirmed
+      loadUserWebsites();
     }
-  }, [initialWebsiteId]);
+  }, [initialWebsiteId, websiteId, loadingUser, currentUser?.id]);
 
   useEffect(() => {
     console.log("🔍 KeywordsTab - selectedWebsiteId:", selectedWebsiteId);
@@ -199,23 +254,21 @@ export function KeywordsTab({
       setError(null);
       console.log(`🔍 Fetching REAL keywords for website: ${selectedWebsiteId}`);
 
-      // Resolve selected website details
-      let website: (Website & { keywords?: any }) | null =
-        (websites.find((w) => w.id === selectedWebsiteId) as any) || null;
-      if (!website) {
-        const { data: singleSite } = await supabase
-          .from("websites")
-          .select("id, url, topic, keywords")
-          .eq("id", selectedWebsiteId)
-          .single();
-        if (singleSite) {
-          website = {
-            id: singleSite.id,
-            url: singleSite.url,
-            topic: singleSite.topic || "General",
-            keywords: (singleSite as any).keywords,
-          };
-        }
+      // Always fetch fresh website data from Supabase to get latest keywords
+      const { data: singleSite } = await supabase
+        .from("websites")
+        .select("id, url, topic, keywords")
+        .eq("id", selectedWebsiteId)
+        .single();
+      
+      let website: (Website & { keywords?: any }) | null = null;
+      if (singleSite) {
+        website = {
+          id: singleSite.id,
+          url: singleSite.url,
+          topic: singleSite.topic || "General",
+          keywords: (singleSite as any).keywords,
+        };
       }
 
       if (!website) {
@@ -349,47 +402,29 @@ export function KeywordsTab({
   }, [keywords, searchQuery, difficultyFilter, sortBy]);
 
   const generateContentFromKeywords = async () => {
+    // Open dialog immediately without validation toasts
+    setGeneratingContent(true);
+    setShowCreateDialog(true);
+    setDialogCompleted(false);
+
     if (!selectedKeywords || selectedKeywords.size === 0) {
-      toast.showToast({
-        title: "No keywords selected",
-        description: "Please select at least one keyword to generate content.",
-        type: "error",
-      });
       return;
     }
 
     if (!currentUser) {
-      toast.showToast({
-        title: "Not logged in",
-        description: "Please log in to generate content.",
-        type: "error",
-      });
       return;
     }
 
     if (!filteredAndSortedKeywords || filteredAndSortedKeywords.length === 0) {
-      toast.showToast({
-        title: "No keywords available",
-        description: "No keywords available to generate content.",
-        type: "error",
-      });
       return;
     }
 
     try {
-      setGeneratingContent(true);
-
       const selectedKeywordTexts = Array.from(selectedKeywords)
         .map((index) => filteredAndSortedKeywords[index]?.keyword)
         .filter(Boolean);
 
       if (selectedKeywordTexts.length === 0) {
-        toast.showToast({
-          title: "Invalid selection",
-          description: "No valid keywords selected.",
-          type: "error",
-        });
-        setGeneratingContent(false);
         return;
       }
 
@@ -433,20 +468,8 @@ export function KeywordsTab({
       }
 
       setSelectedKeywords(new Set());
-
-      toast.showToast({
-        title: `Generated ${generatedArticles.length} articles`,
-        description: `Successfully created content for ${selectedKeywordTexts.length} keywords! Check the Articles tab.`,
-        type: "success",
-        duration: 5000,
-      });
     } catch (error) {
       console.error("Error generating content:", error);
-      toast.showToast({
-        title: "Generation failed",
-        description: "Please try again.",
-        type: "error",
-      });
     } finally {
       setGeneratingContent(false);
     }
@@ -518,13 +541,23 @@ export function KeywordsTab({
   const stats = {
     totalKeywords: keywords.length,
     highPotential: keywords.filter((kw) => kw.difficulty <= 40).length,
-    withContent: keywords.filter((kw) => kw.post_status === "Live" || kw.post_status === "Draft").length,
-    withoutContent: keywords.filter((kw) => kw.post_status === "No Plan").length,
+    withContent: keywords.filter(
+      (kw) => kw.post_status === "Live" || kw.post_status === "Draft"
+    ).length,
+    withoutContent: keywords.filter((kw) => kw.post_status === "No Plan")
+      .length,
   };
 
   const exportKeywords = () => {
     const csvContent = [
-      ["Keyword", "Search Volume", "Difficulty", "CPC", "Competition", "Status"],
+      [
+        "Keyword",
+        "Search Volume",
+        "Difficulty",
+        "CPC",
+        "Competition",
+        "Status",
+      ],
       ...filteredAndSortedKeywords.map((kw) => [
         kw.keyword,
         kw.search_volume,
@@ -548,6 +581,204 @@ export function KeywordsTab({
     URL.revokeObjectURL(url);
   };
 
+  const handleImportCSV = async (file: File) => {
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const csv = e.target?.result as string;
+      const lines = csv.split("\n");
+      const importedKeywords: string[] = [];
+
+      // Skip header, parse each line
+      for (let i = 1; i < lines.length; i++) {
+        if (lines[i].trim()) {
+          const keyword = lines[i].split(",")[0]?.trim();
+          if (keyword) importedKeywords.push(keyword);
+        }
+      }
+
+      if (importedKeywords.length > 0) {
+        console.log("Importing keywords:", importedKeywords);
+        // Persist to Supabase
+        const success = await importKeywordsFromCSV(importedKeywords);
+        
+        if (success) {
+          console.log(`✅ Successfully imported ${importedKeywords.length} keyword(s)`);
+          // toast?.success(`Successfully imported ${importedKeywords.length} keywords`);
+        }
+      }
+      
+      setShowImportDialog(false);
+    };
+    reader.readAsText(file);
+  };
+
+  const handleDeleteKeyword = (index: number) => {
+    const keyword = filteredAndSortedKeywords[index];
+    if (keyword) {
+      setKeywordToDelete({ index, keyword: keyword.keyword });
+      setShowDeleteDialog(true);
+    }
+  };
+
+  const confirmDeleteKeyword = () => {
+    if (keywordToDelete) {
+      const newKeywords = keywords.filter(
+        (kw) => kw.keyword !== keywordToDelete.keyword
+      );
+      setKeywords(newKeywords);
+      setShowDeleteDialog(false);
+      setKeywordToDelete(null);
+      // toast?.success(`Deleted "${keywordToDelete.keyword}"`);
+    }
+  };
+
+  // Helper: Persist keywords to Supabase website's keywords array
+  const persistKeywordsToWebsite = async (newKeywords: Keyword[]) => {
+    try {
+      if (!selectedWebsiteId) {
+        console.error("No website selected");
+        return false;
+      }
+
+      // Fetch current website keywords payload
+      const { data: siteData, error: siteErr } = await supabase
+        .from("websites")
+        .select("id, keywords")
+        .eq("id", selectedWebsiteId)
+        .single();
+
+      if (siteErr) {
+        console.error("Failed to fetch website:", siteErr);
+        return false;
+      }
+
+      const existingPayload = (siteData as any)?.keywords || {};
+      const existingList: any[] = Array.isArray(existingPayload?.keywords)
+        ? existingPayload.keywords
+        : [];
+
+      // Merge & dedupe by keyword text (case-insensitive)
+      const map = new Map<string, any>();
+      
+      // Add existing keywords
+      existingList.forEach((k) => {
+        const key = String(k.keyword || "").toLowerCase();
+        if (key) map.set(key, k);
+      });
+
+      // Add/update new keywords
+      newKeywords.forEach((k) => {
+        const key = String(k.keyword || "").toLowerCase();
+        if (key) {
+          const existing = map.get(key) || {};
+          map.set(key, {
+            ...existing,
+            ...k,
+            is_target_keyword: true,
+            post_status: k.post_status || "No Plan",
+          });
+        }
+      });
+
+      const mergedList = Array.from(map.values());
+      const newPayload = { 
+        ...existingPayload, 
+        keywords: mergedList,
+        analysis_metadata: {
+          ...existingPayload.analysis_metadata,
+          total_keywords: mergedList.length,
+          analyzed_at: new Date().toISOString(),
+        }
+      };
+
+      // Update in Supabase
+      const { error: updateErr } = await supabase
+        .from("websites")
+        .update({ keywords: newPayload })
+        .eq("id", selectedWebsiteId);
+
+      if (updateErr) {
+        console.error("Failed to update website keywords:", updateErr);
+        return false;
+      }
+
+      console.log(`✅ Saved ${newKeywords.length} keyword(s) to website`);
+      return true;
+    } catch (e) {
+      console.error("Error persisting keywords:", e);
+      return false;
+    }
+  };
+
+  // Add selected keywords from table to website
+  const addSelectedKeywordsToWebsite = async () => {
+    try {
+      if (!selectedWebsiteId) {
+        console.log("No website selected");
+        return;
+      }
+      if (!selectedKeywords || selectedKeywords.size === 0) {
+        console.log("No keywords selected");
+        return;
+      }
+
+      // Show importing dialog
+      setShowAddKeywordsDialog(true);
+
+      // Get selected keyword objects from the filtered/sorted view
+      const selectedKeywordObjs = Array.from(selectedKeywords)
+        .map((idx) => filteredAndSortedKeywords[idx])
+        .filter(Boolean);
+
+      // Persist to Supabase
+      const success = await persistKeywordsToWebsite(selectedKeywordObjs);
+
+      if (success) {
+        // Refresh keywords to show newly added ones
+        await fetchKeywords();
+        // Clear selection
+        setSelectedKeywords(new Set());
+      }
+    } catch (e) {
+      console.error("Error adding keywords:", e);
+    }
+  };
+
+  // Import keywords from CSV
+  const importKeywordsFromCSV = async (importedStrings: string[]) => {
+    try {
+      if (!selectedWebsiteId) {
+        console.error("No website selected");
+        return false;
+      }
+
+      // Convert strings to keyword objects with defaults
+      const keywordObjs: Keyword[] = importedStrings.map((keyword) => ({
+        keyword: keyword.trim(),
+        search_volume: 0,
+        difficulty: 0,
+        cpc: 0,
+        competition: 0,
+        post_status: "No Plan" as const,
+        is_target_keyword: true,
+      }));
+
+      // Persist to Supabase
+      const success = await persistKeywordsToWebsite(keywordObjs);
+
+      if (success) {
+        // Refresh keywords
+        await fetchKeywords();
+        console.log(`✅ Imported ${keywordObjs.length} keyword(s)`);
+      }
+
+      return success;
+    } catch (e) {
+      console.error("Error importing keywords:", e);
+      return false;
+    }
+  };
+
   if (loadingWebsites) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -558,7 +789,7 @@ export function KeywordsTab({
     );
   }
 
-  if (error && !selectedWebsiteId && websites.length === 0) {
+  if (error && !selectedWebsiteId && websites.length === 0 && !loadingUser) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
@@ -603,294 +834,400 @@ export function KeywordsTab({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Keywords</h1>
-          <p className="text-sm text-gray-600 mt-1">Track the keywords driving your traffic</p>
+          <h2 className="text-2xl text-gray-700 font-medium">Keywords</h2>
+          <p className="text-sm text-gray-600 mt-1">
+            Track the keywords driving your traffic
+          </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex ">
           <Button
             variant="outline"
-            className="gap-2 border-gray-200 hover:bg-gray-50"
-            onClick={exportKeywords}
+            className="gap-2 text-gray-500 border-gray-200 rounded-r-none hover:bg-gray-50"
+            onClick={() => setShowAddKeywordsDialog(true)}
           >
-            <Download className="w-4 h-4" />
+            Add Keywords
+            <Plus className="w-4 h-4" />
+          </Button>
+          <Button
+            variant="outline"
+            className="gap-2 text-gray-500 border-gray-200 rounded-none hover:bg-gray-50"
+            onClick={() => setShowImportDialog(true)}
+          >
             Import CSV
+            <Download className="w-4 h-4" />
           </Button>
           <Button
             variant="outline"
-            className="gap-2 border-gray-200 hover:bg-gray-50"
-          >
-            Sync from Competitors
-            <ChevronDown className="w-4 h-4" />
-          </Button>
-          <Button
-            variant="outline"
-            className="gap-2 border-gray-200 hover:bg-gray-50"
-            onClick={() => window.open(websiteData.website.url, "_blank")}
+            className="gap-2 text-gray-500 border-gray-200 rounded-l-none hover:bg-gray-50"
+            onClick={() => setShowSyncDialog(true)}
           >
             <ExternalLink className="w-4 h-4" />
             {websiteData.website.url?.replace(/^https?:\/\//, "")}
           </Button>
+          <div className="flex ml-5">
+            <Select
+              value={selectedWebsiteId ?? ""}
+              onValueChange={(val) => setSelectedWebsiteId(val)}
+              disabled={websites.length === 0}
+           >
+              <SelectTrigger className="w-56 h-9 border-gray-200">
+                <SelectValue placeholder="Select website" />
+              </SelectTrigger>
+              <SelectContent>
+                {websites.length > 0 ? (
+                  websites.map((w) => (
+                    <SelectItem key={w.id} value={w.id}>
+                      {w.url?.replace(/^https?:\/\//, "")}
+                    </SelectItem>
+                  ))
+                ) : (
+                  <SelectItem value="" disabled>
+                    No websites found
+                  </SelectItem>
+                )}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
 
       {/* Stats Cards - Pixel Perfect */}
-      <div className="grid grid-cols-4 gap-4">
-        <Card className="border border-gray-200 bg-white shadow-sm">
-          <CardContent className="pt-5 pb-5">
-            <p className="text-xs font-medium text-gray-600 uppercase tracking-wide mb-2">
-              Total Keywords
+      <div className="grid grid-cols-4 ">
+        <Card className="border rounded-r-none border-gray-200 bg-white shadow-sm">
+          <CardContent className="flex flex-col justify-start gap-8">
+            <div className="flex justify-between">
+              <p className="text-xs font-medium text-gray-600 uppercase tracking-wide ">
+                Total Keywords
+              </p>
+              <Image src="/stats1.svg" alt="icon" height={15} width={19.5} />
+            </div>
+            <p className="text-4xl flex items-end font-bold  text-gray-900">
+              {stats.totalKeywords}
             </p>
-            <p className="text-4xl font-bold text-gray-900">{stats.totalKeywords}</p>
           </CardContent>
         </Card>
 
-        <Card className="border border-gray-200 bg-white shadow-sm">
-          <CardContent className="pt-5 pb-5">
-            <p className="text-xs font-medium text-gray-600 uppercase tracking-wide mb-2">
-              High Potential Keywords
-            </p>
+        <Card className="border rounded-none border-gray-200 bg-white shadow-sm">
+          <CardContent className="flex flex-col justify-start gap-8">
+            <div className="flex justify-between">
+              <p className="text-xs font-medium text-gray-600 uppercase tracking-wide ">
+                High Potential Keywords
+              </p>
+              <Image src="/stats2.svg" alt="icon" height={15} width={19.5} />
+            </div>
             <p className="text-4xl font-bold text-gray-900">{stats.highPotential}</p>
           </CardContent>
         </Card>
 
-        <Card className="border border-gray-200 bg-white shadow-sm">
-          <CardContent className="pt-5 pb-5">
-            <p className="text-xs font-medium text-gray-600 uppercase tracking-wide mb-2">
-              With Content
-            </p>
+        <Card className="border rounded-none border-gray-200 bg-white shadow-sm">
+          <CardContent className="flex flex-col justify-start gap-8">
+            <div className="flex justify-between">
+              <p className="text-xs font-medium text-gray-600 uppercase tracking-wide ">
+                With Content
+              </p>
+              <Image src="/stats3.svg" alt="icon" height={15} width={19.5} />
+            </div>
             <p className="text-4xl font-bold text-gray-900">{stats.withContent}</p>
           </CardContent>
         </Card>
 
-        <Card className="border border-gray-200 bg-white shadow-sm">
-          <CardContent className="pt-5 pb-5">
-            <p className="text-xs font-medium text-gray-600 uppercase tracking-wide mb-2">
-              Without Content
-            </p>
+        <Card className="border rounded-l-none border-gray-200 bg-white shadow-sm">
+          <CardContent className="flex flex-col justify-start gap-8">
+            <div className="flex justify-between">
+              <p className="text-xs font-medium text-gray-600 uppercase tracking-wide ">
+                Without Content
+              </p>
+              <Image src="/stats4.svg" alt="icon" height={15} width={19.5} />{" "}
+            </div>
             <p className="text-4xl font-bold text-gray-900">{stats.withoutContent}</p>
           </CardContent>
         </Card>
       </div>
+      <div className="flex items-center justify-between w-full">
+        {/* LEFT */}
+        <div className="flex items-center gap-6 text-sm text-gray-500">
+          {/* Filters Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="flex items-center gap-1 hover:text-gray-700">
+                Filters
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                  <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" />
+                </svg>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-44">
+              <DropdownMenuItem onClick={() => setDifficultyFilter("all")}>All</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setDifficultyFilter("Low")}>Low Difficulty</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setDifficultyFilter("Medium")}>Medium Difficulty</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setDifficultyFilter("High")}>High Difficulty</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Sort By Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="flex items-center gap-1 hover:text-gray-700">
+                Sort By
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                  <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" />
+                </svg>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-64">
+              <DropdownMenuItem onClick={() => setSortBy("volume-desc")}>Search Volume (High → Low)</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSortBy("volume-asc")}>Search Volume (Low → High)</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSortBy("difficulty-asc")}>Difficulty (Low → High)</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSortBy("difficulty-desc")}>Difficulty (High → Low)</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSortBy("cpc-desc")}>CPC (High → Low)</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSortBy("cpc-asc")}>CPC (Low → High)</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSortBy("competition-asc")}>Competition (Low → High)</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSortBy("competition-desc")}>Competition (High → Low)</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Search */}
+          <div className="relative w-full max-w-[210px]">
+            <Input
+              type="text"
+              placeholder="Search Keywords"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              aria-label="Search keywords"
+              className="h-9 pl-9 pr-3 bg-gray-50 border-gray-200 text-sm placeholder:text-gray-400 focus-visible:ring-1 focus-visible:ring-gray-300"
+            />
+            <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          </div>
+        </div>
+
+        {/* CENTER */}
+        <div className=" ">
+          {/* <div className="relative">
+      <input
+        type="text"
+        placeholder="Search Keywords"
+        className="w-full h-9 rounded-md border border-gray-200 bg-gray-50 pl-9 pr-3 text-sm placeholder-gray-400"
+      />
+    </div> */}
+        </div>
+
+        {/* RIGHT */}
+        <button 
+          onClick={generateContentFromKeywords}
+          className="h-9 px-8 rounded-md bg-gray-400 hover:bg-black text-white text-sm transition-colors"
+        >
+          Create Post
+        </button>
+      </div>
 
       {/* Filters and Table */}
-      <Card className="border border-gray-200 bg-white shadow-sm">
-        <CardContent className="pt-6">
-          {/* Filter Controls */}
-          <div className="flex flex-col gap-4 mb-5">
-            <div className="flex gap-3 items-end">
-              <div className="flex-1 relative">
-                <label className="text-xs font-medium text-gray-700 block mb-2">
-                  Search Keywords
-                </label>
-                <Search className="absolute left-3 top-10 transform w-4 h-4 text-gray-400" />
-                <Input
-                  placeholder="Search keywords..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 bg-white border-gray-200 h-9 text-sm"
+
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <table className="w-full border-collapse">
+          {/* ================= HEADER ================= */}
+          <thead>
+            <tr className="border-b border-gray-200 bg-white">
+              <th className="px-4 py-4 text-left w-10">
+                <input
+                  type="checkbox"
+                  checked={
+                    filteredAndSortedKeywords.length > 0 &&
+                    selectedKeywords.size === filteredAndSortedKeywords.length
+                  }
+                  onChange={toggleSelectAll}
+                  aria-label="Select all keywords"
+                  className="w-4 h-4 rounded border-gray-300 focus:ring-0"
                 />
-              </div>
+              </th>
+              <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
+                Keyword
+              </th>
+              <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
+                Search Volume
+              </th>
+              <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
+                Difficulty
+              </th>
+              <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
+                Competition
+              </th>
+              <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
+                Post Status
+              </th>
+              <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
+                Traffic Potential
+              </th>
+              <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
+                Action
+              </th>
+            </tr>
+          </thead>
 
-              <div className="w-40">
-                <label className="text-xs font-medium text-gray-700 block mb-2">
-                  Difficulty
-                </label>
-                <Select
-                  value={difficultyFilter}
-                  onValueChange={setDifficultyFilter}
-                >
-                  <SelectTrigger className="w-full bg-white border-gray-200 h-9 text-sm">
-                    <SelectValue placeholder="All" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                    <SelectItem value="Low">Low</SelectItem>
-                    <SelectItem value="Medium">Medium</SelectItem>
-                    <SelectItem value="High">High</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="w-48">
-                <label className="text-xs font-medium text-gray-700 block mb-2">
-                  Sort by
-                </label>
-                <Select value={sortBy} onValueChange={setSortBy}>
-                  <SelectTrigger className="w-full bg-white border-gray-200 h-9 text-sm">
-                    <SelectValue placeholder="Volume" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="volume-desc">Volume (High to Low)</SelectItem>
-                    <SelectItem value="volume-asc">Volume (Low to High)</SelectItem>
-                    <SelectItem value="difficulty-asc">Difficulty (Easy)</SelectItem>
-                    <SelectItem value="difficulty-desc">Difficulty (Hard)</SelectItem>
-                    <SelectItem value="cpc-desc">CPC (High to Low)</SelectItem>
-                    <SelectItem value="cpc-asc">CPC (Low to High)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <Button
-                size="sm"
-                className="gap-2 bg-gray-100 text-gray-900 hover:bg-gray-200 border border-gray-200 h-9"
-              >
-                <Filter className="w-4 h-4" />
-                Filters
-              </Button>
-            </div>
+          {/* ================= BODY ================= */}
+          <tbody>
+            <tr>
+              <td colSpan={8} className="px-2 py-6 bg-gray-50">
+                {/* INNER CARD */}
+                <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
+                  <table className="w-full ">
+                    <tbody>
+                      {filteredAndSortedKeywords.map((kw, index) => {
+                        const difficultyText = getDifficultyText(kw.difficulty);
+                        const difficultyColor = getDifficultyColor(kw.difficulty);
+                        const competitionText = getCompetitionText(kw.competition);
+                        const competitionColor = getCompetitionColor(kw.competition);
+                        const trafficText = kw.traffic_potential || "—";
+                        return (
+                          <tr
+                            key={`${kw.keyword}-${index}`}
+                            className={`${index !== filteredAndSortedKeywords.length - 1 ? "border-b border-gray-200" : ""} hover:bg-gray-50`}
+                          >
+                            <td className="px-4 py-3 w-10">
+                              <input
+                                className="w-4 h-4 rounded border-gray-300"
+                                type="checkbox"
+                                checked={selectedKeywords.has(index)}
+                                onChange={() => toggleKeywordSelection(index)}
+                                aria-label={`Select keyword ${kw.keyword}`}
+                              />
+                            </td>
+                            <td className="px-4 text-gray-700 py-3 text-sm">{kw.keyword}</td>
+                            <td className="px-4 text-gray-500 py-3 text-sm">
+                              {kw.search_volume?.toLocaleString() || "—"}
+                            </td>
+                            <td className="px-4 text-gray-500 py-3 text-sm">
+                              <span className={`px-2 py-0.5 text-xs `}>
+                                {difficultyText}
+                              </span>
+                            </td>
+                            <td className="px-4 text-gray-500 py-3 text-sm">
+                              <span className={`px-2 py-0.5 text-xs  `}>
+                                {competitionText}
+                              </span>
+                            </td>
+                            <td className="pl-15 py-3">
+                              <span className={`px-3 py-1 text-xs rounded-md ${getPostStatusColor(kw.post_status)}`}>
+                                {kw.post_status || "No Plan"}
+                              </span>
+                            </td>
+                            <td className="px-4 text-gray-500 py-3 text-sm">{trafficText}</td>
+                            <td className="px-4 py-3">
+                              <div className="flex justify-end">
+                                <Button
+                                  variant={"outline"}
+                                  className="border rounded-r-none bg-transparent border-gray-200 rounded-l-md px-8 h-8 text-xs"
+                                >
+                                  Edit
+                                </Button>
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button
+                                      variant={"outline"}
+                                      className="border border-l-0 rounded-l-none bg-transparent border-gray-200 rounded-r-md w-8 h-8 p-0 flex items-center justify-center hover:bg-gray-50"
+                                    >
+                                      <ChevronDown className="w-4 h-4 text-gray-600" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end" className="w-32">
+                                    <DropdownMenuItem
+                                      onClick={() => handleDeleteKeyword(index)}
+                                      className="text-red-600 cursor-pointer"
+                                    >
+                                      Delete
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      {/* Selection Bar */}
+      {selectedKeywords && selectedKeywords.size > 0 && (
+        <div className="mt-4 flex items-center justify-between p-4 bg-blue-50 rounded-lg border border-blue-200">
+          <p className="text-sm font-medium text-gray-900">
+            {selectedKeywords.size} keyword
+            {selectedKeywords.size !== 1 ? "s" : ""} selected
+          </p>
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-9 px-4 border-gray-200 bg-white hover:bg-gray-50 text-sm font-normal"
+              onClick={addSelectedKeywordsToWebsite}
+            >
+              Add Keywords
+            </Button>
+            <Button
+              size="sm"
+              className="h-9 px-4 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium"
+              onClick={generateContentFromKeywords}
+              disabled={generatingContent}
+            >
+              {generatingContent ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                "Create Post"
+              )}
+            </Button>
           </div>
+        </div>
+      )}
 
-          {/* Table */}
-          <div className="border border-gray-200 rounded-lg overflow-hidden">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-200 bg-gray-50">
-                  <th className="px-4 py-3 text-left w-12">
-                    <input
-                      type="checkbox"
-                      checked={
-                        selectedKeywords &&
-                        selectedKeywords.size ===
-                          filteredAndSortedKeywords.length &&
-                        filteredAndSortedKeywords.length > 0
-                      }
-                      onChange={toggleSelectAll}
-                      className="rounded border-gray-300 text-blue-600 cursor-pointer"
-                    />
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wide">
-                    Keyword
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wide">
-                    Search Volume
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wide">
-                    Difficulty
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wide">
-                    Competition
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wide">
-                    Post Status
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wide">
-                    Traffic Potential
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wide">
-                    Action
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredAndSortedKeywords.map((keyword, index) => (
-                  <tr
-                    key={keyword.id || index}
-                    className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
-                  >
-                    <td className="px-4 py-3">
-                      <input
-                        type="checkbox"
-                        checked={
-                          selectedKeywords
-                            ? selectedKeywords.has(index)
-                            : false
-                        }
-                        onChange={() => toggleKeywordSelection(index)}
-                        className="rounded border-gray-300 text-blue-600 cursor-pointer"
-                      />
-                    </td>
-                    <td className="px-4 py-3">
-                      <p className="text-sm font-medium text-gray-900">
-                        {keyword.keyword}
-                      </p>
-                    </td>
-                    <td className="px-4 py-3">
-                      <p className="text-sm font-medium text-gray-900">
-                        {keyword.search_volume.toLocaleString()}
-                      </p>
-                    </td>
-                    <td className="px-4 py-3">
-                      <Badge
-                        className={`${getDifficultyColor(keyword.difficulty)} text-xs font-medium border`}
-                      >
-                        {getDifficultyText(keyword.difficulty)}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-3">
-                      <Badge
-                        className={`${getCompetitionColor(keyword.competition)} text-xs font-medium border`}
-                      >
-                        {getCompetitionText(keyword.competition)}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-3">
-                      <Badge
-                        className={`${getPostStatusColor(keyword.post_status)} text-xs font-medium border`}
-                      >
-                        {keyword.post_status || "—"}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-3">
-                      <p className="text-sm text-gray-700">
-                        {keyword.traffic_potential || "—"}
-                      </p>
-                    </td>
-                    <td className="px-4 py-3">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="text-xs border-gray-200 hover:bg-gray-100"
-                      >
-                        Edit
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+      {/* Create Post Dialog */}
+      <CreatePostDialog
+        isOpen={showCreateDialog}
+        isLoading={dialogCompleted}
+        onClose={() => {
+          setShowCreateDialog(false);
+          setDialogCompleted(false);
+        }}
+        onConfirm={() => setShowCreateDialog(false)}
+      />
 
-          {filteredAndSortedKeywords.length === 0 && (
-            <div className="text-center py-8 text-gray-500">
-              No keywords found matching your filters.
-            </div>
-          )}
+      {/* Import CSV Dialog */}
+      <ImportCSVDialog
+        isOpen={showImportDialog}
+        onClose={() => setShowImportDialog(false)}
+        onImport={handleImportCSV}
+      />
 
-          {/* Selection Bar */}
-          {selectedKeywords && selectedKeywords.size > 0 && (
-            <div className="mt-5 flex items-center justify-between p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <p className="text-sm font-semibold text-gray-900">
-                {selectedKeywords.size} keyword
-                {selectedKeywords.size !== 1 ? "s" : ""} selected
-              </p>
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="border-gray-200 bg-white hover:bg-gray-50 text-sm"
-                >
-                  Add Keywords
-                </Button>
-                <Button
-                  size="sm"
-                  className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium"
-                  onClick={generateContentFromKeywords}
-                  disabled={generatingContent}
-                >
-                  {generatingContent ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Generating...
-                    </>
-                  ) : (
-                    "Create Post"
-                  )}
-                </Button>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {/* Sync Competitors Dialog */}
+      <SyncCompetitorsDialog
+        isOpen={showSyncDialog}
+        onClose={() => setShowSyncDialog(false)}
+      />
+
+      {/* Add Keywords Dialog */}
+      <AddKeywordsDialog
+        isOpen={showAddKeywordsDialog}
+        onClose={() => setShowAddKeywordsDialog(false)}
+        onAdd={async (keywords) => {
+          await importKeywordsFromCSV(keywords)
+        }}
+      />
+
+      {/* Delete Keyword Dialog */}
+      <DeleteKeywordDialog
+        isOpen={showDeleteDialog}
+        keyword={keywordToDelete?.keyword || ""}
+        onClose={() => {
+          setShowDeleteDialog(false);
+          setKeywordToDelete(null);
+        }}
+        onConfirm={confirmDeleteKeyword}
+      />
     </div>
   );
 }

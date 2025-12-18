@@ -13,11 +13,18 @@ import Image from "next/image"
 interface DashboardProps {
   onLogout: () => void
   userEmail?: string
+  userAvatar?: string | null
 }
 
-export function Dashboard({ onLogout, userEmail }: DashboardProps) {
+export function Dashboard({ onLogout, userEmail, userAvatar }: DashboardProps) {
   const [activeTab, setActiveTab] = useState<"analyze" | "keywords" | "competitors" | "articles" | "settings">("analyze") // NEW: Added competitors
   const [selectedWebsiteId, setSelectedWebsiteId] = useState<string | null>(null)
+
+  // Debug: Log props received
+  console.log("=== DASHBOARD COMPONENT PROPS ===")
+  console.log("userEmail:", userEmail)
+  console.log("userAvatar:", userAvatar)
+  console.log("=== END PROPS ===")
 
   return (
     <div className="min-h-screen bg-background">
@@ -86,7 +93,13 @@ export function Dashboard({ onLogout, userEmail }: DashboardProps) {
             {userEmail && (
               <div className="flex items-center border rounded-full py-1.5 pl-6 pr-1.5  gap-2">
                   <span className="text-sm text-muted-foreground hidden sm:inline">{userEmail}</span>
-                <Image src="/profileimg.png" alt="" width={50} height={50} />
+                <Image 
+                  src={userAvatar || "/profileimg.png"} 
+                  alt="Profile" 
+                  width={50} 
+                  height={50}
+                  className="rounded-full object-cover"
+                />
               </div>
             )}
           </div>

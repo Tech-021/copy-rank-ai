@@ -14,6 +14,7 @@ import Image from "next/image"
 export default function Home() {
   const [authState, setAuthState] = useState<"landing" | "login" | "signup" | "dashboard">("landing")
   const [userEmail, setUserEmail] = useState("")
+  const [userAvatar, setUserAvatar] = useState<string | null>(null)
   const [isCheckingSubscription, setIsCheckingSubscription] = useState(true)
   const router = useRouter()
 
@@ -28,6 +29,20 @@ export default function Home() {
         
         if (mounted && user && (user.id || user.email)) {
           setUserEmail(user.email ?? "")
+          
+          // Set user avatar from Google OAuth
+          const avatar = user.user_metadata?.avatar_url || 
+                        user.user_metadata?.picture || 
+                        user.identities?.[0]?.identity_data?.avatar_url ||
+                        user.identities?.[0]?.identity_data?.picture ||
+                        null
+          setUserAvatar(avatar)
+          
+          console.log("=== HOME PAGE USER DATA ===")
+          console.log("Email:", user.email)
+          console.log("Avatar:", avatar)
+          console.log("User metadata:", user.user_metadata)
+          console.log("Identities:", user.identities)
           
           // Check subscription status
           const { data: userData, error: dbError } = await supabase
@@ -163,7 +178,7 @@ export default function Home() {
   }
 
   if (authState === "dashboard") {
-    return <Dashboard onLogout={handleLogout} userEmail={userEmail} />
+    return <Dashboard onLogout={handleLogout} userEmail={userEmail} userAvatar={userAvatar} />
   }
 
   if (authState === "login") {

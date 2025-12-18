@@ -49,6 +49,7 @@ import {
 import { getUser } from "@/lib/auth";
 import { getUserPackage } from "@/lib/articleLimits";
 import { createCheckout } from "@/lib/lemonSqueezy";
+import { supabase } from "@/lib/client";
 import { useToast } from "@/components/ui/toast";
 import Image from "next/image";
 
@@ -125,6 +126,58 @@ export function ArticlesTab({
     content: "",
   });
 
+  interface Website {
+    id: string;
+    url: string;
+    topic?: string;
+    created_at?: string;
+  }
+
+  const [websites, setWebsites] = useState<Website[]>([]);
+  const [loadingWebsites, setLoadingWebsites] = useState(false);
+  const [selectedWebsiteId, setSelectedWebsiteId] = useState<string | null>(
+    websiteId || null
+  );
+
+  const loadUserWebsites = async () => {
+    try {
+      setLoadingWebsites(true);
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from("websites")
+        .select("id, url, topic, created_at")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("Error loading websites:", error);
+        return;
+      }
+
+      if (data && data.length > 0) {
+        setWebsites(data as Website[]);
+        if (!selectedWebsiteId) setSelectedWebsiteId((data as any)[0].id);
+      }
+    } catch (err) {
+      console.error("Error loading websites:", err);
+    } finally {
+      setLoadingWebsites(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!websiteId) {
+      loadUserWebsites();
+    } else {
+      setSelectedWebsiteId(websiteId);
+    }
+  }, [websiteId]);
+
   // Derived data and helpers
   const filteredArticles = articles.filter((article) => {
     if (filterStatus === "all") return true;
@@ -154,9 +207,21 @@ export function ArticlesTab({
 
       setTimeout(() => {
         setPublishSuccess(false);
-        setSelectedArticle((prev) =>
-          prev ? { ...prev, status: "published" as const } : prev
-        );
+        // Fetch updated article data from backend to get the correct slug
+        fetch(`/api/articles?userId=${currentUser?.id}`)
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.success && data.articles) {
+              const updatedArticle = data.articles.find(
+                (a: Article) => a.id === selectedArticle.id
+              );
+              if (updatedArticle) {
+                setSelectedArticle(updatedArticle);
+                setArticles(data.articles);
+              }
+            }
+          })
+          .catch((err) => console.error("Error fetching updated article:", err));
       }, 1200);
     } catch (error) {
       toast.showToast({
@@ -317,8 +382,9 @@ export function ArticlesTab({
 
       if (!currentUser) return;
 
-      const url = websiteId
-        ? `/api/articles?websiteId=${websiteId}&userId=${currentUser.id}`
+      const siteId = selectedWebsiteId || websiteId || null;
+      const url = siteId
+        ? `/api/articles?websiteId=${siteId}&userId=${currentUser.id}`
         : `/api/articles?userId=${currentUser.id}`;
 
       console.log("📡 Fetching articles from:", url);
@@ -383,18 +449,18 @@ export function ArticlesTab({
     } finally {
       setLoading(false);
     }
-  }, [currentUser, websiteId]);
+  }, [currentUser, selectedWebsiteId]);
   // ...existing code...
 
   useEffect(() => {
     if (currentUser) fetchArticles();
-  }, [currentUser, websiteId]);
+  }, [currentUser, selectedWebsiteId]);
 
   useEffect(() => {
     if (!currentUser) return;
     const interval = setInterval(() => fetchArticles(), 30000);
     return () => clearInterval(interval);
-  }, [currentUser, websiteId, fetchArticles]);
+  }, [currentUser, selectedWebsiteId, fetchArticles]);
 
   useEffect(() => {
     if (generatedArticles && generatedArticles.length > 0) {
@@ -758,30 +824,47 @@ export function ArticlesTab({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 ">
       <div>
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-2xl text-gray-700 font-medium">Blogs</h2>
-            <p className="text-gray-500 text-sm">
+            <p className="text-gray-500 mt-3 text-sm">
               Create, review, and publish your AI-generated posts.
             </p>
           </div>
-          <Select>
-            <SelectTrigger className="w-40 h-9 border-gray-200">
-              <SelectValue placeholder={websiteId || "www.delani.pro"} />
+          <Select
+            value={selectedWebsiteId ?? undefined}
+            onValueChange={(val) => setSelectedWebsiteId(val)}
+          >
+            <SelectTrigger className="w-38 h-9 border-gray-200">
+              <SelectValue
+                placeholder={
+                  (selectedWebsiteId
+                    ? websites.find((w) => w.id === selectedWebsiteId)?.url
+                    : websites[0]?.url) || websiteId || "Select website"
+                }
+              />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={websiteId || "www.delani.pro"}>
-                {websiteId || "www.delani.pro"}
-              </SelectItem>
+              {websites.length > 0 ? (
+                websites.map((w) => (
+                  <SelectItem key={w.id} value={w.id}>
+                    {w.url}
+                  </SelectItem>
+                ))
+              ) : websiteId ? (
+                <SelectItem value={websiteId}>{websiteId}</SelectItem>
+              ) : (
+                <SelectItem value="">{loadingWebsites ? "Loading..." : "No websites found"}</SelectItem>
+              )}
             </SelectContent>
           </Select>
         </div>
 
         {/* Create a Ranking Post Section */}
-        <Card className="border-gray-200 bg-white">
-          <CardContent className="pt-2">
+        <Card className="border-gray-200 shadow-none bg-transparent">
+          <CardContent className="">
             <div>
               <h3 className="text-lg font-medium text-gray-900 mb-2">
                 Create a Ranking Post
@@ -789,7 +872,7 @@ export function ArticlesTab({
               <p className="text-sm text-gray-500 mb-4">
                 Turn competitor keywords into SEO-ready blog posts in one click.
               </p>
-              <Button className="bg-black cursor-pointer px-8 text-white hover:bg-gray-900">
+              <Button className="bg-black cursor-pointer py-5 px-8 text-white hover:bg-gray-900">
                 Create Post
               </Button>
             </div>
@@ -944,7 +1027,7 @@ export function ArticlesTab({
             <div className=" max-w-[640px]  bg-white rounded-[9px] border-l border-gray-200 overflow-hidden flex flex-col">
               {/* Header */}
               <div className="flex items-center justify-between p-4 border-b border-gray-200 flex-shrink-0">
-                <span className="text-sm font-semibold text-gray-700">
+                <span className="text-sm  text-gray-500">
                   EDIT POST
                 </span>
                 <button
@@ -960,7 +1043,7 @@ export function ArticlesTab({
                 <div className=" space-y-4 p-4">
                   {/* Title */}
                   <div className="flex gap-3">
-                    <label className="block text-xs mt-1 font-semibold text-gray-700 ">
+                    <label className="block text-xs mt-1 text-gray-600 ">
                       Title
                     </label>
                     <h4>{selectedArticle.title || ""}</h4>
@@ -968,7 +1051,7 @@ export function ArticlesTab({
 
                   {/* Keywords */}
                   <div className="flex gap-1">
-                    <label className="block mt-1 text-xs font-semibold text-gray-700">
+                    <label className="block mt-1 text-xs text-gray-600">
                       Keywords:
                     </label>
 
@@ -1052,7 +1135,7 @@ export function ArticlesTab({
 
                   {/* SEO Preview */}
                   <div>
-                    <div className="bg-white border border-gray-200 p-4 rounded-lg shadow-sm">
+                    <div className="bg-white border border-gray-200 p-9 rounded-lg shadow-sm">
                       <label className="block text-[15px]  text-gray-700 mb-2">
                         SEO Preview
                       </label>
@@ -1293,7 +1376,7 @@ export function ArticlesTab({
         </div>
       </div>
 
-      {userPackage === "free" && (
+      {/* {userPackage === "free" && (
         <Card className="border-blue-200 bg-linear-to-r from-blue-50 to-indigo-50">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
@@ -1316,7 +1399,7 @@ export function ArticlesTab({
             </div>
           </CardContent>
         </Card>
-      )}
+      )} */}
 
      
       <div className="flex gap-4">
