@@ -125,9 +125,11 @@ const handleNext = async () => {
       });
       
       // Small delay to show the toast before navigation
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Navigate to dashboard
+      // Close dialog and navigate to dashboard
+      try { onOpenChange(false); } catch {}
+      setIsDialogOpen(false);
       router.push("/");
       
     } catch (error) {
@@ -362,7 +364,14 @@ const handleNext = async () => {
                   disabled={isLoading}
                   className="bg-[#5baf57] border border-[#0000001a] text-white px-[60px] py-1 w-[170px] h-[50px] rounded-[10px] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isLoading ? "Submitting..." : "Submit"}
+                  {isLoading ? (
+                    <span className="flex items-center justify-center">
+                      <span className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></span>
+                      Submitting...
+                    </span>
+                  ) : (
+                    "Submit"
+                  )}
                 </button>
               </div>
               <div>
