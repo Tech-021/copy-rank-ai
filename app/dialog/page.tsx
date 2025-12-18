@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { getUser } from "@/lib/auth";
 import { Dialog1 } from "@/components/websitedialog";
-import { useToast } from "@/components/ui/toast";
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -75,28 +74,6 @@ export default function OnboardingPage() {
     };
   }, [router]);
   
-      console.log("Onboarding Data:", onboardingData);
-  
-      // Call onboarding API
-      const response = await fetch('/api/onboarding', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json' 
-        },
-        body: JSON.stringify(onboardingData)
-      });
-  
-      const data = await response.json();
-  
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || 'Onboarding failed');
-      }
-  
-      console.log("✅ Onboarding successful:", data);
-      
-      // Show success toast with article generation message
-      toast.showToast({
-        title: "Website Added Successfully!",
   // Show loading state while checking subscription
   if (isCheckingSubscription) {
     return (
