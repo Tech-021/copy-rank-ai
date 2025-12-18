@@ -254,23 +254,21 @@ export function KeywordsTab({
       setError(null);
       console.log(`🔍 Fetching REAL keywords for website: ${selectedWebsiteId}`);
 
-      // Resolve selected website details
-      let website: (Website & { keywords?: any }) | null =
-        (websites.find((w) => w.id === selectedWebsiteId) as any) || null;
-      if (!website) {
-        const { data: singleSite } = await supabase
-          .from("websites")
-          .select("id, url, topic, keywords")
-          .eq("id", selectedWebsiteId)
-          .single();
-        if (singleSite) {
-          website = {
-            id: singleSite.id,
-            url: singleSite.url,
-            topic: singleSite.topic || "General",
-            keywords: (singleSite as any).keywords,
-          };
-        }
+      // Always fetch fresh website data from Supabase to get latest keywords
+      const { data: singleSite } = await supabase
+        .from("websites")
+        .select("id, url, topic, keywords")
+        .eq("id", selectedWebsiteId)
+        .single();
+      
+      let website: (Website & { keywords?: any }) | null = null;
+      if (singleSite) {
+        website = {
+          id: singleSite.id,
+          url: singleSite.url,
+          topic: singleSite.topic || "General",
+          keywords: (singleSite as any).keywords,
+        };
       }
 
       if (!website) {
@@ -583,9 +581,9 @@ export function KeywordsTab({
     URL.revokeObjectURL(url);
   };
 
-  const handleImportCSV = (file: File) => {
+  const handleImportCSV = async (file: File) => {
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       const csv = e.target?.result as string;
       const lines = csv.split("\n");
       const importedKeywords: string[] = [];
@@ -598,10 +596,17 @@ export function KeywordsTab({
         }
       }
 
-      // Here you would typically add these keywords to your database
-      console.log("Imported keywords:", importedKeywords);
-      // TODO: Replace with actual toast notification when toast API is finalized
-      // toast?.success(`Successfully imported ${importedKeywords.length} keywords`);
+      if (importedKeywords.length > 0) {
+        console.log("Importing keywords:", importedKeywords);
+        // Persist to Supabase
+        const success = await importKeywordsFromCSV(importedKeywords);
+        
+        if (success) {
+          console.log(`✅ Successfully imported ${importedKeywords.length} keyword(s)`);
+          // toast?.success(`Successfully imported ${importedKeywords.length} keywords`);
+        }
+      }
+      
       setShowImportDialog(false);
     };
     reader.readAsText(file);
@@ -624,6 +629,153 @@ export function KeywordsTab({
       setShowDeleteDialog(false);
       setKeywordToDelete(null);
       // toast?.success(`Deleted "${keywordToDelete.keyword}"`);
+    }
+  };
+
+  // Helper: Persist keywords to Supabase website's keywords array
+  const persistKeywordsToWebsite = async (newKeywords: Keyword[]) => {
+    try {
+      if (!selectedWebsiteId) {
+        console.error("No website selected");
+        return false;
+      }
+
+      // Fetch current website keywords payload
+      const { data: siteData, error: siteErr } = await supabase
+        .from("websites")
+        .select("id, keywords")
+        .eq("id", selectedWebsiteId)
+        .single();
+
+      if (siteErr) {
+        console.error("Failed to fetch website:", siteErr);
+        return false;
+      }
+
+      const existingPayload = (siteData as any)?.keywords || {};
+      const existingList: any[] = Array.isArray(existingPayload?.keywords)
+        ? existingPayload.keywords
+        : [];
+
+      // Merge & dedupe by keyword text (case-insensitive)
+      const map = new Map<string, any>();
+      
+      // Add existing keywords
+      existingList.forEach((k) => {
+        const key = String(k.keyword || "").toLowerCase();
+        if (key) map.set(key, k);
+      });
+
+      // Add/update new keywords
+      newKeywords.forEach((k) => {
+        const key = String(k.keyword || "").toLowerCase();
+        if (key) {
+          const existing = map.get(key) || {};
+          map.set(key, {
+            ...existing,
+            ...k,
+            is_target_keyword: true,
+            post_status: k.post_status || "No Plan",
+          });
+        }
+      });
+
+      const mergedList = Array.from(map.values());
+      const newPayload = { 
+        ...existingPayload, 
+        keywords: mergedList,
+        analysis_metadata: {
+          ...existingPayload.analysis_metadata,
+          total_keywords: mergedList.length,
+          analyzed_at: new Date().toISOString(),
+        }
+      };
+
+      // Update in Supabase
+      const { error: updateErr } = await supabase
+        .from("websites")
+        .update({ keywords: newPayload })
+        .eq("id", selectedWebsiteId);
+
+      if (updateErr) {
+        console.error("Failed to update website keywords:", updateErr);
+        return false;
+      }
+
+      console.log(`✅ Saved ${newKeywords.length} keyword(s) to website`);
+      return true;
+    } catch (e) {
+      console.error("Error persisting keywords:", e);
+      return false;
+    }
+  };
+
+  // Add selected keywords from table to website
+  const addSelectedKeywordsToWebsite = async () => {
+    try {
+      if (!selectedWebsiteId) {
+        console.log("No website selected");
+        return;
+      }
+      if (!selectedKeywords || selectedKeywords.size === 0) {
+        console.log("No keywords selected");
+        return;
+      }
+
+      // Show importing dialog
+      setShowAddKeywordsDialog(true);
+
+      // Get selected keyword objects from the filtered/sorted view
+      const selectedKeywordObjs = Array.from(selectedKeywords)
+        .map((idx) => filteredAndSortedKeywords[idx])
+        .filter(Boolean);
+
+      // Persist to Supabase
+      const success = await persistKeywordsToWebsite(selectedKeywordObjs);
+
+      if (success) {
+        // Refresh keywords to show newly added ones
+        await fetchKeywords();
+        // Clear selection
+        setSelectedKeywords(new Set());
+      }
+    } catch (e) {
+      console.error("Error adding keywords:", e);
+    }
+  };
+
+  // Import keywords from CSV
+  const importKeywordsFromCSV = async (importedStrings: string[]) => {
+    try {
+      if (!selectedWebsiteId) {
+        console.error("No website selected");
+        return false;
+      }
+
+      // Convert strings to keyword objects with defaults
+      const keywordObjs: Keyword[] = importedStrings.map((keyword) => ({
+        keyword: keyword.trim(),
+        search_volume: 0,
+        difficulty: 0,
+        cpc: 0,
+        competition: 0,
+        post_status: "No Plan" as const,
+        is_target_keyword: true,
+      }));
+
+      // Persist to Supabase
+      const success = await persistKeywordsToWebsite(keywordObjs);
+
+      if (success) {
+        // Refresh keywords
+        await fetchKeywords();
+        console.log(`✅ Imported ${keywordObjs.length} keyword(s)`);
+      }
+
+      return success;
+    } catch (e) {
+      console.error("Error importing keywords:", e);
+      return false;
     }
   };
 
@@ -691,7 +843,8 @@ export function KeywordsTab({
           <Button
             variant="outline"
             className="gap-2 text-gray-500 border-gray-200 rounded-r-none hover:bg-gray-50"
-            onClick={() => setShowAddKeywordsDialog(true)}
+            onClick={addSelectedKeywordsToWebsite}
+            disabled={!selectedKeywords || selectedKeywords.size === 0}
           >
             Add Keywords
             <Plus className="w-4 h-4" />
@@ -1010,7 +1163,7 @@ export function KeywordsTab({
               size="sm"
               variant="outline"
               className="h-9 px-4 border-gray-200 bg-white hover:bg-gray-50 text-sm font-normal"
-              onClick={() => setShowAddKeywordsDialog(true)}
+              onClick={addSelectedKeywordsToWebsite}
             >
               Add Keywords
             </Button>
