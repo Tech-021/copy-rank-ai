@@ -1,14 +1,16 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { getUser } from '@/lib/auth';
 import { supabase } from '@/lib/client';
 
 export default function PaymentCallbackPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [attempts, setAttempts] = useState(0);
   const MAX_ATTEMPTS = 10; // Poll for up to 10 seconds
+  const nextPath = searchParams.get('next') || '/about-yourself';
 
   useEffect(() => {
     async function checkSubscriptionAndRedirect() {
@@ -45,8 +47,8 @@ export default function PaymentCallbackPage() {
 
         // Redirect based on subscription status
         if (userData?.subscribe === true) {
-          // Successfully subscribed - redirect to about-yourself page
-          router.push('/dialog');
+          // Successfully subscribed - redirect to requested next path
+          router.push(nextPath);
         } else if (attempts >= MAX_ATTEMPTS) {
           // Tried too many times, webhook might have failed or payment declined
           router.push('/payment/fail');
@@ -62,7 +64,7 @@ export default function PaymentCallbackPage() {
     }
 
     checkSubscriptionAndRedirect();
-  }, [router, attempts]);
+  }, [router, attempts, nextPath, searchParams]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">

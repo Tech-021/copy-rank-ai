@@ -96,6 +96,7 @@ export function ArticlesTab({
   const [filterStartDate, setFilterStartDate] = useState("2-feb-2025");
   const [filterEndDate, setFilterEndDate] = useState("4-mar-2025");
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
+  const [isContentExpanded, setIsContentExpanded] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [userPackage, setUserPackage] = useState<
     "free" | "pro" | "premium" | null
@@ -123,121 +124,48 @@ export function ArticlesTab({
     preview: "",
     content: "",
   });
-  const mockArticles: Article[] = [
-    {
-      id: "1",
-      title: "Why Framer is Changing How We Think About Web Development",
-      preview:
-        "Explore how Framer is reshaping web development, with real examples, web design insights, and practical web development tips for modern creators.",
-      keyword: [
-        "web design",
-        "framer",
-        "web development",
-        "technology tutorial",
-        "web development guide",
-      ],
-      status: "DRAFT",
-      date: "2025-01-27",
-      wordCount: 2500,
-      content: "<p>Framer is revolutionizing web development...</p>",
-      metaTitle: "Framer Web Development Guide",
-      metaDescription: "Learn how Framer is changing web development",
-      tags: ["web design", "framer", "web development", "technology tutorial"],
-      generatedImages: ["/aimg1.png"],
-    },
-    {
-      id: "2",
-      title: "Why Framer Changed How I Think About Web Design",
-      preview:
-        "Explore how Framer is reshaping web development, with real examples, web design insights, and practical web development tips for modern creators.",
-      keyword: [
-        "web design",
-        "framer",
-        "web development",
-        "technology tutorial",
-        "web development guide",
-      ],
-      status: "DRAFT",
-      date: "2025-02-02",
-      wordCount: 1800,
-      content: "<p>Web design has evolved...</p>",
-      metaTitle: "Web Design with Framer",
-      metaDescription: "Discover new web design techniques",
-     tags: ["web design", "framer", "web development", "technology tutorial"],
-      generatedImages: ["/aimg2.png"],
-    },
-    {
-      id: "3",
-      title: "How I Learned Web Design - Why Framer Changed Everything",
-      preview:
-        "Explore how Framer is reshaping web development, with real examples, web design insights, and practical web development tips for modern creators.",
-      keyword: [
-        "web design",
-        "framer",
-        "web development",
-        "technology tutorial",
-        "web development guide",
-      ],
-      status: "UPLOADED",
-      date: "2025-03-04",
-      wordCount: 2100,
-      content: "<p>Learning web design...</p>",
-      metaTitle: "Learning Web Design",
-      metaDescription: "Master web design skills",
-      tags: ["web design", "framer", "web development", "technology tutorial"],
-      generatedImages: ["aimg3.png"],
-    },
-    {
-      id: "4",
-      title: "Why Framer is Changing How We Think About Web Development",
-      preview:
-        "Explore how Framer is reshaping web development, with real examples, web design insights, and practical web development tips for modern creators.",
-      keyword: ["web design", "framer", "web development"],
-      status: "UPLOADED",
-      date: "2025-01-27",
-      wordCount: 2500,
-      content: "<p>Framer innovations...</p>",
-      metaTitle: "Framer Guide",
-      metaDescription: "Complete Framer tutorial",
-     tags: ["web design", "framer", "web development", "technology tutorial"],
-      generatedImages: ["/aimg1.png"],
-    },
-  ];
 
-  // Then add filtering logic
-  const filteredArticles = mockArticles.filter((article) => {
-    if (filterStatus !== "all" && article.status !== filterStatus) {
-      return false;
-    }
-    return true;
+  // Derived data and helpers
+  const filteredArticles = articles.filter((article) => {
+    if (filterStatus === "all") return true;
+    // Normalize status to lowercase for comparison
+    const status = (article.status || "").toLowerCase();
+    return status === filterStatus;
   });
+
+  const getReadingTime = (wordCount?: number) => {
+    if (!wordCount) return "—";
+    const minutes = Math.max(1, Math.round(wordCount / 200));
+    return `${minutes} min read`;
+  };
   const handlePublish = async () => {
+    if (!selectedArticle) return;
+
     setIsPublishing(true);
     try {
-      // Simulate publishing delay
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      await handleUpdateStatus(selectedArticle.id, "published");
       setPublishSuccess(true);
 
-      // Show success message
       toast.showToast({
         title: "Published!",
         description: "Your article has been published successfully.",
         type: "success",
       });
 
-      // Reset and close after 1.5 seconds
       setTimeout(() => {
-        setIsPublishing(false);
         setPublishSuccess(false);
-        setSelectedArticle(null);
-      }, 1500);
+        setSelectedArticle((prev) =>
+          prev ? { ...prev, status: "published" as const } : prev
+        );
+      }, 1200);
     } catch (error) {
-      setIsPublishing(false);
       toast.showToast({
         title: "Error",
         description: "Failed to publish article",
         type: "error",
       });
+    } finally {
+      setIsPublishing(false);
     }
   };
 
@@ -830,17 +758,17 @@ export function ArticlesTab({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 ">
       <div>
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-2xl text-gray-700 font-medium">Blogs</h2>
-            <p className="text-gray-500 text-sm">
+            <p className="text-gray-500 mt-3 text-sm">
               Create, review, and publish your AI-generated posts.
             </p>
           </div>
           <Select>
-            <SelectTrigger className="w-40 h-9 border-gray-200">
+            <SelectTrigger className="w-38 h-9 border-gray-200">
               <SelectValue placeholder={websiteId || "www.delani.pro"} />
             </SelectTrigger>
             <SelectContent>
@@ -852,8 +780,8 @@ export function ArticlesTab({
         </div>
 
         {/* Create a Ranking Post Section */}
-        <Card className="border-gray-200 bg-white">
-          <CardContent className="pt-2">
+        <Card className="border-gray-200 shadow-none bg-transparent">
+          <CardContent className="">
             <div>
               <h3 className="text-lg font-medium text-gray-900 mb-2">
                 Create a Ranking Post
@@ -861,7 +789,7 @@ export function ArticlesTab({
               <p className="text-sm text-gray-500 mb-4">
                 Turn competitor keywords into SEO-ready blog posts in one click.
               </p>
-              <Button className="bg-black cursor-pointer px-8 text-white hover:bg-gray-900">
+              <Button className="bg-black cursor-pointer py-5 px-8 text-white hover:bg-gray-900">
                 Create Post
               </Button>
             </div>
@@ -870,7 +798,7 @@ export function ArticlesTab({
 
         {/* Stats Grid */}
         <div className="flex mt-5  text-sm">
-          <Select defaultValue="all">
+          <Select value={filterStatus} onValueChange={setFilterStatus}>
             <SelectTrigger className="w-auto border-0 bg-transparent px-0 py-0 text-gray-600 hover:text-gray-900 focus:ring-0 focus:ring-offset-0">
               <SelectValue placeholder="All" />
             </SelectTrigger>
@@ -879,6 +807,7 @@ export function ArticlesTab({
               <SelectItem value="published">Published</SelectItem>
               <SelectItem value="draft">Draft</SelectItem>
               <SelectItem value="scheduled">Scheduled</SelectItem>
+              <SelectItem value="uploaded">Uploaded</SelectItem>
             </SelectContent>
           </Select>
 
@@ -915,15 +844,18 @@ export function ArticlesTab({
         <div className="flex gap-6 h-auto overflow-hidden">
           {/* Left Side - Articles List */}
        <div className="space-y-3 pr-2">
-  {mockArticles.length === 0 ? (
+  {filteredArticles.length === 0 ? (
     <div className="text-center py-12 text-gray-400">
       <p className="text-sm">No articles found</p>
     </div>
   ) : (
-    mockArticles.map((article) => (
+    filteredArticles.map((article) => (
       <div
         key={article.id}
-        onClick={() => setSelectedArticle(article)}
+        onClick={() => {
+          setSelectedArticle(article);
+          setIsContentExpanded(false);
+        }}
         className={`relative flex gap-3 p-3 bg-gray-100 border rounded-lg cursor-pointer hover:border-gray-300 hover:shadow-sm transition-all ${
           selectedArticle?.id === article.id
             ? "border-gray-200 bg-[#F7F7F7]"
@@ -954,13 +886,13 @@ export function ArticlesTab({
                   alt="icon"
                 />
                 <p className="text-xs text-gray-500">
-                  11 minutes read
+                  {getReadingTime(article.wordCount)}
                 </p>
               </div>
 
               <Badge
                 className={`mt-2 text-xs font-medium w-fit ${
-                  article.status === "UPLOADED"
+                  (article.status || "").toLowerCase() === "uploaded"
                     ? "bg-transparent text-green-700 border border-green-600"
                     : "bg-gray-100 text-gray-600 border border-gray-800"
                 }`}
@@ -1012,7 +944,7 @@ export function ArticlesTab({
             <div className=" max-w-[640px]  bg-white rounded-[9px] border-l border-gray-200 overflow-hidden flex flex-col">
               {/* Header */}
               <div className="flex items-center justify-between p-4 border-b border-gray-200 flex-shrink-0">
-                <span className="text-sm font-semibold text-gray-700">
+                <span className="text-sm  text-gray-500">
                   EDIT POST
                 </span>
                 <button
@@ -1028,7 +960,7 @@ export function ArticlesTab({
                 <div className=" space-y-4 p-4">
                   {/* Title */}
                   <div className="flex gap-3">
-                    <label className="block text-xs mt-1 font-semibold text-gray-700 ">
+                    <label className="block text-xs mt-1 text-gray-600 ">
                       Title
                     </label>
                     <h4>{selectedArticle.title || ""}</h4>
@@ -1036,25 +968,35 @@ export function ArticlesTab({
 
                   {/* Keywords */}
                   <div className="flex gap-1">
-                    <label className="block mt-1 text-xs font-semibold text-gray-700">
+                    <label className="block mt-1 text-xs text-gray-600">
                       Keywords:
                     </label>
 
                     <div className="flex  gap-2">
-                      {selectedArticle.keyword.length > 0 ? (
-                        selectedArticle.keyword.map((keyword, index) => (
+                      {(() => {
+                        const keywords = Array.isArray(selectedArticle.keyword)
+                          ? selectedArticle.keyword
+                          : selectedArticle.keyword
+                          ? String(selectedArticle.keyword)
+                              .split(',')
+                              .map((k) => k.trim())
+                              .filter(Boolean)
+                          : [];
+                        return keywords.length > 0 ? (
+                          keywords.map((keyword, index) => (
                           <span
                             key={index}
                             className="px-1 py-1  rounded-full text-xs font-medium bg-gray-100 text-gray-600 border border-gray-300 inline-block"
                           >
                             {keyword}
                           </span>
-                        ))
-                      ) : (
-                        <span className="text-xs text-gray-500">
-                          No keywords
-                        </span>
-                      )}
+                          ))
+                        ) : (
+                          <span className="text-xs text-gray-500">
+                            No keywords
+                          </span>
+                        );
+                      })()}
                     </div>
                   </div>
                   {/* Word Count */}
@@ -1067,7 +1009,9 @@ export function ArticlesTab({
                         width={16}
                         priority
                       />
-                      <p className="text-green-500 text-xs">11 minutes read</p>
+                      <p className="text-green-500 text-xs">
+                        {getReadingTime(selectedArticle.wordCount)}
+                      </p>
                     </div>
                     <div className="flex items-center gap-1">
                       <Image
@@ -1077,20 +1021,24 @@ export function ArticlesTab({
                         width={16}
                         priority
                       />
-                      <p className="text-green-500 text-xs">2,408 words</p>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Image
-                        src="/Union (1).png"
-                        alt="content score icon"
-                        height={16}
-                        width={16}
-                        priority
-                      />
                       <p className="text-green-500 text-xs">
-                        100% content score
+                        {selectedArticle.wordCount?.toLocaleString() || "—"} words
                       </p>
                     </div>
+                    {selectedArticle.contentScore && (
+                      <div className="flex items-center gap-1">
+                        <Image
+                          src="/Union (1).png"
+                          alt="content score icon"
+                          height={16}
+                          width={16}
+                          priority
+                        />
+                        <p className="text-green-500 text-xs">
+                          {selectedArticle.contentScore}% content score
+                        </p>
+                      </div>
+                    )}
                   </div>
                   {/* Preview Text */}
                   <div>
@@ -1104,97 +1052,88 @@ export function ArticlesTab({
 
                   {/* SEO Preview */}
                   <div>
-                    <div className="bg-white border border-gray-200 p-4 rounded-lg shadow-sm">
+                    <div className="bg-white border border-gray-200 p-9 rounded-lg shadow-sm">
                       <label className="block text-[15px]  text-gray-700 mb-2">
                         SEO Preview
                       </label>
                       <p className="text-blue-600 font-medium text-sm mb-2 line-clamp-2">
-                        Web Development in 2024: Framer, Design, and the Future
+                        {selectedArticle.metaTitle || selectedArticle.title}
                       </p>
                       <p className="text-gray-600 text-xs leading-relaxed line-clamp-3">
-                        Explore how Framer is reshaping web development, with
-                        real examples, web design insights, and practical web
-                        development tips for modern creators.
+                        {selectedArticle.metaDescription || selectedArticle.preview}
                       </p>
                     </div>
                   </div>
+
+                  {/* Live URL for published articles */}
+                  {selectedArticle.status === "published" && selectedArticle.slug && (
+                    <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <div className="flex items-start gap-2">
+                        <Globe className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-sm font-semibold text-green-900 mb-1">
+                            Live Article URL
+                          </h4>
+                          <div className="flex items-center gap-2">
+                            <a
+                              href={getArticleUrl(selectedArticle.slug)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs text-blue-600 hover:text-blue-800 hover:underline break-all flex-1"
+                            >
+                              {getArticleUrl(selectedArticle.slug)}
+                            </a>
+                            <button
+                              onClick={() => {
+                                navigator.clipboard.writeText(
+                                  getArticleUrl(selectedArticle.slug!)
+                                );
+                                toast.showToast({
+                                  title: "Copied!",
+                                  description: "URL copied to clipboard",
+                                  type: "success",
+                                });
+                              }}
+                              className="text-green-600 hover:text-green-800 flex-shrink-0"
+                              title="Copy URL"
+                            >
+                              <Copy className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Tags */}
                 </div>
                 <div className="border-b border-gray-200 " />
                 <div className="p-4">
-                  <h4 className="text-2xl">
-                    Web Development in 2024: Framer,
-                    <br /> Design, and the Future
-                  </h4>
-                  <p className="text-[14px] mt-3 text-gray-700 leading-relaxed">
-                    I was sitting in a Lahore café last winter, sipping chai
-                    while a freelance designer across from me pulled up her
-                    portfolio on an iPad. She hadn’t coded a single line. Yet
-                    her site had
-                    <br /> smooth scroll animations, interactive forms, and a
-                    checkout flow that felt like Shopify. “I
-                    <br /> built it in Framer,” she said, shrugging. I nearly
-                    dropped my cup. That moment stuck with me - here was someone
-                    redefining what it means to do web development without
-                    touching a code editor.
-                    <br />
-                    It made me rethink everything I assumed about modern web
-                    design. For years, we've
-                    <br /> treated web development as a rigid path: learn HTML,
-                    CSS, JavaScript, fight with frameworks, deploy via CLI. But
-                    tools like Framer are flipping the script. They’re not
-                    <br /> replacing developers - they’re expanding who gets to
-                    build. And honestly, isn’t that the
-                    <br />
-                    point of technology? To make powerful things accessible?
-                    <br />
-                    If you’ve been wondering how to stay relevant in a world
-                    where no-code is rising, or if you're still writing vanilla
-                    JavaScript for every project, this guide is for you. We’re
-                    not here to
-                    <br />
-                    debate whether no-code kills jobs. We’re here to explore how
-                    tools like Framer are
-                    <br /> reshaping the landscape of web development - and how
-                    you can use them to work smarter, faster, and with more
-                    creativity.
-                    <br />
-                    <br />
-                    The Shift: From Code-First to Design-First Web Development
-                    <br /> Remember when web design meant slicing Photoshop
-                    files and handing them off to developers? That process died
-                    slowly, replaced by collaborative workflows and shared
-                    tools. But now, the separation between design and code is
-                    blurring even more. Framer sits right at the center of that
-                    shift. It started as a prototyping tool but evolved into a
-                    full-stack visual builder that publishes React-based sites.
-                    This isn’t just about dragging and dropping buttons. Framer
-                    lets you build responsive layouts, add interactions, connect
-                    databases, and even handle user authentication - all within
-                    a UI that feels familiar to anyone who’s used Figma or
-                    Webflow. And because it outputs clean React code, it’s not a
-                    dead-end tool. You can export and customize further if
-                    needed. So why does this matter? Because it challenges the
-                    old hierarchy in web development. Instead of design being a
-                    static mockup, it becomes a living, functional prototype.
-                    Want to test a new navigation flow? You tweak it in Framer
-                    and publish a live version in minutes. No back-and-forth
-                    with developers. No waiting for pull requests. Just instant
-                    feedback. But here’s the catch: this doesn’t eliminate the
-                    need for solid web development skills. In fact, it raises
-                    the bar. Now you’re expected to understand not just code,
-                    but UX, performance, and accessibility - all while moving
-                    fast. That’s where smart web development tips come into
-                    play. You can’t just rely on the tool. You have to know when
-                    to step in and optimize. Two Real Examples: When Framer
-                    Shined (and When It Didn’t) Let’s talk real projects. A
-                    startup in Islamabad wanted a landing page for their AI
-                    note-taking app. They needed something sleek, fast, and
-                    packed with micro-interactions to showcase their product.
-                    Their dev team was small, and timelines were tight. Instead
-                    of building from scratch in Next.js, they used Framer.
-                  </p>
+                  <h4 className="text-2xl mb-4">{selectedArticle.title}</h4>
+                  <div
+                    className={`text-[14px] text-gray-700 leading-relaxed relative ${
+                      isContentExpanded ? "" : "max-h-[400px] overflow-hidden"
+                    }`}
+                  >
+                    {renderContentWithImages(
+                      selectedArticle.content,
+                      selectedArticle.generatedImages || [],
+                      3
+                    )}
+                    {!isContentExpanded && (
+                      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-white to-transparent" />
+                    )}
+                  </div>
+                  <div className="mt-4 flex justify-center">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="cursor-pointer"
+                      onClick={() => setIsContentExpanded((prev) => !prev)}
+                    >
+                      {isContentExpanded ? "Show less" : "Read more"}
+                    </Button>
+                  </div>
                 </div>
               </div>
 
@@ -1231,6 +1170,23 @@ export function ArticlesTab({
                     "Publish"
                   )}
                 </Button>
+                {selectedArticle.status === "published" && selectedArticle.slug && (
+                  <Button
+                    variant="outline"
+                    className="h-10 px-4 flex items-center gap-2"
+                    onClick={() => handleIndexNow(selectedArticle.id, selectedArticle.slug!)}
+                    disabled={indexingArticle === selectedArticle.id}
+                  >
+                    {indexingArticle === selectedArticle.id ? (
+                      <div className="animate-spin">
+                        <Image src="/loader.png" alt="" width={92} height={92} />
+                      </div>
+                    ) : (
+                      <Globe className="w-4 h-4" />
+                    )}
+                    Index Now
+                  </Button>
+                )}
                 <Button
                   variant="ghost"
                   className="h-9 w-14 p-0 rounded-sm text-red-500 bg-red-500 hover:text-red-700 hover:bg-red-50"
@@ -1267,11 +1223,15 @@ export function ArticlesTab({
                     <div className="flex gap-3 px-6 pb-6">
                       <Button
                         className="flex-1 h-11  bg-red-500 hover:bg-red-600 text-white font-medium"
-                        onClick={() => {
-                          setIsDeleteDialogOpen(false);
-                          setTimeout(() => {
-                            setIsDeleteCompletedDialogOpen(true);
-                          }, 300);
+                        onClick={async () => {
+                          if (selectedArticle) {
+                            setIsDeleteDialogOpen(false);
+                            await handleDeleteArticle(selectedArticle.id);
+                            setSelectedArticle(null);
+                            setTimeout(() => {
+                              setIsDeleteCompletedDialogOpen(true);
+                            }, 300);
+                          }
                         }}
                       >
                         Delete
@@ -1333,7 +1293,7 @@ export function ArticlesTab({
         </div>
       </div>
 
-      {userPackage === "free" && (
+      {/* {userPackage === "free" && (
         <Card className="border-blue-200 bg-linear-to-r from-blue-50 to-indigo-50">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
@@ -1356,60 +1316,10 @@ export function ArticlesTab({
             </div>
           </CardContent>
         </Card>
-      )}
+      )} */}
 
-      <div className="grid md:grid-cols-4 gap-4">
-        <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
-          <CardContent className="pt-6">
-            <div>
-              <p className="text-sm text-muted-foreground">Total Articles</p>
-              <p className="text-2xl font-bold text-foreground">
-                {stats.total}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
-          <CardContent className="pt-6">
-            <div>
-              <p className="text-sm text-muted-foreground">Published</p>
-              <p className="text-2xl font-bold text-green-600">
-                {stats.published}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
-          <CardContent className="pt-6">
-            <div>
-              <p className="text-sm text-muted-foreground">Scheduled</p>
-              <p className="text-2xl font-bold text-blue-600">
-                {stats.scheduled}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
-          <CardContent className="pt-6">
-            <div>
-              <p className="text-sm text-muted-foreground">Drafts</p>
-              <p className="text-2xl font-bold text-gray-600">{stats.draft}</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
+     
       <div className="flex gap-4">
-        <Button
-          variant="outline"
-          onClick={fetchArticles}
-          className="cursor-pointer gap-2"
-        >
-          <RefreshCw className="w-4 h-4" /> Refresh
-        </Button>
         {/* Update Plan Button - only show if user is not premium */}
         {userPackage !== "premium" && (
           <Dialog open={isPlanDialogOpen} onOpenChange={setIsPlanDialogOpen}>
@@ -1564,368 +1474,7 @@ export function ArticlesTab({
         )}
       </div>
 
-      <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
-        <CardHeader>
-          <CardTitle>Generated Articles</CardTitle>
-          <CardDescription>
-            SEO-optimized articles with AI-generated images
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {articles.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <p>No articles found.</p>
-                <p className="text-sm mt-2">
-                  Generate your first article using the button above.
-                </p>
-              </div>
-            ) : (
-              articles.map((article) => (
-                <div
-                  key={article.id}
-                  className="p-4 rounded-lg border border-border/40 hover:border-primary/30 transition-colors bg-background/50"
-                >
-                  <div className="flex flex-col md:flex-row md:items-start justify-between mb-3">
-                    <div className="flex-1 mb-3 md:mb-0">
-                      <h3 className="font-semibold text-foreground mb-1 text-lg">
-                        {article.title}
-                      </h3>
-                      <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
-                        {article.preview}
-                      </p>
-
-                      <div className="flex flex-col sm:flex-row flex-wrap gap-3 text-sm text-muted-foreground mb-3">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">Keyword:</span>
-                          <span className="px-2 py-1 bg-primary/10 text-primary rounded text-xs font-medium">
-                            {article.keyword}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">Words:</span>
-                          <span>{article.wordCount.toLocaleString()}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">Date:</span>
-                          <span>{article.date}</span>
-                        </div>
-                        {article.readingTime && (
-                          <div className="flex items-center gap-2">
-                            <Clock className="w-3 h-3" />
-                            <span>{article.readingTime}</span>
-                          </div>
-                        )}
-                        {article.contentScore && (
-                          <div
-                            className={`flex items-center gap-2 ${getContentScoreColor(
-                              article.contentScore
-                            )}`}
-                          >
-                            <BarChart3 className="w-3 h-3" />
-                            <span>Score: {article.contentScore}%</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Live URL for published articles */}
-                      {article.status === "published" && article.slug && (
-                        <div className="flex items-center gap-2 mt-2 p-2 bg-green-50 border border-green-200 rounded text-sm">
-                          <Globe className="w-4 h-4 text-green-600 flex-shrink-0" />
-                          <span className="font-medium text-green-700">
-                            Live URL:
-                          </span>
-                          <a
-                            href={getArticleUrl(article.slug)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-600 hover:text-blue-800 hover:underline truncate flex-1"
-                          >
-                            {getArticleUrl(article.slug)}
-                          </a>
-                          <button
-                            onClick={() => {
-                              navigator.clipboard.writeText(
-                                getArticleUrl(article.slug!)
-                              );
-                              toast.showToast({
-                                title: "Copied!",
-                                description: "URL copied to clipboard",
-                                type: "success",
-                              });
-                            }}
-                            className="text-green-600 hover:text-green-800 flex-shrink-0"
-                            title="Copy URL"
-                          >
-                            <Copy className="w-4 h-4" />
-                          </button>
-                        </div>
-                      )}
-
-                      <div className="hidden">{/* spacing placeholder */}</div>
-                      <br />
-                      {article.tags && article.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mb-3">
-                          {article.tags.slice(0, 3).map((tag, index) => (
-                            <Badge
-                              key={index}
-                              variant="secondary"
-                              className="text-xs"
-                            >
-                              {tag}
-                            </Badge>
-                          ))}
-                          {article.tags.length > 3 && (
-                            <Badge variant="outline" className="text-xs">
-                              +{article.tags.length - 3} more
-                            </Badge>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                    <Badge
-                      className={`${getStatusStyles(
-                        article.status
-                      )} border self-start`}
-                    >
-                      {getStatusDisplayText(article.status)}
-                    </Badge>
-                  </div>
-
-                  <div className="flex items-center gap-3 pt-3 border-t border-border/40">
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button variant="outline" size="sm" className="gap-2">
-                          <Eye className="w-4 h-4" /> Preview
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto p-0">
-                        <div className="p-6">
-                          <DialogHeader className="mb-6">
-                            <DialogTitle className="text-2xl font-bold text-gray-900 mb-2">
-                              {article.title}
-                            </DialogTitle>
-                            <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium">Keyword:</span>
-                                <Badge
-                                  variant="outline"
-                                  className="bg-blue-50 text-blue-700"
-                                >
-                                  {article.keyword}
-                                </Badge>
-                              </div>
-                              {article.readingTime && (
-                                <div className="flex items-center gap-2">
-                                  <Clock className="w-4 h-4" />
-                                  <span>{article.readingTime}</span>
-                                </div>
-                              )}
-                              {article.wordCount && (
-                                <div className="flex items-center gap-2">
-                                  <span>
-                                    {article.wordCount.toLocaleString()} words
-                                  </span>
-                                </div>
-                              )}
-                              {article.contentScore && (
-                                <div
-                                  className={`flex items-center gap-2 ${getContentScoreColor(
-                                    article.contentScore
-                                  )}`}
-                                >
-                                  <BarChart3 className="w-4 h-4" />
-                                  <span className="font-medium">
-                                    Content Score: {article.contentScore}%
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-                          </DialogHeader>
-
-                          <div className="space-y-6">
-                            {/* Live URL Section - Only for published articles */}
-                            {article.status === "published" && article.slug && (
-                              <div className="p-4 bg-green-50 rounded-lg border border-green-200">
-                                <div className="flex items-start gap-3">
-                                  <Globe className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                                  <div className="flex-1 min-w-0">
-                                    <h4 className="font-semibold text-green-900 mb-2">
-                                      Live Article URL
-                                    </h4>
-                                    <div className="flex items-center gap-2">
-                                      <a
-                                        href={getArticleUrl(article.slug)}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-blue-600 hover:text-blue-800 hover:underline text-sm break-all flex-1"
-                                      >
-                                        {getArticleUrl(article.slug)}
-                                      </a>
-                                      <button
-                                        onClick={() => {
-                                          navigator.clipboard.writeText(
-                                            getArticleUrl(article.slug!)
-                                          );
-                                          toast.showToast({
-                                            title: "Copied!",
-                                            description:
-                                              "URL copied to clipboard",
-                                            type: "success",
-                                          });
-                                        }}
-                                        className="p-2 text-green-600 hover:text-green-800 hover:bg-green-100 rounded flex-shrink-0"
-                                        title="Copy URL"
-                                      >
-                                        <Copy className="w-4 h-4" />
-                                      </button>
-                                    </div>
-                                    <p className="text-xs text-green-700 mt-2">
-                                      This article is live and indexed by search
-                                      engines
-                                    </p>
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-
-                            {/* SEO Preview Section */}
-                            {(article.metaTitle || article.metaDescription) && (
-                              <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                                <h4 className="font-semibold text-gray-900 mb-3 text-lg">
-                                  SEO Preview
-                                </h4>
-                                <div className="space-y-2">
-                                  {article.metaTitle && (
-                                    <p className="text-blue-600 font-medium text-lg leading-tight hover:underline cursor-pointer">
-                                      {article.metaTitle}
-                                    </p>
-                                  )}
-                                  {article.metaDescription && (
-                                    <p className="text-gray-700 text-sm leading-relaxed">
-                                      {article.metaDescription}
-                                    </p>
-                                  )}
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Article Content Section */}
-                            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-                              <div className="p-6">
-                                <div className="prose prose-sm sm:prose-base lg:prose-lg max-w-none">
-                                  {/* FIXED: Use renderContentWithImages function instead of dangerouslySetInnerHTML */}
-                                  {renderContentWithImages(
-                                    article.content,
-                                    article.generatedImages || []
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Action Buttons */}
-                            <div className="flex gap-3 pt-6 border-t border-gray-200">
-                              <Button
-                                variant="outline"
-                                className="cursor-pointer border-gray-300 hover:bg-gray-50"
-                                onClick={() => openEditDialog(article)}
-                              >
-                                <Edit2 className="w-4 h-4 mr-2" />
-                                Edit Article
-                              </Button>
-                              <Button
-                                className="cursor-pointer bg-primary hover:bg-primary/90 text-white flex-1"
-                                onClick={() =>
-                                  handleUpdateStatus(article.id, "published")
-                                }
-                                disabled={article.status === "published"}
-                              >
-                                {article.status === "published"
-                                  ? "Already Published"
-                                  : "Publish Now"}
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
-
-                    <Select
-                      value={article.status}
-                      onValueChange={(value) =>
-                        handleUpdateStatus(
-                          article.id,
-                          value as "draft" | "scheduled" | "published"
-                        )
-                      }
-                      disabled={updatingStatus === article.id}
-                    >
-                      <SelectTrigger className="w-32 h-9 text-sm">
-                        <SelectValue>
-                          {updatingStatus === article.id ? (
-                            <div className="animate-spin">
-                              <Image
-                                src="/loader.png"
-                                alt=""
-                                width={92}
-                                height={92}
-                              />
-                            </div>
-                          ) : (
-                            getStatusDisplayText(article.status)
-                          )}
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="draft">Draft</SelectItem>
-                        <SelectItem value="scheduled">Scheduled</SelectItem>
-                        <SelectItem value="published">Published</SelectItem>
-                      </SelectContent>
-                    </Select>
-
-                    {article.status === "published" && article.slug && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="gap-2"
-                        onClick={() =>
-                          handleIndexNow(article.id, article.slug!)
-                        }
-                        disabled={indexingArticle === article.id}
-                      >
-                        {indexingArticle === article.id ? (
-                          <div className="animate-spin">
-                            <Image
-                              src="/loader.png"
-                              alt=""
-                              width={92}
-                              height={92}
-                            />
-                          </div>
-                        ) : (
-                          <Globe className="w-4 h-4" />
-                        )}
-                        Index Now
-                      </Button>
-                    )}
-
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-muted-foreground hover:text-destructive ml-auto"
-                      onClick={() => handleDeleteArticle(article.id)}
-                      disabled={updatingStatus === article.id}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
+     
       <Dialog
         open={isEditDialogOpen}
         onOpenChange={(open) => {
