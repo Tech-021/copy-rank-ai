@@ -843,8 +843,7 @@ export function KeywordsTab({
           <Button
             variant="outline"
             className="gap-2 text-gray-500 border-gray-200 rounded-r-none hover:bg-gray-50"
-            onClick={addSelectedKeywordsToWebsite}
-            disabled={!selectedKeywords || selectedKeywords.size === 0}
+            onClick={() => setShowAddKeywordsDialog(true)}
           >
             Add Keywords
             <Plus className="w-4 h-4" />
@@ -1214,6 +1213,9 @@ export function KeywordsTab({
       <AddKeywordsDialog
         isOpen={showAddKeywordsDialog}
         onClose={() => setShowAddKeywordsDialog(false)}
+        onAdd={async (keywords) => {
+          await importKeywordsFromCSV(keywords)
+        }}
       />
 
       {/* Delete Keyword Dialog */}
