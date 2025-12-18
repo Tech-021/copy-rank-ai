@@ -16,14 +16,13 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "../ui/skeleton";
 import Image from "next/image";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
-import { ChevronLeft, Plus } from "lucide-react";
+import { Badge, ChevronLeft, Plus } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -31,7 +30,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/selectvisible";
+} from "@/components/ui/select";
 import { useRouter } from "next/navigation";
 import { Dialog1 } from "@/components/websitedialog"
 
@@ -61,6 +60,9 @@ interface Article {
 interface AnalyzeTabProps {
   onViewKeywords: (websiteId: string) => void;
   onViewCompetitors: (websiteId: string) => void;
+  generatedArticles?: Article[];
+  onArticlesUpdate?: (articles: Article[]) => void;
+  websiteId?: string;
 }
 
 interface Website {
@@ -116,12 +118,17 @@ const getCompetitorsCount = (keywordsData: any): number => {
 export function AnalyzeTab({
   onViewKeywords,
   onViewCompetitors,
+  generatedArticles,
+  onArticlesUpdate,
+  websiteId,
 }: AnalyzeTabProps) {
+  const [articles, setArticles] = useState<Article[]>([]);
   const [websites, setWebsites] = useState<Website[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showSkeletons, setShowSkeletons] = useState(false);
   const toast = useToast();
-
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [isContentExpanded, setIsContentExpanded] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [websiteName, setWebsiteName] = useState("");
   const [competitor1, setCompetitor1] = useState("");
@@ -130,141 +137,165 @@ export function AnalyzeTab({
   const [keyword1, setKeyword1] = useState("");
   const [keyword2, setKeyword2] = useState("");
   const [keyword3, setKeyword3] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [open, setOpen] = useState(false);
-  const [articles, setArticles] = useState<Article[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
-  const [newArticleKeyword, setNewArticleKeyword] = useState("");
-  const [newArticleDate, setNewArticleDate] = useState("");
-  const [filterStatus, setFilterStatus] = useState("all");
-  const [filterStartDate, setFilterStartDate] = useState("2-feb-2025");
-  const [filterEndDate, setFilterEndDate] = useState("4-mar-2025");
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
-  const [currentUser, setCurrentUser] = useState<any>(null);
-  const [userPackage, setUserPackage] = useState<
-    "free" | "pro" | "premium" | null
-  >(null);
-  const [isPlanDialogOpen, setIsPlanDialogOpen] = useState(false);
-  const [selectedPlanVariantId, setSelectedPlanVariantId] = useState<
-    string | null
-  >(null);
-  const [isCreatingCheckout, setIsCreatingCheckout] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [isSavingEdit, setIsSavingEdit] = useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [isDeleteCompletedDialogOpen, setIsDeleteCompletedDialogOpen] =
-    useState(false);
-  const [isPublishing, setIsPublishing] = useState(false);
-  const [publishSuccess, setPublishSuccess] = useState(false);
-  const [indexingArticle, setIndexingArticle] = useState<string | null>(null);
+  const [open, setOpen] = useState(false)
   const [editForm, setEditForm] = useState({
-    title: "",
-    keyword: "",
-    slug: "",
-    metaTitle: "",
-    metaDescription: "",
-    preview: "",
-    content: "",
+      title: "",
+      keyword: "",
+      slug: "",
+      metaTitle: "",
+      metaDescription: "",
+      preview: "",
+      content: "",
+    });
+
+  const [analytics, setAnalytics] = useState<AnalyticsData>({
+    articlesGenerated: 0,
+    articlesLive: 0,
+    estimatedTraffic: 0,
+    keywordsTracked: 0,
+    draftArticles: 0,
+    totalCompetitors: 0,
   });
 
-  const openEditDialog = (article: Article) => {
-    setSelectedArticle(article);
-    setEditForm({
-      title: article.title || "",
-      keyword: Array.isArray(article.keyword)
-        ? article.keyword.join(", ")
-        : article.keyword || "",
-      slug: article.slug || "",
-      metaTitle: article.metaTitle || "",
-      metaDescription: article.metaDescription || "",
-      preview: article.preview || "",
-      content: article.content || "",
-    });
-    setIsEditDialogOpen(true);
-  };
+  const filteredArticles = articles.filter((article) => {
+    if (filterStatus === "all") return true;
+    // Normalize status to lowercase for comparison
+    const status = (article.status || "").toLowerCase();
+    return status === filterStatus;
+  });
 
-  const mockArticles: Article[] = [
-    {
-      id: "1",
-      title: "Why Framer is Changing How We Think About Web Development",
-      preview:
-        "Explore how Framer is reshaping web development, with real examples, web design insights, and practical web development tips for modern creators.",
-      keyword: [
-        "web design",
-        "framer",
-        "web development",
-        "technology tutorial",
-        "web development guide",
-      ],
-      status: "DRAFT",
-      date: "2025-01-27",
-      wordCount: 2500,
-      content: "<p>Framer is revolutionizing web development...</p>",
-      metaTitle: "Framer Web Development Guide",
-      metaDescription: "Learn how Framer is changing web development",
-      tags: ["web design", "framer", "web development", "technology tutorial"],
-      generatedImages: ["/aimg1.png"],
-    },
-    {
-      id: "2",
-      title: "Why Framer Changed How I Think About Web Design",
-      preview:
-        "Explore how Framer is reshaping web development, with real examples, web design insights, and practical web development tips for modern creators.",
-      keyword: [
-        "web design",
-        "framer",
-        "web development",
-        "technology tutorial",
-        "web development guide",
-      ],
-      status: "DRAFT",
-      date: "2025-02-02",
-      wordCount: 1800,
-      content: "<p>Web design has evolved...</p>",
-      metaTitle: "Web Design with Framer",
-      metaDescription: "Discover new web design techniques",
-      tags: ["web design", "framer", "web development", "technology tutorial"],
-      generatedImages: ["/aimg2.png"],
-    },
-    {
-      id: "3",
-      title: "How I Learned Web Design - Why Framer Changed Everything",
-      preview:
-        "Explore how Framer is reshaping web development, with real examples, web design insights, and practical web development tips for modern creators.",
-      keyword: [
-        "web design",
-        "framer",
-        "web development",
-        "technology tutorial",
-        "web development guide",
-      ],
-      status: "UPLOADED",
-      date: "2025-03-04",
-      wordCount: 2100,
-      content: "<p>Learning web design...</p>",
-      metaTitle: "Learning Web Design",
-      metaDescription: "Master web design skills",
-      tags: ["web design", "framer", "web development", "technology tutorial"],
-      generatedImages: ["aimg3.png"],
-    },
-    {
-      id: "4",
-      title: "Why Framer is Changing How We Think About Web Development",
-      preview:
-        "Explore how Framer is reshaping web development, with real examples, web design insights, and practical web development tips for modern creators.",
-      keyword: ["web design", "framer", "web development"],
-      status: "UPLOADED",
-      date: "2025-01-27",
-      wordCount: 2500,
-      content: "<p>Framer innovations...</p>",
-      metaTitle: "Framer Guide",
-      metaDescription: "Complete Framer tutorial",
-      tags: ["web design", "framer", "web development", "technology tutorial"],
-      generatedImages: ["/aimg1.png"],
-    },
-  ];
+  const [selectedWebsiteId, setSelectedWebsiteId] = useState<string | null>(null);
+
+  const actionsRequired = useMemo<ActionItem[]>(() => {
+    const items: ActionItem[] = [];
+    const draftCount = analytics.draftArticles;
+    const hasWebsites = websites.length > 0;
+    const unpublishedArticles =
+      analytics.articlesGenerated > analytics.articlesLive;
+    const autoPublishDisabled = websites.some(
+      (site) => site.auto_publish === false || site.autoPublish === false
+    );
+    const publishingPaused =
+      autoPublishDisabled || websites.some((site) => site.is_active === false);
+
+    if (draftCount > 0) {
+      items.push({
+        id: "drafts",
+        title: `${draftCount} post${draftCount > 1 ? "s" : ""} draft${
+          draftCount > 1 ? "s" : ""
+        } waiting for review`,
+        description: "Finish them to start ranking.",
+        icon: "/actionimg1.png",
+        actionLabel: "Review drafts",
+      });
+    }
+
+    if (publishingPaused || unpublishedArticles) {
+      items.push({
+        id: "publishing",
+        title:
+          analytics.articlesLive === 0
+            ? "Publishing is paused"
+            : "Some posts are not live",
+        description:
+          analytics.articlesLive === 0
+            ? "Turn on auto-publish to ship faster."
+            : "Publish the remaining posts to capture traffic.",
+        icon: "/actionimg2.png",
+        actionLabel: "View posts",
+      });
+    }
+
+    if (!hasWebsites) {
+      items.push({
+        id: "add-website",
+        title: "Add your first website",
+        description: "Connect a site to start tracking and publishing.",
+        icon: "/globe.png",
+        actionLabel: "Add website",
+        onClick: () => setOpen(true),
+      });
+    }
+
+    if (hasWebsites && analytics.totalCompetitors === 0) {
+      items.push({
+        id: "competitors",
+        title: "Add SEO competitors",
+        description:
+          "Track at least one competitor to unlock keyword gap insights.",
+        icon: "/globe.png",
+        actionLabel: "Add competitor",
+      });
+    }
+
+    return items;
+  }, [analytics, websites]);
+
+  const fetchAnalytics = async (userId: string, websiteId?: string | null) => {
+    try {
+      let articlesQuery = supabase
+        .from("articles")
+        .select("status, estimated_traffic, keyword, word_count")
+        .eq("user_id", userId);
+
+      if (websiteId) {
+        articlesQuery = articlesQuery.eq("website_id", websiteId);
+      }
+
+      const { data: articles, error: articlesError } = await articlesQuery;
+
+      if (articlesError) throw articlesError;
+
+      const articlesGenerated = articles?.length || 0;
+      const articlesLive = articles?.filter(a => a.status === "published" || a.status === "UPLOADED").length || 0;
+      const draftArticles = articles?.filter(a => a.status === "draft" || a.status === "DRAFT").length || 0;
+      
+      const estimatedTraffic = articles?.reduce((sum, article) => {
+        return sum + (article.estimated_traffic || 0);
+      }, 0) || 0;
+
+      const allKeywords = new Set<string>();
+      articles?.forEach(article => {
+        if (typeof article.keyword === 'string') {
+          article.keyword.split(',').forEach(k => allKeywords.add(k.trim()));
+        }
+      });
+      const keywordsTracked = allKeywords.size;
+
+      let websitesQuery = supabase
+        .from("websites")
+        .select("keywords")
+        .eq("user_id", userId);
+
+      if (websiteId) {
+        websitesQuery = websitesQuery.eq("id", websiteId);
+      }
+
+      const { data: websitesData, error: websitesError } = await websitesQuery;
+
+      if (websitesError) throw websitesError;
+
+      let totalCompetitors = 0;
+      websitesData?.forEach(website => {
+        const competitorCount = getCompetitorsCount(website.keywords);
+        totalCompetitors += competitorCount;
+      });
+
+      setAnalytics({
+        articlesGenerated,
+        articlesLive,
+        estimatedTraffic,
+        keywordsTracked,
+        draftArticles,
+        totalCompetitors,
+      });
+    } catch (error) {
+      console.error("Error fetching analytics:", error);
+    }
+  };
 
   const loadUserWebsites = async () => {
     try {
@@ -443,6 +474,28 @@ const validateTab3 = () => {
     keyword2.trim() &&
     keyword3.trim();
 
+    const getReadingTime = (wordCount?: number) => {
+    if (!wordCount) return "—";
+    const minutes = Math.max(1, Math.round(wordCount / 200));
+    return `${minutes} min read`;
+  };
+
+    const openEditDialog = (article: Article) => {
+    setSelectedArticle(article);
+    setEditForm({
+      title: article.title || "",
+      keyword: Array.isArray(article.keyword)
+        ? article.keyword.join(", ")
+        : article.keyword || "",
+      slug: article.slug || "",
+      metaTitle: article.metaTitle || "",
+      metaDescription: article.metaDescription || "",
+      preview: article.preview || "",
+      content: article.content || "",
+    });
+    setIsEditDialogOpen(true);
+  };
+
   const handleWebsiteChange = async (websiteId: string) => {
     setSelectedWebsiteId(websiteId);
     
@@ -476,8 +529,9 @@ const validateTab3 = () => {
   }, [selectedWebsiteId]);
 
   return (
-    <div className="space-y-6">
-    <div className="space-y-6">
+    <div className="flex ">
+    <div className="space-y-6 w-[60%] border-r ">
+    <div className="space-y-6 mr-4">
       <div className="flex items-center justify-between">
         <div>
         <h2 className="text-3xl font-normal">Performance overview</h2>
@@ -561,12 +615,12 @@ const validateTab3 = () => {
             </CardContent>
           </Card>
         </div>
-        <div className="flex items-center gap-5">
-          <Card className="bg-transparent px-4 py-5 ">
+        <div className="flex items-center gap-5 max-w-[700px]">
+          <Card className="bg-transparent px-4 py-5 w-[350px]">
             <CardTitle className="text-lg font-normal text-[#000000b3] ml-4">Your Websites</CardTitle>
             <CardContent>
               {websites.length > 0 && (
-                <div className="flex items-center justify-between border px-4 pb-4 pt-5 rounded-t-xl border-[#0000001a] w-[400px]">
+                <div className="flex items-center justify-between border px-4 pb-4 pt-5 rounded-t-xl border-[#0000001a] w-[300px]">
                   <div className="flex items-center gap-5">
                   <div className="bg-[rgb(247,247,247)] w-[34px] h-[34px] flex items-center justify-center rounded-[10px]">
                     <Image src="/globe.png" alt="" width={20} height={20} />
@@ -583,7 +637,7 @@ const validateTab3 = () => {
               )}
               <div 
               onClick={() => setOpen(true)}
-              className={`flex items-center justify-between border px-4 pb-4 pt-5 ${websites.length > 0 ? 'rounded-b-xl' : 'rounded-xl'} border-[#0000001a] w-[400px] cursor-pointer`}>
+              className={`flex items-center justify-between border px-4 pb-4 pt-5 ${websites.length > 0 ? 'rounded-b-xl' : 'rounded-xl'} border-[#0000001a] w-[300px] cursor-pointer`}>
                 <div className="flex items-center gap-5 cursor-pointer">
                 <div className="bg-[rgb(247,247,247)] w-[34px] h-[34px] flex items-center justify-center rounded-[10px] cursor-pointer">
                   <Plus width={20} height={20} className="text-[#65b361] cursor-pointer " />
@@ -595,11 +649,11 @@ const validateTab3 = () => {
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-transparent px-4 py-5 ">
+          <Card className="bg-transparent px-4 py-5 w-[350px]">
             <CardTitle className="text-lg font-normal text-[#000000b3] ml-4">SEO Competitors</CardTitle>
             <CardContent>
               {analytics.totalCompetitors > 0 && (
-                <div className="flex items-center justify-between border px-4 pb-4 pt-5 rounded-t-xl border-[#0000001a] w-[400px]">
+                <div className="flex items-center justify-between border px-4 pb-4 pt-5 rounded-t-xl border-[#0000001a] w-[300px]">
                   <div className="flex items-center gap-5">
                   <div className="bg-[rgb(247,247,247)] w-[34px] h-[34px] flex items-center justify-center rounded-[10px]">
                     <Image src="/globe.png" alt="" width={20} height={20} />
@@ -614,7 +668,9 @@ const validateTab3 = () => {
                   </div>
                 </div>
               )}
-              <div className={`flex items-center justify-between border px-4 pb-4 pt-5 ${analytics.totalCompetitors > 0 ? 'rounded-b-xl' : 'rounded-xl'} border-[#0000001a] w-[400px]`}>
+              <div 
+              
+              className={`flex items-center justify-between border px-4 pb-4 pt-5 ${analytics.totalCompetitors > 0 ? 'rounded-b-xl' : 'rounded-xl'} border-[#0000001a] w-[300px]`}>
                 <div className="flex items-center gap-5">
                 <div className="bg-[rgb(247,247,247)] w-[34px] h-[34px] flex items-center justify-center rounded-[10px]">
                   <Plus width={20} height={20} className="text-[#65b361]" />
@@ -683,6 +739,103 @@ const validateTab3 = () => {
           </CardContent>
         </Card>
       </div>
+      <Dialog1 open={open} onOpenChange={setOpen}  />
+     </div>
+     <div className="w-[38%] border rounded-xl ml-3">
+      {filteredArticles.length === 0 ? (
+    <div className="text-center py-12 text-gray-400">
+      <p className="text-sm">No articles found</p>
     </div>
+  ) : (
+    filteredArticles.map((article) => (
+      <div
+        key={article.id}
+        onClick={() => {
+          setSelectedArticle(article);
+          setIsContentExpanded(false);
+        }}
+        className={`relative flex gap-3 p-3 bg-gray-100 border rounded-lg cursor-pointer hover:border-gray-300 hover:shadow-sm transition-all ${
+          selectedArticle?.id === article.id
+            ? "border-gray-200 bg-[#F7F7F7]"
+            : "border-gray-100"
+        }`}
+      >
+        {/* Thumbnail */}
+        <img
+          src={article.generatedImages?.[0] || "/article-image.jpg"}
+          alt={article.title}
+          className="w-20 h-20 rounded object-cover flex-shrink-0"
+        />
+
+        {/* Main Content Column */}
+        <div className="flex flex-col min-w-0 flex-1">
+          {/* Title + Meta */}
+          <div className="flex justify-between gap-2">
+            <div className="min-w-0 rounded-xl border ">
+              <h4 className="font-medium text-gray-900 text-sm line-clamp-2">
+                {article.title}
+              </h4>
+
+              <div className="flex items-center gap-1 mt-1">
+                <Image
+                  src="/clock.png"
+                  height={13}
+                  width={13}
+                  alt="icon"
+                />
+                <p className="text-xs text-gray-500">
+                  {getReadingTime(article.wordCount)}
+                </p>
+              </div>
+
+              <Badge
+                className={`mt-2 text-xs font-medium w-fit ${
+                  (article.status || "").toLowerCase() === "uploaded"
+                    ? "bg-transparent text-green-700 border border-green-600"
+                    : "bg-gray-100 text-gray-600 border border-gray-800"
+                }`}
+              >
+                {article.status}
+              </Badge>
+            </div>
+
+            {/* Edit Button */}
+            {selectedArticle?.id !== article.id && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-gray-400 hover:text-gray-700 h-8 w-8 p-0 flex-shrink-0"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  openEditDialog(article);
+                }}
+              >
+                Edit
+              </Button>
+            )}
+          </div>
+
+          {/* Preview (FULL WIDTH, NOT under image) */}
+          <p className="text-xs text-gray-500 line-clamp-2 mt-2">
+            {article.preview}
+          </p>
+
+          {/* Tags */}
+          <div className="flex gap-1 flex-wrap mt-2">
+            {article.tags?.slice(0, 5).map((tag) => (
+              <span
+                key={tag}
+                className="text-xs bg-gray-200  text-gray-600 px-2 py-0.5 rounded-2xl border border-gray-200"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+    ))
+  )}
+     </div>
+     </div> 
   );
 }
