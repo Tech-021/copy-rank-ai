@@ -618,7 +618,7 @@ export function KeywordsTab({
   const confirmDeleteKeyword = () => {
     if (keywordToDelete) {
       const newKeywords = keywords.filter(
-        (_, idx) => idx !== keywordToDelete.index
+        (kw) => kw.keyword !== keywordToDelete.keyword
       );
       setKeywords(newKeywords);
       setShowDeleteDialog(false);
@@ -713,14 +713,26 @@ export function KeywordsTab({
             {websiteData.website.url?.replace(/^https?:\/\//, "")}
           </Button>
           <div className="flex ml-5">
-            <Select>
-              <SelectTrigger className="w-38 h-9 border-gray-200">
-                <SelectValue placeholder={websiteId || "www.delani.pro"} />
+            <Select
+              value={selectedWebsiteId ?? ""}
+              onValueChange={(val) => setSelectedWebsiteId(val)}
+              disabled={websites.length === 0}
+           >
+              <SelectTrigger className="w-56 h-9 border-gray-200">
+                <SelectValue placeholder="Select website" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={websiteId || "www.delani.pro"}>
-                  {websiteId || "www.delani.pro"}
-                </SelectItem>
+                {websites.length > 0 ? (
+                  websites.map((w) => (
+                    <SelectItem key={w.id} value={w.id}>
+                      {w.url?.replace(/^https?:\/\//, "")}
+                    </SelectItem>
+                  ))
+                ) : (
+                  <SelectItem value="" disabled>
+                    No websites found
+                  </SelectItem>
+                )}
               </SelectContent>
             </Select>
           </div>
@@ -782,26 +794,57 @@ export function KeywordsTab({
       <div className="flex items-center justify-between w-full">
         {/* LEFT */}
         <div className="flex items-center gap-6 text-sm text-gray-500">
-          <button className="flex items-center gap-1 hover:text-gray-700">
-            Filters
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-              <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" />
-            </svg>
-          </button>
+          {/* Filters Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="flex items-center gap-1 hover:text-gray-700">
+                Filters
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                  <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" />
+                </svg>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-44">
+              <DropdownMenuItem onClick={() => setDifficultyFilter("all")}>All</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setDifficultyFilter("Low")}>Low Difficulty</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setDifficultyFilter("Medium")}>Medium Difficulty</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setDifficultyFilter("High")}>High Difficulty</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
-          <button className="flex items-center gap-1 hover:text-gray-700">
-            Sort By
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-              <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" />
-            </svg>
-          </button>
+          {/* Sort By Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="flex items-center gap-1 hover:text-gray-700">
+                Sort By
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                  <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" />
+                </svg>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-64">
+              <DropdownMenuItem onClick={() => setSortBy("volume-desc")}>Search Volume (High → Low)</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSortBy("volume-asc")}>Search Volume (Low → High)</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSortBy("difficulty-asc")}>Difficulty (Low → High)</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSortBy("difficulty-desc")}>Difficulty (High → Low)</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSortBy("cpc-desc")}>CPC (High → Low)</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSortBy("cpc-asc")}>CPC (Low → High)</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSortBy("competition-asc")}>Competition (Low → High)</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSortBy("competition-desc")}>Competition (High → Low)</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Search */}
           <div className="relative w-full max-w-[210px]">
             <Input
               type="text"
               placeholder="Search Keywords"
-              className="h-9  pr-3 bg-gray-50 border-gray-200 text-sm placeholder:text-gray-400 focus-visible:ring-1 focus-visible:ring-gray-300"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              aria-label="Search keywords"
+              className="h-9 pl-9 pr-3 bg-gray-50 border-gray-200 text-sm placeholder:text-gray-400 focus-visible:ring-1 focus-visible:ring-gray-300"
             />
-            <Search className="absolute left-46 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           </div>
         </div>
 
