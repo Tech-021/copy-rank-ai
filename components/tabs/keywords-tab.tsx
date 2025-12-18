@@ -122,6 +122,7 @@ export function KeywordsTab({
   const [loading, setLoading] = useState(true);
   const [loadingWebsites, setLoadingWebsites] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loadingUser, setLoadingUser] = useState<boolean>(true);
   const [generatingContent, setGeneratingContent] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
@@ -167,12 +168,16 @@ export function KeywordsTab({
         const { data: user, error } = await getUser();
         if (error) {
           console.error("Error fetching current user:", error);
+          setCurrentUser(null);
           return;
         }
         setCurrentUser(user);
         console.log("👤 Current user:", user?.id);
       } catch (err) {
         console.error("Failed to get current user:", err);
+        setCurrentUser(null);
+      } finally {
+        setLoadingUser(false);
       }
     };
 
@@ -182,8 +187,8 @@ export function KeywordsTab({
   const loadUserWebsites = async () => {
     try {
       setLoadingWebsites(true);
+      // Don't error if user isn't loaded yet—just return and wait
       if (!currentUser || !currentUser.id) {
-        setError("Please log in to view keywords");
         return;
       }
 
@@ -208,6 +213,7 @@ export function KeywordsTab({
       }));
 
       setWebsites(userWebsites);
+      setError(null);
       if (!selectedWebsiteId && userWebsites.length > 0) {
         setSelectedWebsiteId(userWebsites[0].id);
       }
@@ -220,12 +226,15 @@ export function KeywordsTab({
   };
 
   useEffect(() => {
-    if (!initialWebsiteId) {
-      loadUserWebsites();
-    } else {
+    if (initialWebsiteId) {
       setSelectedWebsiteId(initialWebsiteId);
+    } else if (websiteId) {
+      setSelectedWebsiteId(websiteId);
+    } else if (!loadingUser && currentUser?.id) {
+      // Only load websites after user auth is confirmed
+      loadUserWebsites();
     }
-  }, [initialWebsiteId]);
+  }, [initialWebsiteId, websiteId, loadingUser, currentUser?.id]);
 
   useEffect(() => {
     console.log("🔍 KeywordsTab - selectedWebsiteId:", selectedWebsiteId);
@@ -628,7 +637,7 @@ export function KeywordsTab({
     );
   }
 
-  if (error && !selectedWebsiteId && websites.length === 0) {
+  if (error && !selectedWebsiteId && websites.length === 0 && !loadingUser) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
