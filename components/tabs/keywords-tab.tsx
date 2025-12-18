@@ -106,88 +106,7 @@ interface Article {
   estimatedTraffic?: number;
 }
 
-// Mock data for development
-const MOCK_KEYWORDS: Keyword[] = [
-  {
-    id: "1",
-    keyword: "web development",
-    search_volume: 27100,
-    difficulty: 62,
-    cpc: 15.5,
-    competition: 0.65,
-    post_status: "Live",
-    traffic_potential: "4.2k/mo",
-  },
-  {
-    id: "2",
-    keyword: "web design",
-    search_volume: 12300,
-    difficulty: 58,
-    cpc: 12.8,
-    competition: 0.72,
-    post_status: "Draft",
-    traffic_potential: "3.8k/mo",
-  },
-  {
-    id: "3",
-    keyword: "frame templates",
-    search_volume: 8400,
-    difficulty: 32,
-    cpc: 8.2,
-    competition: 0.45,
-    post_status: "No Plan",
-    traffic_potential: "1.9k/mo",
-  },
-  // {
-  //   id: "4",
-  //   keyword: "responsive design",
-  //   search_volume: 19200,
-  //   difficulty: 68,
-  //   cpc: 18.3,
-  //   competition: 0.78,
-  //   post_status: "Live",
-  //   traffic_potential: "5.1k/mo",
-  // },
-  // {
-  //   id: "5",
-  //   keyword: "UI components",
-  //   search_volume: 5600,
-  //   difficulty: 45,
-  //   cpc: 11.2,
-  //   competition: 0.52,
-  //   post_status: "Draft",
-  //   traffic_potential: "2.3k/mo",
-  // },
-  // {
-  //   id: "6",
-  //   keyword: "CSS frameworks",
-  //   search_volume: 14200,
-  //   difficulty: 72,
-  //   cpc: 14.9,
-  //   competition: 0.81,
-  //   post_status: "No Plan",
-  //   traffic_potential: "3.5k/mo",
-  // },
-  // {
-  //   id: "7",
-  //   keyword: "web hosting",
-  //   search_volume: 33400,
-  //   difficulty: 78,
-  //   cpc: 22.1,
-  //   competition: 0.89,
-  //   post_status: "Live",
-  //   traffic_potential: "6.2k/mo",
-  // },
-];
-
-const MOCK_WEBSITE_DATA: WebsiteData = {
-  website: {
-    id: "demo-site",
-    url: "www.dellars.pro",
-    topic: "Web Development",
-  },
-  keywords: MOCK_KEYWORDS,
-};
+// Removed mock data: now pulling real keywords via /api/keyword and websites via Supabase
 
 export function KeywordsTab({
   websiteId: initialWebsiteId,
@@ -263,23 +182,34 @@ export function KeywordsTab({
   const loadUserWebsites = async () => {
     try {
       setLoadingWebsites(true);
-      // TODO: Replace with real API when ready
-      // const { data: { user } } = await supabase.auth.getUser();
-      // if (!user) { setError("Please log in to view keywords"); return; }
-      // const { data, error } = await supabase.from("websites")...
+      if (!currentUser || !currentUser.id) {
+        setError("Please log in to view keywords");
+        return;
+      }
 
-      // Using mock data for now
-      const mockWebsites: Website[] = [
-        {
-          id: "demo-site",
-          url: "www.dellars.pro",
-          topic: "Web Development",
-        },
-      ];
+      const { data, error: dbError } = await supabase
+        .from("websites")
+        .select("id, url, topic, keywords")
+        .eq("user_id", currentUser.id)
+        .order("created_at", { ascending: false });
 
-      setWebsites(mockWebsites);
-      if (!selectedWebsiteId) {
-        setSelectedWebsiteId(mockWebsites[0].id);
+      if (dbError) {
+        console.error("Error loading websites:", dbError);
+        setError("Failed to load websites");
+        return;
+      }
+
+      const userWebsites: Website[] = (data || []).map((w: any) => ({
+        id: w.id,
+        url: w.url,
+        topic: w.topic || "General",
+        // carry stored keywords payload for later merge
+        keywords: w.keywords,
+      }));
+
+      setWebsites(userWebsites);
+      if (!selectedWebsiteId && userWebsites.length > 0) {
+        setSelectedWebsiteId(userWebsites[0].id);
       }
     } catch (error) {
       console.error("Error loading websites:", error);
@@ -313,19 +243,107 @@ export function KeywordsTab({
     try {
       setLoading(true);
       setError(null);
-      console.log(`🔍 Fetching keywords for website: ${selectedWebsiteId}`);
+      console.log(`🔍 Fetching REAL keywords for website: ${selectedWebsiteId}`);
 
-      // TODO: Replace with real API when ready
-      // const response = await fetch(`/api/keyword/${selectedWebsiteId}`);
-      // const data = await response.json();
+      // Resolve selected website details
+      let website: (Website & { keywords?: any }) | null =
+        (websites.find((w) => w.id === selectedWebsiteId) as any) || null;
+      if (!website) {
+        const { data: singleSite } = await supabase
+          .from("websites")
+          .select("id, url, topic, keywords")
+          .eq("id", selectedWebsiteId)
+          .single();
+        if (singleSite) {
+          website = {
+            id: singleSite.id,
+            url: singleSite.url,
+            topic: singleSite.topic || "General",
+            keywords: (singleSite as any).keywords,
+          };
+        }
+      }
 
-      // Using mock data for now
-      const data = MOCK_WEBSITE_DATA;
+      if (!website) {
+        throw new Error("Website not found");
+      }
 
-      setWebsiteData(data);
-      setKeywords(data.keywords || []);
+      // Call real keyword API with tuned filters to avoid over-restrictive defaults
+      const response = await fetch(`/api/keyword`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          topic: website.topic || "General",
+          websiteUrl: website.url || "",
+          includeCompetitors: true,
+          maxVolume: 10000, // allow medium/high volume keywords
+          minVolume: 50, // allow smaller niches
+          maxDifficulty: 100, // don't drop harder keywords in the UI
+          limit: 100,
+        }),
+      });
+
+      const apiData = await response.json();
+      if (!response.ok || !apiData.success) {
+        throw new Error(
+          apiData.error || "Failed to fetch keywords from DataForSEO"
+        );
+      }
+
+      const competitorKeywords: Keyword[] = Array.isArray(apiData.competitors)
+        ? apiData.competitors.flatMap((comp: any) => comp.keywords || [])
+        : [];
+
+      const primaryKeywords = (apiData.keywords || []) as Keyword[];
+
+      const targetKeywordsFromSite: Keyword[] = (() => {
+        const kw = (website as any)?.keywords;
+        const arr = kw?.keywords;
+        if (Array.isArray(arr)) {
+          return arr.filter((k: any) => k && k.keyword);
+        }
+        return [];
+      })();
+
+      // Merge primary + competitor + stored target keywords, dedupe by keyword text (case-insensitive)
+      const mergedKeywordsMap = new Map<string, any>();
+
+      [...primaryKeywords, ...competitorKeywords, ...targetKeywordsFromSite].forEach((kw: any) => {
+        if (!kw?.keyword) return;
+        const key = String(kw.keyword).toLowerCase();
+        if (!mergedKeywordsMap.has(key)) {
+          mergedKeywordsMap.set(key, kw);
+        }
+      });
+
+      const realKeywords = Array.from(mergedKeywordsMap.values());
+
+      setWebsiteData({
+        website: {
+          id: website.id,
+          url: website.url,
+          topic: website.topic,
+        },
+        keywords: realKeywords,
+      });
+
+      setKeywords(
+        realKeywords.map((kw: any) => ({
+          id: kw.id || undefined,
+          keyword: kw.keyword,
+          search_volume: kw.search_volume,
+          difficulty: kw.difficulty,
+          cpc: kw.cpc,
+          competition: kw.competition,
+          // Default UI-only fields
+          post_status: kw.post_status || "No Plan",
+          traffic_potential:
+            kw.traffic_potential ||
+            (kw.search_volume ? `${Math.round(kw.search_volume * 0.1)}+/mo` : "—"),
+        }))
+      );
       setSelectedKeywords(new Set());
-      console.log(`✅ Total keywords loaded: ${data.keywords.length}`);
+      console.log(`✅ Total REAL keywords loaded: ${realKeywords.length}`);
     } catch (err) {
       console.error("Error fetching keywords:", err);
       setError(err instanceof Error ? err.message : "Failed to load keywords");
@@ -682,8 +700,8 @@ export function KeywordsTab({
             className="gap-2 text-gray-500 border-gray-200 rounded-l-none hover:bg-gray-50"
             onClick={() => setShowSyncDialog(true)}
           >
-            Sync from Competitors
-            <RefreshCw className="w-4 h-4" />
+            <ExternalLink className="w-4 h-4" />
+            {websiteData.website.url?.replace(/^https?:\/\//, "")}
           </Button>
           <div className="flex ml-5">
             <Select>

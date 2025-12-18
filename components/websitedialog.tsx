@@ -16,7 +16,7 @@ interface MyDialogProps {
   onOpenChange: (open: boolean) => void
 }
 
-export default function Dialog1({ open, onOpenChange }: MyDialogProps) {
+export function Dialog1({ open, onOpenChange }: MyDialogProps) {
   const [tab, setTab] = useState("tab1");
   const toast = useToast();
   const [ isDialogOpen, setIsDialogOpen ] = useState(true)
@@ -233,8 +233,10 @@ const handleNext = async () => {
               <div>
                 <button
                   onClick={() => {
-                    validateTab1()
-                    setTab("tab2")}}
+                    if (validateTab1()) {
+                      setTab("tab2");
+                    }
+                  }}
                   className="bg-[#5baf57] border border-[#0000001a] text-white px-[60px] py-1 w-[170px] h-[50px] rounded-[10px] cursor-pointer"
                 >
                   Next
@@ -292,8 +294,9 @@ const handleNext = async () => {
               <div>
                 <button
                   onClick={() => {
-                    validateTab2();
-                    setTab("tab3")
+                    if (validateTab2()) {
+                      setTab("tab3");
+                    }
                   }}
                   className="bg-[#5baf57] border border-[#0000001a] text-white px-[60px] py-1 w-[170px] h-[50px] rounded-[10px] cursor-pointer"
                 >
@@ -352,11 +355,14 @@ const handleNext = async () => {
               <div>
                 <button
                   onClick={() => {
-                    validateTab3();
-                    setTab("tab3")}}
-                  className="bg-[#5baf57] border border-[#0000001a] text-white px-[60px] py-1 w-[170px] h-[50px] rounded-[10px] cursor-pointer"
+                    if (validateTab3()) {
+                      handleNext();
+                    }
+                  }}
+                  disabled={isLoading}
+                  className="bg-[#5baf57] border border-[#0000001a] text-white px-[60px] py-1 w-[170px] h-[50px] rounded-[10px] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Submit
+                  {isLoading ? "Submitting..." : "Submit"}
                 </button>
               </div>
               <div>
