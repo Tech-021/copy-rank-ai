@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -67,6 +67,9 @@ interface Website {
   url: string;
   topic: string;
   keywords: any;
+  auto_publish?: boolean;
+  autoPublish?: boolean;
+  is_active?: boolean;
   isAnalyzing?: boolean;
   user_id?: string;
   created_at?: string;
@@ -79,6 +82,15 @@ interface AnalyticsData {
   keywordsTracked: number;
   draftArticles: number;
   totalCompetitors: number;
+}
+
+interface ActionItem {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  actionLabel?: string;
+  onClick?: () => void;
 }
 
 const getKeywordsCount = (keywordsData: any): number => {
@@ -130,6 +142,71 @@ export function AnalyzeTab({
   });
 
   const [selectedWebsiteId, setSelectedWebsiteId] = useState<string | null>(null);
+
+  const actionsRequired = useMemo<ActionItem[]>(() => {
+    const items: ActionItem[] = [];
+    const draftCount = analytics.draftArticles;
+    const hasWebsites = websites.length > 0;
+    const unpublishedArticles =
+      analytics.articlesGenerated > analytics.articlesLive;
+    const autoPublishDisabled = websites.some(
+      (site) => site.auto_publish === false || site.autoPublish === false
+    );
+    const publishingPaused =
+      autoPublishDisabled || websites.some((site) => site.is_active === false);
+
+    if (draftCount > 0) {
+      items.push({
+        id: "drafts",
+        title: `${draftCount} post${draftCount > 1 ? "s" : ""} draft${
+          draftCount > 1 ? "s" : ""
+        } waiting for review`,
+        description: "Finish them to start ranking.",
+        icon: "/actionimg1.png",
+        actionLabel: "Review drafts",
+      });
+    }
+
+    if (publishingPaused || unpublishedArticles) {
+      items.push({
+        id: "publishing",
+        title:
+          analytics.articlesLive === 0
+            ? "Publishing is paused"
+            : "Some posts are not live",
+        description:
+          analytics.articlesLive === 0
+            ? "Turn on auto-publish to ship faster."
+            : "Publish the remaining posts to capture traffic.",
+        icon: "/actionimg2.png",
+        actionLabel: "View posts",
+      });
+    }
+
+    if (!hasWebsites) {
+      items.push({
+        id: "add-website",
+        title: "Add your first website",
+        description: "Connect a site to start tracking and publishing.",
+        icon: "/globe.png",
+        actionLabel: "Add website",
+        onClick: () => setOpen(true),
+      });
+    }
+
+    if (hasWebsites && analytics.totalCompetitors === 0) {
+      items.push({
+        id: "competitors",
+        title: "Add SEO competitors",
+        description:
+          "Track at least one competitor to unlock keyword gap insights.",
+        icon: "/globe.png",
+        actionLabel: "Add competitor",
+      });
+    }
+
+    return items;
+  }, [analytics, websites]);
 
   const fetchAnalytics = async (userId: string, websiteId?: string | null) => {
     try {
@@ -556,36 +633,60 @@ const validateTab3 = () => {
           </Card>
         </div>
         <Card className="bg-transparent px-4 py-5 ">
-            <CardTitle className="text-lg font-normal text-[#000000b3] ml-4">Actions Required</CardTitle>
-            <CardContent>
-              {analytics.draftArticles > 0 && (
-                <div className="flex items-center justify-between border px-4 pb-4 pt-5 rounded-t-xl border-[#0000001a]">
-                  <div className="flex items-center gap-5">
+          <CardTitle className="text-lg font-normal text-[#000000b3] ml-4">Actions Required</CardTitle>
+          <CardContent>
+            {showSkeletons ? (
+              <div className="space-y-2">
+                <Skeleton className="h-16 w-full" />
+                <Skeleton className="h-16 w-full" />
+              </div>
+            ) : actionsRequired.length === 0 ? (
+              <div className="flex items-center justify-between border px-4 pb-4 pt-5 rounded-xl border-[#0000001a]">
+                <div className="flex items-center gap-5">
                   <div className="bg-[rgb(247,247,247)] w-[30px] h-[30px] flex items-center justify-center rounded-[10px]">
-                    <Image src="/actionimg1.png" alt="" width={18} height={26} className="rounded-[3px]" />
+                    <Image src="/actionimg2.png" alt="" width={24} height={24} />
                   </div>
                   <div>
-                    <p className="text-sm text-[#000000b3] font-normal">{analytics.draftArticles} post{analytics.draftArticles > 1 ? 's' : ''} draft{analytics.draftArticles > 1 ? 's' : ''} waiting for review</p>
-                    <p className="text-xs text-[#00000080] font-normal">Finish them to start ranking.</p>
+                    <p className="text-sm text-[#000000b3] font-normal">You’re all set</p>
+                    <p className="text-xs text-[#00000080] font-normal">No outstanding tasks right now.</p>
                   </div>
-                  </div>
-                    <Button className="border bg-transparent hover:bg-transparent text-[#00000080] border-[#0000001a] cursor-pointer">View</Button>
                 </div>
-              )}
-              <div className={`flex items-center justify-between border px-4 pb-4 pt-5 ${analytics.draftArticles > 0 ? 'rounded-b-xl' : 'rounded-xl'} border-[#0000001a]`}>
-                <div className="flex items-center gap-5">
-                <div className="bg-[rgb(247,247,247)] w-[30px] h-[30px] flex items-center justify-center rounded-[10px]">
-                  <Image src="/actionimg2.png" alt="" width={24} height={24} />
-                </div>
-                <div>
-                  <p className="text-sm text-[#000000b3] font-normal">Publishing is paused</p>
-                  <p className="text-xs text-[#00000080] font-normal">Turn on auto-publish to ship faster.</p>
-                </div>
-                </div>
-                  <Button className="border bg-transparent hover:bg-transparent text-[#00000080] border-[#0000001a] cursor-pointer">View</Button>
               </div>
-            </CardContent>
-          </Card>
+            ) : (
+              actionsRequired.map((action, index) => {
+                const isFirst = index === 0;
+                const isLast = index === actionsRequired.length - 1;
+
+                return (
+                  <div
+                    key={action.id}
+                    className={`flex items-center justify-between border px-4 pb-4 pt-5 border-[#0000001a] ${
+                      isFirst ? "rounded-t-xl" : ""
+                    } ${isLast ? "rounded-b-xl" : "border-b-0"}`}
+                  >
+                    <div className="flex items-center gap-5">
+                      <div className="bg-[rgb(247,247,247)] w-[30px] h-[30px] flex items-center justify-center rounded-[10px]">
+                        <Image src={action.icon} alt="" width={24} height={24} />
+                      </div>
+                      <div>
+                        <p className="text-sm text-[#000000b3] font-normal">{action.title}</p>
+                        <p className="text-xs text-[#00000080] font-normal">{action.description}</p>
+                      </div>
+                    </div>
+                    {action.actionLabel && (
+                      <Button
+                        onClick={action.onClick}
+                        className="border bg-transparent hover:bg-transparent text-[#00000080] border-[#0000001a] cursor-pointer"
+                      >
+                        {action.actionLabel}
+                      </Button>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </CardContent>
+        </Card>
       </div>
       <Dialog1 open={open} onOpenChange={setOpen}  />
      </div> 
