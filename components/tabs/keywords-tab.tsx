@@ -254,23 +254,21 @@ export function KeywordsTab({
       setError(null);
       console.log(`🔍 Fetching REAL keywords for website: ${selectedWebsiteId}`);
 
-      // Resolve selected website details
-      let website: (Website & { keywords?: any }) | null =
-        (websites.find((w) => w.id === selectedWebsiteId) as any) || null;
-      if (!website) {
-        const { data: singleSite } = await supabase
-          .from("websites")
-          .select("id, url, topic, keywords")
-          .eq("id", selectedWebsiteId)
-          .single();
-        if (singleSite) {
-          website = {
-            id: singleSite.id,
-            url: singleSite.url,
-            topic: singleSite.topic || "General",
-            keywords: (singleSite as any).keywords,
-          };
-        }
+      // Always fetch fresh website data from Supabase to get latest keywords
+      const { data: singleSite } = await supabase
+        .from("websites")
+        .select("id, url, topic, keywords")
+        .eq("id", selectedWebsiteId)
+        .single();
+      
+      let website: (Website & { keywords?: any }) | null = null;
+      if (singleSite) {
+        website = {
+          id: singleSite.id,
+          url: singleSite.url,
+          topic: singleSite.topic || "General",
+          keywords: (singleSite as any).keywords,
+        };
       }
 
       if (!website) {
@@ -583,9 +581,9 @@ export function KeywordsTab({
     URL.revokeObjectURL(url);
   };
 
-  const handleImportCSV = (file: File) => {
+  const handleImportCSV = async (file: File) => {
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       const csv = e.target?.result as string;
       const lines = csv.split("\n");
       const importedKeywords: string[] = [];
@@ -598,10 +596,17 @@ export function KeywordsTab({
         }
       }
 
-      // Here you would typically add these keywords to your database
-      console.log("Imported keywords:", importedKeywords);
-      // TODO: Replace with actual toast notification when toast API is finalized
-      // toast?.success(`Successfully imported ${importedKeywords.length} keywords`);
+      if (importedKeywords.length > 0) {
+        console.log("Importing keywords:", importedKeywords);
+        // Persist to Supabase
+        const success = await importKeywordsFromCSV(importedKeywords);
+        
+        if (success) {
+          console.log(`✅ Successfully imported ${importedKeywords.length} keyword(s)`);
+          // toast?.success(`Successfully imported ${importedKeywords.length} keywords`);
+        }
+      }
+      
       setShowImportDialog(false);
     };
     reader.readAsText(file);
@@ -618,12 +623,159 @@ export function KeywordsTab({
   const confirmDeleteKeyword = () => {
     if (keywordToDelete) {
       const newKeywords = keywords.filter(
-        (_, idx) => idx !== keywordToDelete.index
+        (kw) => kw.keyword !== keywordToDelete.keyword
       );
       setKeywords(newKeywords);
       setShowDeleteDialog(false);
       setKeywordToDelete(null);
       // toast?.success(`Deleted "${keywordToDelete.keyword}"`);
+    }
+  };
+
+  // Helper: Persist keywords to Supabase website's keywords array
+  const persistKeywordsToWebsite = async (newKeywords: Keyword[]) => {
+    try {
+      if (!selectedWebsiteId) {
+        console.error("No website selected");
+        return false;
+      }
+
+      // Fetch current website keywords payload
+      const { data: siteData, error: siteErr } = await supabase
+        .from("websites")
+        .select("id, keywords")
+        .eq("id", selectedWebsiteId)
+        .single();
+
+      if (siteErr) {
+        console.error("Failed to fetch website:", siteErr);
+        return false;
+      }
+
+      const existingPayload = (siteData as any)?.keywords || {};
+      const existingList: any[] = Array.isArray(existingPayload?.keywords)
+        ? existingPayload.keywords
+        : [];
+
+      // Merge & dedupe by keyword text (case-insensitive)
+      const map = new Map<string, any>();
+      
+      // Add existing keywords
+      existingList.forEach((k) => {
+        const key = String(k.keyword || "").toLowerCase();
+        if (key) map.set(key, k);
+      });
+
+      // Add/update new keywords
+      newKeywords.forEach((k) => {
+        const key = String(k.keyword || "").toLowerCase();
+        if (key) {
+          const existing = map.get(key) || {};
+          map.set(key, {
+            ...existing,
+            ...k,
+            is_target_keyword: true,
+            post_status: k.post_status || "No Plan",
+          });
+        }
+      });
+
+      const mergedList = Array.from(map.values());
+      const newPayload = { 
+        ...existingPayload, 
+        keywords: mergedList,
+        analysis_metadata: {
+          ...existingPayload.analysis_metadata,
+          total_keywords: mergedList.length,
+          analyzed_at: new Date().toISOString(),
+        }
+      };
+
+      // Update in Supabase
+      const { error: updateErr } = await supabase
+        .from("websites")
+        .update({ keywords: newPayload })
+        .eq("id", selectedWebsiteId);
+
+      if (updateErr) {
+        console.error("Failed to update website keywords:", updateErr);
+        return false;
+      }
+
+      console.log(`✅ Saved ${newKeywords.length} keyword(s) to website`);
+      return true;
+    } catch (e) {
+      console.error("Error persisting keywords:", e);
+      return false;
+    }
+  };
+
+  // Add selected keywords from table to website
+  const addSelectedKeywordsToWebsite = async () => {
+    try {
+      if (!selectedWebsiteId) {
+        console.log("No website selected");
+        return;
+      }
+      if (!selectedKeywords || selectedKeywords.size === 0) {
+        console.log("No keywords selected");
+        return;
+      }
+
+      // Show importing dialog
+      setShowAddKeywordsDialog(true);
+
+      // Get selected keyword objects from the filtered/sorted view
+      const selectedKeywordObjs = Array.from(selectedKeywords)
+        .map((idx) => filteredAndSortedKeywords[idx])
+        .filter(Boolean);
+
+      // Persist to Supabase
+      const success = await persistKeywordsToWebsite(selectedKeywordObjs);
+
+      if (success) {
+        // Refresh keywords to show newly added ones
+        await fetchKeywords();
+        // Clear selection
+        setSelectedKeywords(new Set());
+      }
+    } catch (e) {
+      console.error("Error adding keywords:", e);
+    }
+  };
+
+  // Import keywords from CSV
+  const importKeywordsFromCSV = async (importedStrings: string[]) => {
+    try {
+      if (!selectedWebsiteId) {
+        console.error("No website selected");
+        return false;
+      }
+
+      // Convert strings to keyword objects with defaults
+      const keywordObjs: Keyword[] = importedStrings.map((keyword) => ({
+        keyword: keyword.trim(),
+        search_volume: 0,
+        difficulty: 0,
+        cpc: 0,
+        competition: 0,
+        post_status: "No Plan" as const,
+        is_target_keyword: true,
+      }));
+
+      // Persist to Supabase
+      const success = await persistKeywordsToWebsite(keywordObjs);
+
+      if (success) {
+        // Refresh keywords
+        await fetchKeywords();
+        console.log(`✅ Imported ${keywordObjs.length} keyword(s)`);
+      }
+
+      return success;
+    } catch (e) {
+      console.error("Error importing keywords:", e);
+      return false;
     }
   };
 
@@ -713,14 +865,26 @@ export function KeywordsTab({
             {websiteData.website.url?.replace(/^https?:\/\//, "")}
           </Button>
           <div className="flex ml-5">
-            <Select>
-              <SelectTrigger className="w-38 h-9 border-gray-200">
-                <SelectValue placeholder={websiteId || "www.delani.pro"} />
+            <Select
+              value={selectedWebsiteId ?? ""}
+              onValueChange={(val) => setSelectedWebsiteId(val)}
+              disabled={websites.length === 0}
+           >
+              <SelectTrigger className="w-56 h-9 border-gray-200">
+                <SelectValue placeholder="Select website" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={websiteId || "www.delani.pro"}>
-                  {websiteId || "www.delani.pro"}
-                </SelectItem>
+                {websites.length > 0 ? (
+                  websites.map((w) => (
+                    <SelectItem key={w.id} value={w.id}>
+                      {w.url?.replace(/^https?:\/\//, "")}
+                    </SelectItem>
+                  ))
+                ) : (
+                  <SelectItem value="" disabled>
+                    No websites found
+                  </SelectItem>
+                )}
               </SelectContent>
             </Select>
           </div>
@@ -738,7 +902,7 @@ export function KeywordsTab({
               <Image src="/stats1.svg" alt="icon" height={15} width={19.5} />
             </div>
             <p className="text-4xl flex items-end font-bold  text-gray-900">
-              7
+              {stats.totalKeywords}
             </p>
           </CardContent>
         </Card>
@@ -751,7 +915,7 @@ export function KeywordsTab({
               </p>
               <Image src="/stats2.svg" alt="icon" height={15} width={19.5} />
             </div>
-            <p className="text-4xl font-bold text-gray-900">3</p>
+            <p className="text-4xl font-bold text-gray-900">{stats.highPotential}</p>
           </CardContent>
         </Card>
 
@@ -763,7 +927,7 @@ export function KeywordsTab({
               </p>
               <Image src="/stats3.svg" alt="icon" height={15} width={19.5} />
             </div>
-            <p className="text-4xl font-bold text-gray-900">4</p>
+            <p className="text-4xl font-bold text-gray-900">{stats.withContent}</p>
           </CardContent>
         </Card>
 
@@ -775,33 +939,64 @@ export function KeywordsTab({
               </p>
               <Image src="/stats4.svg" alt="icon" height={15} width={19.5} />{" "}
             </div>
-            <p className="text-4xl font-bold text-gray-900">3</p>
+            <p className="text-4xl font-bold text-gray-900">{stats.withoutContent}</p>
           </CardContent>
         </Card>
       </div>
       <div className="flex items-center justify-between w-full">
         {/* LEFT */}
         <div className="flex items-center gap-6 text-sm text-gray-500">
-          <button className="flex items-center gap-1 hover:text-gray-700">
-            Filters
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-              <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" />
-            </svg>
-          </button>
+          {/* Filters Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="flex items-center gap-1 hover:text-gray-700">
+                Filters
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                  <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" />
+                </svg>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-44">
+              <DropdownMenuItem onClick={() => setDifficultyFilter("all")}>All</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setDifficultyFilter("Low")}>Low Difficulty</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setDifficultyFilter("Medium")}>Medium Difficulty</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setDifficultyFilter("High")}>High Difficulty</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
-          <button className="flex items-center gap-1 hover:text-gray-700">
-            Sort By
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-              <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" />
-            </svg>
-          </button>
+          {/* Sort By Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="flex items-center gap-1 hover:text-gray-700">
+                Sort By
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                  <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" />
+                </svg>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-64">
+              <DropdownMenuItem onClick={() => setSortBy("volume-desc")}>Search Volume (High → Low)</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSortBy("volume-asc")}>Search Volume (Low → High)</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSortBy("difficulty-asc")}>Difficulty (Low → High)</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSortBy("difficulty-desc")}>Difficulty (High → Low)</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSortBy("cpc-desc")}>CPC (High → Low)</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSortBy("cpc-asc")}>CPC (Low → High)</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSortBy("competition-asc")}>Competition (Low → High)</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSortBy("competition-desc")}>Competition (High → Low)</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Search */}
           <div className="relative w-full max-w-[210px]">
             <Input
               type="text"
               placeholder="Search Keywords"
-              className="h-9  pr-3 bg-gray-50 border-gray-200 text-sm placeholder:text-gray-400 focus-visible:ring-1 focus-visible:ring-gray-300"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              aria-label="Search keywords"
+              className="h-9 pl-9 pr-3 bg-gray-50 border-gray-200 text-sm placeholder:text-gray-400 focus-visible:ring-1 focus-visible:ring-gray-300"
             />
-            <Search className="absolute left-46 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           </div>
         </div>
 
@@ -967,7 +1162,7 @@ export function KeywordsTab({
               size="sm"
               variant="outline"
               className="h-9 px-4 border-gray-200 bg-white hover:bg-gray-50 text-sm font-normal"
-              onClick={() => setShowAddKeywordsDialog(true)}
+              onClick={addSelectedKeywordsToWebsite}
             >
               Add Keywords
             </Button>
@@ -1018,6 +1213,9 @@ export function KeywordsTab({
       <AddKeywordsDialog
         isOpen={showAddKeywordsDialog}
         onClose={() => setShowAddKeywordsDialog(false)}
+        onAdd={async (keywords) => {
+          await importKeywordsFromCSV(keywords)
+        }}
       />
 
       {/* Delete Keyword Dialog */}
