@@ -154,9 +154,21 @@ export function ArticlesTab({
 
       setTimeout(() => {
         setPublishSuccess(false);
-        setSelectedArticle((prev) =>
-          prev ? { ...prev, status: "published" as const } : prev
-        );
+        // Fetch updated article data from backend to get the correct slug
+        fetch(`/api/articles?userId=${currentUser?.id}`)
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.success && data.articles) {
+              const updatedArticle = data.articles.find(
+                (a: Article) => a.id === selectedArticle.id
+              );
+              if (updatedArticle) {
+                setSelectedArticle(updatedArticle);
+                setArticles(data.articles);
+              }
+            }
+          })
+          .catch((err) => console.error("Error fetching updated article:", err));
       }, 1200);
     } catch (error) {
       toast.showToast({
