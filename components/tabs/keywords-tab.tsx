@@ -902,7 +902,7 @@ export function KeywordsTab({
               <Image src="/stats1.svg" alt="icon" height={15} width={19.5} />
             </div>
             <p className="text-4xl flex items-end font-bold  text-gray-900">
-              7
+              {stats.totalKeywords}
             </p>
           </CardContent>
         </Card>
@@ -915,7 +915,7 @@ export function KeywordsTab({
               </p>
               <Image src="/stats2.svg" alt="icon" height={15} width={19.5} />
             </div>
-            <p className="text-4xl font-bold text-gray-900">3</p>
+            <p className="text-4xl font-bold text-gray-900">{stats.highPotential}</p>
           </CardContent>
         </Card>
 
@@ -927,7 +927,7 @@ export function KeywordsTab({
               </p>
               <Image src="/stats3.svg" alt="icon" height={15} width={19.5} />
             </div>
-            <p className="text-4xl font-bold text-gray-900">4</p>
+            <p className="text-4xl font-bold text-gray-900">{stats.withContent}</p>
           </CardContent>
         </Card>
 
@@ -939,7 +939,7 @@ export function KeywordsTab({
               </p>
               <Image src="/stats4.svg" alt="icon" height={15} width={19.5} />{" "}
             </div>
-            <p className="text-4xl font-bold text-gray-900">3</p>
+            <p className="text-4xl font-bold text-gray-900">{stats.withoutContent}</p>
           </CardContent>
         </Card>
       </div>
