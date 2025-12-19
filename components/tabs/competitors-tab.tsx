@@ -42,6 +42,7 @@ import { supabase } from "@/lib/client";
 import { useToast } from "@/components/ui/toast";
 import Image from "next/image";
 import { CreatePostDialog } from "@/components/ui/CreatePostDialog";
+import { CreatePostDialogDashboard } from "../dialog2";
 
 interface CompetitorsTabProps {
   websiteId: string | null;
@@ -1020,8 +1021,8 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
               )}
               <tr>
                 <td colSpan={5} className="bg-white">
-                  <div className="my-3 flex justify-end mr-30">
-                    <Button className="bg-[#171717] px-6 hover:bg-gray-500">Create post</Button>
+                  <div className="mt-6 flex justify-end mr-4">
+                    <Button onClick={handleCreatePost} className="bg-[#171717] px-6 hover:bg-gray-500">Create post</Button>
                   </div>
                 </td>
               </tr>
@@ -1115,15 +1116,18 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
 </div>
       </div>
 
-      {/* Create Post Dialog */}
-      <CreatePostDialog
-        isOpen={showCreatePostDialog}
-        isLoading={createPostCompleted}
-        onClose={() => {
-          setShowCreatePostDialog(false);
-          setCreatePostCompleted(false);
+      {/* Create Post Dialog (enqueue-backed) */}
+      <CreatePostDialogDashboard
+        open={showCreatePostDialog}
+        onOpenChange={(val) => {
+          setShowCreatePostDialog(val);
+          if (!val) setCreatePostCompleted(false);
         }}
-        onConfirm={() => setShowCreatePostDialog(false)}
+        websiteId={selectedWebsiteId ?? undefined}
+        onCreated={() => {
+          setCreatePostCompleted(true);
+          fetchCompetitors();
+        }}
       />
 
       {/* Add Competitor Dialog */}
@@ -1167,7 +1171,7 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
                     />
                   </div>
 
-                  {/* Tags */}
+                  Tags
                  <div className="bg-gray-200 border border-gray-300 rounded-2xl w-full h-[81px]">
                   <div className="flex gap-2 p-3 flex-wrap">
                     {["www.designjoy.com", "www.lander.studio", "www.webflow.com"].map(
