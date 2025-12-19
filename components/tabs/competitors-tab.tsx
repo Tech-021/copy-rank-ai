@@ -530,6 +530,14 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
             <Button
               variant="outline"
               className="gap-2 text-gray-500 border-gray-200 rounded-l-none hover:bg-gray-50"
+              onClick={async () => {
+                const fallbackId = initialWebsiteId || selectedWebsiteId || (websites && websites.length > 0 ? websites[0].id : undefined);
+                if (!fallbackId) {
+                  await loadUserWebsites();
+                  return;
+                }
+                await fetchCompetitors(fallbackId);
+              }}
             >
               Sync Keywords
               <RefreshCcw />
