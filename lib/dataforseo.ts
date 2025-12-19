@@ -166,14 +166,32 @@ export function filterKeywords(
   maxVolume: number = 500,  // NEW: Maximum search volume
   maxCompetition: number = 0.3  // CHANGED: Low competition threshold (30%)
 ): KeywordData[] {
-  return keywords
-    .filter(kw => 
-      kw.search_volume >= minVolume && 
-      kw.search_volume <= maxVolume &&  // NEW: Maximum volume filter
-      kw.difficulty <= maxDifficulty &&
-      kw.competition <= maxCompetition  // CHANGED: Low competition (0.3 = 30%)
-    )
-    .sort((a, b) => b.search_volume - a.search_volume)  // Sort by volume (highest first)
+  console.log(`🔍 Filtering ${keywords.length} keywords with criteria:`);
+  console.log(`   minVolume: ${minVolume}, maxVolume: ${maxVolume}`);
+  console.log(`   maxDifficulty: ${maxDifficulty}, maxCompetition: ${maxCompetition}`);
+  
+  const filtered = keywords.filter(kw => {
+    const passVolume = kw.search_volume >= minVolume && kw.search_volume <= maxVolume;
+    const passDifficulty = kw.difficulty <= maxDifficulty;
+    const passCompetition = kw.competition <= maxCompetition;
+    
+    if (!passVolume) {
+      console.log(`   ❌ "${kw.keyword}" - Volume ${kw.search_volume} not in range [${minVolume}, ${maxVolume}]`);
+    }
+    if (!passDifficulty) {
+      console.log(`   ❌ "${kw.keyword}" - Difficulty ${kw.difficulty} > ${maxDifficulty}`);
+    }
+    if (!passCompetition) {
+      console.log(`   ❌ "${kw.keyword}" - Competition ${kw.competition} > ${maxCompetition}`);
+    }
+    
+    return passVolume && passDifficulty && passCompetition;
+  });
+  
+  console.log(`✅ Filtered result: ${filtered.length} keywords passed`);
+  
+  return filtered
+    .sort((a, b) => (b.search_volume || 0) - (a.search_volume || 0))  // Sort by volume (highest first)
     .slice(0, 30);
 }
 

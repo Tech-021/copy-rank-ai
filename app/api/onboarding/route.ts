@@ -22,9 +22,10 @@ const supabase = createClient(
 
 interface OnboardingRequest {
   clientDomain: string;
-  competitors: string[]; // Array of 3 competitor URLs
+  competitors?: string[]; // Array of 3 competitor URLs (optional for quick adds)
   targetKeywords?: string[]; // Optional, for frontend only
   userId: string;
+  isQuickAdd?: boolean; // Flag to indicate quick add without competitors
 }
 
 interface CompetitorResult {
@@ -135,7 +136,7 @@ export async function POST(request: Request) {
   try {
     const body: OnboardingRequest = await request.json();
 
-    const { clientDomain, competitors, targetKeywords, userId } = body;
+    const { clientDomain, competitors, targetKeywords, userId, isQuickAdd } = body;
 
     // Validation
     if (!clientDomain) {
@@ -145,15 +146,19 @@ export async function POST(request: Request) {
       );
     }
 
-    if (
-      !competitors ||
-      !Array.isArray(competitors) ||
-      competitors.length !== 3
-    ) {
-      return NextResponse.json(
-        { error: "Exactly 3 competitors are required" },
-        { status: 400 }
-      );
+    // For full onboarding, require exactly 3 competitors
+    // For quick adds, competitors are optional
+    if (!isQuickAdd) {
+      if (
+        !competitors ||
+        !Array.isArray(competitors) ||
+        competitors.length !== 3
+      ) {
+        return NextResponse.json(
+          { error: "Exactly 3 competitors are required" },
+          { status: 400 }
+        );
+      }
     }
 
     if (!userId) {
@@ -172,20 +177,26 @@ export async function POST(request: Request) {
       );
     }
 
-    // Normalize competitor URLs
-    const normalizedCompetitors = competitors
-      .map((comp) => normalizeUrl(comp))
-      .filter(Boolean) as string[];
-    if (normalizedCompetitors.length !== 3) {
-      return NextResponse.json(
-        { error: "Failed to normalize one or more competitor URLs" },
-        { status: 400 }
-      );
+    // Normalize competitor URLs (only if provided)
+    let normalizedCompetitors: string[] = [];
+    if (competitors && competitors.length > 0) {
+      normalizedCompetitors = competitors
+        .map((comp) => normalizeUrl(comp))
+        .filter(Boolean) as string[];
+      if (!isQuickAdd && normalizedCompetitors.length !== 3) {
+        return NextResponse.json(
+          { error: "Failed to normalize one or more competitor URLs" },
+          { status: 400 }
+        );
+      }
     }
 
     console.log("🚀 Starting onboarding process...");
     console.log("📋 Client domain (normalized):", normalizedClientDomain);
-    console.log("📋 Competitors (normalized):", normalizedCompetitors);
+    console.log("📋 Quick add mode:", isQuickAdd);
+    if (normalizedCompetitors.length > 0) {
+      console.log("📋 Competitors (normalized):", normalizedCompetitors);
+    }
 
     // STEP 1: Find topic for client domain (NO keywords)
     console.log("🔍 Step 1: Finding topic for client domain...");
@@ -205,71 +216,99 @@ export async function POST(request: Request) {
       // Continue with default topic
     }
 
-    // STEP 2: Process each competitor (find topic + keywords)
+    // STEP 2: Process each competitor (find topic + keywords) - skip if quick add
     console.log("🔍 Step 2: Processing competitors...");
     const competitorResults: CompetitorResult[] = [];
     const allKeywords: any[] = [];
 
-    for (let i = 0; i < normalizedCompetitors.length; i++) {
-      const competitorUrl = normalizedCompetitors[i];
-      console.log(`\n📊 Processing competitor ${i + 1}/3: ${competitorUrl}`);
+    if (normalizedCompetitors.length > 0) {
+      for (let i = 0; i < normalizedCompetitors.length; i++) {
+        const competitorUrl = normalizedCompetitors[i];
+        console.log(`\n📊 Processing competitor ${i + 1}/${normalizedCompetitors.length}: ${competitorUrl}`);
 
-      try {
-        // 2a. Scrape competitor domain
-        const competitorScrape = await hybridScraper(competitorUrl);
+        try {
+          // 2a. Scrape competitor domain
+          const competitorScrape = await hybridScraper(competitorUrl);
 
-        if (!competitorScrape) {
-          console.warn(`⚠️ Failed to scrape competitor ${i + 1}`);
+          if (!competitorScrape) {
+            console.warn(`⚠️ Failed to scrape competitor ${i + 1}`);
+            competitorResults.push({
+              domain: competitorUrl,
+              topic: "Unknown",
+              keywords: [],
+              success: false,
+              error: "Failed to scrape domain",
+            });
+            continue;
+          }
+
+          // 2b. Find topic for competitor
+          const competitorAnalysis = await analyzeWithQwen(competitorScrape);
+          const competitorTopic = competitorAnalysis.niche || "General";
+          console.log(`✅ Competitor ${i + 1} topic: ${competitorTopic}`);
+
+          // 2c. Fetch keywords for competitor topic
+          console.log(`🔍 Fetching keywords for topic: ${competitorTopic}`);
+          const rawKeywords = await fetchKeywordsFromDataForSEO(competitorTopic);
+
+          // Apply filters: 100-10000 volume, competition ≤0.3
+          const filteredKeywords = filterKeywords(
+            rawKeywords,
+            70, // maxDifficulty
+            100, // minVolume
+            10000, // maxVolume (increased from 500)
+            0.3 // maxCompetition (low competition)
+          );
+
+          console.log(
+            `✅ Found ${filteredKeywords.length} keywords for competitor ${i + 1}`
+          );
+
+          // Add to merged keywords array
+          allKeywords.push(...filteredKeywords);
+
+          competitorResults.push({
+            domain: competitorUrl,
+            topic: competitorTopic,
+            keywords: filteredKeywords,
+            success: true,
+          });
+        } catch (error) {
+          console.error(`❌ Error processing competitor ${i + 1}:`, error);
           competitorResults.push({
             domain: competitorUrl,
             topic: "Unknown",
             keywords: [],
             success: false,
-            error: "Failed to scrape domain",
+            error: error instanceof Error ? error.message : "Unknown error",
           });
-          continue;
         }
+      }
+    } else {
+      console.log("ℹ️ No competitors provided (quick add mode)");
+      // In quick add mode, fetch keywords from client topic instead
+      if (clientTopic !== "General") {
+        try {
+          console.log(`🔍 Fetching keywords for client topic: ${clientTopic}`);
+          const rawKeywords = await fetchKeywordsFromDataForSEO(clientTopic);
 
-        // 2b. Find topic for competitor
-        const competitorAnalysis = await analyzeWithQwen(competitorScrape);
-        const competitorTopic = competitorAnalysis.niche || "General";
-        console.log(`✅ Competitor ${i + 1} topic: ${competitorTopic}`);
+          // Apply filters: 100-10000 volume, competition ≤0.3
+          const filteredKeywords = filterKeywords(
+            rawKeywords,
+            70, // maxDifficulty
+            100, // minVolume
+            10000, // maxVolume
+            0.3 // maxCompetition (low competition)
+          );
 
-        // 2c. Fetch keywords for competitor topic
-        console.log(`🔍 Fetching keywords for topic: ${competitorTopic}`);
-        const rawKeywords = await fetchKeywordsFromDataForSEO(competitorTopic);
-
-        // Apply filters: 100-10000 volume, competition ≤0.3
-        const filteredKeywords = filterKeywords(
-          rawKeywords,
-          70, // maxDifficulty
-          100, // minVolume
-          10000, // maxVolume (increased from 500)
-          0.3 // maxCompetition (low competition)
-        );
-
-        console.log(
-          `✅ Found ${filteredKeywords.length} keywords for competitor ${i + 1}`
-        );
-
-        // Add to merged keywords array
-        allKeywords.push(...filteredKeywords);
-
-        competitorResults.push({
-          domain: competitorUrl,
-          topic: competitorTopic,
-          keywords: filteredKeywords,
-          success: true,
-        });
-      } catch (error) {
-        console.error(`❌ Error processing competitor ${i + 1}:`, error);
-        competitorResults.push({
-          domain: competitorUrl,
-          topic: "Unknown",
-          keywords: [],
-          success: false,
-          error: error instanceof Error ? error.message : "Unknown error",
-        });
+          console.log(
+            `✅ Found ${filteredKeywords.length} keywords for client topic: ${clientTopic}`
+          );
+          allKeywords.push(...filteredKeywords);
+        } catch (error) {
+          console.error("❌ Error fetching keywords from client topic:", error);
+          console.warn("⚠️ Continuing with empty keywords - will add default keywords");
+        }
       }
     }
 
@@ -322,6 +361,21 @@ export async function POST(request: Request) {
       `📊 Total before deduplication: ${allKeywords.length} competitor + ${targetKeywordData.length} target = ${allMergedKeywords.length} total`
     );
 
+    // If no keywords found, add default keywords for the topic
+    if (allMergedKeywords.length === 0 && clientTopic !== "General") {
+      console.warn("⚠️ No keywords found from APIs, adding default keywords for topic");
+      const defaultKeywords = [
+        { keyword: `${clientTopic}`, search_volume: 1000, difficulty: 30, cpc: 0.5, competition: 0.3 },
+        { keyword: `${clientTopic} tips`, search_volume: 500, difficulty: 25, cpc: 0.4, competition: 0.2 },
+        { keyword: `best ${clientTopic}`, search_volume: 450, difficulty: 35, cpc: 0.6, competition: 0.4 },
+        { keyword: `${clientTopic} guide`, search_volume: 400, difficulty: 28, cpc: 0.5, competition: 0.3 },
+        { keyword: `${clientTopic} tutorial`, search_volume: 350, difficulty: 27, cpc: 0.45, competition: 0.25 },
+        { keyword: `learn ${clientTopic}`, search_volume: 300, difficulty: 26, cpc: 0.4, competition: 0.2 },
+      ];
+      allMergedKeywords.push(...defaultKeywords);
+      console.log(`✅ Added ${defaultKeywords.length} default keywords`);
+    }
+
     // Remove duplicate keywords (by keyword text, case-insensitive)
     const uniqueKeywords = allMergedKeywords.filter(
       (keyword, index, self) =>
@@ -336,7 +390,7 @@ export async function POST(request: Request) {
 
     // STEP 4: Sort by search volume (highest first) and limit
     const finalKeywords = uniqueKeywords
-      .sort((a, b) => b.search_volume - a.search_volume)
+      .sort((a, b) => (b.search_volume || 0) - (a.search_volume || 0))
       .slice(0, 100); // Limit to top 100 keywords (increased from 50)
 
     console.log(`✅ Final keyword count: ${finalKeywords.length}`);
