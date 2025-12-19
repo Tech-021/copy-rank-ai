@@ -34,6 +34,7 @@ import {
 import { useRouter } from "next/navigation";
 import { Dialog1 } from "@/components/websitedialog"
 import { WebsiteDialog } from "../dialog1";
+import { CreatePostDialogDashboard } from "../dialog2";
 
 interface Article {
   id: string;
@@ -143,6 +144,7 @@ export function AnalyzeTab({
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [open, setOpen] = useState(false)
   const [ openWebsiteDialog, setOpenWebsiteDialog ] = useState(false)
+  const [ openPostDialog, setOpenPostDialog ] = useState(false)
   const [editForm, setEditForm] = useState({
       title: "",
       keyword: "",
@@ -674,7 +676,9 @@ const validateTab3 = () => {
               <CardTitle>Create a Ranking Post</CardTitle>
               <CardDescription>Turn competitor keywords into SEO ready blog posts in one click.</CardDescription>
               <CardContent className="px-0">
-                <Button className="text-base font-normal text-white bg-black px-[60px] py-1 w-[170px] h-[50px] border border-[#00000080] rounded-[10px] hover:bg-transparent hover:text-[#00000080] cursor-pointer">Create Post</Button>
+                <Button 
+                onClick={() => setOpenPostDialog(true)}
+                className="text-base font-normal text-white bg-black px-[60px] py-1 w-[170px] h-[50px] border border-[#00000080] rounded-[10px] hover:bg-transparent hover:text-[#00000080] cursor-pointer">Create Post</Button>
               </CardContent>
             </Card>
           </div>
@@ -802,6 +806,7 @@ const validateTab3 = () => {
 
       <Dialog1 open={open} onOpenChange={setOpen} />
       <WebsiteDialog open={openWebsiteDialog} onOpenChange={setOpenWebsiteDialog} />
+      <CreatePostDialogDashboard open={openPostDialog} onOpenChange={setOpenPostDialog} />
 
       <div className="space-y-3 md:w-2/5 w-full border px-2 py-2 rounded-xl overflow-y-auto min-w-0">
         {loadingArticles ? (
