@@ -47,19 +47,63 @@ export async function POST(request: Request) {
     console.log(`📊 User package limit: ${userLimit}, Requested: ${requestedArticles}, Final: ${finalArticleCount}`);
 
     // Extract keyword strings
-    const keywordStrings = keywords.map((kw: any) => 
-      typeof kw === 'string' ? kw : kw.keyword
-    ).filter((kw: string) => kw && kw.trim() !== '');
+    let keywordStrings: string[] = [];
+    
+    if (keywords && keywords.length > 0) {
+      keywordStrings = keywords.map((kw: any) => 
+        typeof kw === 'string' ? kw : kw.keyword
+      ).filter((kw: string) => kw && kw.trim() !== '');
+    }
 
     console.log(`📊 Extracted ${keywordStrings.length} keyword strings`);
 
+    // If no keywords after extraction, fetch them from the website record
     if (keywordStrings.length === 0) {
-      console.error("❌ No valid keywords after extraction");
-      return NextResponse.json(
-        { error: "No valid keywords found" },
-        { status: 400 }
-      );
+      console.warn("⚠️ No keywords provided, fetching from website record...");
+      
+      try {
+        const { data: websiteData } = await supabase
+          .from('websites')
+          .select('keywords')
+          .eq('id', websiteId)
+          .single();
+        
+        if (websiteData?.keywords?.keywords && websiteData.keywords.keywords.length > 0) {
+          keywordStrings = websiteData.keywords.keywords
+            .slice(0, 5)
+            .map((kw: any) => typeof kw === 'string' ? kw : kw.keyword)
+            .filter((kw: string) => kw && kw.trim() !== '');
+          console.log(`✅ Found ${keywordStrings.length} keywords from website record`);
+        }
+      } catch (error) {
+        console.error("⚠️ Error fetching keywords from website:", error);
+      }
     }
+
+    // If still no keywords, use a default keyword based on the topic
+    if (keywordStrings.length === 0) {
+      console.warn("⚠️ No keywords found anywhere, using default keyword");
+      try {
+        const { data: websiteData } = await supabase
+          .from('websites')
+          .select('topic')
+          .eq('id', websiteId)
+          .single();
+        
+        if (websiteData?.topic && websiteData.topic !== 'General') {
+          keywordStrings = [websiteData.topic];
+          console.log(`✅ Using website topic as keyword: "${websiteData.topic}"`);
+        } else {
+          keywordStrings = ['content'];
+          console.log(`⚠️ Using fallback keyword: "content"`);
+        }
+      } catch (error) {
+        console.error("⚠️ Error fetching topic:", error);
+        keywordStrings = ['content'];
+      }
+    }
+
+    console.log(`📝 Final keywords to use: ${keywordStrings.join(", ")}`);
 
     // Create jobs for articles (up to package limit)
     const jobs = [];
