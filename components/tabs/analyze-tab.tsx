@@ -642,7 +642,7 @@ const validateTab3 = () => {
   }, [selectedWebsiteId]);
 
   return (
-    <div className="flex flex-col md:flex-row gap-5">
+    <div className="flex flex-col md:flex-row">
       <div className="space-y-6 md:w-3/5 w-full min-w-0">
         <div className="space-y-6">
           <div className="flex items-center justify-between">
@@ -669,7 +669,7 @@ const validateTab3 = () => {
               </Select>
             </div>
           </div>
-
+          <div className="border-r pr-3 ">
           <div className="flex items-center">
             <Card className="border-border/40 bg-white rounded-none rounded-l-xl backdrop-blur-sm w-[222px] h-[174px]">
               <CardHeader className="flex items-center justify-between">
@@ -850,6 +850,7 @@ const validateTab3 = () => {
               )}
             </CardContent>
           </Card>
+          </div>
         </div>
       </div>
 
