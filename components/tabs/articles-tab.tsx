@@ -116,7 +116,6 @@ export function ArticlesTab({
   const [selectedPlanVariantId, setSelectedPlanVariantId] = useState<
     string | null
   >(null);
-  const [ openPostDialog, setOpenPostDialog ] = useState(false)
   const [isCreatingCheckout, setIsCreatingCheckout] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
@@ -965,8 +964,7 @@ export function ArticlesTab({
               <p className="text-sm text-gray-500 mb-4">
                 Turn competitor keywords into SEO-ready blog posts in one click.
               </p>
-              <Button 
-              onClick={() => setOpenPostDialog(true)}
+              <Button
               className="bg-black cursor-pointer py-5 px-8 text-white hover:bg-gray-900">
                 Create Post
               </Button>
@@ -1649,7 +1647,6 @@ export function ArticlesTab({
           </Dialog>
         )}
       </div>
-      <CreatePostDialogDashboard open={openPostDialog} onOpenChange={setOpenPostDialog} />
      
       <Dialog
         open={isEditDialogOpen}

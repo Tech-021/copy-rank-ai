@@ -287,7 +287,6 @@ export function AnalyzeTab({
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [open, setOpen] = useState(false)
   const [ openWebsiteDialog, setOpenWebsiteDialog ] = useState(false)
-  const [ openPostDialog, setOpenPostDialog ] = useState(false)
   const [editForm, setEditForm] = useState({
       title: "",
       keyword: "",
@@ -813,7 +812,6 @@ export function AnalyzeTab({
               <CardDescription>Turn competitor keywords into SEO ready blog posts in one click.</CardDescription>
               <CardContent className="px-0">
                 <Button 
-                onClick={() => setOpenPostDialog(true)}
                 className="text-base font-normal text-white bg-black px-[60px] py-1 w-[170px] h-[50px] border border-[#00000080] rounded-[10px] hover:bg-transparent hover:text-[#00000080] cursor-pointer">Create Post</Button>
               </CardContent>
             </Card>
@@ -941,7 +939,6 @@ export function AnalyzeTab({
 
       <Dialog1 open={open} onOpenChange={setOpen} />
       <WebsiteDialog open={openWebsiteDialog} onOpenChange={setOpenWebsiteDialog} />
-      <CreatePostDialogDashboard open={openPostDialog} onOpenChange={setOpenPostDialog} />
       {/* Add Competitor Dialog */}
             {showAddCompetitorDialog && (
               <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
