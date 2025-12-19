@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Sparkles, LogOut } from "lucide-react"
 import { AnalyzeTab } from "@/components/tabs/analyze-tab"
@@ -9,6 +9,7 @@ import { ArticlesTab } from "@/components/tabs/articles-tab"
 import { SettingsTab } from "@/components/tabs/settings-tab"
 import { CompetitorsTab } from "@/components/tabs/competitors-tab" // NEW: Import CompetitorsTab
 import Image from "next/image"
+import { getUser } from "@/lib/auth"
 
 interface DashboardProps {
   onLogout: () => void
@@ -19,12 +20,35 @@ interface DashboardProps {
 export function Dashboard({ onLogout, userEmail, userAvatar }: DashboardProps) {
   const [activeTab, setActiveTab] = useState<"analyze" | "keywords" | "competitors" | "articles" | "settings">("analyze") // NEW: Added competitors
   const [selectedWebsiteId, setSelectedWebsiteId] = useState<string | null>(null)
+  const [localAvatar, setLocalAvatar] = useState<string | null>(userAvatar ?? null)
 
   // Debug: Log props received
   console.log("=== DASHBOARD COMPONENT PROPS ===")
   console.log("userEmail:", userEmail)
   console.log("userAvatar:", userAvatar)
   console.log("=== END PROPS ===")
+
+  // Fallback: if parent didn't pass an avatar, fetch user and try to get it
+  useEffect(() => {
+    async function fetchAvatarIfMissing() {
+      if (localAvatar) return
+      try {
+        const { data: user } = await getUser()
+        if (!user) return
+
+        const avatarFromMetadata = user.user_metadata?.avatar_url
+        const pictureFromMetadata = user.user_metadata?.picture
+        const avatarFromIdentity = user.identities?.[0]?.identity_data?.avatar_url
+        const pictureFromIdentity = user.identities?.[0]?.identity_data?.picture
+
+        const avatar = avatarFromMetadata || pictureFromMetadata || avatarFromIdentity || pictureFromIdentity || null
+        if (avatar) setLocalAvatar(avatar)
+      } catch (err) {
+        console.error("Dashboard: failed to fetch avatar fallback", err)
+      }
+    }
+    fetchAvatarIfMissing()
+  }, [localAvatar])
 
   return (
     <div className="min-h-screen bg-background">
@@ -92,14 +116,33 @@ export function Dashboard({ onLogout, userEmail, userAvatar }: DashboardProps) {
           <div className="flex items-center gap-4">
             {userEmail && (
               <div className="flex items-center border rounded-full py-1.5 pl-6 pr-1.5  gap-2">
-                  <span className="text-sm text-muted-foreground hidden sm:inline">{userEmail}</span>
-                <Image 
-                  src={userAvatar || "/profileimg.png"} 
-                  alt="Profile" 
-                  width={50} 
-                  height={50}
-                  className="rounded-full object-cover"
-                />
+                <span className="text-sm text-muted-foreground hidden sm:inline">{userEmail}</span>
+                {(() => {
+                  const avatarToShow = localAvatar ?? userAvatar ?? "/profileimg.png"
+                  const isExternal = typeof avatarToShow === "string" && avatarToShow.startsWith("http")
+                  if (isExternal) {
+                    return (
+                      // Use native img for external URLs to avoid Next/Image domain issues in dev
+                      <img
+                        src={avatarToShow}
+                        alt="Profile"
+                        width={50}
+                        height={50}
+                        className="rounded-full object-cover"
+                      />
+                    )
+                  }
+
+                  return (
+                    <Image
+                      src={avatarToShow}
+                      alt="Profile"
+                      width={50}
+                      height={50}
+                      className="rounded-full object-cover"
+                    />
+                  )
+                })()}
               </div>
             )}
           </div>
