@@ -49,13 +49,6 @@ export function WebsiteDialog({ open, onOpenChange }: WebsiteDialogProps) {
             </div>
           </div>
           <div>
-            <button
-              // onClick={() => setTab('tab2')}
-              className="flex text-[#000000b3] text-[15px] items-center cursor-pointer"
-            >
-              <ChevronLeft />
-              Back
-            </button>
           </div>
         </div>)}
       </DialogContent>
