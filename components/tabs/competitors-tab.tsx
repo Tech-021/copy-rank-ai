@@ -40,6 +40,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/lib/client";
 import Image from "next/image";
+import { CreatePostDialog } from "@/components/ui/CreatePostDialog";
 
 interface CompetitorsTabProps {
   websiteId: string | null;
@@ -101,6 +102,12 @@ export function CompetitorsTab({
   const [searchQuery, setSearchQuery] = useState("");
   const [qualityFilter, setQualityFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("overlap-desc");
+  const [showCreatePostDialog, setShowCreatePostDialog] = useState(false);
+  const [createPostCompleted, setCreatePostCompleted] = useState(false);
+  const [showAddCompetitorDialog, setShowAddCompetitorDialog] = useState(false);
+  const [addCompetitorCompleted, setAddCompetitorCompleted] = useState(false);
+  const [competitorInput, setCompetitorInput] = useState("");
+  const [competitorTags, setCompetitorTags] = useState<string[]>([]);
 
   // Load user websites if no websiteId is provided
   const loadUserWebsites = async () => {
@@ -381,6 +388,37 @@ export function CompetitorsTab({
     ).length,
   };
 
+  const handleCreatePost = () => {
+    setShowCreatePostDialog(true);
+    setCreatePostCompleted(false);
+    // Simulate post creation
+    setTimeout(() => {
+      setCreatePostCompleted(true);
+    }, 2000);
+  };
+
+  const handleAddCompetitor = () => {
+    setShowAddCompetitorDialog(true);
+    setAddCompetitorCompleted(false);
+  };
+
+  const handleAddCompetitorSubmit = () => {
+    // Simulate adding competitor
+    setAddCompetitorCompleted(true);
+    setTimeout(() => {
+      setShowAddCompetitorDialog(false);
+      setAddCompetitorCompleted(false);
+      setCompetitorInput("");
+      setCompetitorTags([]);
+    }, 2000);
+  };
+
+  const toggleCompetitorTag = (tag: string) => {
+    setCompetitorTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+    );
+  };
+
   if (loadingWebsites) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -468,6 +506,7 @@ export function CompetitorsTab({
           <div className="flex ">
             {/* Add Competitors */}
             <Button
+              onClick={handleAddCompetitor}
               variant="outline"
               className="gap-2 text-gray-500 border-gray-200 rounded-r-none hover:bg-gray-50"
             >
@@ -680,7 +719,7 @@ export function CompetitorsTab({
                     
                   </div>
                   <div className="mt-6 flex justify-end mr-4">
-                    <Button className="bg-[#171717] px-6 hover:bg-gray-500">
+                    <Button onClick={handleCreatePost} className="bg-[#171717] px-6 hover:bg-gray-500">
                       Create post 
                     </Button>
                   </div>
@@ -691,135 +730,263 @@ export function CompetitorsTab({
         </div>
 
         {/* Competitor Overview Table */}
-       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-  <table className="w-full border-collapse">
-    {/* ================= HEADER ================= */}
-    <thead>
-      <tr className="border-b border-gray-200 bg-white">
-        <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
-          Competitor
-        </th>
-        <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
-          Primary Topic
-        </th>
-        <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
-          Shared Keywords
-        </th>
-        <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
-          Unique Keywords
-        </th>
-        <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
-          High Value Keywords
-        </th>
-        <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
-          Last Seen
-        </th>
-        <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
-          Action
-        </th>
-      </tr>
-    </thead>
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <table className="w-full border-collapse">
+            {/* ================= HEADER ================= */}
+            <thead>
+              <tr className="border-b border-gray-200 bg-white">
+                <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
+                  Competitor
+                </th>
+                <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
+                  Primary Topic
+                </th>
+                <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
+                  Shared Keywords
+                </th>
+                <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
+                  Unique Keywords
+                </th>
+                <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
+                  High Value Keywords
+                </th>
+                <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
+                  Last Seen
+                </th>
+                <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
+                  Action
+                </th>
+              </tr>
+            </thead>
 
-    {/* ================= BODY ================= */}
-    <tbody>
-      {[
-        {
-          name: "diginola.co",
-          topic: "Web Dev",
-          shared: 2,
-          unique: 9,
-          highValue: 3,
-          lastSeen: "1 min ago",
-        },
-        {
-          name: "lindev-studio",
-          topic: "Technology",
-          shared: 1,
-          unique: 3,
-          highValue: 1,
-          lastSeen: "5 days ago",
-        },
-        {
-          name: "designpyxe.in",
-          topic: "Design",
-          shared: 1,
-          unique: 2,
-          highValue: 2,
-          lastSeen: "2 days ago",
-        },
-        {
-          name: "webflow.com",
-          topic: "Web Tools",
-          shared: 4,
-          unique: 22,
-          highValue: 9,
-          lastSeen: "1 hr ago",
-        },
-      ].map((row, index, arr) => (
-        <tr
-          key={index}
-          className={`${
-            index !== arr.length - 1 ? "border-b border-gray-200" : ""
-          } hover:bg-gray-50`}
-        >
-          <td className="px-4 py-4 text-sm text-gray-700 font-medium">
-            <div className="flex items-center gap-3">
-              <img
-                src={`https://ui-avatars.com/api/?name=${row.name}&background=random&color=fff&bold=true&size=32`}
-                alt={row.name}
-                className="w-5 h-5 rounded-full"
-              />
-              {row.name}
-            </div>
-          </td>
-          <td className="px-4 py-4 text-sm text-gray-700">
-            {row.topic}
-          </td>
-          <td className="px-4 py-4 text-sm text-gray-500">
-            {row.shared}
-          </td>
-          <td className="px-4 py-4 text-sm text-gray-500">
-            {row.unique}
-          </td>
-          <td className="px-4 py-4 text-sm text-gray-500">
-            {row.highValue}
-          </td>
-          <td className="px-4 py-4 text-sm text-gray-500">
-            {row.lastSeen}
-          </td>
-          <td className="px-4 py-4">
-            <div className="flex justify-end">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="border bg-transparent border-gray-200 h-8 px-3 text-xs flex items-center gap-1"
-                  >
-                    Visit
-                    <ChevronDown className="w-4 h-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-36">
-                  <DropdownMenuItem
-                    onClick={() =>
-                      window.open(`https://${row.name}`, "_blank")
-                    }
-                  >
-                    Visit Website
-                  </DropdownMenuItem>
-                  <DropdownMenuItem className="text-red-600 cursor-pointer">
-                    Remove
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </td>
-        </tr>
-      ))}
-    </tbody>
-  </table>
-</div>
+            {/* ================= BODY ================= */}
+            <tbody>
+              <tr>
+                <td colSpan={7} className="px-2 py-6 bg-gray-50">
+                  {/* INNER CARD */}
+                  <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
+                    <table className="w-full">
+                      <tbody>
+                        {[
+                          {
+                            name: "diginola.co",
+                            topic: "Web Dev",
+                            shared: 2,
+                            unique: 9,
+                            highValue: 3,
+                            lastSeen: "1 min ago",
+                          },
+                          {
+                            name: "lindev-studio",
+                            topic: "Technology",
+                            shared: 1,
+                            unique: 3,
+                            highValue: 1,
+                            lastSeen: "5 days ago",
+                          },
+                          {
+                            name: "designpyxe.in",
+                            topic: "Design",
+                            shared: 1,
+                            unique: 2,
+                            highValue: 2,
+                            lastSeen: "2 days ago",
+                          },
+                          {
+                            name: "webflow.com",
+                            topic: "Web Tools",
+                            shared: 4,
+                            unique: 22,
+                            highValue: 9,
+                            lastSeen: "1 hr ago",
+                          },
+                        ].map((row, index, arr) => (
+                          <tr
+                            key={index}
+                            className={`${
+                              index !== arr.length - 1 ? "border-b border-gray-200" : ""
+                            } hover:bg-gray-50`}
+                          >
+                            <td className="px-4 py-4 text-sm text-gray-700 font-medium">
+                              <div className="flex items-center gap-3">
+                                <img
+                                  src={`https://ui-avatars.com/api/?name=${row.name}&background=random&color=fff&bold=true&size=32`}
+                                  alt={row.name}
+                                  className="w-5 h-5 rounded-full"
+                                />
+                                {row.name}
+                              </div>
+                            </td>
+                            <td className="px-4 py-4 text-sm text-gray-700">
+                              {row.topic}
+                            </td>
+                            <td className="px-4 py-4 text-sm text-gray-500">
+                              {row.shared}
+                            </td>
+                            <td className="px-4 py-4 text-sm text-gray-500">
+                              {row.unique}
+                            </td>
+                            <td className="px-4 py-4 text-sm text-gray-500">
+                              {row.highValue}
+                            </td>
+                            <td className="px-4 py-4 text-sm text-gray-500">
+                              {row.lastSeen}
+                            </td>
+                            <td className="px-4 py-4">
+                              <div className="flex justify-end">
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button
+                                      variant="outline"
+                                      className="border bg-transparent border-gray-200 h-8 px-3 text-xs flex items-center gap-1"
+                                    >
+                                      Visit
+                                      <ChevronDown className="w-4 h-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end" className="w-36">
+                                    <DropdownMenuItem
+                                      onClick={() =>
+                                        window.open(`https://${row.name}`, "_blank")
+                                      }
+                                    >
+                                      Visit Website
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem className="text-red-600 cursor-pointer">
+                                      Remove
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
+
+      {/* Create Post Dialog */}
+      <CreatePostDialog
+        isOpen={showCreatePostDialog}
+        isLoading={createPostCompleted}
+        onClose={() => {
+          setShowCreatePostDialog(false);
+          setCreatePostCompleted(false);
+        }}
+        onConfirm={() => setShowCreatePostDialog(false)}
+      />
+
+      {/* Add Competitor Dialog */}
+      {showAddCompetitorDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg w-full max-w-[550px] p-8 relative">
+            {/* Close Button */}
+            <button
+              onClick={() => {
+                setShowAddCompetitorDialog(false);
+                setAddCompetitorCompleted(false);
+                setCompetitorInput("");
+                setCompetitorTags([]);
+              }}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <ChevronDown className="w-5 h-5 rotate-180" />
+            </button>
+
+            {!addCompetitorCompleted ? (
+              <>
+                {/* Add New Competitor State */}
+                <div className="space-y-6">
+                  <div>
+                    <h2 className="text-2xl font-semibold text-gray-900">
+                      Add New Competitor
+                    </h2>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Type in the URL of your competitor
+                    </p>
+                  </div>
+
+                  {/* Input Field */}
+                  <div>
+                    <Input
+                      type="text"
+                      placeholder="www.example.com"
+                      value={competitorInput}
+                      onChange={(e) => setCompetitorInput(e.target.value)}
+                      className="h-10 border-gray-200 bg-gray-50"
+                    />
+                  </div>
+
+                  {/* Tags */}
+                 <div className="bg-gray-200 border border-gray-300 rounded-2xl w-full h-[81px]">
+                  <div className="flex gap-2 p-3 flex-wrap">
+                    {["www.designjoy.com", "www.lander.studio", "www.webflow.com"].map(
+                      (tag) => (
+                        <button
+                          key={tag}
+                          onClick={() => toggleCompetitorTag(tag)}
+                          className={`px-3 py-1 text-xs rounded-full border transition-colors ${
+                            competitorTags.includes(tag)
+                              ? "bg-gray-900 border text-white border-gray-900"
+                              : "bg-gray-100 text-gray-600 border-gray-600 hover:border-gray-300"
+                          }`}
+                        >
+                          {tag}
+                        </button>
+                      )
+                    )}
+                  </div>
+                  </div>
+
+                  {/* Done Button */}
+                  <button
+                    onClick={handleAddCompetitorSubmit}
+                    className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 rounded-lg transition-colors"
+                  >
+                    Done
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Completed State */}
+                <div className="text-center space-y-6">
+                  <h2 className="text-2xl font-semibold text-gray-900">
+                    Competitor Added!
+                  </h2>
+
+                  {/* Success Checkmark */}
+                  <div className="flex justify-center py-8">
+                    <Image
+                      src="/check.png"
+                      height={81}
+                      width={81}
+                      alt="Success"
+                    />
+                  </div>
+
+                  {/* View Competitors Button */}
+                  <button
+                    onClick={() => {
+                      setShowAddCompetitorDialog(false);
+                      setAddCompetitorCompleted(false);
+                    }}
+                    className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 rounded-lg transition-colors"
+                  >
+                    View Competitors
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
