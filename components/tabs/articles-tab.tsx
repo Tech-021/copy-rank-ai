@@ -52,6 +52,7 @@ import { createCheckout } from "@/lib/lemonSqueezy";
 import { supabase } from "@/lib/client";
 import { useToast } from "@/components/ui/toast";
 import Image from "next/image";
+import { CreatePostDialogDashboard } from "../dialog2";
 
 interface Article {
   id: string;
@@ -138,6 +139,7 @@ export function ArticlesTab({
   const [selectedWebsiteId, setSelectedWebsiteId] = useState<string | null>(
     websiteId || null
   );
+  const [openPostDialog, setOpenPostDialog] = useState(false);
 
   const loadUserWebsites = async () => {
     try {
@@ -872,12 +874,13 @@ export function ArticlesTab({
               <p className="text-sm text-gray-500 mb-4">
                 Turn competitor keywords into SEO-ready blog posts in one click.
               </p>
-              <Button className="bg-black cursor-pointer py-5 px-8 text-white hover:bg-gray-900">
+              <Button onClick={() => setOpenPostDialog(true)} className="bg-black cursor-pointer py-5 px-8 text-white hover:bg-gray-900">
                 Create Post
               </Button>
             </div>
           </CardContent>
         </Card>
+        <CreatePostDialogDashboard open={openPostDialog} onOpenChange={setOpenPostDialog} websiteId={selectedWebsiteId ?? undefined} onCreated={() => fetchArticles()} />
 
         {/* Stats Grid */}
         <div className="flex mt-5  text-sm">
