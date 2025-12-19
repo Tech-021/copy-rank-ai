@@ -856,7 +856,7 @@ export function ArticlesTab({
               ) : websiteId ? (
                 <SelectItem value={websiteId}>{websiteId}</SelectItem>
               ) : (
-                <SelectItem value="">{loadingWebsites ? "Loading..." : "No websites found"}</SelectItem>
+                <SelectItem value="no-websites" disabled>{loadingWebsites ? "Loading..." : "No websites found"}</SelectItem>
               )}
             </SelectContent>
           </Select>

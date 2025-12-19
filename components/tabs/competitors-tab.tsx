@@ -2,6 +2,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { Plus } from "lucide-react";
+import { RefreshCcw } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -27,7 +29,15 @@ import {
   Target,
   BarChart3,
   Loader2,
+  ChevronDown,
+  Download,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { supabase } from "@/lib/client";
 import Image from "next/image";
 
@@ -75,15 +85,16 @@ interface WebsiteData {
   };
 }
 
-export function CompetitorsTab({
-  websiteId: initialWebsiteId,
-}: CompetitorsTabProps) {
+export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabProps) {
   const [selectedWebsiteId, setSelectedWebsiteId] = useState<string | null>(
     initialWebsiteId
   );
   const [websites, setWebsites] = useState<Website[]>([]);
   const [websiteData, setWebsiteData] = useState<WebsiteData | null>(null);
   const [competitors, setCompetitors] = useState<Competitor[]>([]);
+  const [siteKeywords, setSiteKeywords] = useState<
+    { keyword: string; volume?: number; difficulty?: string; sites?: string }[]
+  >([]);
   const [loading, setLoading] = useState(true);
   const [loadingWebsites, setLoadingWebsites] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -151,15 +162,16 @@ export function CompetitorsTab({
     }
   }, [selectedWebsiteId]);
 
-  const fetchCompetitors = async () => {
-    if (!selectedWebsiteId) return;
+  const fetchCompetitors = async (id?: string) => {
+    const siteId = id || selectedWebsiteId;
+    if (!siteId) return;
 
     try {
       setLoading(true);
       setError(null);
-      console.log(`🔍 Fetching competitors for website: ${selectedWebsiteId}`);
+      console.log(`🔍 Fetching competitors for website: ${siteId}`);
 
-      const response = await fetch(`/api/keyword/${selectedWebsiteId}`);
+      const response = await fetch(`/api/keyword/${siteId}`);
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -195,6 +207,29 @@ export function CompetitorsTab({
         metadata: data.metadata,
       });
       setCompetitors(competitorsData);
+
+      // Extract site keywords/opportunities if present in fullData
+      let extractedKeywords: any[] = [];
+      if (data.fullData) {
+        if (Array.isArray(data.fullData.site_keywords)) {
+          extractedKeywords = data.fullData.site_keywords;
+        } else if (Array.isArray(data.fullData.keywords)) {
+          extractedKeywords = data.fullData.keywords;
+        } else if (Array.isArray(data.fullData.opportunities)) {
+          extractedKeywords = data.fullData.opportunities;
+        } else if (Array.isArray(data.fullData.top_keywords)) {
+          extractedKeywords = data.fullData.top_keywords;
+        }
+      }
+
+      const normalized = extractedKeywords.map((k: any) => ({
+        keyword: k.keyword || k.key || k.name || String(k),
+        volume: k.volume || k.search_volume || k.searchVolume || undefined,
+        difficulty: k.difficulty || k.difficulty_level || k.difficultyLevel || "N/A",
+        sites: k.sites || k.sites_count || k.competition || "N/A",
+      }));
+
+      setSiteKeywords(normalized);
 
       console.log(`✅ Total competitors loaded: ${competitorsData.length}`);
     } catch (err) {
@@ -422,435 +457,271 @@ export function CompetitorsTab({
     );
   }
 
-  if (!websiteData || competitors.length === 0) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <Users className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-          <p className="text-muted-foreground mb-2">No competitor data found</p>
-          <p className="text-sm text-muted-foreground">
-            This website doesn't have competitor analysis data yet.
-          </p>
-          <Button onClick={fetchCompetitors} variant="outline" className="mt-4">
-            Refresh
-          </Button>
-        </div>
-      </div>
-    );
-  }
+  // If no websiteData or no competitors, continue rendering the main
+  // competitors UI but with empty lists. This lets the tab open and show
+  // a simple empty state within the normal layout instead of blocking
+  // navigation with an early return.
 
   return (
-    <div className="space-y-6">
-      {/* Website Selector Pills - Show when multiple websites or no initial websiteId */}
-      {websites.length > 0 && (
-        <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
-          <CardHeader>
-            <CardTitle>Select Website</CardTitle>
-            <CardDescription>
-              Choose a website to view its competitors
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2">
-              {websites.map((website) => (
-                <Button
-                  key={website.id}
-                  variant={
-                    selectedWebsiteId === website.id ? "default" : "outline"
-                  }
-                  onClick={() => setSelectedWebsiteId(website.id)}
-                  className={`cursor-pointer ${
-                    selectedWebsiteId === website.id
-                      ? "bg-primary text-primary-foreground"
-                      : "border-border/40 hover:bg-accent"
-                  }`}
-                >
-                  {website.url}
-                  {selectedWebsiteId === website.id && (
-                    <Badge className="ml-2 bg-primary-foreground/20 text-primary-foreground">
-                      Active
-                    </Badge>
-                  )}
-                </Button>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+    <div className="space-y-6 p-6">
+      {/* Main Competitors Section */}
+      <div className="space-y-4">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          {/* Left side */}
+          <div>
+            <h2 className="text-2xl text-gray-700 font-medium">Competitors</h2>
+            <p className="text-sm text-gray-600 mt-1">
+              Track and compare your competitors
+            </p>
+          </div>
 
-      {/* Website Info Header */}
-      <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
-        <CardContent className="pt-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">
-                SEO Competitors
-              </h1>
-              <div className="flex items-center gap-4 mt-2">
-                <p className="text-sm text-muted-foreground">
-                  <span className="font-medium">Website:</span>{" "}
-                  {websiteData.website.url}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  <span className="font-medium">Topic:</span>{" "}
-                  {websiteData.website.topic}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  <span className="font-medium">Total Competitors:</span>{" "}
-                  {competitors.length}
-                </p>
-              </div>
-            </div>
+          {/* Right side */}
+          <div className="flex ">
+            {/* Add Competitors */}
             <Button
               variant="outline"
-              className="cursor-pointer border-border/40 gap-2"
-              onClick={() => window.open(websiteData.website.url, "_blank")}
+              className="gap-2 text-gray-500 border-gray-200 rounded-r-none hover:bg-gray-50"
             >
-              <ExternalLink className="w-4 h-4" />
-              Visit Website
+              Add Competitors
+              <Plus />
             </Button>
-          </div>
-        </CardContent>
-      </Card>
 
-      {/* Stats Cards */}
-      <div className="grid md:grid-cols-4 gap-4">
-        <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">
+            {/* Sync */}
+            <Button
+              variant="outline"
+              className="gap-2 text-gray-500 border-gray-200 rounded-l-none hover:bg-gray-50"
+            >
+              Sync Keywords
+              <RefreshCcw />
+            </Button>
+
+            {/* Website */}
+            <div className="flex ml-5">
+              <Select
+                value={selectedWebsiteId ?? undefined}
+                onValueChange={(val) => setSelectedWebsiteId(val)}
+              >
+                <SelectTrigger className="w-48 h-9 border-gray-200">
+                  <SelectValue
+                    placeholder={
+                      websiteData?.website?.url || websites[0]?.url || "Select website"
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {websites && websites.length > 0 ? (
+                    websites.map((w) => (
+                      <SelectItem key={w.id} value={w.id}>
+                        {w.url}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="no-websites" disabled>
+                      No websites
+                    </SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </div>
+
+        {/* Stats Cards - 4 Column Grid */}
+        <div className="grid grid-cols-4">
+          {/* Card 1 */}
+          <Card className="border rounded-r-none border-gray-200 bg-white shadow-sm">
+            <CardContent className="flex flex-col justify-start gap-8">
+              <div className="flex justify-between">
+                <p className="text-xs font-medium text-gray-600 uppercase tracking-wide">
                   Total Competitors
                 </p>
-                <p className="text-2xl font-bold text-foreground">
-                  {stats.totalCompetitors}
-                </p>
+                <Image src="/stats1.svg" alt="icon" height={15} width={19.5} />
               </div>
-              <Users className="w-8 h-8 text-primary/40" />
-            </div>
-          </CardContent>
-        </Card>
+              <p className="text-4xl font-bold text-gray-900">
+                {stats.totalCompetitors}
+              </p>
+            </CardContent>
+          </Card>
 
-        <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">
-                  Avg. Keyword Overlap
+          {/* Card 2 */}
+          <Card className="border rounded-none border-gray-200 bg-white shadow-sm">
+            <CardContent className="flex flex-col justify-start gap-8">
+              <div className="flex justify-between">
+                <p className="text-xs font-medium text-gray-600 uppercase tracking-wide">
+                  Shared Keywords
                 </p>
-                <p className="text-2xl font-bold text-foreground">
-                  {formatNumber(stats.avgOverlap)}
-                </p>
+                <Image src="/stats2.svg" alt="icon" height={15} width={19.5} />
               </div>
-              <Target className="w-8 h-8 text-accent/40" />
-            </div>
-          </CardContent>
-        </Card>
+              <p className="text-4xl font-bold text-gray-900">
+                {formatNumber(stats.avgOverlap)}
+              </p>
+            </CardContent>
+          </Card>
 
-        <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Avg. Position</p>
-                <p className="text-2xl font-bold text-foreground">
-                  {stats.avgPosition}
+          {/* Card 3 */}
+          <Card className="border rounded-none border-gray-200 bg-white shadow-sm">
+            <CardContent className="flex flex-col justify-start gap-8">
+              <div className="flex justify-between">
+                <p className="text-xs font-medium text-gray-600 uppercase tracking-wide">
+                  Keyword Gaps
                 </p>
+                <Image src="/stats3.svg" alt="icon" height={15} width={19.5} />
               </div>
-              <TrendingUp className="w-8 h-8 text-yellow-500/40" />
-            </div>
-          </CardContent>
-        </Card>
+              <p className="text-4xl font-bold text-gray-900">9</p>
+            </CardContent>
+          </Card>
 
-        <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">High Quality</p>
-                <p className="text-2xl font-bold text-foreground">
-                  {stats.highQualityCount}
+          {/* Card 4 */}
+          <Card className="border rounded-l-none border-gray-200 bg-white shadow-sm">
+            <CardContent className="flex flex-col justify-start gap-8">
+              <div className="flex justify-between">
+                <p className="text-xs font-medium text-gray-600 uppercase tracking-wide">
+                  High Value Gaps
                 </p>
+                <Image src="/stats4.svg" alt="icon" height={15} width={19.5} />
               </div>
-              <BarChart3 className="w-8 h-8 text-green-500/40" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+              <p className="text-4xl font-bold text-gray-900">4</p>
+            </CardContent>
+          </Card>
+        </div>
 
-      {/* Filters and Search */}
-      <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
-        <CardHeader>
-          <CardTitle>Competitor Analysis</CardTitle>
-          <CardDescription>
-            Analyze websites competing for similar keywords in search results
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Search and Filters Row */}
-          <div className="flex flex-col md:flex-row gap-3">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="Search competitors..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 bg-input border-border/40"
-              />
-            </div>
+        {/* Best Keyword Opportunities Table */}
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <table className="w-full border-collapse">
+            {/* ================= HEADER ================= */}
+            <thead>
+              <tr className="border-b border-gray-200 bg-white">
+                <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
+                  Keyword
+                </th>
+                <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
+                  Search Volume
+                </th>
+                <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
+                  Difficulty
+                </th>
+                <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
+                  Competing Sites
+                </th>
+                <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
+                  Action
+                </th>
+              </tr>
+            </thead>
 
-            <Select value={qualityFilter} onValueChange={setQualityFilter}>
-              <SelectTrigger className="w-full md:w-40 bg-input border-border/40">
-                <SelectValue placeholder="Quality" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Qualities</SelectItem>
-                <SelectItem value="High">High</SelectItem>
-                <SelectItem value="Medium">Medium</SelectItem>
-                <SelectItem value="Low">Low</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-full md:w-48 bg-input border-border/40">
-                <SelectValue placeholder="Sort by" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="overlap-desc">
-                  Overlap (High to Low)
-                </SelectItem>
-                <SelectItem value="overlap-asc">
-                  Overlap (Low to High)
-                </SelectItem>
-                <SelectItem value="position-asc">
-                  Position (Best to Worst)
-                </SelectItem>
-                <SelectItem value="position-desc">
-                  Position (Worst to Best)
-                </SelectItem>
-                <SelectItem value="traffic-desc">
-                  Traffic (High to Low)
-                </SelectItem>
-                <SelectItem value="traffic-asc">
-                  Traffic (Low to High)
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Competitors Grid */}
-          <div className="grid gap-4">
-            {filteredAndSortedCompetitors.map((competitor, index) => {
-              const displayData = getCompetitorDisplayData(competitor);
-              const isNew = isNewFormat(competitor);
-
-              return (
-                <Card
-                  key={competitor.domain}
-                  className="border-border/40 bg-card/50 backdrop-blur-sm"
-                >
-                  <CardContent className="pt-6">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-3">
-                          <h3 className="font-semibold text-foreground text-lg">
-                            {displayData.domain}
-                          </h3>
-                          {isNew ? (
-                            <Badge className="bg-blue-100 text-blue-700 border-blue-200">
-                              {displayData.topic}
-                            </Badge>
-                          ) : (
-                            <Badge
-                              className={getQualityColor(
-                                competitor.serp_overlap_quality || "Low"
-                              )}
-                            >
-                              {competitor.serp_overlap_quality} Quality
-                            </Badge>
-                          )}
-                          {displayData.success === false && (
-                            <Badge
-                              variant="outline"
-                              className="text-red-600 border-red-300"
-                            >
-                              Failed
-                            </Badge>
-                          )}
-                        </div>
-
-                        {isNew ? (
-                          // New format display
-                          <div className="space-y-3">
-                            <div className="grid md:grid-cols-2 gap-4">
-                              <div>
-                                <p className="text-sm text-muted-foreground">
-                                  Topic
-                                </p>
-                                <p className="text-lg font-bold text-foreground">
-                                  {displayData.topic}
-                                </p>
-                              </div>
-                              <div>
-                                <p className="text-sm text-muted-foreground">
-                                  Keywords Found
-                                </p>
-                                <p className="text-lg font-bold text-foreground">
-                                  {displayData.keywordsCount}
-                                </p>
-                              </div>
-                            </div>
-
-                            {displayData.keywords &&
-                              displayData.keywords.length > 0 && (
-                                <div>
-                                  <p className="text-sm text-muted-foreground mb-2">
-                                    Keywords:
-                                  </p>
-                                  <div className="flex flex-wrap gap-2">
-                                    {displayData.keywords
-                                      .slice(0, 10)
-                                      .map((kw: any, idx: number) => (
-                                        <Badge
-                                          key={idx}
-                                          variant="outline"
-                                          className="text-xs"
-                                        >
-                                          {typeof kw === "string"
-                                            ? kw
-                                            : kw.keyword}
-                                        </Badge>
-                                      ))}
-                                    {displayData.keywords.length > 10 && (
-                                      <Badge
-                                        variant="outline"
-                                        className="text-xs"
-                                      >
-                                        +{displayData.keywords.length - 10} more
-                                      </Badge>
-                                    )}
-                                  </div>
-                                </div>
-                              )}
-
-                            {displayData.error && (
-                              <p className="text-sm text-red-600">
-                                Error: {displayData.error}
-                              </p>
-                            )}
-                          </div>
-                        ) : (
-                          // Old format display (existing code)
-                          <>
-                            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-                              <div>
-                                <p className="text-sm text-muted-foreground">
-                                  Keyword Overlap
-                                </p>
-                                <p className="text-lg font-bold text-foreground">
-                                  {formatNumber(
-                                    competitor.common_keywords || 0
-                                  )}
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  {competitor.competitive_overlap}% overlap
-                                </p>
-                              </div>
-
-                              <div>
-                                <p className="text-sm text-muted-foreground">
-                                  Avg. Position
-                                </p>
-                                <p
-                                  className={`text-lg font-bold ${getPositionColor(
-                                    competitor.avg_position || 0
-                                  )}`}
-                                >
-                                  #
-                                  {competitor.avg_position?.toFixed(1) || "N/A"}
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  SERP position
-                                </p>
-                              </div>
-
-                              <div>
-                                <p className="text-sm text-muted-foreground">
-                                  Estimated Traffic
-                                </p>
-                                <p className="text-lg font-bold text-foreground">
-                                  {formatCurrency(
-                                    competitor.organic_traffic
-                                      ?.estimated_traffic_value || 0
-                                  )}
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  Traffic value
-                                </p>
-                              </div>
-
-                              <div>
-                                <p className="text-sm text-muted-foreground">
-                                  Top Positions
-                                </p>
-                                <p className="text-lg font-bold text-foreground">
-                                  {formatNumber(
-                                    competitor.organic_traffic
-                                      ?.top_3_positions || 0
-                                  )}
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  Top 3 rankings
-                                </p>
-                              </div>
-                            </div>
-
-                            <div className="flex gap-2">
-                              <Badge variant="outline" className="text-xs">
-                                Total Keywords:{" "}
-                                {formatNumber(
-                                  competitor.organic_traffic?.total_keywords ||
-                                    0
-                                )}
-                              </Badge>
-                              <Badge variant="outline" className="text-xs">
-                                Top 10:{" "}
-                                {formatNumber(
-                                  competitor.organic_traffic
-                                    ?.top_10_positions || 0
-                                )}
-                              </Badge>
-                            </div>
-                          </>
-                        )}
+            {/* ================= BODY ================= */}
+            <tbody>
+              {siteKeywords && siteKeywords.length > 0 ? (
+                siteKeywords.map((row, index) => (
+                  <tr key={row.keyword + index} className={`${index !== siteKeywords.length - 1 ? "border-b border-gray-200" : ""} hover:bg-gray-50`}>
+                    <td className="px-4 py-3 text-sm text-gray-700">{row.keyword}</td>
+                    <td className="px-4 py-3 text-sm text-gray-500">{row.volume ? row.volume.toLocaleString() : "-"}</td>
+                    <td className="px-4 py-3 text-sm text-gray-500"><span className="px-2 py-0.5 text-xs">{row.difficulty}</span></td>
+                    <td className="px-4 py-3 text-sm text-gray-500"><span className="px-2 py-0.5 text-xs">{row.sites}</span></td>
+                    <td className="px-4 py-3">
+                      <div className="flex justify-end">
+                        <Button variant="outline" className="border rounded-r-none bg-transparent border-gray-200 rounded-l-md px-6 h-8 text-xs">View</Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="outline" className="border border-l-0 rounded-l-none bg-transparent border-gray-200 rounded-r-md w-8 h-8 p-0 flex items-center justify-center hover:bg-gray-50"><ChevronDown className="w-4 h-4 text-gray-600" /></Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-32"><DropdownMenuItem className="text-red-600 cursor-pointer">Delete</DropdownMenuItem></DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={5} className="px-4 py-6 text-center text-sm text-muted-foreground">No keyword opportunities found for this website</td>
+                </tr>
+              )}
+              <tr>
+                <td colSpan={5} className="bg-white">
+                  <div className="mt-6 flex justify-end mr-4">
+                    <Button className="bg-[#171717] px-6 hover:bg-gray-500">Create post</Button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="cursor-pointer gap-2 ml-4"
-                        onClick={() => {
-                          const url = displayData.domain.startsWith("http")
-                            ? displayData.domain
-                            : `https://${displayData.domain}`;
-                          window.open(url, "_blank");
-                        }}
-                      >
-                        <ExternalLink className="w-4 h-4" />
-                        Visit
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
+        {/* Competitor Overview Table */}
+       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+  <table className="w-full border-collapse">
+    {/* ================= HEADER ================= */}
+    <thead>
+      <tr className="border-b border-gray-200 bg-white">
+        <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
+          Competitor
+        </th>
+        <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
+          Primary Topic
+        </th>
+        <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
+          Shared Keywords
+        </th>
+        <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
+          Unique Keywords
+        </th>
+        <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
+          High Value Keywords
+        </th>
+        <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
+          Last Seen
+        </th>
+        <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
+          Action
+        </th>
+      </tr>
+    </thead>
 
-          {filteredAndSortedCompetitors.length === 0 && (
-            <div className="text-center py-8 text-muted-foreground">
-              No competitors found matching your filters.
-            </div>
-          )}
-        </CardContent>
-      </Card>
+    {/* ================= BODY ================= */}
+    <tbody>
+      {filteredAndSortedCompetitors.map((comp, idx) => {
+        const d = getCompetitorDisplayData(comp);
+        const lastSeen = comp && (comp.generatedAt || comp.organic_traffic?.last_seen || "-");
+        const shared = d.keywordsCount || comp.common_keywords || 0;
+        const unique = Math.max(0, (comp.organic_traffic?.total_keywords || 0) - shared);
+        const highValue = 0;
+
+        return (
+          <tr key={d.domain + idx} className={`${idx !== filteredAndSortedCompetitors.length - 1 ? "border-b border-gray-200" : ""} hover:bg-gray-50`}>
+            <td className="px-4 py-3 text-sm text-gray-700 font-medium">
+              <div className="flex items-center gap-3">
+                <img src={`https://ui-avatars.com/api/?name=${d.domain}&background=random&color=fff&bold=true&size=32`} alt={d.domain} className="w-5 h-5 rounded-full" />
+                {d.domain}
+              </div>
+            </td>
+            <td className="px-4 py-3 text-sm text-gray-700">{d.topic}</td>
+            <td className="px-4 py-3 text-sm text-gray-500">{shared}</td>
+            <td className="px-4 py-3 text-sm text-gray-500">{unique}</td>
+            <td className="px-4 py-3 text-sm text-gray-500">{highValue}</td>
+            <td className="px-4 py-3 text-sm text-gray-500">{lastSeen || "-"}</td>
+            <td className="px-4 py-3">
+              <div className="flex justify-end">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="border bg-transparent border-gray-200 h-8 px-3 text-xs flex items-center gap-1">Visit<ChevronDown className="w-4 h-4" /></Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-36">
+                    <DropdownMenuItem onClick={() => window.open(`https://${d.domain}`, "_blank")}>
+                      Visit Website
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="text-red-600">Remove</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </td>
+          </tr>
+        );
+      })}
+    </tbody>
+  </table>
+</div>
+      </div>
     </div>
   );
 }
