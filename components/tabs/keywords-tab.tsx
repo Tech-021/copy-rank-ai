@@ -1065,88 +1065,54 @@ export function KeywordsTab({
 
           {/* ================= BODY ================= */}
           <tbody>
-            <tr>
-              <td colSpan={8} className="px-2 py-6 bg-gray-50">
-                {/* INNER CARD */}
-                <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
-                  <table className="w-full ">
-                    <tbody>
-                      {filteredAndSortedKeywords.map((kw, index) => {
-                        const difficultyText = getDifficultyText(kw.difficulty);
-                        const difficultyColor = getDifficultyColor(kw.difficulty);
-                        const competitionText = getCompetitionText(kw.competition);
-                        const competitionColor = getCompetitionColor(kw.competition);
-                        const trafficText = kw.traffic_potential || "—";
-                        return (
-                          <tr
-                            key={`${kw.keyword}-${index}`}
-                            className={`${index !== filteredAndSortedKeywords.length - 1 ? "border-b border-gray-200" : ""} hover:bg-gray-50`}
-                          >
-                            <td className="px-4 py-3 w-10">
-                              <input
-                                className="w-4 h-4 rounded border-gray-300"
-                                type="checkbox"
-                                checked={selectedKeywords.has(index)}
-                                onChange={() => toggleKeywordSelection(index)}
-                                aria-label={`Select keyword ${kw.keyword}`}
-                              />
-                            </td>
-                            <td className="px-4 text-gray-700 py-3 text-sm">{kw.keyword}</td>
-                            <td className="px-4 text-gray-500 py-3 text-sm">
-                              {kw.search_volume?.toLocaleString() || "—"}
-                            </td>
-                            <td className="px-4 text-gray-500 py-3 text-sm">
-                              <span className={`px-2 py-0.5 text-xs `}>
-                                {difficultyText}
-                              </span>
-                            </td>
-                            <td className="px-4 text-gray-500 py-3 text-sm">
-                              <span className={`px-2 py-0.5 text-xs  `}>
-                                {competitionText}
-                              </span>
-                            </td>
-                            <td className="pl-15 py-3">
-                              <span className={`px-3 py-1 text-xs rounded-md ${getPostStatusColor(kw.post_status)}`}>
-                                {kw.post_status || "No Plan"}
-                              </span>
-                            </td>
-                            <td className="px-4 text-gray-500 py-3 text-sm">{trafficText}</td>
-                            <td className="px-4 py-3">
-                              <div className="flex justify-end">
-                                <Button
-                                  variant={"outline"}
-                                  className="border rounded-r-none bg-transparent border-gray-200 rounded-l-md px-8 h-8 text-xs"
-                                >
-                                  Edit
-                                </Button>
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button
-                                      variant={"outline"}
-                                      className="border border-l-0 rounded-l-none bg-transparent border-gray-200 rounded-r-md w-8 h-8 p-0 flex items-center justify-center hover:bg-gray-50"
-                                    >
-                                      <ChevronDown className="w-4 h-4 text-gray-600" />
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end" className="w-32">
-                                    <DropdownMenuItem
-                                      onClick={() => handleDeleteKeyword(index)}
-                                      className="text-red-600 cursor-pointer"
-                                    >
-                                      Delete
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </td>
-            </tr>
+            {filteredAndSortedKeywords.length > 0 ? (
+              filteredAndSortedKeywords.map((kw, index) => {
+                const difficultyText = getDifficultyText(kw.difficulty);
+                const difficultyColor = getDifficultyColor(kw.difficulty);
+                const competitionText = getCompetitionText(kw.competition);
+                const competitionColor = getCompetitionColor(kw.competition);
+                const trafficText = kw.traffic_potential || "—";
+                return (
+                  <tr
+                    key={`${kw.keyword}-${index}`}
+                    className={`${index !== filteredAndSortedKeywords.length - 1 ? "border-b border-gray-200" : ""} hover:bg-gray-50`}
+                  >
+                    <td className="px-4 py-3 w-10">
+                      <input
+                        className="w-4 h-4 rounded border-gray-300"
+                        type="checkbox"
+                        checked={selectedKeywords.has(index)}
+                        onChange={() => toggleKeywordSelection(index)}
+                        aria-label={`Select keyword ${kw.keyword}`}
+                      />
+                    </td>
+                    <td className="px-4 text-gray-700 py-3 text-sm">{kw.keyword}</td>
+                    <td className="px-4 text-gray-500 py-3 text-sm">{kw.search_volume?.toLocaleString() || "—"}</td>
+                    <td className="px-4 text-gray-500 py-3 text-sm"><span className={`px-2 py-0.5 text-xs `}>{difficultyText}</span></td>
+                    <td className="px-4 text-gray-500 py-3 text-sm"><span className={`px-2 py-0.5 text-xs  `}>{competitionText}</span></td>
+                    <td className="pl-15 py-3"><span className={`px-3 py-1 text-xs rounded-md ${getPostStatusColor(kw.post_status)}`}>{kw.post_status || "No Plan"}</span></td>
+                    <td className="px-4 text-gray-500 py-3 text-sm">{trafficText}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex justify-end">
+                        <Button variant={"outline"} className="border rounded-r-none bg-transparent border-gray-200 rounded-l-md px-8 h-8 text-xs">Edit</Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant={"outline"} className="border border-l-0 rounded-l-none bg-transparent border-gray-200 rounded-r-md w-8 h-8 p-0 flex items-center justify-center hover:bg-gray-50"><ChevronDown className="w-4 h-4 text-gray-600" /></Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-32">
+                            <DropdownMenuItem onClick={() => handleDeleteKeyword(index)} className="text-red-600 cursor-pointer">Delete</DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
+            ) : (
+              <tr>
+                <td colSpan={8} className="px-4 py-6 text-center text-sm text-muted-foreground">No keywords found for this website</td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
