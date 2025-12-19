@@ -541,8 +541,8 @@ const validateTab3 = () => {
   }, [selectedWebsiteId]);
 
   return (
-    <div className="space-y-6 flex gap-5">
-      <div className="space-y-6 w-[60%]">
+    <div className="flex flex-col md:flex-row gap-5">
+      <div className="space-y-6 md:w-3/5 w-full min-w-0">
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <div>
@@ -751,7 +751,7 @@ const validateTab3 = () => {
 
       <Dialog1 open={open} onOpenChange={setOpen} />
 
-      <div className="space-y-3 w-[40%] border px-2 py-2 rounded-xl">
+      <div className="space-y-3 md:w-2/5 w-full border px-2 py-2 rounded-xl max-h-[70vh] overflow-y-auto min-w-0">
         {loadingArticles ? (
           <div className="text-center py-12 text-gray-400">
             <p className="text-sm">Loading articles...</p>
