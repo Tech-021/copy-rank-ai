@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/select";
 import { useRouter } from "next/navigation";
 import { Dialog1 } from "@/components/websitedialog"
+import { WebsiteDialog } from "../dialog1";
 
 interface Article {
   id: string;
@@ -141,6 +142,7 @@ export function AnalyzeTab({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [open, setOpen] = useState(false)
+  const [ openWebsiteDialog, setOpenWebsiteDialog ] = useState(false)
   const [editForm, setEditForm] = useState({
       title: "",
       keyword: "",
@@ -636,7 +638,7 @@ const validateTab3 = () => {
                 </div>
               )}
               <div 
-              onClick={() => setOpen(true)}
+              onClick={() => setOpenWebsiteDialog(true)}
               className={`flex items-center justify-between border px-4 pb-4 pt-5 ${websites.length > 0 ? 'rounded-b-xl' : 'rounded-xl'} border-[#0000001a] w-[300px] cursor-pointer`}>
                 <div className="flex items-center gap-5 cursor-pointer">
                 <div className="bg-[rgb(247,247,247)] w-[34px] h-[34px] flex items-center justify-center rounded-[10px] cursor-pointer">
@@ -740,6 +742,7 @@ const validateTab3 = () => {
         </Card>
       </div>
       <Dialog1 open={open} onOpenChange={setOpen}  />
+      <WebsiteDialog open={openWebsiteDialog} onOpenChange={setOpenWebsiteDialog} />
      </div>
      <div className="w-[38%] border rounded-xl ml-3">
       {filteredArticles.length === 0 ? (
