@@ -8,6 +8,12 @@ const nextConfig = {
   },
   images: {
     unoptimized: true,
+    domains: [
+      'lh3.googleusercontent.com',
+      'avatars.githubusercontent.com',
+      'secure.gravatar.com',
+      'www.gravatar.com',
+    ],
     remotePatterns: [
       {
         protocol: 'https',

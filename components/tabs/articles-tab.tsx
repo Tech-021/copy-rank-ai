@@ -49,6 +49,7 @@ import {
 import { getUser } from "@/lib/auth";
 import { getUserPackage } from "@/lib/articleLimits";
 import { createCheckout } from "@/lib/lemonSqueezy";
+import { supabase } from "@/lib/client";
 import { useToast } from "@/components/ui/toast";
 import Image from "next/image";
 
@@ -125,6 +126,58 @@ export function ArticlesTab({
     content: "",
   });
 
+  interface Website {
+    id: string;
+    url: string;
+    topic?: string;
+    created_at?: string;
+  }
+
+  const [websites, setWebsites] = useState<Website[]>([]);
+  const [loadingWebsites, setLoadingWebsites] = useState(false);
+  const [selectedWebsiteId, setSelectedWebsiteId] = useState<string | null>(
+    websiteId || null
+  );
+
+  const loadUserWebsites = async () => {
+    try {
+      setLoadingWebsites(true);
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from("websites")
+        .select("id, url, topic, created_at")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("Error loading websites:", error);
+        return;
+      }
+
+      if (data && data.length > 0) {
+        setWebsites(data as Website[]);
+        if (!selectedWebsiteId) setSelectedWebsiteId((data as any)[0].id);
+      }
+    } catch (err) {
+      console.error("Error loading websites:", err);
+    } finally {
+      setLoadingWebsites(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!websiteId) {
+      loadUserWebsites();
+    } else {
+      setSelectedWebsiteId(websiteId);
+    }
+  }, [websiteId]);
+
   // Derived data and helpers
   const filteredArticles = articles.filter((article) => {
     if (filterStatus === "all") return true;
@@ -154,9 +207,21 @@ export function ArticlesTab({
 
       setTimeout(() => {
         setPublishSuccess(false);
-        setSelectedArticle((prev) =>
-          prev ? { ...prev, status: "published" as const } : prev
-        );
+        // Fetch updated article data from backend to get the correct slug
+        fetch(`/api/articles?userId=${currentUser?.id}`)
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.success && data.articles) {
+              const updatedArticle = data.articles.find(
+                (a: Article) => a.id === selectedArticle.id
+              );
+              if (updatedArticle) {
+                setSelectedArticle(updatedArticle);
+                setArticles(data.articles);
+              }
+            }
+          })
+          .catch((err) => console.error("Error fetching updated article:", err));
       }, 1200);
     } catch (error) {
       toast.showToast({
@@ -317,8 +382,9 @@ export function ArticlesTab({
 
       if (!currentUser) return;
 
-      const url = websiteId
-        ? `/api/articles?websiteId=${websiteId}&userId=${currentUser.id}`
+      const siteId = selectedWebsiteId || websiteId || null;
+      const url = siteId
+        ? `/api/articles?websiteId=${siteId}&userId=${currentUser.id}`
         : `/api/articles?userId=${currentUser.id}`;
 
       console.log("📡 Fetching articles from:", url);
@@ -383,18 +449,18 @@ export function ArticlesTab({
     } finally {
       setLoading(false);
     }
-  }, [currentUser, websiteId]);
+  }, [currentUser, selectedWebsiteId]);
   // ...existing code...
 
   useEffect(() => {
     if (currentUser) fetchArticles();
-  }, [currentUser, websiteId]);
+  }, [currentUser, selectedWebsiteId]);
 
   useEffect(() => {
     if (!currentUser) return;
     const interval = setInterval(() => fetchArticles(), 30000);
     return () => clearInterval(interval);
-  }, [currentUser, websiteId, fetchArticles]);
+  }, [currentUser, selectedWebsiteId, fetchArticles]);
 
   useEffect(() => {
     if (generatedArticles && generatedArticles.length > 0) {
@@ -767,14 +833,31 @@ export function ArticlesTab({
               Create, review, and publish your AI-generated posts.
             </p>
           </div>
-          <Select>
+          <Select
+            value={selectedWebsiteId ?? undefined}
+            onValueChange={(val) => setSelectedWebsiteId(val)}
+          >
             <SelectTrigger className="w-38 h-9 border-gray-200">
-              <SelectValue placeholder={websiteId || "www.delani.pro"} />
+              <SelectValue
+                placeholder={
+                  (selectedWebsiteId
+                    ? websites.find((w) => w.id === selectedWebsiteId)?.url
+                    : websites[0]?.url) || websiteId || "Select website"
+                }
+              />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={websiteId || "www.delani.pro"}>
-                {websiteId || "www.delani.pro"}
-              </SelectItem>
+              {websites.length > 0 ? (
+                websites.map((w) => (
+                  <SelectItem key={w.id} value={w.id}>
+                    {w.url}
+                  </SelectItem>
+                ))
+              ) : websiteId ? (
+                <SelectItem value={websiteId}>{websiteId}</SelectItem>
+              ) : (
+                <SelectItem value="no-websites" disabled>{loadingWebsites ? "Loading..." : "No websites found"}</SelectItem>
+              )}
             </SelectContent>
           </Select>
         </div>

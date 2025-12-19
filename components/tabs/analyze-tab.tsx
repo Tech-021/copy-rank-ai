@@ -22,7 +22,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "../ui/skeleton";
 import Image from "next/image";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
-import { ChevronLeft, Plus } from "lucide-react";
+import { Badge, ChevronLeft, Plus } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/select";
 import { useRouter } from "next/navigation";
 import { Dialog1 } from "@/components/websitedialog"
+import { WebsiteDialog } from "../dialog1";
 
 interface Article {
   id: string;
@@ -60,6 +61,9 @@ interface Article {
 interface AnalyzeTabProps {
   onViewKeywords: (websiteId: string) => void;
   onViewCompetitors: (websiteId: string) => void;
+  generatedArticles?: Article[];
+  onArticlesUpdate?: (articles: Article[]) => void;
+  websiteId?: string;
 }
 
 interface Website {
@@ -115,12 +119,17 @@ const getCompetitorsCount = (keywordsData: any): number => {
 export function AnalyzeTab({
   onViewKeywords,
   onViewCompetitors,
+  generatedArticles,
+  onArticlesUpdate,
+  websiteId,
 }: AnalyzeTabProps) {
+  const [articles, setArticles] = useState<Article[]>([]);
   const [websites, setWebsites] = useState<Website[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showSkeletons, setShowSkeletons] = useState(false);
   const toast = useToast();
-
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [isContentExpanded, setIsContentExpanded] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [websiteName, setWebsiteName] = useState("");
   const [competitor1, setCompetitor1] = useState("");
@@ -129,8 +138,20 @@ export function AnalyzeTab({
   const [keyword1, setKeyword1] = useState("");
   const [keyword2, setKeyword2] = useState("");
   const [keyword3, setKeyword3] = useState("");
+  const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [open, setOpen] = useState(false)
+  const [ openWebsiteDialog, setOpenWebsiteDialog ] = useState(false)
+  const [editForm, setEditForm] = useState({
+      title: "",
+      keyword: "",
+      slug: "",
+      metaTitle: "",
+      metaDescription: "",
+      preview: "",
+      content: "",
+    });
 
   const [analytics, setAnalytics] = useState<AnalyticsData>({
     articlesGenerated: 0,
@@ -141,7 +162,18 @@ export function AnalyzeTab({
     totalCompetitors: 0,
   });
 
+  const filteredArticles = articles.filter((article) => {
+    if (filterStatus === "all") return true;
+    // Normalize status to lowercase for comparison
+    const status = (article.status || "").toLowerCase();
+    return status === filterStatus;
+  });
+
   const [selectedWebsiteId, setSelectedWebsiteId] = useState<string | null>(null);
+  // Articles state (replace old mock list with dynamic data)
+  // const [articles, setArticles] = useState<Article[]>([]);
+  const [loadingArticles, setLoadingArticles] = useState(true);
+  // const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
 
   const actionsRequired = useMemo<ActionItem[]>(() => {
     const items: ActionItem[] = [];
@@ -194,19 +226,9 @@ export function AnalyzeTab({
       });
     }
 
-    if (hasWebsites && analytics.totalCompetitors === 0) {
-      items.push({
-        id: "competitors",
-        title: "Add SEO competitors",
-        description:
-          "Track at least one competitor to unlock keyword gap insights.",
-        icon: "/globe.png",
-        actionLabel: "Add competitor",
-      });
-    }
 
     return items;
-  }, [analytics, websites]);
+  }, [analytics, websites, selectedWebsiteId, onViewCompetitors]);
 
   const fetchAnalytics = async (userId: string, websiteId?: string | null) => {
     try {
@@ -297,7 +319,6 @@ export function AnalyzeTab({
           setSelectedWebsiteId(data[0].id);
         }
       }
-
       await fetchAnalytics(user.id, selectedWebsiteId);
     } catch (error) {
       console.error("Error loading websites:", error);
@@ -448,6 +469,28 @@ const validateTab3 = () => {
     keyword2.trim() &&
     keyword3.trim();
 
+    const getReadingTime = (wordCount?: number) => {
+    if (!wordCount) return "—";
+    const minutes = Math.max(1, Math.round(wordCount / 200));
+    return `${minutes} min read`;
+  };
+
+    const openEditDialog = (article: Article) => {
+    setSelectedArticle(article);
+    setEditForm({
+      title: article.title || "",
+      keyword: Array.isArray(article.keyword)
+        ? article.keyword.join(", ")
+        : article.keyword || "",
+      slug: article.slug || "",
+      metaTitle: article.metaTitle || "",
+      metaDescription: article.metaDescription || "",
+      preview: article.preview || "",
+      content: article.content || "",
+    });
+    setIsEditDialogOpen(true);
+  };
+
   const handleWebsiteChange = async (websiteId: string) => {
     setSelectedWebsiteId(websiteId);
     
@@ -460,9 +503,100 @@ const validateTab3 = () => {
     }
   };
 
+  const handleTriggerArticleProcessing = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch("/api/article-jobs/trigger", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to trigger article processing");
+      }
+
+      toast.showToast({
+        title: "Processing Started",
+        description: "Article processing has been triggered. Check back in a moment for updates.",
+        type: "success",
+      });
+
+      // Refresh articles after a short delay
+      setTimeout(() => {
+        fetchArticles();
+        fetchAnalytics(supabase.auth.getUser().then(({ data: { user } }) => user?.id || ""), selectedWebsiteId);
+      }, 2000);
+    } catch (error) {
+      toast.showToast({
+        title: "Failed to Trigger Processing",
+        description: error instanceof Error ? error.message : "Unknown error",
+        type: "error",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
     loadUserWebsites();
   }, []);
+
+  // Fetch articles for current user / website
+  const fetchArticles = async () => {
+    try {
+      setLoadingArticles(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const siteId = selectedWebsiteId || undefined;
+      const url = siteId
+        ? `/api/articles?websiteId=${siteId}&userId=${user.id}`
+        : `/api/articles?userId=${user.id}`;
+
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("Failed to fetch articles");
+      const data = await res.json();
+
+      if (data.success) {
+        const normalizedArticles = (data.articles || []).map((a: any) => {
+          const rawImages =
+            a.generatedImages ??
+            a.generated_images ??
+            a.generated_images_urls ??
+            a.generated_images_url ??
+            a.images ??
+            [];
+          const parsedImages =
+            typeof rawImages === "string"
+              ? (() => {
+                  try {
+                    return JSON.parse(rawImages);
+                  } catch {
+                    return rawImages ? [rawImages] : [];
+                  }
+                })()
+              : rawImages ?? [];
+          return { ...a, generatedImages: parsedImages };
+        });
+
+        setArticles(normalizedArticles);
+      }
+    } catch (err) {
+      console.error("Error fetching articles:", err);
+    } finally {
+      setLoadingArticles(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchArticles();
+  }, [selectedWebsiteId]);
+
+  useEffect(() => {
+    const interval = setInterval(() => fetchArticles(), 30000);
+    return () => clearInterval(interval);
+  }, [selectedWebsiteId]);
 
   useEffect(() => {
     const refreshAnalytics = async () => {
@@ -481,97 +615,107 @@ const validateTab3 = () => {
   }, [selectedWebsiteId]);
 
   return (
-    <div className="space-y-6">
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-        <h2 className="text-3xl font-normal">Performance overview</h2>
-        <p className="text-[#00000080] text-sm mt-2">Turn competitor keywords into SEO-ready long blog posts in one click.</p>
-        </div>
-        <div className="">
-          <Select 
-            value={selectedWebsiteId || undefined} 
-            onValueChange={handleWebsiteChange}
-          >
-              <SelectTrigger className="h-10 bg-transparent rounded-[8px] focus-visible:outline-none focus-visible:ring-0 border-[#0000001a] focus-visible:border-[#0000001a] focus:outline-none cursor-pointer outline-none active:outline-none px-3.5 py-2.5 text-[#00000080]">
-                <SelectValue placeholder="Select your website" /> 
-              </SelectTrigger>
-              <SelectContent className="cursor-pointer">
-                {websites.map((website, index) => (
-                  <SelectItem 
-                    key={website.id} 
-                    value={website.id} 
-                    className={`cursor-pointer data-[state=checked]:text-[#00000080] data-[state=checked]:opacity-40 ${index < websites.length - 1 ? 'border-b rounded-none border-[#0000001a]' : ''}`}
-                  >
-                    {website.url}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+    <div className="flex flex-col md:flex-row gap-5">
+      <div className="space-y-6 md:w-3/5 w-full min-w-0">
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-3xl font-normal">Performance overview</h2>
+              <p className="text-[#00000080] text-sm mt-2">Turn competitor keywords into SEO-ready long blog posts in one click.</p>
+            </div>
+            <div>
+              <Select value={selectedWebsiteId || undefined} onValueChange={handleWebsiteChange}>
+                <SelectTrigger className="h-10 bg-transparent rounded-[8px] focus-visible:outline-none focus-visible:ring-0 border-[#0000001a] focus-visible:border-[#0000001a] focus:outline-none cursor-pointer outline-none active:outline-none px-3.5 py-2.5 text-[#00000080]">
+                  <SelectValue placeholder="Select your website" />
+                </SelectTrigger>
+                <SelectContent className="cursor-pointer">
+                  {websites.map((website, index) => (
+                    <SelectItem
+                      key={website.id}
+                      value={website.id}
+                      className={`cursor-pointer data-[state=checked]:text-[#00000080] data-[state=checked]:opacity-40 ${index < websites.length - 1 ? 'border-b rounded-none border-[#0000001a]' : ''}`}
+                    >
+                      {website.url}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
 
-        </div>
-        </div>
-        <div className="flex items-center">
-          <Card className="border-border/40 bg-white rounded-none rounded-l-xl backdrop-blur-sm w-[222px] h-[174px]">
-        <CardHeader className="flex items-center justify-between">
-          <CardTitle className="text-sm font-normal text-[#00000080]">Articles Generated </CardTitle>
-          <Image src="/dashboardcardimg1.png" alt="" width={20} height={20} />
-        </CardHeader>
-        <CardContent>
-          <div className="text-[#000000b3] text-4xl font-bold mt-12">
-            {showSkeletons ? <Skeleton className="h-10 w-16" /> : analytics.articlesGenerated}
+          <div className="flex items-center">
+            <Card className="border-border/40 bg-white rounded-none rounded-l-xl backdrop-blur-sm w-[222px] h-[174px]">
+              <CardHeader className="flex items-center justify-between">
+                <CardTitle className="text-sm font-normal text-[#00000080]">Articles Generated</CardTitle>
+                <Image src="/dashboardcardimg1.png" alt="" width={20} height={20} />
+              </CardHeader>
+              <CardContent>
+                <div className="text-[#000000b3] text-4xl font-bold mt-12">
+                  {showSkeletons ? <Skeleton className="h-10 w-16" /> : analytics.articlesGenerated}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-border/40 bg-white rounded-none backdrop-blur-sm w-[222px] h-[174px]">
+              <CardHeader className="flex items-center justify-between">
+                <CardTitle className="text-sm font-normal text-[#00000080]">Articles Live</CardTitle>
+                <Image src="/dashboardcardimg2.png" alt="" width={20} height={20} />
+              </CardHeader>
+              <CardContent>
+                <div className="text-[#000000b3] text-4xl font-bold mt-12">
+                  {showSkeletons ? <Skeleton className="h-10 w-16" /> : analytics.articlesLive}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-border/40 bg-white rounded-none backdrop-blur-sm w-[222px] h-[174px]">
+              <CardHeader className="flex items-center justify-between">
+                <CardTitle className="text-sm font-normal text-[#00000080]">Est. Traffic Potential</CardTitle>
+                <Image src="/dashboardcardimg3.png" alt="" width={20} height={20} />
+              </CardHeader>
+              <CardContent>
+                <div className="text-[#000000b3] text-4xl font-bold mt-12">
+                  {showSkeletons ? <Skeleton className="h-10 w-24" /> : analytics.estimatedTraffic.toLocaleString()}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-border/40 bg-white rounded-none rounded-r-xl backdrop-blur-sm w-[222px] h-[174px]">
+              <CardHeader className="flex items-center justify-between">
+                <CardTitle className="text-sm font-normal text-[#00000080]">Keyword Tracked</CardTitle>
+                <Image src="/dashboardcardimg4.png" alt="" width={20} height={20} />
+              </CardHeader>
+              <CardContent>
+                <div className="text-[#000000b3] text-4xl font-bold mt-12">
+                  {showSkeletons ? <Skeleton className="h-10 w-16" /> : analytics.keywordsTracked}
+                </div>
+              </CardContent>
+            </Card>
           </div>
-        </CardContent>
-      </Card>
-      <Card className="border-border/40 bg-white rounded-none backdrop-blur-sm w-[222px] h-[174px]">
-        <CardHeader className="flex items-center justify-between">
-          <CardTitle className="text-sm font-normal text-[#00000080]">Articles Live </CardTitle>
-          <Image src="/dashboardcardimg2.png" alt="" width={20} height={20} />
-        </CardHeader>
-        <CardContent>
-          <div className="text-[#000000b3] text-4xl font-bold mt-12">
-            {showSkeletons ? <Skeleton className="h-10 w-16" /> : analytics.articlesLive}
+
+          <div>
+            <Card className="bg-transparent p-5 mt-5">
+              <CardTitle>Create a Ranking Post</CardTitle>
+              <CardDescription>Turn competitor keywords into SEO ready blog posts in one click.</CardDescription>
+              <CardContent className="px-0 flex gap-3">
+                <Button className="text-base font-normal text-white bg-black px-[60px] py-1 w-[170px] h-[50px] border border-[#00000080] rounded-[10px] hover:bg-transparent hover:text-[#00000080] cursor-pointer">Create Post</Button>
+                {/* <Button 
+                  onClick={handleTriggerArticleProcessing}
+                  disabled={isLoading}
+                  className="text-base font-normal text-black bg-transparent px-[60px] py-1 h-[50px] border border-[#00000080] rounded-[10px] hover:bg-black hover:text-white cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isLoading ? "Processing..." : "Trigger Processing"}
+                </Button> */}
+              </CardContent>
+            </Card>
           </div>
-        </CardContent>
-      </Card>
-      <Card className="border-border/40 bg-white rounded-none backdrop-blur-sm w-[222px] h-[174px]">
-        <CardHeader className="flex items-center justify-between">
-          <CardTitle className="text-sm font-normal text-[#00000080]">Est. Traffic Potential </CardTitle>
-          <Image src="/dashboardcardimg3.png" alt="" width={20} height={20} />
-        </CardHeader>
-        <CardContent>
-          <div className="text-[#000000b3] text-4xl font-bold mt-12">
-            {showSkeletons ? <Skeleton className="h-10 w-24" /> : analytics.estimatedTraffic.toLocaleString()}
-          </div>
-        </CardContent>
-      </Card>
-      <Card className="border-border/40 bg-white rounded-none rounded-r-xl backdrop-blur-sm w-[222px] h-[174px]">
-        <CardHeader className="flex items-center justify-between">
-          <CardTitle className="text-sm font-normal text-[#00000080]">Keyword Tracked </CardTitle>
-          <Image src="/dashboardcardimg4.png" alt="" width={20} height={20} />
-        </CardHeader>
-        <CardContent>
-          <div className="text-[#000000b3] text-4xl font-bold mt-12">
-            {showSkeletons ? <Skeleton className="h-10 w-16" /> : analytics.keywordsTracked}
-          </div>
-        </CardContent>
-      </Card>
-        </div>
-        <div>
-          <Card className="bg-transparent p-5 mt-5">
-            <CardTitle>Create a Ranking Post</CardTitle>
-            <CardDescription>Turn competitor keywords into SEO ready blog posts in one click.</CardDescription>
-            <CardContent className="px-0">
-              <Button className="text-base font-normal text-white bg-black px-[60px] py-1 w-[170px] h-[50px] border border-[#00000080] rounded-[10px] hover:bg-transparent hover:text-[#00000080] cursor-pointer ">Create Post</Button>
-            </CardContent>
-          </Card>
-        </div>
-        <div className="flex items-center gap-5">
-          <Card className="bg-transparent px-4 py-5 ">
+
+          <div className="flex items-center gap-5 max-w-[700px]">
+          <Card className="bg-transparent px-4 py-5 w-[350px]">
             <CardTitle className="text-lg font-normal text-[#000000b3] ml-4">Your Websites</CardTitle>
             <CardContent>
               {websites.length > 0 && (
-                <div className="flex items-center justify-between border px-4 pb-4 pt-5 rounded-t-xl border-[#0000001a] w-[400px]">
+                <div className="flex items-center justify-between border px-4 pb-4 pt-5 rounded-t-xl border-[#0000001a] w-[300px]">
                   <div className="flex items-center gap-5">
                   <div className="bg-[rgb(247,247,247)] w-[34px] h-[34px] flex items-center justify-center rounded-[10px]">
                     <Image src="/globe.png" alt="" width={20} height={20} />
@@ -587,8 +731,8 @@ const validateTab3 = () => {
                 </div>
               )}
               <div 
-              onClick={() => setOpen(true)}
-              className={`flex items-center justify-between border px-4 pb-4 pt-5 ${websites.length > 0 ? 'rounded-b-xl' : 'rounded-xl'} border-[#0000001a] w-[400px] cursor-pointer`}>
+              onClick={() => setOpenWebsiteDialog(true)}
+              className={`flex items-center justify-between border px-4 pb-4 pt-5 ${websites.length > 0 ? 'rounded-b-xl' : 'rounded-xl'} border-[#0000001a] w-[300px] cursor-pointer`}>
                 <div className="flex items-center gap-5 cursor-pointer">
                 <div className="bg-[rgb(247,247,247)] w-[34px] h-[34px] flex items-center justify-center rounded-[10px] cursor-pointer">
                   <Plus width={20} height={20} className="text-[#65b361] cursor-pointer " />
@@ -600,11 +744,11 @@ const validateTab3 = () => {
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-transparent px-4 py-5 ">
+          <Card className="bg-transparent px-4 py-5 w-[350px]">
             <CardTitle className="text-lg font-normal text-[#000000b3] ml-4">SEO Competitors</CardTitle>
             <CardContent>
               {analytics.totalCompetitors > 0 && (
-                <div className="flex items-center justify-between border px-4 pb-4 pt-5 rounded-t-xl border-[#0000001a] w-[400px]">
+                <div onClick={() => onViewCompetitors?.(selectedWebsiteId || "")} className="cursor-pointer flex items-center justify-between border px-4 pb-4 pt-5 rounded-t-xl border-[#0000001a] w-[300px]">
                   <div className="flex items-center gap-5">
                   <div className="bg-[rgb(247,247,247)] w-[34px] h-[34px] flex items-center justify-center rounded-[10px]">
                     <Image src="/globe.png" alt="" width={20} height={20} />
@@ -619,7 +763,9 @@ const validateTab3 = () => {
                   </div>
                 </div>
               )}
-              <div className={`flex items-center justify-between border px-4 pb-4 pt-5 ${analytics.totalCompetitors > 0 ? 'rounded-b-xl' : 'rounded-xl'} border-[#0000001a] w-[400px]`}>
+              <div 
+              onClick={() => onViewCompetitors?.(selectedWebsiteId || "")}
+              className={`cursor-pointer flex items-center justify-between border px-4 pb-4 pt-5 ${analytics.totalCompetitors > 0 ? 'rounded-b-xl' : 'rounded-xl'} border-[#0000001a] w-[300px]`}>
                 <div className="flex items-center gap-5">
                 <div className="bg-[rgb(247,247,247)] w-[34px] h-[34px] flex items-center justify-center rounded-[10px]">
                   <Plus width={20} height={20} className="text-[#65b361]" />
@@ -632,63 +778,112 @@ const validateTab3 = () => {
             </CardContent>
           </Card>
         </div>
-        <Card className="bg-transparent px-4 py-5 ">
-          <CardTitle className="text-lg font-normal text-[#000000b3] ml-4">Actions Required</CardTitle>
-          <CardContent>
-            {showSkeletons ? (
-              <div className="space-y-2">
-                <Skeleton className="h-16 w-full" />
-                <Skeleton className="h-16 w-full" />
-              </div>
-            ) : actionsRequired.length === 0 ? (
-              <div className="flex items-center justify-between border px-4 pb-4 pt-5 rounded-xl border-[#0000001a]">
-                <div className="flex items-center gap-5">
-                  <div className="bg-[rgb(247,247,247)] w-[30px] h-[30px] flex items-center justify-center rounded-[10px]">
-                    <Image src="/actionimg2.png" alt="" width={24} height={24} />
-                  </div>
-                  <div>
-                    <p className="text-sm text-[#000000b3] font-normal">You’re all set</p>
-                    <p className="text-xs text-[#00000080] font-normal">No outstanding tasks right now.</p>
+
+          <Card className="bg-transparent px-4 py-5">
+            <CardTitle className="text-lg font-normal text-[#000000b3] ml-4">Actions Required</CardTitle>
+            <CardContent>
+              {showSkeletons ? (
+                <div className="space-y-2">
+                  <Skeleton className="h-16 w-full" />
+                  <Skeleton className="h-16 w-full" />
+                </div>
+              ) : actionsRequired.length === 0 ? (
+                <div className="flex items-center justify-between border px-4 pb-4 pt-5 rounded-xl border-[#0000001a]">
+                  <div className="flex items-center gap-5">
+                    <div className="bg-[rgb(247,247,247)] w-[30px] h-[30px] flex items-center justify-center rounded-[10px]">
+                      <Image src="/actionimg2.png" alt="" width={24} height={24} />
+                    </div>
+                    <div>
+                      <p className="text-sm text-[#000000b3] font-normal">You’re all set</p>
+                      <p className="text-xs text-[#00000080] font-normal">No outstanding tasks right now.</p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ) : (
-              actionsRequired.map((action, index) => {
-                const isFirst = index === 0;
-                const isLast = index === actionsRequired.length - 1;
-
-                return (
-                  <div
-                    key={action.id}
-                    className={`flex items-center justify-between border px-4 pb-4 pt-5 border-[#0000001a] ${
-                      isFirst ? "rounded-t-xl" : ""
-                    } ${isLast ? "rounded-b-xl" : "border-b-0"}`}
-                  >
-                    <div className="flex items-center gap-5">
-                      <div className="bg-[rgb(247,247,247)] w-[30px] h-[30px] flex items-center justify-center rounded-[10px]">
-                        <Image src={action.icon} alt="" width={24} height={24} />
+              ) : (
+                actionsRequired.map((action, index) => {
+                  const isFirst = index === 0;
+                  const isLast = index === actionsRequired.length - 1;
+                  return (
+                    <div
+                      key={action.id}
+                      className={`flex items-center justify-between border px-4 pb-4 pt-5 border-[#0000001a] ${isFirst ? 'rounded-t-xl' : ''} ${isLast ? 'rounded-b-xl' : 'border-b-0'}`}
+                    >
+                      <div className="flex items-center gap-5">
+                        <div className="bg-[rgb(247,247,247)] w-[30px] h-[30px] flex items-center justify-center rounded-[10px]">
+                          <Image src={action.icon} alt="" width={24} height={24} />
+                        </div>
+                        <div>
+                          <p className="text-sm text-[#000000b3] font-normal">{action.title}</p>
+                          <p className="text-xs text-[#00000080] font-normal">{action.description}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm text-[#000000b3] font-normal">{action.title}</p>
-                        <p className="text-xs text-[#00000080] font-normal">{action.description}</p>
-                      </div>
+                      {action.actionLabel && (
+                        <Button onClick={action.onClick} className="border bg-transparent hover:bg-transparent text-[#00000080] border-[#0000001a] cursor-pointer">
+                          {action.actionLabel}
+                        </Button>
+                      )}
                     </div>
-                    {action.actionLabel && (
-                      <Button
-                        onClick={action.onClick}
-                        className="border bg-transparent hover:bg-transparent text-[#00000080] border-[#0000001a] cursor-pointer"
-                      >
-                        {action.actionLabel}
-                      </Button>
-                    )}
-                  </div>
-                );
-              })
-            )}
-          </CardContent>
-        </Card>
+                  );
+                })
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
-      <Dialog1 open={open} onOpenChange={setOpen}  />
-     </div> 
+
+      <Dialog1 open={open} onOpenChange={setOpen} />
+      <WebsiteDialog 
+        open={openWebsiteDialog} 
+        onOpenChange={setOpenWebsiteDialog}
+        onSuccess={() => {
+          loadUserWebsites();
+        }}
+      />
+
+      <div className="space-y-3 md:w-2/5 w-full border px-2 py-2 rounded-xl overflow-y-auto min-w-0">
+        {loadingArticles ? (
+          <div className="text-center py-12 text-gray-400">
+            <p className="text-sm">Loading articles...</p>
+          </div>
+        ) : articles.length === 0 ? (
+          <div className="text-center py-12 text-gray-400">
+            <p className="text-sm">No articles found</p>
+          </div>
+        ) : (
+          articles.map((article) => (
+            <div
+              key={article.id}
+              onClick={() => setSelectedArticle(article)}
+              className={`relative flex gap-3 p-3 bg-transparent border border-[#000000] rounded-lg cursor-pointer transition-all ${selectedArticle?.id === article.id ? 'border-gray-200 bg-transparent' : 'border-gray-200'}`}
+            >
+              <img src={article.generatedImages?.[0] || '/article-image.jpg'} alt={article.title} className="w-20 h-20 rounded object-cover flex-shrink-0" />
+
+              <div className="flex flex-col min-w-0 flex-1">
+                <div className="flex justify-between gap-2">
+                  <div className="min-w-0">
+                    <h4 className="font-medium text-gray-900 text-sm line-clamp-2">{article.title}</h4>
+                    <div className="flex items-center gap-1 mt-1">
+                      <Image src="/clock.png" height={13} width={13} alt="icon" />
+                      <p className="text-xs text-gray-500">{article.readingTime || '—'}</p>
+                    </div>
+                    <div className="mt-2 text-xs">
+                      <span className="bg-transparent text-green-700 border border-green-600 px-2 py-0.5 rounded-2xl">{article.status}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <p className="text-xs text-gray-500 line-clamp-2 mt-2">{article.preview}</p>
+
+                <div className="flex gap-1 flex-wrap mt-2">
+                  {article.tags?.slice(0, 5).map((tag) => (
+                    <span key={tag} className="text-xs bg-gray-100  text-gray-600 px-2 py-0.5 rounded-2xl border border-[#0000001a]">{tag}</span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
   );
 }
