@@ -810,7 +810,6 @@ export function KeywordsTab({
           <div className="animate-spin mb-4">
             <Image src="/loader.png" alt="Loading" width={92} height={92} />
           </div>
-          <p className="text-gray-600">Loading keywords...</p>
         </div>
       </div>
     );
