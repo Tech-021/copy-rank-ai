@@ -150,15 +150,133 @@ export function AnalyzeTab({
       prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
     );
   };
-  const handleAddCompetitorSubmit = () => {
-    // Simulate adding competitor
-    setAddCompetitorCompleted(true);
-    setTimeout(() => {
+  const handleAddCompetitorSubmit = async () => {
+    try {
+      const toAdd: string[] = [];
+      if (competitorInput.trim()) {
+        toAdd.push(...competitorInput.split(/[,\n]+/).map(s => s.trim()).filter(Boolean));
+      }
+      if (competitorTags.length > 0) {
+        toAdd.push(...competitorTags.map(t => t.trim()).filter(Boolean));
+      }
+
+      if (toAdd.length === 0) {
+        // Nothing to add - show brief completed state
+        setAddCompetitorCompleted(true);
+        setTimeout(() => {
+          setShowAddCompetitorDialog(false);
+          setAddCompetitorCompleted(false);
+          setCompetitorInput("");
+          setCompetitorTags([]);
+        }, 1200);
+        return;
+      }
+
+      const siteId = selectedWebsiteId || (websites && websites.length > 0 ? websites[0].id : undefined);
+      if (!siteId) {
+        toast.showToast({ title: "No website selected", description: "Please add or select a website first.", type: "error" });
+        await loadUserWebsites();
+        return;
+      }
+
+      setIsSubmitting(true);
+      const success = await persistCompetitorsToWebsite(siteId, toAdd);
+      setIsSubmitting(false);
+
+      if (success) {
+        setAddCompetitorCompleted(true);
+        await loadUserWebsites();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (user) await fetchAnalytics(user.id, selectedWebsiteId);
+
+        // refresh briefly then close
+        setTimeout(() => {
+          setShowAddCompetitorDialog(false);
+          setAddCompetitorCompleted(false);
+          setCompetitorInput("");
+          setCompetitorTags([]);
+        }, 1200);
+      } else {
+        toast.showToast({ title: "Failed to add", description: "Unable to save competitors. Try again.", type: "error" });
+        setShowAddCompetitorDialog(false);
+      }
+    } catch (err) {
+      console.error("Error adding competitor from analyze tab:", err);
+      toast.showToast({ title: "Error", description: err instanceof Error ? err.message : "Unknown error", type: "error" });
       setShowAddCompetitorDialog(false);
-      setAddCompetitorCompleted(false);
-      setCompetitorInput("");
-      setCompetitorTags([]);
-    }, 2000);
+      setIsSubmitting(false);
+    }
+  };
+
+  // Persist competitor domains into the website.keywords.competitors array
+  const persistCompetitorsToWebsite = async (siteId: string, domains: string[]) => {
+    try {
+      const { data: siteData, error: siteErr } = await supabase
+        .from("websites")
+        .select("id, keywords")
+        .eq("id", siteId)
+        .single();
+
+      if (siteErr) {
+        console.error("Failed to fetch website:", siteErr);
+        return false;
+      }
+
+      const existingPayload = (siteData as any)?.keywords || {};
+      const existingList: any[] = Array.isArray(existingPayload?.competitors)
+        ? existingPayload.competitors
+        : [];
+
+      const map = new Map<string, any>();
+      existingList.forEach((c) => {
+        const key = String(c.domain || "").toLowerCase();
+        if (key) map.set(key, c);
+      });
+
+      domains.forEach((d) => {
+        const domain = d.replace(/^(https?:\/\/)?(www\.)?/, "").split("/")[0];
+        const key = domain.toLowerCase();
+        if (!key) return;
+        const existing = map.get(key) || {};
+        map.set(key, {
+          ...existing,
+          domain,
+          topic: existing.topic || null,
+          keywords: existing.keywords || [],
+          keywords_count: existing.keywords_count || (existing.keywords ? existing.keywords.length : 0),
+          success: existing.success !== false,
+        });
+      });
+
+      const merged = Array.from(map.values());
+      const newPayload = {
+        ...existingPayload,
+        competitors: merged,
+        analysis_metadata: {
+          ...existingPayload.analysis_metadata,
+          totalCompetitors: merged.length,
+          analyzed_at: new Date().toISOString(),
+        },
+      };
+
+      const { error: updateErr } = await supabase
+        .from("websites")
+        .update({ keywords: newPayload })
+        .eq("id", siteId);
+
+      if (updateErr) {
+        console.error("Failed to update website competitors:", updateErr);
+        return false;
+      }
+
+      toast.showToast({ title: "Competitors added", description: `${domains.length} competitor(s) saved.`, type: "success" });
+      return true;
+    } catch (e) {
+      console.error("Error persisting competitors:", e);
+      return false;
+    }
   };
   const handleAddCompetitor = () => {
     setShowAddCompetitorDialog(true);
@@ -769,8 +887,7 @@ const validateTab3 = () => {
           <Card className="bg-transparent px-4 py-5 w-[350px]">
             <CardTitle className="text-lg font-normal text-[#000000b3] ml-4">SEO Competitors</CardTitle>
             <CardContent>
-              {analytics.totalCompetitors > 0 && (
-                <div onClick={() => onViewCompetitors?.(selectedWebsiteId || "")} className="cursor-pointer flex items-center justify-between border px-4 pb-4 pt-5 rounded-t-xl border-[#0000001a] w-[300px]">
+                <div  className="cursor-pointer flex items-center justify-between border px-4 pb-4 pt-5 rounded-t-xl border-[#0000001a] w-[300px]">
                   <div className="flex items-center gap-5">
                   <div className="bg-[rgb(247,247,247)] w-[34px] h-[34px] flex items-center justify-center rounded-[10px]">
                     <Image src="/globe.png" alt="" width={20} height={20} />
@@ -784,7 +901,6 @@ const validateTab3 = () => {
                     <Image src="/menudots.png" alt="" width={3} height={17} />
                   </div>
                 </div>
-              )}
               <div 
               onClick={handleAddCompetitor}
               className={`cursor-pointer flex items-center justify-between border px-4 pb-4 pt-5 ${analytics.totalCompetitors > 0 ? 'rounded-b-xl' : 'rounded-xl'} border-[#0000001a] w-[300px]`}>

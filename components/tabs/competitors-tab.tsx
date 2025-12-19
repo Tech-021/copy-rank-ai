@@ -39,6 +39,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/lib/client";
+import { useToast } from "@/components/ui/toast";
 import Image from "next/image";
 import { CreatePostDialog } from "@/components/ui/CreatePostDialog";
 
@@ -431,20 +432,249 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
   };
 
   const handleAddCompetitorSubmit = () => {
-    // Simulate adding competitor
-    setAddCompetitorCompleted(true);
-    setTimeout(() => {
-      setShowAddCompetitorDialog(false);
-      setAddCompetitorCompleted(false);
-      setCompetitorInput("");
-      setCompetitorTags([]);
-    }, 2000);
+    (async () => {
+      try {
+        const toAdd: string[] = [];
+        if (competitorInput.trim()) {
+          toAdd.push(...competitorInput.split(/[\n,]+/).map(s => s.trim()).filter(Boolean));
+        }
+        if (competitorTags.length > 0) {
+          toAdd.push(...competitorTags.map(t => t.trim()).filter(Boolean));
+        }
+
+        if (toAdd.length === 0) {
+          // nothing to add - show completed UI briefly
+          setAddCompetitorCompleted(true);
+          setTimeout(() => {
+            setShowAddCompetitorDialog(false);
+            setAddCompetitorCompleted(false);
+            setCompetitorInput("");
+            setCompetitorTags([]);
+          }, 1200);
+          return;
+        }
+
+        const siteId = selectedWebsiteId || initialWebsiteId || (websites && websites.length > 0 ? websites[0].id : undefined);
+        if (!siteId) {
+          // fallback: try to load websites to allow selection
+          await loadUserWebsites();
+          return;
+        }
+
+        const success = await persistCompetitorsToWebsite(siteId, toAdd);
+        if (success) {
+          setAddCompetitorCompleted(true);
+          // refresh competitors for site
+          await fetchCompetitors(siteId);
+          setTimeout(() => {
+            setShowAddCompetitorDialog(false);
+            setAddCompetitorCompleted(false);
+            setCompetitorInput("");
+            setCompetitorTags([]);
+          }, 1200);
+        } else {
+          // show simple failure flow (close dialog)
+          setAddCompetitorCompleted(false);
+          setShowAddCompetitorDialog(false);
+        }
+      } catch (err) {
+        console.error("Error adding competitor:", err);
+        setShowAddCompetitorDialog(false);
+      }
+    })();
+  };
+
+  // Persist competitor domains into the website.keywords.competitors array
+  const persistCompetitorsToWebsite = async (siteId: string, domains: string[]) => {
+    try {
+      // fetch current website keywords payload
+      const { data: siteData, error: siteErr } = await supabase
+        .from("websites")
+        .select("id, keywords")
+        .eq("id", siteId)
+        .single();
+
+      if (siteErr) {
+        console.error("Failed to fetch website:", siteErr);
+        return false;
+      }
+
+      const existingPayload = (siteData as any)?.keywords || {};
+      const existingList: any[] = Array.isArray(existingPayload?.competitors)
+        ? existingPayload.competitors
+        : [];
+
+      const map = new Map<string, any>();
+      // add existing
+      existingList.forEach((c) => {
+        const key = String(c.domain || "").toLowerCase();
+        if (key) map.set(key, c);
+      });
+
+      // add new domains
+      domains.forEach((d) => {
+        const domain = d.replace(/^(https?:\/\/)?(www\.)?/, "").split("/")[0];
+        const key = domain.toLowerCase();
+        if (!key) return;
+        const existing = map.get(key) || {};
+        map.set(key, {
+          ...existing,
+          domain,
+          topic: existing.topic || null,
+          keywords: existing.keywords || [],
+          keywords_count: existing.keywords_count || (existing.keywords ? existing.keywords.length : 0),
+          success: existing.success !== false,
+        });
+      });
+
+      const merged = Array.from(map.values());
+      const newPayload = {
+        ...existingPayload,
+        competitors: merged,
+        analysis_metadata: {
+          ...existingPayload.analysis_metadata,
+          totalCompetitors: merged.length,
+          analyzed_at: new Date().toISOString(),
+        },
+      };
+
+      const { error: updateErr } = await supabase
+        .from("websites")
+        .update({ keywords: newPayload })
+        .eq("id", siteId);
+
+      if (updateErr) {
+        console.error("Failed to update website competitors:", updateErr);
+        return false;
+      }
+
+      return true;
+    } catch (e) {
+      console.error("Error persisting competitors:", e);
+      return false;
+    }
   };
 
   const toggleCompetitorTag = (tag: string) => {
     setCompetitorTags((prev) =>
       prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
     );
+  };
+
+  const toast = useToast();
+
+  const removeCompetitorFromWebsite = async (siteId: string | undefined, domain: string) => {
+    try {
+      if (!siteId) {
+        toast.showToast({ title: "No website selected", description: "Please select a website first.", type: "error" });
+        return;
+      }
+
+      const confirmed = window.confirm(`Remove competitor ${domain}? This will delete it from the website record.`);
+      if (!confirmed) return;
+
+      const { data: siteData, error: siteErr } = await supabase
+        .from("websites")
+        .select("id, keywords")
+        .eq("id", siteId)
+        .single();
+
+      if (siteErr) throw siteErr;
+
+      const existingPayload = (siteData as any)?.keywords || {};
+      const existingList: any[] = Array.isArray(existingPayload?.competitors)
+        ? existingPayload.competitors
+        : [];
+
+      const filtered = existingList.filter((c) => String(c.domain || "").toLowerCase() !== domain.toLowerCase());
+
+      const newPayload = {
+        ...existingPayload,
+        competitors: filtered,
+        analysis_metadata: {
+          ...existingPayload.analysis_metadata,
+          totalCompetitors: filtered.length,
+          analyzed_at: new Date().toISOString(),
+        },
+      };
+
+      const { error: updateErr } = await supabase
+        .from("websites")
+        .update({ keywords: newPayload })
+        .eq("id", siteId);
+
+      if (updateErr) throw updateErr;
+
+      toast.showToast({ title: "Removed", description: `${domain} removed from competitors.`, type: "success" });
+      await fetchCompetitors(siteId);
+    } catch (err) {
+      console.error("Error removing competitor:", err);
+      toast.showToast({ title: "Delete Failed", description: err instanceof Error ? err.message : "Failed to remove competitor", type: "error" });
+    }
+  };
+
+  const removeKeywordFromWebsite = async (siteId: string | undefined, keyword: string) => {
+    try {
+      if (!siteId) {
+        toast.showToast({ title: "No website selected", description: "Please select a website first.", type: "error" });
+        return;
+      }
+
+      const confirmed = window.confirm(`Remove keyword "${keyword}"? This will delete it from the website record.`);
+      if (!confirmed) return;
+
+      const { data: siteData, error: siteErr } = await supabase
+        .from("websites")
+        .select("id, keywords")
+        .eq("id", siteId)
+        .single();
+
+      if (siteErr) throw siteErr;
+
+      const existingPayload = (siteData as any)?.keywords || {};
+
+      const triedKeys = ["site_keywords", "keywords", "opportunities", "top_keywords"];
+      let mutated = false;
+
+      const newPayload = { ...existingPayload };
+
+      for (const key of triedKeys) {
+        const arr = existingPayload?.[key];
+        if (!Array.isArray(arr)) continue;
+
+        const filtered = arr.filter((item: any) => {
+          if (typeof item === "string") return String(item).toLowerCase() !== keyword.toLowerCase();
+          if (item && typeof item === "object") {
+            const cand = item.keyword || item.key || item.name || String(item);
+            return String(cand).toLowerCase() !== keyword.toLowerCase();
+          }
+          return true;
+        });
+
+        if (filtered.length !== arr.length) {
+          newPayload[key] = filtered;
+          mutated = true;
+        }
+      }
+
+      if (!mutated) {
+        toast.showToast({ title: "Not found", description: `Keyword \"${keyword}\" not present in stored payload.`, type: "warning" });
+        return;
+      }
+
+      const { error: updateErr } = await supabase
+        .from("websites")
+        .update({ keywords: newPayload })
+        .eq("id", siteId);
+
+      if (updateErr) throw updateErr;
+
+      toast.showToast({ title: "Removed", description: `Keyword \"${keyword}\" removed.`, type: "success" });
+      await fetchCompetitors(siteId);
+    } catch (err) {
+      console.error("Error removing keyword:", err);
+      toast.showToast({ title: "Delete Failed", description: err instanceof Error ? err.message : "Failed to remove keyword", type: "error" });
+    }
   };
 
   if (loadingWebsites) {
@@ -534,6 +764,14 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
             <Button
               variant="outline"
               className="gap-2 text-gray-500 border-gray-200 rounded-l-none hover:bg-gray-50"
+              onClick={async () => {
+                const fallbackId = initialWebsiteId || selectedWebsiteId || (websites && websites.length > 0 ? websites[0].id : undefined);
+                if (!fallbackId) {
+                  await loadUserWebsites();
+                  return;
+                }
+                await fetchCompetitors(fallbackId);
+              }}
             >
               Sync Keywords
               <RefreshCcw />
@@ -669,7 +907,17 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
                           <DropdownMenuTrigger asChild>
                             <Button variant="outline" className="border border-l-0 rounded-l-none bg-transparent border-gray-200 rounded-r-md w-8 h-8 p-0 flex items-center justify-center hover:bg-gray-50"><ChevronDown className="w-4 h-4 text-gray-600" /></Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-32"><DropdownMenuItem className="text-red-600 cursor-pointer">Delete</DropdownMenuItem></DropdownMenuContent>
+                          <DropdownMenuContent align="end" className="w-32">
+                            <DropdownMenuItem
+                              className="text-red-600 cursor-pointer"
+                              onClick={async () => {
+                                const siteId = selectedWebsiteId || initialWebsiteId || (websites && websites.length > 0 ? websites[0].id : undefined);
+                                await removeKeywordFromWebsite(siteId, row.keyword);
+                              }}
+                            >
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
                     </td>
@@ -749,12 +997,20 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" className="border bg-transparent border-gray-200 h-8 px-3 text-xs flex items-center gap-1">Visit<ChevronDown className="w-4 h-4" /></Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-36">
-                    <DropdownMenuItem onClick={() => window.open(`https://${d.domain}`, "_blank")}>
-                      Visit Website
-                    </DropdownMenuItem>
-                    <DropdownMenuItem className="text-red-600">Remove</DropdownMenuItem>
-                  </DropdownMenuContent>
+                    <DropdownMenuContent align="end" className="w-36">
+                      <DropdownMenuItem onClick={() => window.open(`https://${d.domain}`, "_blank")}>
+                        Visit Website
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="text-red-600 cursor-pointer"
+                        onClick={async () => {
+                          const siteId = selectedWebsiteId || initialWebsiteId || (websites && websites.length > 0 ? websites[0].id : undefined);
+                          await removeCompetitorFromWebsite(siteId, d.domain);
+                        }}
+                      >
+                        Remove
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
                 </DropdownMenu>
               </div>
             </td>
