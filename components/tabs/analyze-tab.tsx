@@ -228,19 +228,9 @@ export function AnalyzeTab({
       });
     }
 
-    if (hasWebsites && analytics.totalCompetitors === 0) {
-      items.push({
-        id: "competitors",
-        title: "Add SEO competitors",
-        description:
-          "Track at least one competitor to unlock keyword gap insights.",
-        icon: "/globe.png",
-        actionLabel: "Add competitor",
-      });
-    }
 
     return items;
-  }, [analytics, websites]);
+  }, [analytics, websites, selectedWebsiteId, onViewCompetitors]);
 
   const fetchAnalytics = async (userId: string, websiteId?: string | null) => {
     try {
@@ -331,7 +321,6 @@ export function AnalyzeTab({
           setSelectedWebsiteId(data[0].id);
         }
       }
-        <Dialog1 open={open} onOpenChange={setOpen} />
       await fetchAnalytics(user.id, selectedWebsiteId);
     } catch (error) {
       console.error("Error loading websites:", error);
@@ -513,6 +502,41 @@ const validateTab3 = () => {
     
     if (user) {
       await fetchAnalytics(user.id, websiteId);
+    }
+  };
+
+  const handleTriggerArticleProcessing = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch("/api/article-jobs/trigger", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to trigger article processing");
+      }
+
+      toast.showToast({
+        title: "Processing Started",
+        description: "Article processing has been triggered. Check back in a moment for updates.",
+        type: "success",
+      });
+
+      // Refresh articles after a short delay
+      setTimeout(() => {
+        fetchArticles();
+        fetchAnalytics(supabase.auth.getUser().then(({ data: { user } }) => user?.id || ""), selectedWebsiteId);
+      }, 2000);
+    } catch (error) {
+      toast.showToast({
+        title: "Failed to Trigger Processing",
+        description: error instanceof Error ? error.message : "Unknown error",
+        type: "error",
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -721,7 +745,7 @@ const validateTab3 = () => {
             <CardTitle className="text-lg font-normal text-[#000000b3] ml-4">SEO Competitors</CardTitle>
             <CardContent>
               {analytics.totalCompetitors > 0 && (
-                <div className="flex items-center justify-between border px-4 pb-4 pt-5 rounded-t-xl border-[#0000001a] w-[300px]">
+                <div onClick={() => onViewCompetitors?.(selectedWebsiteId || "")} className="cursor-pointer flex items-center justify-between border px-4 pb-4 pt-5 rounded-t-xl border-[#0000001a] w-[300px]">
                   <div className="flex items-center gap-5">
                   <div className="bg-[rgb(247,247,247)] w-[34px] h-[34px] flex items-center justify-center rounded-[10px]">
                     <Image src="/globe.png" alt="" width={20} height={20} />
@@ -737,8 +761,8 @@ const validateTab3 = () => {
                 </div>
               )}
               <div 
-              
-              className={`flex items-center justify-between border px-4 pb-4 pt-5 ${analytics.totalCompetitors > 0 ? 'rounded-b-xl' : 'rounded-xl'} border-[#0000001a] w-[300px]`}>
+              onClick={() => onViewCompetitors?.(selectedWebsiteId || "")}
+              className={`cursor-pointer flex items-center justify-between border px-4 pb-4 pt-5 ${analytics.totalCompetitors > 0 ? 'rounded-b-xl' : 'rounded-xl'} border-[#0000001a] w-[300px]`}>
                 <div className="flex items-center gap-5">
                 <div className="bg-[rgb(247,247,247)] w-[34px] h-[34px] flex items-center justify-center rounded-[10px]">
                   <Plus width={20} height={20} className="text-[#65b361]" />

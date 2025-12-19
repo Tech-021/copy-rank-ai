@@ -40,6 +40,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/lib/client";
 import Image from "next/image";
+import { CreatePostDialog } from "@/components/ui/CreatePostDialog";
 
 interface CompetitorsTabProps {
   websiteId: string | null;
@@ -85,10 +86,7 @@ interface WebsiteData {
   };
 }
 
-export function CompetitorsTab({
-  websiteId: initialWebsiteId,
-  websiteId,
-}: CompetitorsTabProps) {
+export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabProps) {
   const [selectedWebsiteId, setSelectedWebsiteId] = useState<string | null>(
     initialWebsiteId
   );
@@ -104,6 +102,12 @@ export function CompetitorsTab({
   const [searchQuery, setSearchQuery] = useState("");
   const [qualityFilter, setQualityFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("overlap-desc");
+  const [showCreatePostDialog, setShowCreatePostDialog] = useState(false);
+  const [createPostCompleted, setCreatePostCompleted] = useState(false);
+  const [showAddCompetitorDialog, setShowAddCompetitorDialog] = useState(false);
+  const [addCompetitorCompleted, setAddCompetitorCompleted] = useState(false);
+  const [competitorInput, setCompetitorInput] = useState("");
+  const [competitorTags, setCompetitorTags] = useState<string[]>([]);
 
   // Load user websites if no websiteId is provided
   const loadUserWebsites = async () => {
@@ -165,15 +169,16 @@ export function CompetitorsTab({
     }
   }, [selectedWebsiteId]);
 
-  const fetchCompetitors = async () => {
-    if (!selectedWebsiteId) return;
+  const fetchCompetitors = async (id?: string) => {
+    const siteId = id || selectedWebsiteId;
+    if (!siteId) return;
 
     try {
       setLoading(true);
       setError(null);
-      console.log(`🔍 Fetching competitors for website: ${selectedWebsiteId}`);
+      console.log(`🔍 Fetching competitors for website: ${siteId}`);
 
-      const response = await fetch(`/api/keyword/${selectedWebsiteId}`);
+      const response = await fetch(`/api/keyword/${siteId}`);
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -407,6 +412,37 @@ export function CompetitorsTab({
     ).length,
   };
 
+  const handleCreatePost = () => {
+    setShowCreatePostDialog(true);
+    setCreatePostCompleted(false);
+    // Simulate post creation
+    setTimeout(() => {
+      setCreatePostCompleted(true);
+    }, 2000);
+  };
+
+  const handleAddCompetitor = () => {
+    setShowAddCompetitorDialog(true);
+    setAddCompetitorCompleted(false);
+  };
+
+  const handleAddCompetitorSubmit = () => {
+    // Simulate adding competitor
+    setAddCompetitorCompleted(true);
+    setTimeout(() => {
+      setShowAddCompetitorDialog(false);
+      setAddCompetitorCompleted(false);
+      setCompetitorInput("");
+      setCompetitorTags([]);
+    }, 2000);
+  };
+
+  const toggleCompetitorTag = (tag: string) => {
+    setCompetitorTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+    );
+  };
+
   if (loadingWebsites) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -459,22 +495,10 @@ export function CompetitorsTab({
     );
   }
 
-  if (!websiteData || competitors.length === 0) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <Users className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-          <p className="text-muted-foreground mb-2">No competitor data found</p>
-          <p className="text-sm text-muted-foreground">
-            This website doesn't have competitor analysis data yet.
-          </p>
-          <Button onClick={fetchCompetitors} variant="outline" className="mt-4">
-            Refresh
-          </Button>
-        </div>
-      </div>
-    );
-  }
+  // If no websiteData or no competitors, continue rendering the main
+  // competitors UI but with empty lists. This lets the tab open and show
+  // a simple empty state within the normal layout instead of blocking
+  // navigation with an early return.
 
   return (
     <div className="space-y-6 p-6">
@@ -494,6 +518,7 @@ export function CompetitorsTab({
           <div className="flex ">
             {/* Add Competitors */}
             <Button
+              onClick={handleAddCompetitor}
               variant="outline"
               className="gap-2 text-gray-500 border-gray-200 rounded-r-none hover:bg-gray-50"
             >
@@ -663,34 +688,34 @@ export function CompetitorsTab({
         </div>
 
         {/* Competitor Overview Table */}
-       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-  <table className="w-full border-collapse">
-    {/* ================= HEADER ================= */}
-    <thead>
-      <tr className="border-b border-gray-200 bg-white">
-        <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
-          Competitor
-        </th>
-        <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
-          Primary Topic
-        </th>
-        <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
-          Shared Keywords
-        </th>
-        <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
-          Unique Keywords
-        </th>
-        <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
-          High Value Keywords
-        </th>
-        <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
-          Last Seen
-        </th>
-        <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
-          Action
-        </th>
-      </tr>
-    </thead>
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <table className="w-full border-collapse">
+            {/* ================= HEADER ================= */}
+            <thead>
+              <tr className="border-b border-gray-200 bg-white">
+                <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
+                  Competitor
+                </th>
+                <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
+                  Primary Topic
+                </th>
+                <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
+                  Shared Keywords
+                </th>
+                <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
+                  Unique Keywords
+                </th>
+                <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
+                  High Value Keywords
+                </th>
+                <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
+                  Last Seen
+                </th>
+                <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
+                  Action
+                </th>
+              </tr>
+            </thead>
 
     {/* ================= BODY ================= */}
     <tbody>
@@ -736,6 +761,123 @@ export function CompetitorsTab({
   </table>
 </div>
       </div>
+
+      {/* Create Post Dialog */}
+      <CreatePostDialog
+        isOpen={showCreatePostDialog}
+        isLoading={createPostCompleted}
+        onClose={() => {
+          setShowCreatePostDialog(false);
+          setCreatePostCompleted(false);
+        }}
+        onConfirm={() => setShowCreatePostDialog(false)}
+      />
+
+      {/* Add Competitor Dialog */}
+      {showAddCompetitorDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg w-full max-w-[550px] p-8 relative">
+            {/* Close Button */}
+            <button
+              onClick={() => {
+                setShowAddCompetitorDialog(false);
+                setAddCompetitorCompleted(false);
+                setCompetitorInput("");
+                setCompetitorTags([]);
+              }}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <ChevronDown className="w-5 h-5 rotate-180" />
+            </button>
+
+            {!addCompetitorCompleted ? (
+              <>
+                {/* Add New Competitor State */}
+                <div className="space-y-6">
+                  <div>
+                    <h2 className="text-2xl font-semibold text-gray-900">
+                      Add New Competitor
+                    </h2>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Type in the URL of your competitor
+                    </p>
+                  </div>
+
+                  {/* Input Field */}
+                  <div>
+                    <Input
+                      type="text"
+                      placeholder="www.example.com"
+                      value={competitorInput}
+                      onChange={(e) => setCompetitorInput(e.target.value)}
+                      className="h-10 border-gray-200 bg-gray-50"
+                    />
+                  </div>
+
+                  {/* Tags */}
+                 <div className="bg-gray-200 border border-gray-300 rounded-2xl w-full h-[81px]">
+                  <div className="flex gap-2 p-3 flex-wrap">
+                    {["www.designjoy.com", "www.lander.studio", "www.webflow.com"].map(
+                      (tag) => (
+                        <button
+                          key={tag}
+                          onClick={() => toggleCompetitorTag(tag)}
+                          className={`px-3 py-1 text-xs rounded-full border transition-colors ${
+                            competitorTags.includes(tag)
+                              ? "bg-gray-900 border text-white border-gray-900"
+                              : "bg-gray-100 text-gray-600 border-gray-600 hover:border-gray-300"
+                          }`}
+                        >
+                          {tag}
+                        </button>
+                      )
+                    )}
+                  </div>
+                  </div>
+
+                  {/* Done Button */}
+                  <button
+                    onClick={handleAddCompetitorSubmit}
+                    className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 rounded-lg transition-colors"
+                  >
+                    Done
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Completed State */}
+                <div className="text-center space-y-6">
+                  <h2 className="text-2xl font-semibold text-gray-900">
+                    Competitor Added!
+                  </h2>
+
+                  {/* Success Checkmark */}
+                  <div className="flex justify-center py-8">
+                    <Image
+                      src="/check.png"
+                      height={81}
+                      width={81}
+                      alt="Success"
+                    />
+                  </div>
+
+                  {/* View Competitors Button */}
+                  <button
+                    onClick={() => {
+                      setShowAddCompetitorDialog(false);
+                      setAddCompetitorCompleted(false);
+                    }}
+                    className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 rounded-lg transition-colors"
+                  >
+                    View Competitors
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
