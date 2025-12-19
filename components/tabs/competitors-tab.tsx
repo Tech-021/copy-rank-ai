@@ -431,14 +431,127 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
   };
 
   const handleAddCompetitorSubmit = () => {
-    // Simulate adding competitor
-    setAddCompetitorCompleted(true);
-    setTimeout(() => {
-      setShowAddCompetitorDialog(false);
-      setAddCompetitorCompleted(false);
-      setCompetitorInput("");
-      setCompetitorTags([]);
-    }, 2000);
+    (async () => {
+      try {
+        const toAdd: string[] = [];
+        if (competitorInput.trim()) {
+          toAdd.push(...competitorInput.split(/[\n,]+/).map(s => s.trim()).filter(Boolean));
+        }
+        if (competitorTags.length > 0) {
+          toAdd.push(...competitorTags.map(t => t.trim()).filter(Boolean));
+        }
+
+        if (toAdd.length === 0) {
+          // nothing to add - show completed UI briefly
+          setAddCompetitorCompleted(true);
+          setTimeout(() => {
+            setShowAddCompetitorDialog(false);
+            setAddCompetitorCompleted(false);
+            setCompetitorInput("");
+            setCompetitorTags([]);
+          }, 1200);
+          return;
+        }
+
+        const siteId = selectedWebsiteId || initialWebsiteId || (websites && websites.length > 0 ? websites[0].id : undefined);
+        if (!siteId) {
+          // fallback: try to load websites to allow selection
+          await loadUserWebsites();
+          return;
+        }
+
+        const success = await persistCompetitorsToWebsite(siteId, toAdd);
+        if (success) {
+          setAddCompetitorCompleted(true);
+          // refresh competitors for site
+          await fetchCompetitors(siteId);
+          setTimeout(() => {
+            setShowAddCompetitorDialog(false);
+            setAddCompetitorCompleted(false);
+            setCompetitorInput("");
+            setCompetitorTags([]);
+          }, 1200);
+        } else {
+          // show simple failure flow (close dialog)
+          setAddCompetitorCompleted(false);
+          setShowAddCompetitorDialog(false);
+        }
+      } catch (err) {
+        console.error("Error adding competitor:", err);
+        setShowAddCompetitorDialog(false);
+      }
+    })();
+  };
+
+  // Persist competitor domains into the website.keywords.competitors array
+  const persistCompetitorsToWebsite = async (siteId: string, domains: string[]) => {
+    try {
+      // fetch current website keywords payload
+      const { data: siteData, error: siteErr } = await supabase
+        .from("websites")
+        .select("id, keywords")
+        .eq("id", siteId)
+        .single();
+
+      if (siteErr) {
+        console.error("Failed to fetch website:", siteErr);
+        return false;
+      }
+
+      const existingPayload = (siteData as any)?.keywords || {};
+      const existingList: any[] = Array.isArray(existingPayload?.competitors)
+        ? existingPayload.competitors
+        : [];
+
+      const map = new Map<string, any>();
+      // add existing
+      existingList.forEach((c) => {
+        const key = String(c.domain || "").toLowerCase();
+        if (key) map.set(key, c);
+      });
+
+      // add new domains
+      domains.forEach((d) => {
+        const domain = d.replace(/^(https?:\/\/)?(www\.)?/, "").split("/")[0];
+        const key = domain.toLowerCase();
+        if (!key) return;
+        const existing = map.get(key) || {};
+        map.set(key, {
+          ...existing,
+          domain,
+          topic: existing.topic || null,
+          keywords: existing.keywords || [],
+          keywords_count: existing.keywords_count || (existing.keywords ? existing.keywords.length : 0),
+          success: existing.success !== false,
+        });
+      });
+
+      const merged = Array.from(map.values());
+      const newPayload = {
+        ...existingPayload,
+        competitors: merged,
+        analysis_metadata: {
+          ...existingPayload.analysis_metadata,
+          totalCompetitors: merged.length,
+          analyzed_at: new Date().toISOString(),
+        },
+      };
+
+      const { error: updateErr } = await supabase
+        .from("websites")
+        .update({ keywords: newPayload })
+        .eq("id", siteId);
+
+      if (updateErr) {
+        console.error("Failed to update website competitors:", updateErr);
+        return false;
+      }
+
+      return true;
+    } catch (e) {
+      console.error("Error persisting competitors:", e);
+      return false;
+    }
   };
 
   const toggleCompetitorTag = (tag: string) => {
@@ -534,6 +647,14 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
             <Button
               variant="outline"
               className="gap-2 text-gray-500 border-gray-200 rounded-l-none hover:bg-gray-50"
+              onClick={async () => {
+                const fallbackId = initialWebsiteId || selectedWebsiteId || (websites && websites.length > 0 ? websites[0].id : undefined);
+                if (!fallbackId) {
+                  await loadUserWebsites();
+                  return;
+                }
+                await fetchCompetitors(fallbackId);
+              }}
             >
               Sync Keywords
               <RefreshCcw />
