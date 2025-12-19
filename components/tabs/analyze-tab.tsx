@@ -801,6 +801,7 @@ const validateTab3 = () => {
       </div>
 
       <Dialog1 open={open} onOpenChange={setOpen} />
+      <WebsiteDialog open={openWebsiteDialog} onOpenChange={setOpenWebsiteDialog} />
 
       <div className="space-y-3 md:w-2/5 w-full border px-2 py-2 rounded-xl overflow-y-auto min-w-0">
         {loadingArticles ? (
