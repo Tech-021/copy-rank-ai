@@ -1074,7 +1074,7 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
                     />
                   </div>
 
-                  {/* Tags */}
+                  Tags
                  <div className="bg-gray-200 border border-gray-300 rounded-2xl w-full h-[81px]">
                   <div className="flex gap-2 p-3 flex-wrap">
                     {["www.designjoy.com", "www.lander.studio", "www.webflow.com"].map(
