@@ -503,41 +503,7 @@ export function AnalyzeTab({
     }
   };
 
-const validateTab1 = () => {
-  if (!websiteName.trim()) {
-    toast.showToast({
-      title: "Missing Website URL",
-      description: "Please enter your website URL to continue.",
-      type: "error",
-    });
-    return false;
-  }
-  return true;
-};
 
-const validateTab2 = () => {
-  if (!competitor1.trim() || !competitor2.trim() || !competitor3.trim()) {
-    toast.showToast({
-      title: "Missing Competitors",
-      description: "Please enter all 3 competitors to continue.",
-      type: "error",
-    });
-    return false;
-  }
-  return true;
-};
-
-const validateTab3 = () => {
-  if (!keyword1.trim() || !keyword2.trim() || !keyword3.trim()) {
-    toast.showToast({
-      title: "Missing Keywords",
-      description: "Please enter all 3 keywords before submitting.",
-      type: "error",
-    });
-    return false;
-  }
-  return true;
-};
 
   const handleSubmitOnboarding = async () => {
     setIsSubmitting(true);
