@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import { RefreshCcw } from "lucide-react";
 import {
   Card,
@@ -39,7 +39,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/lib/client";
+import { useToast } from "@/components/ui/toast";
 import Image from "next/image";
+import { CreatePostDialog } from "@/components/ui/CreatePostDialog";
+import { CreatePostDialogDashboard } from "../dialog2";
 
 interface CompetitorsTabProps {
   websiteId: string | null;
@@ -50,6 +53,8 @@ interface Website {
   url: string;
   topic: string;
   created_at?: string;
+
+
 }
 
 interface Competitor {
@@ -59,6 +64,7 @@ interface Competitor {
   keywords?: any[];
   keywords_count?: number;
   error?: string | null;
+  generatedAt?: string;
   // Old format fields (for backward compatibility)
   avg_position?: number;
   common_keywords?: number;
@@ -67,6 +73,7 @@ interface Competitor {
     top_3_positions: number;
     top_10_positions: number;
     estimated_traffic_value: number;
+    last_seen?: string;
   };
   competitive_overlap?: number;
   serp_overlap_quality?: "High" | "Medium" | "Low";
@@ -101,6 +108,12 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
   const [searchQuery, setSearchQuery] = useState("");
   const [qualityFilter, setQualityFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("overlap-desc");
+  const [showCreatePostDialog, setShowCreatePostDialog] = useState(false);
+  const [createPostCompleted, setCreatePostCompleted] = useState(false);
+  const [showAddCompetitorDialog, setShowAddCompetitorDialog] = useState(false);
+  const [addCompetitorCompleted, setAddCompetitorCompleted] = useState(false);
+  const [competitorInput, setCompetitorInput] = useState("");
+  const [competitorTags, setCompetitorTags] = useState<string[]>([]);
 
   // Load user websites if no websiteId is provided
   const loadUserWebsites = async () => {
@@ -405,6 +418,266 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
     ).length,
   };
 
+  const handleCreatePost = () => {
+    setShowCreatePostDialog(true);
+    setCreatePostCompleted(false);
+    // Simulate post creation
+    setTimeout(() => {
+      setCreatePostCompleted(true);
+    }, 2000);
+  };
+
+  const handleAddCompetitor = () => {
+    setShowAddCompetitorDialog(true);
+    setAddCompetitorCompleted(false);
+  };
+
+  const handleAddCompetitorSubmit = () => {
+    (async () => {
+      try {
+        const toAdd: string[] = [];
+        if (competitorInput.trim()) {
+          toAdd.push(...competitorInput.split(/[\n,]+/).map(s => s.trim()).filter(Boolean));
+        }
+        if (competitorTags.length > 0) {
+          toAdd.push(...competitorTags.map(t => t.trim()).filter(Boolean));
+        }
+
+        if (toAdd.length === 0) {
+          // nothing to add - show completed UI briefly
+          setAddCompetitorCompleted(true);
+          setTimeout(() => {
+            setShowAddCompetitorDialog(false);
+            setAddCompetitorCompleted(false);
+            setCompetitorInput("");
+            setCompetitorTags([]);
+          }, 1200);
+          return;
+        }
+
+        const siteId = selectedWebsiteId || initialWebsiteId || (websites && websites.length > 0 ? websites[0].id : undefined);
+        if (!siteId) {
+          // fallback: try to load websites to allow selection
+          await loadUserWebsites();
+          return;
+        }
+
+        const success = await persistCompetitorsToWebsite(siteId, toAdd);
+        if (success) {
+          setAddCompetitorCompleted(true);
+          // refresh competitors for site
+          await fetchCompetitors(siteId);
+          setTimeout(() => {
+            setShowAddCompetitorDialog(false);
+            setAddCompetitorCompleted(false);
+            setCompetitorInput("");
+            setCompetitorTags([]);
+          }, 1200);
+        } else {
+          // show simple failure flow (close dialog)
+          setAddCompetitorCompleted(false);
+          setShowAddCompetitorDialog(false);
+        }
+      } catch (err) {
+        console.error("Error adding competitor:", err);
+        setShowAddCompetitorDialog(false);
+      }
+    })();
+  };
+
+  // Persist competitor domains into the website.keywords.competitors array
+  const persistCompetitorsToWebsite = async (siteId: string, domains: string[]) => {
+    try {
+      // fetch current website keywords payload
+      const { data: siteData, error: siteErr } = await supabase
+        .from("websites")
+        .select("id, keywords")
+        .eq("id", siteId)
+        .single();
+
+      if (siteErr) {
+        console.error("Failed to fetch website:", siteErr);
+        return false;
+      }
+
+      const existingPayload = (siteData as any)?.keywords || {};
+      const existingList: any[] = Array.isArray(existingPayload?.competitors)
+        ? existingPayload.competitors
+        : [];
+
+      const map = new Map<string, any>();
+      // add existing
+      existingList.forEach((c) => {
+        const key = String(c.domain || "").toLowerCase();
+        if (key) map.set(key, c);
+      });
+
+      // add new domains
+      domains.forEach((d) => {
+        const domain = d.replace(/^(https?:\/\/)?(www\.)?/, "").split("/")[0];
+        const key = domain.toLowerCase();
+        if (!key) return;
+        const existing = map.get(key) || {};
+        map.set(key, {
+          ...existing,
+          domain,
+          topic: existing.topic || null,
+          keywords: existing.keywords || [],
+          keywords_count: existing.keywords_count || (existing.keywords ? existing.keywords.length : 0),
+          success: existing.success !== false,
+        });
+      });
+
+      const merged = Array.from(map.values());
+      const newPayload = {
+        ...existingPayload,
+        competitors: merged,
+        analysis_metadata: {
+          ...existingPayload.analysis_metadata,
+          totalCompetitors: merged.length,
+          analyzed_at: new Date().toISOString(),
+        },
+      };
+
+      const { error: updateErr } = await supabase
+        .from("websites")
+        .update({ keywords: newPayload })
+        .eq("id", siteId);
+
+      if (updateErr) {
+        console.error("Failed to update website competitors:", updateErr);
+        return false;
+      }
+
+      return true;
+    } catch (e) {
+      console.error("Error persisting competitors:", e);
+      return false;
+    }
+  };
+
+  const toggleCompetitorTag = (tag: string) => {
+    setCompetitorTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+    );
+  };
+
+  const toast = useToast();
+
+  const removeCompetitorFromWebsite = async (siteId: string | undefined, domain: string) => {
+    try {
+      if (!siteId) {
+        toast.showToast({ title: "No website selected", description: "Please select a website first.", type: "error" });
+        return;
+      }
+
+      const confirmed = window.confirm(`Remove competitor ${domain}? This will delete it from the website record.`);
+      if (!confirmed) return;
+
+      const { data: siteData, error: siteErr } = await supabase
+        .from("websites")
+        .select("id, keywords")
+        .eq("id", siteId)
+        .single();
+
+      if (siteErr) throw siteErr;
+
+      const existingPayload = (siteData as any)?.keywords || {};
+      const existingList: any[] = Array.isArray(existingPayload?.competitors)
+        ? existingPayload.competitors
+        : [];
+
+      const filtered = existingList.filter((c) => String(c.domain || "").toLowerCase() !== domain.toLowerCase());
+
+      const newPayload = {
+        ...existingPayload,
+        competitors: filtered,
+        analysis_metadata: {
+          ...existingPayload.analysis_metadata,
+          totalCompetitors: filtered.length,
+          analyzed_at: new Date().toISOString(),
+        },
+      };
+
+      const { error: updateErr } = await supabase
+        .from("websites")
+        .update({ keywords: newPayload })
+        .eq("id", siteId);
+
+      if (updateErr) throw updateErr;
+
+      toast.showToast({ title: "Removed", description: `${domain} removed from competitors.`, type: "success" });
+      await fetchCompetitors(siteId);
+    } catch (err) {
+      console.error("Error removing competitor:", err);
+      toast.showToast({ title: "Delete Failed", description: err instanceof Error ? err.message : "Failed to remove competitor", type: "error" });
+    }
+  };
+
+  const removeKeywordFromWebsite = async (siteId: string | undefined, keyword: string) => {
+    try {
+      if (!siteId) {
+        toast.showToast({ title: "No website selected", description: "Please select a website first.", type: "error" });
+        return;
+      }
+
+      const confirmed = window.confirm(`Remove keyword "${keyword}"? This will delete it from the website record.`);
+      if (!confirmed) return;
+
+      const { data: siteData, error: siteErr } = await supabase
+        .from("websites")
+        .select("id, keywords")
+        .eq("id", siteId)
+        .single();
+
+      if (siteErr) throw siteErr;
+
+      const existingPayload = (siteData as any)?.keywords || {};
+
+      const triedKeys = ["site_keywords", "keywords", "opportunities", "top_keywords"];
+      let mutated = false;
+
+      const newPayload = { ...existingPayload };
+
+      for (const key of triedKeys) {
+        const arr = existingPayload?.[key];
+        if (!Array.isArray(arr)) continue;
+
+        const filtered = arr.filter((item: any) => {
+          if (typeof item === "string") return String(item).toLowerCase() !== keyword.toLowerCase();
+          if (item && typeof item === "object") {
+            const cand = item.keyword || item.key || item.name || String(item);
+            return String(cand).toLowerCase() !== keyword.toLowerCase();
+          }
+          return true;
+        });
+
+        if (filtered.length !== arr.length) {
+          newPayload[key] = filtered;
+          mutated = true;
+        }
+      }
+
+      if (!mutated) {
+        toast.showToast({ title: "Not found", description: `Keyword \"${keyword}\" not present in stored payload.`, type: "warning" });
+        return;
+      }
+
+      const { error: updateErr } = await supabase
+        .from("websites")
+        .update({ keywords: newPayload })
+        .eq("id", siteId);
+
+      if (updateErr) throw updateErr;
+
+      toast.showToast({ title: "Removed", description: `Keyword \"${keyword}\" removed.`, type: "success" });
+      await fetchCompetitors(siteId);
+    } catch (err) {
+      console.error("Error removing keyword:", err);
+      toast.showToast({ title: "Delete Failed", description: err instanceof Error ? err.message : "Failed to remove keyword", type: "error" });
+    }
+  };
+
   if (loadingWebsites) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -449,7 +722,7 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
           <p className="text-destructive mb-4">{error}</p>
-          <Button onClick={fetchCompetitors} variant="outline">
+           <Button onClick={() => fetchCompetitors()} variant="outline">
             Try Again
           </Button>
         </div>
@@ -480,6 +753,7 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
           <div className="flex ">
             {/* Add Competitors */}
             <Button
+              onClick={handleAddCompetitor}
               variant="outline"
               className="gap-2 text-gray-500 border-gray-200 rounded-r-none hover:bg-gray-50"
             >
@@ -491,6 +765,14 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
             <Button
               variant="outline"
               className="gap-2 text-gray-500 border-gray-200 rounded-l-none hover:bg-gray-50"
+              onClick={async () => {
+                const fallbackId = initialWebsiteId || selectedWebsiteId || (websites && websites.length > 0 ? websites[0].id : undefined);
+                if (!fallbackId) {
+                  await loadUserWebsites();
+                  return;
+                }
+                await fetchCompetitors(fallbackId);
+              }}
             >
               Sync Keywords
               <RefreshCcw />
@@ -626,7 +908,17 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
                           <DropdownMenuTrigger asChild>
                             <Button variant="outline" className="border border-l-0 rounded-l-none bg-transparent border-gray-200 rounded-r-md w-8 h-8 p-0 flex items-center justify-center hover:bg-gray-50"><ChevronDown className="w-4 h-4 text-gray-600" /></Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-32"><DropdownMenuItem className="text-red-600 cursor-pointer">Delete</DropdownMenuItem></DropdownMenuContent>
+                          <DropdownMenuContent align="end" className="w-32">
+                            <DropdownMenuItem
+                              className="text-red-600 cursor-pointer"
+                              onClick={async () => {
+                                const siteId = selectedWebsiteId || initialWebsiteId || (websites && websites.length > 0 ? websites[0].id : undefined);
+                                await removeKeywordFromWebsite(siteId, row.keyword);
+                              }}
+                            >
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
                     </td>
@@ -640,7 +932,7 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
               <tr>
                 <td colSpan={5} className="bg-white">
                   <div className="mt-6 flex justify-end mr-4">
-                    <Button className="bg-[#171717] px-6 hover:bg-gray-500">Create post</Button>
+                    <Button onClick={handleCreatePost} className="bg-[#171717] px-6 hover:bg-gray-500">Create post</Button>
                   </div>
                 </td>
               </tr>
@@ -649,34 +941,34 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
         </div>
 
         {/* Competitor Overview Table */}
-       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-  <table className="w-full border-collapse">
-    {/* ================= HEADER ================= */}
-    <thead>
-      <tr className="border-b border-gray-200 bg-white">
-        <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
-          Competitor
-        </th>
-        <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
-          Primary Topic
-        </th>
-        <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
-          Shared Keywords
-        </th>
-        <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
-          Unique Keywords
-        </th>
-        <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
-          High Value Keywords
-        </th>
-        <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
-          Last Seen
-        </th>
-        <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
-          Action
-        </th>
-      </tr>
-    </thead>
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <table className="w-full border-collapse">
+            {/* ================= HEADER ================= */}
+            <thead>
+              <tr className="border-b border-gray-200 bg-white">
+                <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
+                  Competitor
+                </th>
+                <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
+                  Primary Topic
+                </th>
+                <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
+                  Shared Keywords
+                </th>
+                <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
+                  Unique Keywords
+                </th>
+                <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
+                  High Value Keywords
+                </th>
+                <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
+                  Last Seen
+                </th>
+                <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
+                  Action
+                </th>
+              </tr>
+            </thead>
 
     {/* ================= BODY ================= */}
     <tbody>
@@ -706,12 +998,20 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" className="border bg-transparent border-gray-200 h-8 px-3 text-xs flex items-center gap-1">Visit<ChevronDown className="w-4 h-4" /></Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-36">
-                    <DropdownMenuItem onClick={() => window.open(`https://${d.domain}`, "_blank")}>
-                      Visit Website
-                    </DropdownMenuItem>
-                    <DropdownMenuItem className="text-red-600">Remove</DropdownMenuItem>
-                  </DropdownMenuContent>
+                    <DropdownMenuContent align="end" className="w-36">
+                      <DropdownMenuItem onClick={() => window.open(`https://${d.domain}`, "_blank")}>
+                        Visit Website
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="text-red-600 cursor-pointer"
+                        onClick={async () => {
+                          const siteId = selectedWebsiteId || initialWebsiteId || (websites && websites.length > 0 ? websites[0].id : undefined);
+                          await removeCompetitorFromWebsite(siteId, d.domain);
+                        }}
+                      >
+                        Remove
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
                 </DropdownMenu>
               </div>
             </td>
@@ -722,6 +1022,126 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
   </table>
 </div>
       </div>
+
+      {/* Create Post Dialog (enqueue-backed) */}
+      <CreatePostDialogDashboard
+        open={showCreatePostDialog}
+        onOpenChange={(val) => {
+          setShowCreatePostDialog(val);
+          if (!val) setCreatePostCompleted(false);
+        }}
+        websiteId={selectedWebsiteId ?? undefined}
+        onCreated={() => {
+          setCreatePostCompleted(true);
+          fetchCompetitors();
+        }}
+      />
+
+      {/* Add Competitor Dialog */}
+      {showAddCompetitorDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg w-full max-w-[550px] p-8 relative">
+            {/* Close Button */}
+            <button
+              onClick={() => {
+                setShowAddCompetitorDialog(false);
+                setAddCompetitorCompleted(false);
+                setCompetitorInput("");
+                setCompetitorTags([]);
+              }}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <X className="w-5 h-5 rotate-180" />
+            </button>
+
+            {!addCompetitorCompleted ? (
+              <>
+                {/* Add New Competitor State */}
+                <div className="space-y-6">
+                  <div>
+                    <h2 className="text-2xl font-semibold text-gray-900">
+                      Add New Competitor
+                    </h2>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Type in the URL of your competitor
+                    </p>
+                  </div>
+
+                  {/* Input Field */}
+                  <div>
+                    <Input
+                      type="text"
+                      placeholder="www.example.com"
+                      value={competitorInput}
+                      onChange={(e) => setCompetitorInput(e.target.value)}
+                      className="h-10 border-gray-200 bg-gray-50"
+                    />
+                  </div>
+
+                  Tags
+                 <div className="bg-gray-200 border border-gray-300 rounded-2xl w-full h-[81px]">
+                  <div className="flex gap-2 p-3 flex-wrap">
+                    {["www.designjoy.com", "www.lander.studio", "www.webflow.com"].map(
+                      (tag) => (
+                        <button
+                          key={tag}
+                          onClick={() => toggleCompetitorTag(tag)}
+                          className={`px-3 py-1 text-xs rounded-full border transition-colors ${
+                            competitorTags.includes(tag)
+                              ? "bg-gray-900 border text-white border-gray-900"
+                              : "bg-gray-100 text-gray-600 border-gray-600 hover:border-gray-300"
+                          }`}
+                        >
+                          {tag}
+                        </button>
+                      )
+                    )}
+                  </div>
+                  </div>
+
+                  {/* Done Button */}
+                  <button
+                    onClick={handleAddCompetitorSubmit}
+                    className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 rounded-lg transition-colors"
+                  >
+                    Done
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Completed State */}
+                <div className="text-center space-y-6">
+                  <h2 className="text-2xl font-semibold text-gray-900">
+                    Competitor Added!
+                  </h2>
+
+                  {/* Success Checkmark */}
+                  <div className="flex justify-center py-8">
+                    <Image
+                      src="/check.png"
+                      height={81}
+                      width={81}
+                      alt="Success"
+                    />
+                  </div>
+
+                  {/* View Competitors Button */}
+                  <button
+                    onClick={() => {
+                      setShowAddCompetitorDialog(false);
+                      setAddCompetitorCompleted(false);
+                    }}
+                    className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 rounded-lg transition-colors"
+                  >
+                    View Competitors
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
