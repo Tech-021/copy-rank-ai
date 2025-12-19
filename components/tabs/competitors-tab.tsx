@@ -613,6 +613,70 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
     }
   };
 
+  const removeKeywordFromWebsite = async (siteId: string | undefined, keyword: string) => {
+    try {
+      if (!siteId) {
+        toast.showToast({ title: "No website selected", description: "Please select a website first.", type: "error" });
+        return;
+      }
+
+      const confirmed = window.confirm(`Remove keyword "${keyword}"? This will delete it from the website record.`);
+      if (!confirmed) return;
+
+      const { data: siteData, error: siteErr } = await supabase
+        .from("websites")
+        .select("id, keywords")
+        .eq("id", siteId)
+        .single();
+
+      if (siteErr) throw siteErr;
+
+      const existingPayload = (siteData as any)?.keywords || {};
+
+      const triedKeys = ["site_keywords", "keywords", "opportunities", "top_keywords"];
+      let mutated = false;
+
+      const newPayload = { ...existingPayload };
+
+      for (const key of triedKeys) {
+        const arr = existingPayload?.[key];
+        if (!Array.isArray(arr)) continue;
+
+        const filtered = arr.filter((item: any) => {
+          if (typeof item === "string") return String(item).toLowerCase() !== keyword.toLowerCase();
+          if (item && typeof item === "object") {
+            const cand = item.keyword || item.key || item.name || String(item);
+            return String(cand).toLowerCase() !== keyword.toLowerCase();
+          }
+          return true;
+        });
+
+        if (filtered.length !== arr.length) {
+          newPayload[key] = filtered;
+          mutated = true;
+        }
+      }
+
+      if (!mutated) {
+        toast.showToast({ title: "Not found", description: `Keyword \"${keyword}\" not present in stored payload.`, type: "warning" });
+        return;
+      }
+
+      const { error: updateErr } = await supabase
+        .from("websites")
+        .update({ keywords: newPayload })
+        .eq("id", siteId);
+
+      if (updateErr) throw updateErr;
+
+      toast.showToast({ title: "Removed", description: `Keyword \"${keyword}\" removed.`, type: "success" });
+      await fetchCompetitors(siteId);
+    } catch (err) {
+      console.error("Error removing keyword:", err);
+      toast.showToast({ title: "Delete Failed", description: err instanceof Error ? err.message : "Failed to remove keyword", type: "error" });
+    }
+  };
+
   if (loadingWebsites) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -843,7 +907,17 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
                           <DropdownMenuTrigger asChild>
                             <Button variant="outline" className="border border-l-0 rounded-l-none bg-transparent border-gray-200 rounded-r-md w-8 h-8 p-0 flex items-center justify-center hover:bg-gray-50"><ChevronDown className="w-4 h-4 text-gray-600" /></Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-32"><DropdownMenuItem className="text-red-600 cursor-pointer">Delete</DropdownMenuItem></DropdownMenuContent>
+                          <DropdownMenuContent align="end" className="w-32">
+                            <DropdownMenuItem
+                              className="text-red-600 cursor-pointer"
+                              onClick={async () => {
+                                const siteId = selectedWebsiteId || initialWebsiteId || (websites && websites.length > 0 ? websites[0].id : undefined);
+                                await removeKeywordFromWebsite(siteId, row.keyword);
+                              }}
+                            >
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
                     </td>
