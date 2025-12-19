@@ -99,7 +99,7 @@ export function Dashboard({ onLogout, userEmail, userAvatar }: DashboardProps) {
                 : "text-[#00000080] "
             }`}
           >
-            Add Your Competitors
+            Competitors
           </button>
           <button
             onClick={() => setActiveTab("settings")}
