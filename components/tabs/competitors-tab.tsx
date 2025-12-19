@@ -643,8 +643,9 @@ export function CompetitorsTab({
                                   variant="outline"
                                   className="border rounded-r-none bg-transparent border-gray-200 rounded-l-md px-6 h-8 text-xs"
                                 >
-                                  Create
+                                  View 
                                 </Button>
+                                
 
                                 <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
@@ -666,11 +667,22 @@ export function CompetitorsTab({
                                   </DropdownMenuContent>
                                 </DropdownMenu>
                               </div>
+                              
                             </td>
+                            
                           </tr>
+                          
                         ))}
+                        
                       </tbody>
+                      
                     </table>
+                    
+                  </div>
+                  <div className="mt-6 flex justify-end mr-4">
+                    <Button className="bg-[#171717] px-6 hover:bg-gray-500">
+                      Create post 
+                    </Button>
                   </div>
                 </td>
               </tr>
@@ -759,7 +771,14 @@ export function CompetitorsTab({
                     } hover:bg-gray-50`}
                   >
                     <td className="px-4 py-3 text-sm text-gray-700 font-medium">
-                      {row.name}
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={`https://ui-avatars.com/api/?name=${row.name}&background=random&color=fff&bold=true&size=32`}
+                          alt={row.name}
+                          className="w-5 h-5 rounded-full"
+                        />
+                        {row.name}
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-700">
                       {row.topic}
