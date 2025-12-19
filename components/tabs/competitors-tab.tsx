@@ -709,7 +709,6 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
           <div className="animate-spin">
             <Image src="/loader.png" alt="" width={92} height={92} />
           </div>
-          <p className="text-muted-foreground">Loading competitors...</p>
         </div>
       </div>
     );
