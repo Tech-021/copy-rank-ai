@@ -22,7 +22,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "../ui/skeleton";
 import Image from "next/image";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
-import { Badge, ChevronLeft, Plus } from "lucide-react";
+import { Badge, ChevronLeft, Plus, X } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -34,6 +34,7 @@ import {
 import { useRouter } from "next/navigation";
 import { Dialog1 } from "@/components/websitedialog"
 import { WebsiteDialog } from "../dialog1";
+import { CreatePostDialogDashboard } from "../dialog2";
 
 interface Article {
   id: string;
@@ -139,10 +140,154 @@ export function AnalyzeTab({
   const [keyword2, setKeyword2] = useState("");
   const [keyword3, setKeyword3] = useState("");
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
+  {/*------Competitor Dialog---- */}
+  const [showAddCompetitorDialog, setShowAddCompetitorDialog] = useState(false);
+  const [addCompetitorCompleted, setAddCompetitorCompleted] = useState(false);
+  const [competitorInput, setCompetitorInput] = useState("");
+  const [competitorTags, setCompetitorTags] = useState<string[]>([]);
+  const toggleCompetitorTag = (tag: string) => {
+    setCompetitorTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+    );
+  };
+  const handleAddCompetitorSubmit = async () => {
+    try {
+      const toAdd: string[] = [];
+      if (competitorInput.trim()) {
+        toAdd.push(...competitorInput.split(/[,\n]+/).map(s => s.trim()).filter(Boolean));
+      }
+      if (competitorTags.length > 0) {
+        toAdd.push(...competitorTags.map(t => t.trim()).filter(Boolean));
+      }
+
+      if (toAdd.length === 0) {
+        // Nothing to add - show brief completed state
+        setAddCompetitorCompleted(true);
+        setTimeout(() => {
+          setShowAddCompetitorDialog(false);
+          setAddCompetitorCompleted(false);
+          setCompetitorInput("");
+          setCompetitorTags([]);
+        }, 1200);
+        return;
+      }
+
+      const siteId = selectedWebsiteId || (websites && websites.length > 0 ? websites[0].id : undefined);
+      if (!siteId) {
+        toast.showToast({ title: "No website selected", description: "Please add or select a website first.", type: "error" });
+        await loadUserWebsites();
+        return;
+      }
+
+      setIsSubmitting(true);
+      const success = await persistCompetitorsToWebsite(siteId, toAdd);
+      setIsSubmitting(false);
+
+      if (success) {
+        setAddCompetitorCompleted(true);
+        await loadUserWebsites();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (user) await fetchAnalytics(user.id, selectedWebsiteId);
+
+        // refresh briefly then close
+        setTimeout(() => {
+          setShowAddCompetitorDialog(false);
+          setAddCompetitorCompleted(false);
+          setCompetitorInput("");
+          setCompetitorTags([]);
+        }, 1200);
+      } else {
+        toast.showToast({ title: "Failed to add", description: "Unable to save competitors. Try again.", type: "error" });
+        setShowAddCompetitorDialog(false);
+      }
+    } catch (err) {
+      console.error("Error adding competitor from analyze tab:", err);
+      toast.showToast({ title: "Error", description: err instanceof Error ? err.message : "Unknown error", type: "error" });
+      setShowAddCompetitorDialog(false);
+      setIsSubmitting(false);
+    }
+  };
+
+  // Persist competitor domains into the website.keywords.competitors array
+  const persistCompetitorsToWebsite = async (siteId: string, domains: string[]) => {
+    try {
+      const { data: siteData, error: siteErr } = await supabase
+        .from("websites")
+        .select("id, keywords")
+        .eq("id", siteId)
+        .single();
+
+      if (siteErr) {
+        console.error("Failed to fetch website:", siteErr);
+        return false;
+      }
+
+      const existingPayload = (siteData as any)?.keywords || {};
+      const existingList: any[] = Array.isArray(existingPayload?.competitors)
+        ? existingPayload.competitors
+        : [];
+
+      const map = new Map<string, any>();
+      existingList.forEach((c) => {
+        const key = String(c.domain || "").toLowerCase();
+        if (key) map.set(key, c);
+      });
+
+      domains.forEach((d) => {
+        const domain = d.replace(/^(https?:\/\/)?(www\.)?/, "").split("/")[0];
+        const key = domain.toLowerCase();
+        if (!key) return;
+        const existing = map.get(key) || {};
+        map.set(key, {
+          ...existing,
+          domain,
+          topic: existing.topic || null,
+          keywords: existing.keywords || [],
+          keywords_count: existing.keywords_count || (existing.keywords ? existing.keywords.length : 0),
+          success: existing.success !== false,
+        });
+      });
+
+      const merged = Array.from(map.values());
+      const newPayload = {
+        ...existingPayload,
+        competitors: merged,
+        analysis_metadata: {
+          ...existingPayload.analysis_metadata,
+          totalCompetitors: merged.length,
+          analyzed_at: new Date().toISOString(),
+        },
+      };
+
+      const { error: updateErr } = await supabase
+        .from("websites")
+        .update({ keywords: newPayload })
+        .eq("id", siteId);
+
+      if (updateErr) {
+        console.error("Failed to update website competitors:", updateErr);
+        return false;
+      }
+
+      toast.showToast({ title: "Competitors added", description: `${domains.length} competitor(s) saved.`, type: "success" });
+      return true;
+    } catch (e) {
+      console.error("Error persisting competitors:", e);
+      return false;
+    }
+  };
+  const handleAddCompetitor = () => {
+    setShowAddCompetitorDialog(true);
+    setAddCompetitorCompleted(false);
+  };
+  {/*------Competitor Dialog Ends--- */}
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [open, setOpen] = useState(false)
   const [ openWebsiteDialog, setOpenWebsiteDialog ] = useState(false)
+  const [ openPostDialog, setOpenPostDialog ] = useState(false)
   const [editForm, setEditForm] = useState({
       title: "",
       keyword: "",
@@ -614,6 +759,16 @@ const validateTab3 = () => {
     }
   }, [selectedWebsiteId]);
 
+  const handlePostCreated = async () => {
+    try {
+      await fetchArticles();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) await fetchAnalytics(user.id, selectedWebsiteId);
+    } catch (err) {
+      console.error("Error refreshing after post creation:", err);
+    }
+  };
+
   return (
     <div className="flex flex-col md:flex-row gap-5">
       <div className="space-y-6 md:w-3/5 w-full min-w-0">
@@ -697,15 +852,10 @@ const validateTab3 = () => {
             <Card className="bg-transparent p-5 mt-5">
               <CardTitle>Create a Ranking Post</CardTitle>
               <CardDescription>Turn competitor keywords into SEO ready blog posts in one click.</CardDescription>
-              <CardContent className="px-0 flex gap-3">
-                <Button className="text-base font-normal text-white bg-black px-[60px] py-1 w-[170px] h-[50px] border border-[#00000080] rounded-[10px] hover:bg-transparent hover:text-[#00000080] cursor-pointer">Create Post</Button>
-                {/* <Button 
-                  onClick={handleTriggerArticleProcessing}
-                  disabled={isLoading}
-                  className="text-base font-normal text-black bg-transparent px-[60px] py-1 h-[50px] border border-[#00000080] rounded-[10px] hover:bg-black hover:text-white cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isLoading ? "Processing..." : "Trigger Processing"}
-                </Button> */}
+              <CardContent className="px-0">
+                <Button 
+                onClick={() => setOpenPostDialog(true)}
+                className="text-base font-normal text-white bg-black px-[60px] py-1 w-[170px] h-[50px] border border-[#00000080] rounded-[10px] hover:bg-transparent hover:text-[#00000080] cursor-pointer">Create Post</Button>
               </CardContent>
             </Card>
           </div>
@@ -747,8 +897,7 @@ const validateTab3 = () => {
           <Card className="bg-transparent px-4 py-5 w-[350px]">
             <CardTitle className="text-lg font-normal text-[#000000b3] ml-4">SEO Competitors</CardTitle>
             <CardContent>
-              {analytics.totalCompetitors > 0 && (
-                <div onClick={() => onViewCompetitors?.(selectedWebsiteId || "")} className="cursor-pointer flex items-center justify-between border px-4 pb-4 pt-5 rounded-t-xl border-[#0000001a] w-[300px]">
+                <div  className="cursor-pointer flex items-center justify-between border px-4 pb-4 pt-5 rounded-t-xl border-[#0000001a] w-[300px]">
                   <div className="flex items-center gap-5">
                   <div className="bg-[rgb(247,247,247)] w-[34px] h-[34px] flex items-center justify-center rounded-[10px]">
                     <Image src="/globe.png" alt="" width={20} height={20} />
@@ -762,9 +911,8 @@ const validateTab3 = () => {
                     <Image src="/menudots.png" alt="" width={3} height={17} />
                   </div>
                 </div>
-              )}
               <div 
-              onClick={() => onViewCompetitors?.(selectedWebsiteId || "")}
+              onClick={handleAddCompetitor}
               className={`cursor-pointer flex items-center justify-between border px-4 pb-4 pt-5 ${analytics.totalCompetitors > 0 ? 'rounded-b-xl' : 'rounded-xl'} border-[#0000001a] w-[300px]`}>
                 <div className="flex items-center gap-5">
                 <div className="bg-[rgb(247,247,247)] w-[34px] h-[34px] flex items-center justify-center rounded-[10px]">
@@ -832,13 +980,113 @@ const validateTab3 = () => {
       </div>
 
       <Dialog1 open={open} onOpenChange={setOpen} />
-      <WebsiteDialog 
-        open={openWebsiteDialog} 
-        onOpenChange={setOpenWebsiteDialog}
-        onSuccess={() => {
-          loadUserWebsites();
-        }}
-      />
+      <WebsiteDialog open={openWebsiteDialog} onOpenChange={setOpenWebsiteDialog} />
+      <CreatePostDialogDashboard open={openPostDialog} onOpenChange={setOpenPostDialog} websiteId={selectedWebsiteId} onCreated={handlePostCreated} />
+      {/* Add Competitor Dialog */}
+            {showAddCompetitorDialog && (
+              <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                <div className="bg-white rounded-lg w-full max-w-[550px] p-8 relative">
+                  {/* Close Button */}
+                  <button
+                    onClick={() => {
+                      setShowAddCompetitorDialog(false);
+                      setAddCompetitorCompleted(false);
+                      setCompetitorInput("");
+                      setCompetitorTags([]);
+                    }}
+                    className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    <X className="w-5 h-5 rotate-180" />
+                  </button>
+      
+                  {!addCompetitorCompleted ? (
+                    <>
+                      {/* Add New Competitor State */}
+                      <div className="space-y-6">
+                        <div>
+                          <h2 className="text-2xl font-semibold text-gray-900">
+                            Add New Competitor
+                          </h2>
+                          <p className="text-sm text-gray-600 mt-1">
+                            Type in the URL of your competitor
+                          </p>
+                        </div>
+      
+                        {/* Input Field */}
+                        <div>
+                          <Input
+                            type="text"
+                            placeholder="www.example.com"
+                            value={competitorInput}
+                            onChange={(e) => setCompetitorInput(e.target.value)}
+                            className="h-10 border-gray-200 bg-gray-50"
+                          />
+                        </div>
+      
+                        {/* Tags */}
+                       <div className="bg-gray-200 border border-gray-300 rounded-2xl w-full h-[81px]">
+                        <div className="flex gap-2 p-3 flex-wrap">
+                          {["www.designjoy.com", "www.lander.studio", "www.webflow.com"].map(
+                            (tag) => (
+                              <button
+                                key={tag}
+                                onClick={() => toggleCompetitorTag(tag)}
+                                className={`px-3 py-1 text-xs rounded-full border transition-colors ${
+                                  competitorTags.includes(tag)
+                                    ? "bg-gray-900 border text-white border-gray-900"
+                                    : "bg-gray-100 text-gray-600 border-gray-600 hover:border-gray-300"
+                                }`}
+                              >
+                                {tag}
+                              </button>
+                            )
+                          )}
+                        </div>
+                        </div>
+      
+                        {/* Done Button */}
+                        <button
+                          onClick={handleAddCompetitorSubmit}
+                          className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 rounded-lg transition-colors"
+                        >
+                          Done
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      {/* Completed State */}
+                      <div className="text-center space-y-6">
+                        <h2 className="text-2xl font-semibold text-gray-900">
+                          Competitor Added!
+                        </h2>
+      
+                        {/* Success Checkmark */}
+                        <div className="flex justify-center py-8">
+                          <Image
+                            src="/check.png"
+                            height={81}
+                            width={81}
+                            alt="Success"
+                          />
+                        </div>
+      
+                        {/* View Competitors Button */}
+                        <button
+                          onClick={() => {
+                            setShowAddCompetitorDialog(false);
+                            setAddCompetitorCompleted(false);
+                          }}
+                          className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 rounded-lg transition-colors"
+                        >
+                          View Competitors
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
 
       <div className="space-y-3 md:w-2/5 w-full border px-2 py-2 rounded-xl overflow-y-auto min-w-0">
         {loadingArticles ? (
