@@ -7,36 +7,63 @@ import { useEffect, useState } from "react"
 interface AddKeywordsDialogProps {
   isOpen: boolean
   onClose: () => void
+  onAdd?: (keywords: string[]) => Promise<void>
 }
 
 export function AddKeywordsDialog({
   isOpen,
   onClose,
+  onAdd,
 }: AddKeywordsDialogProps) {
   const [added, setAdded] = useState(false)
-
-  useEffect(() => {
-    if (isOpen && !added) {
-      const timer = setTimeout(() => {
-        setAdded(true)
-      }, 2000)
-      return () => clearTimeout(timer)
-    }
-  }, [isOpen, added])
+  const [keywordInput, setKeywordInput] = useState("")
+  const [isAdding, setIsAdding] = useState(false)
 
   const handleClose = () => {
     setAdded(false)
+    setKeywordInput("")
+    setIsAdding(false)
     onClose()
   }
 
-  useEffect(() => {
-    if (added) {
-      const timer = setTimeout(() => {
-        handleClose()
-      }, 2000)
-      return () => clearTimeout(timer)
+  const handleAddKeywords = async () => {
+    if (!keywordInput.trim()) return
+
+    setIsAdding(true)
+
+    // Parse keywords - split by newline or comma
+    const keywords = keywordInput
+      .split(/[\n,]+/)
+      .map(k => k.trim())
+      .filter(k => k.length > 0)
+
+    if (keywords.length === 0) {
+      setIsAdding(false)
+      return
     }
-  }, [added])
+
+    // Call onAdd if provided
+    if (onAdd) {
+      await onAdd(keywords)
+    }
+
+    setAdded(true)
+    setIsAdding(false)
+
+    // Auto close after success
+    setTimeout(() => {
+      handleClose()
+    }, 2000)
+  }
+
+  useEffect(() => {
+    // Reset state when dialog opens
+    if (isOpen) {
+      setAdded(false)
+      setKeywordInput("")
+      setIsAdding(false)
+    }
+  }, [isOpen])
 
   if (!isOpen) return null
 
@@ -47,37 +74,69 @@ export function AddKeywordsDialog({
         <button
           onClick={handleClose}
           className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+          aria-label="Close dialog"
         >
           <X className="w-5 h-5" />
         </button>
 
         {!added ? (
           <>
-            {/* Importing State */}
-            <div className="text-center space-y-8">
-              <h2 className="text-2xl  text-gray-900">
-                Importing Keywords
-              </h2>
+            {!isAdding ? (
+              <>
+                {/* Input State */}
+                <div className="space-y-6">
+                  <h2 className="text-2xl text-gray-900">
+                    Add Keywords
+                  </h2>
+                  <p className="text-sm text-gray-600">
+                    Enter keywords (one per line or comma-separated)
+                  </p>
 
-              {/* Loading Checkmark Animation */}
-              <div className="flex justify-center animate-spin py-8">
-                <Image
-                  src="/loader.png"
-                  height={92}
-                  width={92}
-                  alt="icon"
-                />
-              </div>
+                  <textarea
+                    value={keywordInput}
+                    onChange={(e) => setKeywordInput(e.target.value)}
+                    placeholder="Enter keywords here..."
+                    className="w-full h-48 px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 resize-none text-sm"
+                  />
 
-              {/* Loading Button */}
-              <button
-                disabled
-                className="w-full bg-green-600 hover:bg-green-600 text-white font-medium py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
-              >
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                <span></span>
-              </button>
-            </div>
+                  <button
+                    onClick={handleAddKeywords}
+                    disabled={!keywordInput.trim()}
+                    className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium py-3 rounded-lg transition-colors"
+                  >
+                    Add Keywords
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Adding State */}
+                <div className="text-center space-y-8">
+                  <h2 className="text-2xl text-gray-900">
+                    Adding Keywords
+                  </h2>
+
+                  {/* Loading Animation */}
+                  <div className="flex justify-center animate-spin py-8">
+                    <Image
+                      src="/loader.png"
+                      height={92}
+                      width={92}
+                      alt="icon"
+                    />
+                  </div>
+
+                  {/* Loading Button */}
+                  <button
+                    disabled
+                    aria-label="Adding keywords"
+                    className="w-full bg-green-600 text-white font-medium py-3 rounded-lg flex items-center justify-center gap-2"
+                  >
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  </button>
+                </div>
+              </>
+            )}
           </>
         ) : (
           <>
