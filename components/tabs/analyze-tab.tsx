@@ -679,73 +679,74 @@ const validateTab3 = () => {
             </Card>
           </div>
 
-          <div className="flex items-center gap-5">
-            <Card className="bg-transparent px-4 py-5">
-              <CardTitle className="text-lg font-normal text-[#000000b3] ml-4">Your Websites</CardTitle>
-              <CardContent>
-                {websites.length > 0 && (
-                  <div className="flex items-center justify-between border px-4 pb-4 pt-5 rounded-t-xl border-[#0000001a] w-[400px]">
-                    <div className="flex items-center gap-5">
-                      <div className="bg-[rgb(247,247,247)] w-[34px] h-[34px] flex items-center justify-center rounded-[10px]">
-                        <Image src="/globe.png" alt="" width={20} height={20} />
-                      </div>
-                      <div>
-                        <p className="text-sm text-[#000000b3] font-normal">{websites.length} website{websites.length > 1 ? 's' : ''}</p>
-                        <p className="text-xs text-[#00000080] font-normal">{websites[0]?.url}{websites.length > 1 ? ` and ${websites.length - 1} other${websites.length > 2 ? 's' : ''}` : ''}</p>
-                      </div>
-                    </div>
-                    <div className="w-[34px] h-[34px] bg-[#00000000] rounded-xl flex items-center justify-center cursor-pointer">
-                      <Image src="/menudots.png" alt="" width={3} height={17} />
-                    </div>
-                  </div>
-                )}
-
-                <div onClick={() => setOpen(true)} className={`flex items-center justify-between border px-4 pb-4 pt-5 ${websites.length > 0 ? 'rounded-b-xl' : 'rounded-xl'} border-[#0000001a] w-[400px] cursor-pointer`}>
-                  <div className="flex items-center gap-5 cursor-pointer">
-                    <div className="bg-[rgb(247,247,247)] w-[34px] h-[34px] flex items-center justify-center rounded-[10px] cursor-pointer">
-                      <Plus width={20} height={20} className="text-[#65b361] cursor-pointer" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-[#000000b3] font-normal">Add Website</p>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-transparent px-4 py-5">
-              <CardTitle className="text-lg font-normal text-[#000000b3] ml-4">SEO Competitors</CardTitle>
-              <CardContent>
-                {analytics.totalCompetitors > 0 && (
-                  <div className="flex items-center justify-between border px-4 pb-4 pt-5 rounded-t-xl border-[#0000001a] w-[400px]">
-                    <div className="flex items-center gap-5">
-                      <div className="bg-[rgb(247,247,247)] w-[34px] h-[34px] flex items-center justify-center rounded-[10px]">
-                        <Image src="/globe.png" alt="" width={20} height={20} />
-                      </div>
-                      <div>
-                        <p className="text-sm text-[#000000b3] font-normal">{analytics.totalCompetitors} Competitor{analytics.totalCompetitors > 1 ? 's' : ''}</p>
-                        <p className="text-xs text-[#00000080] font-normal">Tracked across your websites</p>
-                      </div>
-                    </div>
-                    <div className="w-[34px] h-[34px] bg-[#00000000] rounded-xl flex items-center justify-center cursor-pointer">
-                      <Image src="/menudots.png" alt="" width={3} height={17} />
-                    </div>
-                  </div>
-                )}
-
-                <div className={`flex items-center justify-between border px-4 pb-4 pt-5 ${analytics.totalCompetitors > 0 ? 'rounded-b-xl' : 'rounded-xl'} border-[#0000001a] w-[400px]`}>
+          <div className="flex items-center gap-5 max-w-[700px]">
+          <Card className="bg-transparent px-4 py-5 w-[350px]">
+            <CardTitle className="text-lg font-normal text-[#000000b3] ml-4">Your Websites</CardTitle>
+            <CardContent>
+              {websites.length > 0 && (
+                <div className="flex items-center justify-between border px-4 pb-4 pt-5 rounded-t-xl border-[#0000001a] w-[300px]">
                   <div className="flex items-center gap-5">
-                    <div className="bg-[rgb(247,247,247)] w-[34px] h-[34px] flex items-center justify-center rounded-[10px]">
-                      <Plus width={20} height={20} className="text-[#65b361]" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-[#000000b3] font-normal">Add Competitor</p>
-                    </div>
+                  <div className="bg-[rgb(247,247,247)] w-[34px] h-[34px] flex items-center justify-center rounded-[10px]">
+                    <Image src="/globe.png" alt="" width={20} height={20} />
+                  </div>
+                  <div>
+                    <p className="text-sm text-[#000000b3] font-normal">{websites.length} website{websites.length > 1 ? 's' : ''}</p>
+                    <p className="text-xs text-[#00000080] font-normal">{websites[0]?.url}{websites.length > 1 ? ` and ${websites.length - 1} other${websites.length > 2 ? 's' : ''}` : ''}</p>
+                  </div>
+                  </div>
+                  <div className="w-[34px] h-[34px] bg-[#00000000] rounded-xl flex items-center justify-center cursor-pointer">
+                    <Image src="/menudots.png" alt="" width={3} height={17} />
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
+              )}
+              <div 
+              onClick={() => setOpenWebsiteDialog(true)}
+              className={`flex items-center justify-between border px-4 pb-4 pt-5 ${websites.length > 0 ? 'rounded-b-xl' : 'rounded-xl'} border-[#0000001a] w-[300px] cursor-pointer`}>
+                <div className="flex items-center gap-5 cursor-pointer">
+                <div className="bg-[rgb(247,247,247)] w-[34px] h-[34px] flex items-center justify-center rounded-[10px] cursor-pointer">
+                  <Plus width={20} height={20} className="text-[#65b361] cursor-pointer " />
+                </div>
+                <div>
+                  <p className="text-sm text-[#000000b3] font-normal">Add Website</p>
+                </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="bg-transparent px-4 py-5 w-[350px]">
+            <CardTitle className="text-lg font-normal text-[#000000b3] ml-4">SEO Competitors</CardTitle>
+            <CardContent>
+              {analytics.totalCompetitors > 0 && (
+                <div className="flex items-center justify-between border px-4 pb-4 pt-5 rounded-t-xl border-[#0000001a] w-[300px]">
+                  <div className="flex items-center gap-5">
+                  <div className="bg-[rgb(247,247,247)] w-[34px] h-[34px] flex items-center justify-center rounded-[10px]">
+                    <Image src="/globe.png" alt="" width={20} height={20} />
+                  </div>
+                  <div>
+                    <p className="text-sm text-[#000000b3] font-normal">{analytics.totalCompetitors} Competitor{analytics.totalCompetitors > 1 ? 's' : ''}</p>
+                    <p className="text-xs text-[#00000080] font-normal">Tracked across your websites</p>
+                  </div>
+                  </div>
+                  <div className="w-[34px] h-[34px] bg-[#00000000] rounded-xl flex items-center justify-center cursor-pointer">
+                    <Image src="/menudots.png" alt="" width={3} height={17} />
+                  </div>
+                </div>
+              )}
+              <div 
+              
+              className={`flex items-center justify-between border px-4 pb-4 pt-5 ${analytics.totalCompetitors > 0 ? 'rounded-b-xl' : 'rounded-xl'} border-[#0000001a] w-[300px]`}>
+                <div className="flex items-center gap-5">
+                <div className="bg-[rgb(247,247,247)] w-[34px] h-[34px] flex items-center justify-center rounded-[10px]">
+                  <Plus width={20} height={20} className="text-[#65b361]" />
+                </div>
+                <div>
+                  <p className="text-sm text-[#000000b3] font-normal">Add Competitor</p>
+                </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
           <Card className="bg-transparent px-4 py-5">
             <CardTitle className="text-lg font-normal text-[#000000b3] ml-4">Actions Required</CardTitle>
@@ -801,7 +802,7 @@ const validateTab3 = () => {
 
       <Dialog1 open={open} onOpenChange={setOpen} />
 
-      <div className="space-y-3 md:w-2/5 w-full border px-2 py-2 rounded-xl max-h-[70vh] overflow-y-auto min-w-0">
+      <div className="space-y-3 md:w-2/5 w-full border px-2 py-2 rounded-xl overflow-y-auto min-w-0">
         {loadingArticles ? (
           <div className="text-center py-12 text-gray-400">
             <p className="text-sm">Loading articles...</p>
