@@ -657,11 +657,10 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
         }
       }
 
-      if (!mutated) {
-        toast.showToast({ title: "Not found", description: `Keyword \"${keyword}\" not present in stored payload.`, type: "warning" });
+    if (!mutated) {
+        toast.showToast({ title: "Not found", description: `Keyword \"${keyword}\" not present in stored payload.`, type: "error" });
         return;
       }
-
       const { error: updateErr } = await supabase
         .from("websites")
         .update({ keywords: newPayload })
