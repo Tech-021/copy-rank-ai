@@ -226,19 +226,9 @@ export function AnalyzeTab({
       });
     }
 
-    if (hasWebsites && analytics.totalCompetitors === 0) {
-      items.push({
-        id: "competitors",
-        title: "Add SEO competitors",
-        description:
-          "Track at least one competitor to unlock keyword gap insights.",
-        icon: "/globe.png",
-        actionLabel: "Add competitor",
-      });
-    }
 
     return items;
-  }, [analytics, websites]);
+  }, [analytics, websites, selectedWebsiteId, onViewCompetitors]);
 
   const fetchAnalytics = async (userId: string, websiteId?: string | null) => {
     try {
@@ -758,7 +748,7 @@ const validateTab3 = () => {
             <CardTitle className="text-lg font-normal text-[#000000b3] ml-4">SEO Competitors</CardTitle>
             <CardContent>
               {analytics.totalCompetitors > 0 && (
-                <div className="flex items-center justify-between border px-4 pb-4 pt-5 rounded-t-xl border-[#0000001a] w-[300px]">
+                <div onClick={() => onViewCompetitors?.(selectedWebsiteId || "")} className="cursor-pointer flex items-center justify-between border px-4 pb-4 pt-5 rounded-t-xl border-[#0000001a] w-[300px]">
                   <div className="flex items-center gap-5">
                   <div className="bg-[rgb(247,247,247)] w-[34px] h-[34px] flex items-center justify-center rounded-[10px]">
                     <Image src="/globe.png" alt="" width={20} height={20} />
@@ -774,8 +764,8 @@ const validateTab3 = () => {
                 </div>
               )}
               <div 
-              
-              className={`flex items-center justify-between border px-4 pb-4 pt-5 ${analytics.totalCompetitors > 0 ? 'rounded-b-xl' : 'rounded-xl'} border-[#0000001a] w-[300px]`}>
+              onClick={() => onViewCompetitors?.(selectedWebsiteId || "")}
+              className={`cursor-pointer flex items-center justify-between border px-4 pb-4 pt-5 ${analytics.totalCompetitors > 0 ? 'rounded-b-xl' : 'rounded-xl'} border-[#0000001a] w-[300px]`}>
                 <div className="flex items-center gap-5">
                 <div className="bg-[rgb(247,247,247)] w-[34px] h-[34px] flex items-center justify-center rounded-[10px]">
                   <Plus width={20} height={20} className="text-[#65b361]" />

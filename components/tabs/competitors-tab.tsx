@@ -85,10 +85,7 @@ interface WebsiteData {
   };
 }
 
-export function CompetitorsTab({
-  websiteId: initialWebsiteId,
-  websiteId,
-}: CompetitorsTabProps) {
+export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabProps) {
   const [selectedWebsiteId, setSelectedWebsiteId] = useState<string | null>(
     initialWebsiteId
   );
@@ -165,15 +162,16 @@ export function CompetitorsTab({
     }
   }, [selectedWebsiteId]);
 
-  const fetchCompetitors = async () => {
-    if (!selectedWebsiteId) return;
+  const fetchCompetitors = async (id?: string) => {
+    const siteId = id || selectedWebsiteId;
+    if (!siteId) return;
 
     try {
       setLoading(true);
       setError(null);
-      console.log(`🔍 Fetching competitors for website: ${selectedWebsiteId}`);
+      console.log(`🔍 Fetching competitors for website: ${siteId}`);
 
-      const response = await fetch(`/api/keyword/${selectedWebsiteId}`);
+      const response = await fetch(`/api/keyword/${siteId}`);
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -459,22 +457,10 @@ export function CompetitorsTab({
     );
   }
 
-  if (!websiteData || competitors.length === 0) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <Users className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-          <p className="text-muted-foreground mb-2">No competitor data found</p>
-          <p className="text-sm text-muted-foreground">
-            This website doesn't have competitor analysis data yet.
-          </p>
-          <Button onClick={fetchCompetitors} variant="outline" className="mt-4">
-            Refresh
-          </Button>
-        </div>
-      </div>
-    );
-  }
+  // If no websiteData or no competitors, continue rendering the main
+  // competitors UI but with empty lists. This lets the tab open and show
+  // a simple empty state within the normal layout instead of blocking
+  // navigation with an early return.
 
   return (
     <div className="space-y-6 p-6">
