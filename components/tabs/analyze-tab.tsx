@@ -727,6 +727,16 @@ export function AnalyzeTab({
     }
   }, [selectedWebsiteId]);
 
+  const handlePostCreated = async () => {
+    try {
+      await fetchArticles();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) await fetchAnalytics(user.id, selectedWebsiteId);
+    } catch (err) {
+      console.error("Error refreshing after post creation:", err);
+    }
+  };
+
   return (
     <div className="flex flex-col md:flex-row gap-2">
       <div className="space-y-6 md:w-3/5 w-full min-w-0">
@@ -939,6 +949,7 @@ export function AnalyzeTab({
 
       <Dialog1 open={open} onOpenChange={setOpen} />
       <WebsiteDialog open={openWebsiteDialog} onOpenChange={setOpenWebsiteDialog} />
+      <CreatePostDialogDashboard open={openPostDialog} onOpenChange={setOpenPostDialog} websiteId={selectedWebsiteId} onCreated={handlePostCreated} />
       {/* Add Competitor Dialog */}
             {showAddCompetitorDialog && (
               <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">

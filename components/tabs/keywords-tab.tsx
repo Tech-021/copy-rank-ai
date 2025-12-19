@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect } from "react";
 import { RefreshCw } from "lucide-react";
 import { Plus } from "lucide-react";
 import { CreatePostDialog } from "@/components/ui/CreatePostDialog";
+import { CreatePostDialogDashboard } from "../dialog2";
 import { ImportCSVDialog } from "@/components/ui/ImportCSVDialog";
 import { SyncCompetitorsDialog } from "@/components/ui/SyncCompetitorsDialog";
 import { AddKeywordsDialog } from "@/components/ui/AddKeywordsDialog";
@@ -1109,8 +1110,8 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
 
         {/* RIGHT */}
         <button 
-          onClick={generateContentFromKeywords}
-          className="h-9 px-8 rounded-md bg-black hover:bg-[#00000080] cursor-pointer text-white text-sm transition-colors"
+          onClick={() => setShowCreateDialog(true)}
+          className="h-9 px-8 rounded-md bg-gray-400 hover:bg-black text-white text-sm transition-colors"
         >
           Create Post
         </button>
@@ -1232,31 +1233,27 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
             <Button
               size="sm"
               className="h-9 px-4 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium"
-              onClick={generateContentFromKeywords}
+              onClick={() => setShowCreateDialog(true)}
               disabled={generatingContent}
             >
-              {generatingContent ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Generating...
-                </>
-              ) : (
-                "Create Post"
-              )}
+              Create Post
             </Button>
           </div>
         </div>
       )}
 
-      {/* Create Post Dialog */}
-      <CreatePostDialog
-        isOpen={showCreateDialog}
-        isLoading={dialogCompleted}
-        onClose={() => {
-          setShowCreateDialog(false);
-          setDialogCompleted(false);
+      {/* Create Post Dialog (enqueue-backed) */}
+      <CreatePostDialogDashboard
+        open={showCreateDialog}
+        onOpenChange={(val) => {
+          setShowCreateDialog(val);
+          if (!val) setDialogCompleted(false);
         }}
-        onConfirm={() => setShowCreateDialog(false)}
+        websiteId={selectedWebsiteId ?? undefined}
+        onCreated={() => {
+          setDialogCompleted(true);
+          fetchKeywords();
+        }}
       />
 
       {/* Import CSV Dialog */}
