@@ -78,6 +78,15 @@ interface Competitor {
   serp_overlap_quality?: "High" | "Medium" | "Low";
 }
 
+interface AnalyticsData {
+  articlesGenerated: number;
+  articlesLive: number;
+  estimatedTraffic: number;
+  keywordsTracked: number;
+  draftArticles: number;
+  totalCompetitors: number;
+}
+
 interface WebsiteData {
   website: {
     id: string;
@@ -384,6 +393,98 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
     if (num >= 1000) return (num / 1000).toFixed(1) + "K";
     return num.toString();
   };
+
+    const getCompetitorsCount = (keywordsData: any): number => {
+    if (!keywordsData) return 0;
+    if (keywordsData.competitors && Array.isArray(keywordsData.competitors)) {
+      return keywordsData.competitors.length;
+    }
+    return 0;
+  };
+  
+  const [analytics, setAnalytics] = useState<AnalyticsData>({
+      articlesGenerated: 0,
+      articlesLive: 0,
+      estimatedTraffic: 0,
+      keywordsTracked: 0,
+      draftArticles: 0,
+      totalCompetitors: 0,
+    });
+  
+    const fetchAnalytics = async (userId: string, websiteId?: string | null) => {
+        try {
+          let articlesQuery = supabase
+            .from("articles")
+            .select("status, estimated_traffic, keyword, word_count")
+            .eq("user_id", userId);
+    
+          if (websiteId) {
+            articlesQuery = articlesQuery.eq("website_id", websiteId);
+          }
+    
+          const { data: articles, error: articlesError } = await articlesQuery;
+    
+          if (articlesError) throw articlesError;
+    
+          const articlesGenerated = articles?.length || 0;
+          const articlesLive = articles?.filter(a => a.status === "published" || a.status === "UPLOADED").length || 0;
+          const draftArticles = articles?.filter(a => a.status === "draft" || a.status === "DRAFT").length || 0;
+          
+          const estimatedTraffic = articles?.reduce((sum, article) => {
+            return sum + (article.estimated_traffic || 0);
+          }, 0) || 0;
+    
+          const allKeywords = new Set<string>();
+          articles?.forEach(article => {
+            if (typeof article.keyword === 'string') {
+              article.keyword.split(',').forEach(k => allKeywords.add(k.trim()));
+            }
+          });
+          const keywordsTracked = allKeywords.size;
+    
+          let websitesQuery = supabase
+            .from("websites")
+            .select("keywords")
+            .eq("user_id", userId);
+    
+          if (websiteId) {
+            websitesQuery = websitesQuery.eq("id", websiteId);
+          }
+    
+          const { data: websitesData, error: websitesError } = await websitesQuery;
+    
+          if (websitesError) throw websitesError;
+    
+          let totalCompetitors = 0;
+          websitesData?.forEach(website => {
+            const competitorCount = getCompetitorsCount(website.keywords);
+            totalCompetitors += competitorCount;
+          });
+    
+          setAnalytics({
+            articlesGenerated,
+            articlesLive,
+            estimatedTraffic,
+            keywordsTracked,
+            draftArticles,
+            totalCompetitors,
+          });
+        } catch (error) {
+          console.error("Error fetching analytics:", error);
+        }
+      };
+  
+    const handleWebsiteChange = async (websiteId: string) => {
+        setSelectedWebsiteId(websiteId);
+        
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        
+        if (user) {
+          await fetchAnalytics(user.id, websiteId);
+        }
+      };
 
   const formatCurrency = (num: number) => {
     if (num >= 1000000) return "$" + (num / 1000000).toFixed(1) + "M";
@@ -752,7 +853,7 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
             <Button
               onClick={handleAddCompetitor}
               variant="outline"
-              className="gap-2 text-gray-500 border-gray-200 rounded-r-none hover:bg-gray-50"
+              className="gap-2 text-gray-500 border-gray-200 rounded-r-none hover:bg-gray-50 cursor-pointer"
             >
               Add Competitors
               <Plus />
@@ -761,7 +862,7 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
             {/* Sync */}
             <Button
               variant="outline"
-              className="gap-2 text-gray-500 border-gray-200 rounded-l-none hover:bg-gray-50"
+              className="gap-2 text-gray-500 border-gray-200 rounded-l-none hover:bg-gray-50 cursor-pointer"
               onClick={async () => {
                 const fallbackId = initialWebsiteId || selectedWebsiteId || (websites && websites.length > 0 ? websites[0].id : undefined);
                 if (!fallbackId) {
@@ -776,30 +877,21 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
             </Button>
 
             {/* Website */}
-            <div className="flex ml-5">
-              <Select
-                value={selectedWebsiteId ?? undefined}
-                onValueChange={(val) => setSelectedWebsiteId(val)}
-              >
-                <SelectTrigger className="w-48 h-9 border-gray-200">
-                  <SelectValue
-                    placeholder={
-                      websiteData?.website?.url || websites[0]?.url || "Select website"
-                    }
-                  />
+            <div className="ml-3">
+              <Select value={selectedWebsiteId || undefined} onValueChange={handleWebsiteChange}>
+                <SelectTrigger className="h-10 bg-transparent rounded-[8px] focus-visible:outline-none focus-visible:ring-0 border-[#0000001a] focus-visible:border-[#0000001a] focus:outline-none cursor-pointer outline-none active:outline-none px-3.5 py-2.5 text-[#00000080]">
+                  <SelectValue placeholder="Select your website" />
                 </SelectTrigger>
-                <SelectContent>
-                  {websites && websites.length > 0 ? (
-                    websites.map((w) => (
-                      <SelectItem key={w.id} value={w.id}>
-                        {w.url}
-                      </SelectItem>
-                    ))
-                  ) : (
-                    <SelectItem value="no-websites" disabled>
-                      No websites
+                <SelectContent className="cursor-pointer">
+                  {websites.map((website, index) => (
+                    <SelectItem
+                      key={website.id}
+                      value={website.id}
+                      className={`cursor-pointer data-[state=checked]:text-[#00000080] data-[state=checked]:opacity-40 ${index < websites.length - 1 ? 'border-b rounded-none border-[#0000001a]' : ''}`}
+                    >
+                      {website.url}
                     </SelectItem>
-                  )}
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -807,9 +899,9 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
         </div>
 
         {/* Stats Cards - 4 Column Grid */}
-        <div className="grid grid-cols-4">
+        <div className="grid grid-cols-4 rounded-xl shadow-xl">
           {/* Card 1 */}
-          <Card className="border rounded-r-none border-gray-200 bg-white shadow-sm">
+          <Card className="border rounded-r-none border-gray-200 bg-white shadow-xl">
             <CardContent className="flex flex-col justify-start gap-8">
               <div className="flex justify-between">
                 <p className="text-xs font-medium text-gray-600 uppercase tracking-wide">
@@ -824,7 +916,7 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
           </Card>
 
           {/* Card 2 */}
-          <Card className="border rounded-none border-gray-200 bg-white shadow-sm">
+          <Card className="border rounded-none border-gray-200 bg-white shadow-xl">
             <CardContent className="flex flex-col justify-start gap-8">
               <div className="flex justify-between">
                 <p className="text-xs font-medium text-gray-600 uppercase tracking-wide">
@@ -839,7 +931,7 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
           </Card>
 
           {/* Card 3 */}
-          <Card className="border rounded-none border-gray-200 bg-white shadow-sm">
+          <Card className="border rounded-none border-gray-200 bg-white shadow-xl">
             <CardContent className="flex flex-col justify-start gap-8">
               <div className="flex justify-between">
                 <p className="text-xs font-medium text-gray-600 uppercase tracking-wide">
@@ -852,7 +944,7 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
           </Card>
 
           {/* Card 4 */}
-          <Card className="border rounded-l-none border-gray-200 bg-white shadow-sm">
+          <Card className="border rounded-l-none border-gray-200 bg-white shadow-xl">
             <CardContent className="flex flex-col justify-start gap-8">
               <div className="flex justify-between">
                 <p className="text-xs font-medium text-gray-600 uppercase tracking-wide">
@@ -899,15 +991,15 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
                     <td className="px-4 py-3 text-sm text-gray-500"><span className="px-2 py-0.5 text-xs">{row.difficulty}</span></td>
                     <td className="px-4 py-3 text-sm text-gray-500"><span className="px-2 py-0.5 text-xs">{row.sites}</span></td>
                     <td className="px-4 py-3">
-                      <div className="flex justify-end">
-                        <Button variant="outline" className="border rounded-r-none bg-transparent border-gray-200 rounded-l-md px-6 h-8 text-xs">View</Button>
+                      <div className="flex justify-start">
+                        <Button className="border rounded-r-none bg-transparent hover:bg-transparent text-black cursor-pointer border-gray-200 rounded-l-md px-6 h-8 text-xs">View</Button>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="outline" className="border border-l-0 rounded-l-none bg-transparent border-gray-200 rounded-r-md w-8 h-8 p-0 flex items-center justify-center hover:bg-gray-50"><ChevronDown className="w-4 h-4 text-gray-600" /></Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-32">
                             <DropdownMenuItem
-                              className="text-red-600 cursor-pointer"
+                              className="text-red-600 hover:bg-transparent! hover:text-red-600! cursor-pointer"
                               onClick={async () => {
                                 const siteId = selectedWebsiteId || initialWebsiteId || (websites && websites.length > 0 ? websites[0].id : undefined);
                                 await removeKeywordFromWebsite(siteId, row.keyword);
@@ -928,7 +1020,7 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
               )}
               <tr>
                 <td colSpan={5} className="bg-white">
-                  <div className="mt-6 flex justify-end mr-4">
+                  <div className="my-3 flex justify-end mr-30">
                     <Button className="bg-[#171717] px-6 hover:bg-gray-500">Create post</Button>
                   </div>
                 </td>
@@ -990,27 +1082,30 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
             <td className="px-4 py-3 text-sm text-gray-500">{highValue}</td>
             <td className="px-4 py-3 text-sm text-gray-500">{lastSeen || "-"}</td>
             <td className="px-4 py-3">
-              <div className="flex justify-end">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="border bg-transparent border-gray-200 h-8 px-3 text-xs flex items-center gap-1">Visit<ChevronDown className="w-4 h-4" /></Button>
-                  </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-36">
-                      <DropdownMenuItem onClick={() => window.open(`https://${d.domain}`, "_blank")}>
+              <div className="flex justify-start">
+                        <Button className="border rounded-r-none bg-transparent hover:bg-transparent text-black cursor-pointer border-gray-200 rounded-l-md px-6 h-8 text-xs">Visit</Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button className="border border-l-0 rounded-l-none bg-transparent border-gray-200 rounded-r-md w-8 h-8 p-0 flex items-center justify-center hover:bg-gray-50"><ChevronDown className="w-4 h-4 text-gray-600" /></Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-32">
+                            <DropdownMenuItem 
+                            className="text-black hover:bg-transparent! hover:text-black cursor-pointer"
+                            onClick={() => window.open(`https://${d.domain}`, "_blank")}>
                         Visit Website
                       </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="text-red-600 cursor-pointer"
-                        onClick={async () => {
-                          const siteId = selectedWebsiteId || initialWebsiteId || (websites && websites.length > 0 ? websites[0].id : undefined);
-                          await removeCompetitorFromWebsite(siteId, d.domain);
-                        }}
-                      >
-                        Remove
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
+                            <DropdownMenuItem
+                              className="text-red-600 hover:bg-transparent! hover:text-red-600! cursor-pointer"
+                              onClick={async () => {
+                                const siteId = selectedWebsiteId || initialWebsiteId || (websites && websites.length > 0 ? websites[0].id : undefined);
+                                await removeKeywordFromWebsite(siteId, row.keyword);
+                              }}
+                            >
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
             </td>
           </tr>
         );
