@@ -817,43 +817,47 @@ export function CompetitorsTab({
                                 {row.name}
                               </div>
                             </td>
-                            <td className="px-4 py-4 text-sm text-gray-700">
+                            <td className=" px-6 py-4 text-sm text-gray-700">
                               {row.topic}
                             </td>
-                            <td className="px-4 py-4 text-sm text-gray-500">
+                            <td className=" py-4 text-sm text-gray-500">
                               {row.shared}
                             </td>
-                            <td className="px-4 py-4 text-sm text-gray-500">
+                            <td className=" py-4 text-sm text-gray-500">
                               {row.unique}
                             </td>
-                            <td className="px-4 py-4 text-sm text-gray-500">
+                            <td className=" py-4 text-sm text-gray-500">
                               {row.highValue}
                             </td>
-                            <td className="px-4 py-4 text-sm text-gray-500">
+                            <td className="text-sm text-gray-500">
                               {row.lastSeen}
                             </td>
-                            <td className="px-4 py-4">
-                              <div className="flex justify-end">
+                            <td className=" py-4">
+                                 <div className="flex justify-end">
+                                <Button
+                                  variant="outline"
+                                  className="border rounded-r-none bg-transparent border-gray-200 rounded-l-md px-6 h-8 text-xs"
+                                >
+                                  Visit 
+                                </Button>
+                                
+
                                 <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
                                     <Button
                                       variant="outline"
-                                      className="border bg-transparent border-gray-200 h-8 px-3 text-xs flex items-center gap-1"
+                                      className="border border-l-0 rounded-l-none bg-transparent border-gray-200 rounded-r-md w-8 h-8 p-0 flex items-center justify-center hover:bg-gray-50"
                                     >
-                                      Visit
-                                      <ChevronDown className="w-4 h-4" />
+                                      <ChevronDown className="w-4 h-4 text-gray-600" />
                                     </Button>
                                   </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end" className="w-36">
-                                    <DropdownMenuItem
-                                      onClick={() =>
-                                        window.open(`https://${row.name}`, "_blank")
-                                      }
-                                    >
-                                      Visit Website
-                                    </DropdownMenuItem>
+
+                                  <DropdownMenuContent
+                                    align="end"
+                                    className="w-32"
+                                  >
                                     <DropdownMenuItem className="text-red-600 cursor-pointer">
-                                      Remove
+                                      Delete
                                     </DropdownMenuItem>
                                   </DropdownMenuContent>
                                 </DropdownMenu>
