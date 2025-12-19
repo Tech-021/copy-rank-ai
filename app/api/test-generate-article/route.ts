@@ -913,7 +913,7 @@ function parseStructuredResponse(response: string, keyword: string) {
     content: content,
     metaTitle: metaTitle,
     metaDescription: metaDescription,
-    slug: urlSlugMatch ? urlSlugMatch[1].trim() : generateSlugFromTitle(metaTitle),
+    slug: generateSlugFromTitle(metaTitle),
     ogTitle: ogTitleMatch
       ? ogTitleMatch[1].trim()
       : generateFallbackOgTitle(keyword),
@@ -945,7 +945,7 @@ function generateEnhancedMetadata(
     // SEO Metadata
     metaTitle: parsedData.metaTitle,
     metaDescription: parsedData.metaDescription,
-    slug: parsedData.slug || generateSlugFromTitle(parsedData.metaTitle || title),
+    slug: generateSlugFromTitle(title),
     focusKeyword: keyword,
 
     // Content Analysis
