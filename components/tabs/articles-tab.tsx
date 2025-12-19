@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { Stepper } from "@/components/ui/stepper";
+import { CreatePostDialogDashboard } from "../dialog2";
 
 import {
   Card,
@@ -29,7 +30,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select3";
+} from "@/components/ui/select";
 import {
   Loader2,
   Plus,
@@ -76,6 +77,15 @@ interface Article {
   generatedImages?: string[];
 }
 
+interface AnalyticsData {
+  articlesGenerated: number;
+  articlesLive: number;
+  estimatedTraffic: number;
+  keywordsTracked: number;
+  draftArticles: number;
+  totalCompetitors: number;
+}
+
 interface ArticlesTabProps {
   generatedArticles?: Article[];
   onArticlesUpdate?: (articles: Article[]) => void;
@@ -106,6 +116,7 @@ export function ArticlesTab({
   const [selectedPlanVariantId, setSelectedPlanVariantId] = useState<
     string | null
   >(null);
+  const [ openPostDialog, setOpenPostDialog ] = useState(false)
   const [isCreatingCheckout, setIsCreatingCheckout] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
@@ -138,6 +149,14 @@ export function ArticlesTab({
   const [selectedWebsiteId, setSelectedWebsiteId] = useState<string | null>(
     websiteId || null
   );
+  const [analytics, setAnalytics] = useState<AnalyticsData>({
+      articlesGenerated: 0,
+      articlesLive: 0,
+      estimatedTraffic: 0,
+      keywordsTracked: 0,
+      draftArticles: 0,
+      totalCompetitors: 0,
+    });
 
   const loadUserWebsites = async () => {
     try {
@@ -682,6 +701,89 @@ export function ArticlesTab({
     }
   };
 
+  const getCompetitorsCount = (keywordsData: any): number => {
+  if (!keywordsData) return 0;
+  if (keywordsData.competitors && Array.isArray(keywordsData.competitors)) {
+    return keywordsData.competitors.length;
+  }
+  return 0;
+};
+
+  const fetchAnalytics = async (userId: string, websiteId?: string | null) => {
+      try {
+        let articlesQuery = supabase
+          .from("articles")
+          .select("status, estimated_traffic, keyword, word_count")
+          .eq("user_id", userId);
+  
+        if (websiteId) {
+          articlesQuery = articlesQuery.eq("website_id", websiteId);
+        }
+  
+        const { data: articles, error: articlesError } = await articlesQuery;
+  
+        if (articlesError) throw articlesError;
+  
+        const articlesGenerated = articles?.length || 0;
+        const articlesLive = articles?.filter(a => a.status === "published" || a.status === "UPLOADED").length || 0;
+        const draftArticles = articles?.filter(a => a.status === "draft" || a.status === "DRAFT").length || 0;
+        
+        const estimatedTraffic = articles?.reduce((sum, article) => {
+          return sum + (article.estimated_traffic || 0);
+        }, 0) || 0;
+  
+        const allKeywords = new Set<string>();
+        articles?.forEach(article => {
+          if (typeof article.keyword === 'string') {
+            article.keyword.split(',').forEach(k => allKeywords.add(k.trim()));
+          }
+        });
+        const keywordsTracked = allKeywords.size;
+  
+        let websitesQuery = supabase
+          .from("websites")
+          .select("keywords")
+          .eq("user_id", userId);
+  
+        if (websiteId) {
+          websitesQuery = websitesQuery.eq("id", websiteId);
+        }
+  
+        const { data: websitesData, error: websitesError } = await websitesQuery;
+  
+        if (websitesError) throw websitesError;
+  
+        let totalCompetitors = 0;
+        websitesData?.forEach(website => {
+          const competitorCount = getCompetitorsCount(website.keywords);
+          totalCompetitors += competitorCount;
+        });
+  
+        setAnalytics({
+          articlesGenerated,
+          articlesLive,
+          estimatedTraffic,
+          keywordsTracked,
+          draftArticles,
+          totalCompetitors,
+        });
+      } catch (error) {
+        console.error("Error fetching analytics:", error);
+      }
+    };
+
+  const handleWebsiteChange = async (websiteId: string) => {
+      setSelectedWebsiteId(websiteId);
+      
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      
+      if (user) {
+        await fetchAnalytics(user.id, websiteId);
+      }
+    };
+
   const handleIndexNow = async (articleId: string, slug: string) => {
     if (!slug) {
       toast.showToast({
@@ -833,33 +935,24 @@ export function ArticlesTab({
               Create, review, and publish your AI-generated posts.
             </p>
           </div>
-          <Select
-            value={selectedWebsiteId ?? undefined}
-            onValueChange={(val) => setSelectedWebsiteId(val)}
-          >
-            <SelectTrigger className="w-38 h-9 border-gray-200">
-              <SelectValue
-                placeholder={
-                  (selectedWebsiteId
-                    ? websites.find((w) => w.id === selectedWebsiteId)?.url
-                    : websites[0]?.url) || websiteId || "Select website"
-                }
-              />
-            </SelectTrigger>
-            <SelectContent>
-              {websites.length > 0 ? (
-                websites.map((w) => (
-                  <SelectItem key={w.id} value={w.id}>
-                    {w.url}
-                  </SelectItem>
-                ))
-              ) : websiteId ? (
-                <SelectItem value={websiteId}>{websiteId}</SelectItem>
-              ) : (
-                <SelectItem value="no-websites" disabled>{loadingWebsites ? "Loading..." : "No websites found"}</SelectItem>
-              )}
-            </SelectContent>
-          </Select>
+          <div>
+              <Select value={selectedWebsiteId || undefined} onValueChange={handleWebsiteChange}>
+                <SelectTrigger className="h-10 bg-transparent rounded-[8px] focus-visible:outline-none focus-visible:ring-0 border-[#0000001a] focus-visible:border-[#0000001a] focus:outline-none cursor-pointer outline-none active:outline-none px-3.5 py-2.5 text-[#00000080]">
+                  <SelectValue placeholder="Select your website" />
+                </SelectTrigger>
+                <SelectContent className="cursor-pointer">
+                  {websites.map((website, index) => (
+                    <SelectItem
+                      key={website.id}
+                      value={website.id}
+                      className={`cursor-pointer data-[state=checked]:text-[#00000080] data-[state=checked]:opacity-40 ${index < websites.length - 1 ? 'border-b rounded-none border-[#0000001a]' : ''}`}
+                    >
+                      {website.url}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
         </div>
 
         {/* Create a Ranking Post Section */}
@@ -872,7 +965,9 @@ export function ArticlesTab({
               <p className="text-sm text-gray-500 mb-4">
                 Turn competitor keywords into SEO-ready blog posts in one click.
               </p>
-              <Button className="bg-black cursor-pointer py-5 px-8 text-white hover:bg-gray-900">
+              <Button 
+              onClick={() => setOpenPostDialog(true)}
+              className="bg-black cursor-pointer py-5 px-8 text-white hover:bg-gray-900">
                 Create Post
               </Button>
             </div>
@@ -880,7 +975,7 @@ export function ArticlesTab({
         </Card>
 
         {/* Stats Grid */}
-        <div className="flex mt-5  text-sm">
+        <div className="flex mt-5 gap-2 text-sm">
           <Select value={filterStatus} onValueChange={setFilterStatus}>
             <SelectTrigger className="w-auto border-0 bg-transparent px-0 py-0 text-gray-600 hover:text-gray-900 focus:ring-0 focus:ring-offset-0">
               <SelectValue placeholder="All" />
@@ -942,7 +1037,7 @@ export function ArticlesTab({
         className={`relative flex gap-3 p-3 bg-gray-100 border rounded-lg cursor-pointer hover:border-gray-300 hover:shadow-sm transition-all ${
           selectedArticle?.id === article.id
             ? "border-gray-200 bg-[#F7F7F7]"
-            : "border-gray-100"
+            : "border-[#0000001a]"
         }`}
       >
         {/* Thumbnail */}
@@ -1135,7 +1230,7 @@ export function ArticlesTab({
 
                   {/* SEO Preview */}
                   <div>
-                    <div className="bg-white border border-gray-200 p-9 rounded-lg shadow-sm">
+                    <div className="bg-white border border-gray-200 p-9 rounded-lg shadow-xl">
                       <label className="block text-[15px]  text-gray-700 mb-2">
                         SEO Preview
                       </label>
@@ -1209,9 +1304,8 @@ export function ArticlesTab({
                   </div>
                   <div className="mt-4 flex justify-center">
                     <Button
-                      variant="outline"
                       size="sm"
-                      className="cursor-pointer"
+                      className="bg-gray-400 hover:bg-gray-400 cursor-pointer"
                       onClick={() => setIsContentExpanded((prev) => !prev)}
                     >
                       {isContentExpanded ? "Show less" : "Read more"}
@@ -1271,8 +1365,7 @@ export function ArticlesTab({
                   </Button>
                 )}
                 <Button
-                  variant="ghost"
-                  className="h-9 w-14 p-0 rounded-sm text-red-500 bg-red-500 hover:text-red-700 hover:bg-red-50"
+                  className="h-9 w-14 p-0 rounded-sm text-red-500 bg-red-500 hover:bg-red-300 hover:text-red-700 cursor-pointer"
                   onClick={() => setIsDeleteDialogOpen(true)}
                 >
                   <Image src="/bin.png" height={11} width={11} alt="icon" />
@@ -1556,7 +1649,7 @@ export function ArticlesTab({
           </Dialog>
         )}
       </div>
-
+      <CreatePostDialogDashboard open={openPostDialog} onOpenChange={setOpenPostDialog} />
      
       <Dialog
         open={isEditDialogOpen}
