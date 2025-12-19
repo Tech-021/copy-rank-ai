@@ -95,6 +95,9 @@ export function CompetitorsTab({
   const [websites, setWebsites] = useState<Website[]>([]);
   const [websiteData, setWebsiteData] = useState<WebsiteData | null>(null);
   const [competitors, setCompetitors] = useState<Competitor[]>([]);
+  const [siteKeywords, setSiteKeywords] = useState<
+    { keyword: string; volume?: number; difficulty?: string; sites?: string }[]
+  >([]);
   const [loading, setLoading] = useState(true);
   const [loadingWebsites, setLoadingWebsites] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -206,6 +209,29 @@ export function CompetitorsTab({
         metadata: data.metadata,
       });
       setCompetitors(competitorsData);
+
+      // Extract site keywords/opportunities if present in fullData
+      let extractedKeywords: any[] = [];
+      if (data.fullData) {
+        if (Array.isArray(data.fullData.site_keywords)) {
+          extractedKeywords = data.fullData.site_keywords;
+        } else if (Array.isArray(data.fullData.keywords)) {
+          extractedKeywords = data.fullData.keywords;
+        } else if (Array.isArray(data.fullData.opportunities)) {
+          extractedKeywords = data.fullData.opportunities;
+        } else if (Array.isArray(data.fullData.top_keywords)) {
+          extractedKeywords = data.fullData.top_keywords;
+        }
+      }
+
+      const normalized = extractedKeywords.map((k: any) => ({
+        keyword: k.keyword || k.key || k.name || String(k),
+        volume: k.volume || k.search_volume || k.searchVolume || undefined,
+        difficulty: k.difficulty || k.difficulty_level || k.difficultyLevel || "N/A",
+        sites: k.sites || k.sites_count || k.competition || "N/A",
+      }));
+
+      setSiteKeywords(normalized);
 
       console.log(`✅ Total competitors loaded: ${competitorsData.length}`);
     } catch (err) {
@@ -486,14 +512,29 @@ export function CompetitorsTab({
 
             {/* Website */}
             <div className="flex ml-5">
-              <Select>
-                <SelectTrigger className="w-38 h-9 border-gray-200">
-                  <SelectValue placeholder={websiteId || "www.delani.pro"} />
+              <Select
+                value={selectedWebsiteId ?? undefined}
+                onValueChange={(val) => setSelectedWebsiteId(val)}
+              >
+                <SelectTrigger className="w-48 h-9 border-gray-200">
+                  <SelectValue
+                    placeholder={
+                      websiteData?.website?.url || websites[0]?.url || "Select website"
+                    }
+                  />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={websiteId || "www.delani.pro"}>
-                    {websiteId || "www.delani.pro"}
-                  </SelectItem>
+                  {websites && websites.length > 0 ? (
+                    websites.map((w) => (
+                      <SelectItem key={w.id} value={w.id}>
+                        {w.url}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="no-websites" disabled>
+                      No websites
+                    </SelectItem>
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -561,7 +602,7 @@ export function CompetitorsTab({
 
         {/* Best Keyword Opportunities Table */}
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <table className="w-full border-collapse">
+            <table className="w-full border-collapse">
             {/* ================= HEADER ================= */}
             <thead>
               <tr className="border-b border-gray-200 bg-white">
@@ -585,104 +626,35 @@ export function CompetitorsTab({
 
             {/* ================= BODY ================= */}
             <tbody>
+              {siteKeywords && siteKeywords.length > 0 ? (
+                siteKeywords.map((row, index) => (
+                  <tr key={row.keyword + index} className={`${index !== siteKeywords.length - 1 ? "border-b border-gray-200" : ""} hover:bg-gray-50`}>
+                    <td className="px-4 py-3 text-sm text-gray-700">{row.keyword}</td>
+                    <td className="px-4 py-3 text-sm text-gray-500">{row.volume ? row.volume.toLocaleString() : "-"}</td>
+                    <td className="px-4 py-3 text-sm text-gray-500"><span className="px-2 py-0.5 text-xs">{row.difficulty}</span></td>
+                    <td className="px-4 py-3 text-sm text-gray-500"><span className="px-2 py-0.5 text-xs">{row.sites}</span></td>
+                    <td className="px-4 py-3">
+                      <div className="flex justify-end">
+                        <Button variant="outline" className="border rounded-r-none bg-transparent border-gray-200 rounded-l-md px-6 h-8 text-xs">View</Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="outline" className="border border-l-0 rounded-l-none bg-transparent border-gray-200 rounded-r-md w-8 h-8 p-0 flex items-center justify-center hover:bg-gray-50"><ChevronDown className="w-4 h-4 text-gray-600" /></Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-32"><DropdownMenuItem className="text-red-600 cursor-pointer">Delete</DropdownMenuItem></DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={5} className="px-4 py-6 text-center text-sm text-muted-foreground">No keyword opportunities found for this website</td>
+                </tr>
+              )}
               <tr>
-                <td colSpan={5} className="px-2 py-6 bg-gray-50">
-                  {/* INNER CARD (same as first table) */}
-                  <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
-                    <table className="w-full">
-                      <tbody>
-                        {[
-                          {
-                            keyword: "web-development",
-                            volume: 27103,
-                            difficulty: "Medium",
-                            sites: "Low",
-                          },
-                          {
-                            keyword: "web-design",
-                            volume: 12500,
-                            difficulty: "Medium",
-                            sites: "Medium",
-                          },
-                          {
-                            keyword: "banner-templates",
-                            volume: 8480,
-                            difficulty: "Low",
-                            sites: "Medium",
-                          },
-                        ].map((row, index) => (
-                          <tr
-                            key={index}
-                            className={`${
-                              index !== 2 ? "border-b border-gray-200" : ""
-                            } hover:bg-gray-50`}
-                          >
-                            <td className="px-4 py-3 text-sm text-gray-700">
-                              {row.keyword}
-                            </td>
-
-                            <td className="px-4 py-3 text-sm text-gray-500">
-                              {row.volume.toLocaleString()}
-                            </td>
-
-                            <td className="px-4 py-3 text-sm text-gray-500">
-                              <span className="px-2 py-0.5 text-xs">
-                                {row.difficulty}
-                              </span>
-                            </td>
-
-                            <td className="px-4 py-3 text-sm text-gray-500">
-                              <span className="px-2 py-0.5 text-xs">
-                                {row.sites}
-                              </span>
-                            </td>
-
-                            <td className="px-4 py-3">
-                              <div className="flex justify-end">
-                                <Button
-                                  variant="outline"
-                                  className="border rounded-r-none bg-transparent border-gray-200 rounded-l-md px-6 h-8 text-xs"
-                                >
-                                  View 
-                                </Button>
-                                
-
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button
-                                      variant="outline"
-                                      className="border border-l-0 rounded-l-none bg-transparent border-gray-200 rounded-r-md w-8 h-8 p-0 flex items-center justify-center hover:bg-gray-50"
-                                    >
-                                      <ChevronDown className="w-4 h-4 text-gray-600" />
-                                    </Button>
-                                  </DropdownMenuTrigger>
-
-                                  <DropdownMenuContent
-                                    align="end"
-                                    className="w-32"
-                                  >
-                                    <DropdownMenuItem className="text-red-600 cursor-pointer">
-                                      Delete
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              </div>
-                              
-                            </td>
-                            
-                          </tr>
-                          
-                        ))}
-                        
-                      </tbody>
-                      
-                    </table>
-                    
-                  </div>
+                <td colSpan={5} className="bg-white">
                   <div className="mt-6 flex justify-end mr-4">
-                    <Button className="bg-[#171717] px-6 hover:bg-gray-500">
-                      Create post 
-                    </Button>
+                    <Button className="bg-[#171717] px-6 hover:bg-gray-500">Create post</Button>
                   </div>
                 </td>
               </tr>
@@ -722,113 +694,44 @@ export function CompetitorsTab({
 
     {/* ================= BODY ================= */}
     <tbody>
-      <tr>
-        <td colSpan={7} className="px-2 py-6 bg-gray-50">
-          {/* INNER CARD */}
-          <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
-            <table className="w-full">
-              <tbody>
-                {[
-                  {
-                    name: "diginola.co",
-                    topic: "Web Dev",
-                    shared: 2,
-                    unique: 9,
-                    highValue: 3,
-                    lastSeen: "1 min ago",
-                  },
-                  {
-                    name: "lindev-studio",
-                    topic: "Technology",
-                    shared: 1,
-                    unique: 3,
-                    highValue: 1,
-                    lastSeen: "5 days ago",
-                  },
-                  {
-                    name: "designpyxe.in",
-                    topic: "Design",
-                    shared: 1,
-                    unique: 2,
-                    highValue: 2,
-                    lastSeen: "2 days ago",
-                  },
-                  {
-                    name: "webflow.com",
-                    topic: "Web Tools",
-                    shared: 4,
-                    unique: 22,
-                    highValue: 9,
-                    lastSeen: "1 hr ago",
-                  },
-                ].map((row, index, arr) => (
-                  <tr
-                    key={index}
-                    className={`${
-                      index !== arr.length - 1
-                        ? "border-b border-gray-200"
-                        : ""
-                    } hover:bg-gray-50`}
-                  >
-                    <td className="px-4 py-3 text-sm text-gray-700 font-medium">
-                      <div className="flex items-center gap-3">
-                        <img
-                          src={`https://ui-avatars.com/api/?name=${row.name}&background=random&color=fff&bold=true&size=32`}
-                          alt={row.name}
-                          className="w-5 h-5 rounded-full"
-                        />
-                        {row.name}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-700">
-                      {row.topic}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-500">
-                      {row.shared}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-500">
-                      {row.unique}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-500">
-                      {row.highValue}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-500">
-                      {row.lastSeen}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex justify-end">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="outline"
-                              className="border bg-transparent border-gray-200 h-8 px-3 text-xs flex items-center gap-1"
-                            >
-                              Visit
-                              <ChevronDown className="w-4 h-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-36">
-                            <DropdownMenuItem
-                              onClick={() =>
-                                window.open(`https://${row.name}`, "_blank")
-                              }
-                            >
-                              Visit Website
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="text-red-600">
-                              Remove
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </td>
-      </tr>
+      {filteredAndSortedCompetitors.map((comp, idx) => {
+        const d = getCompetitorDisplayData(comp);
+        const lastSeen = comp && (comp.generatedAt || comp.organic_traffic?.last_seen || "-");
+        const shared = d.keywordsCount || comp.common_keywords || 0;
+        const unique = Math.max(0, (comp.organic_traffic?.total_keywords || 0) - shared);
+        const highValue = 0;
+
+        return (
+          <tr key={d.domain + idx} className={`${idx !== filteredAndSortedCompetitors.length - 1 ? "border-b border-gray-200" : ""} hover:bg-gray-50`}>
+            <td className="px-4 py-3 text-sm text-gray-700 font-medium">
+              <div className="flex items-center gap-3">
+                <img src={`https://ui-avatars.com/api/?name=${d.domain}&background=random&color=fff&bold=true&size=32`} alt={d.domain} className="w-5 h-5 rounded-full" />
+                {d.domain}
+              </div>
+            </td>
+            <td className="px-4 py-3 text-sm text-gray-700">{d.topic}</td>
+            <td className="px-4 py-3 text-sm text-gray-500">{shared}</td>
+            <td className="px-4 py-3 text-sm text-gray-500">{unique}</td>
+            <td className="px-4 py-3 text-sm text-gray-500">{highValue}</td>
+            <td className="px-4 py-3 text-sm text-gray-500">{lastSeen || "-"}</td>
+            <td className="px-4 py-3">
+              <div className="flex justify-end">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="border bg-transparent border-gray-200 h-8 px-3 text-xs flex items-center gap-1">Visit<ChevronDown className="w-4 h-4" /></Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-36">
+                    <DropdownMenuItem onClick={() => window.open(`https://${d.domain}`, "_blank")}>
+                      Visit Website
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="text-red-600">Remove</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </td>
+          </tr>
+        );
+      })}
     </tbody>
   </table>
 </div>
