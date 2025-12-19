@@ -722,113 +722,100 @@ export function CompetitorsTab({
 
     {/* ================= BODY ================= */}
     <tbody>
-      <tr>
-        <td colSpan={7} className="px-2 py-6 bg-gray-50">
-          {/* INNER CARD */}
-          <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
-            <table className="w-full">
-              <tbody>
-                {[
-                  {
-                    name: "diginola.co",
-                    topic: "Web Dev",
-                    shared: 2,
-                    unique: 9,
-                    highValue: 3,
-                    lastSeen: "1 min ago",
-                  },
-                  {
-                    name: "lindev-studio",
-                    topic: "Technology",
-                    shared: 1,
-                    unique: 3,
-                    highValue: 1,
-                    lastSeen: "5 days ago",
-                  },
-                  {
-                    name: "designpyxe.in",
-                    topic: "Design",
-                    shared: 1,
-                    unique: 2,
-                    highValue: 2,
-                    lastSeen: "2 days ago",
-                  },
-                  {
-                    name: "webflow.com",
-                    topic: "Web Tools",
-                    shared: 4,
-                    unique: 22,
-                    highValue: 9,
-                    lastSeen: "1 hr ago",
-                  },
-                ].map((row, index, arr) => (
-                  <tr
-                    key={index}
-                    className={`${
-                      index !== arr.length - 1
-                        ? "border-b border-gray-200"
-                        : ""
-                    } hover:bg-gray-50`}
+      {[
+        {
+          name: "diginola.co",
+          topic: "Web Dev",
+          shared: 2,
+          unique: 9,
+          highValue: 3,
+          lastSeen: "1 min ago",
+        },
+        {
+          name: "lindev-studio",
+          topic: "Technology",
+          shared: 1,
+          unique: 3,
+          highValue: 1,
+          lastSeen: "5 days ago",
+        },
+        {
+          name: "designpyxe.in",
+          topic: "Design",
+          shared: 1,
+          unique: 2,
+          highValue: 2,
+          lastSeen: "2 days ago",
+        },
+        {
+          name: "webflow.com",
+          topic: "Web Tools",
+          shared: 4,
+          unique: 22,
+          highValue: 9,
+          lastSeen: "1 hr ago",
+        },
+      ].map((row, index, arr) => (
+        <tr
+          key={index}
+          className={`${
+            index !== arr.length - 1 ? "border-b border-gray-200" : ""
+          } hover:bg-gray-50`}
+        >
+          <td className="px-4 py-4 text-sm text-gray-700 font-medium">
+            <div className="flex items-center gap-3">
+              <img
+                src={`https://ui-avatars.com/api/?name=${row.name}&background=random&color=fff&bold=true&size=32`}
+                alt={row.name}
+                className="w-5 h-5 rounded-full"
+              />
+              {row.name}
+            </div>
+          </td>
+          <td className="px-4 py-4 text-sm text-gray-700">
+            {row.topic}
+          </td>
+          <td className="px-4 py-4 text-sm text-gray-500">
+            {row.shared}
+          </td>
+          <td className="px-4 py-4 text-sm text-gray-500">
+            {row.unique}
+          </td>
+          <td className="px-4 py-4 text-sm text-gray-500">
+            {row.highValue}
+          </td>
+          <td className="px-4 py-4 text-sm text-gray-500">
+            {row.lastSeen}
+          </td>
+          <td className="px-4 py-4">
+            <div className="flex justify-end">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="border bg-transparent border-gray-200 h-8 px-3 text-xs flex items-center gap-1"
                   >
-                    <td className="px-4 py-3 text-sm text-gray-700 font-medium">
-                      <div className="flex items-center gap-3">
-                        <img
-                          src={`https://ui-avatars.com/api/?name=${row.name}&background=random&color=fff&bold=true&size=32`}
-                          alt={row.name}
-                          className="w-5 h-5 rounded-full"
-                        />
-                        {row.name}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-700">
-                      {row.topic}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-500">
-                      {row.shared}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-500">
-                      {row.unique}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-500">
-                      {row.highValue}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-500">
-                      {row.lastSeen}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex justify-end">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="outline"
-                              className="border bg-transparent border-gray-200 h-8 px-3 text-xs flex items-center gap-1"
-                            >
-                              Visit
-                              <ChevronDown className="w-4 h-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-36">
-                            <DropdownMenuItem
-                              onClick={() =>
-                                window.open(`https://${row.name}`, "_blank")
-                              }
-                            >
-                              Visit Website
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="text-red-600">
-                              Remove
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </td>
-      </tr>
+                    Visit
+                    <ChevronDown className="w-4 h-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-36">
+                  <DropdownMenuItem
+                    onClick={() =>
+                      window.open(`https://${row.name}`, "_blank")
+                    }
+                  >
+                    Visit Website
+                  </DropdownMenuItem>
+                  <DropdownMenuItem className="text-red-600 cursor-pointer">
+                    Remove
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </td>
+        </tr>
+      ))}
     </tbody>
   </table>
 </div>
