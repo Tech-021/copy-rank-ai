@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import { RefreshCcw } from "lucide-react";
 import {
   Card,
@@ -51,6 +51,8 @@ interface Website {
   url: string;
   topic: string;
   created_at?: string;
+
+
 }
 
 interface Competitor {
@@ -60,6 +62,7 @@ interface Competitor {
   keywords?: any[];
   keywords_count?: number;
   error?: string | null;
+  generatedAt?: string;
   // Old format fields (for backward compatibility)
   avg_position?: number;
   common_keywords?: number;
@@ -68,6 +71,7 @@ interface Competitor {
     top_3_positions: number;
     top_10_positions: number;
     estimated_traffic_value: number;
+    last_seen?: string;
   };
   competitive_overlap?: number;
   serp_overlap_quality?: "High" | "Medium" | "Low";
@@ -600,7 +604,7 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
           <p className="text-destructive mb-4">{error}</p>
-          <Button onClick={fetchCompetitors} variant="outline">
+           <Button onClick={() => fetchCompetitors()} variant="outline">
             Try Again
           </Button>
         </div>
@@ -908,7 +912,7 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
               }}
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
             >
-              <ChevronDown className="w-5 h-5 rotate-180" />
+              <X className="w-5 h-5 rotate-180" />
             </button>
 
             {!addCompetitorCompleted ? (
