@@ -39,6 +39,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/lib/client";
+import { useToast } from "@/components/ui/toast";
 import Image from "next/image";
 import { CreatePostDialog } from "@/components/ui/CreatePostDialog";
 
@@ -560,6 +561,58 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
     );
   };
 
+  const toast = useToast();
+
+  const removeCompetitorFromWebsite = async (siteId: string | undefined, domain: string) => {
+    try {
+      if (!siteId) {
+        toast.showToast({ title: "No website selected", description: "Please select a website first.", type: "error" });
+        return;
+      }
+
+      const confirmed = window.confirm(`Remove competitor ${domain}? This will delete it from the website record.`);
+      if (!confirmed) return;
+
+      const { data: siteData, error: siteErr } = await supabase
+        .from("websites")
+        .select("id, keywords")
+        .eq("id", siteId)
+        .single();
+
+      if (siteErr) throw siteErr;
+
+      const existingPayload = (siteData as any)?.keywords || {};
+      const existingList: any[] = Array.isArray(existingPayload?.competitors)
+        ? existingPayload.competitors
+        : [];
+
+      const filtered = existingList.filter((c) => String(c.domain || "").toLowerCase() !== domain.toLowerCase());
+
+      const newPayload = {
+        ...existingPayload,
+        competitors: filtered,
+        analysis_metadata: {
+          ...existingPayload.analysis_metadata,
+          totalCompetitors: filtered.length,
+          analyzed_at: new Date().toISOString(),
+        },
+      };
+
+      const { error: updateErr } = await supabase
+        .from("websites")
+        .update({ keywords: newPayload })
+        .eq("id", siteId);
+
+      if (updateErr) throw updateErr;
+
+      toast.showToast({ title: "Removed", description: `${domain} removed from competitors.`, type: "success" });
+      await fetchCompetitors(siteId);
+    } catch (err) {
+      console.error("Error removing competitor:", err);
+      toast.showToast({ title: "Delete Failed", description: err instanceof Error ? err.message : "Failed to remove competitor", type: "error" });
+    }
+  };
+
   if (loadingWebsites) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -870,12 +923,20 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" className="border bg-transparent border-gray-200 h-8 px-3 text-xs flex items-center gap-1">Visit<ChevronDown className="w-4 h-4" /></Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-36">
-                    <DropdownMenuItem onClick={() => window.open(`https://${d.domain}`, "_blank")}>
-                      Visit Website
-                    </DropdownMenuItem>
-                    <DropdownMenuItem className="text-red-600">Remove</DropdownMenuItem>
-                  </DropdownMenuContent>
+                    <DropdownMenuContent align="end" className="w-36">
+                      <DropdownMenuItem onClick={() => window.open(`https://${d.domain}`, "_blank")}>
+                        Visit Website
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="text-red-600 cursor-pointer"
+                        onClick={async () => {
+                          const siteId = selectedWebsiteId || initialWebsiteId || (websites && websites.length > 0 ? websites[0].id : undefined);
+                          await removeCompetitorFromWebsite(siteId, d.domain);
+                        }}
+                      >
+                        Remove
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
                 </DropdownMenu>
               </div>
             </td>
