@@ -60,6 +60,7 @@ interface Competitor {
   keywords?: any[];
   keywords_count?: number;
   error?: string | null;
+  generatedAt?: string;
   // Old format fields (for backward compatibility)
   avg_position?: number;
   common_keywords?: number;
@@ -68,6 +69,7 @@ interface Competitor {
     top_3_positions: number;
     top_10_positions: number;
     estimated_traffic_value: number;
+    last_seen?: string;
   };
   competitive_overlap?: number;
   serp_overlap_quality?: "High" | "Medium" | "Low";
@@ -487,7 +489,7 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
           <p className="text-destructive mb-4">{error}</p>
-          <Button onClick={fetchCompetitors} variant="outline">
+          <Button onClick={() => fetchCompetitors()} variant="outline">
             Try Again
           </Button>
         </div>
