@@ -171,9 +171,9 @@ export function AnalyzeTab({
 
   const [selectedWebsiteId, setSelectedWebsiteId] = useState<string | null>(null);
   // Articles state (replace old mock list with dynamic data)
-  const [articles, setArticles] = useState<Article[]>([]);
+  // const [articles, setArticles] = useState<Article[]>([]);
   const [loadingArticles, setLoadingArticles] = useState(true);
-  const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
+  // const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
 
   const actionsRequired = useMemo<ActionItem[]>(() => {
     const items: ActionItem[] = [];
