@@ -287,7 +287,6 @@ export function AnalyzeTab({
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [open, setOpen] = useState(false)
   const [ openWebsiteDialog, setOpenWebsiteDialog ] = useState(false)
-  const [ openPostDialog, setOpenPostDialog ] = useState(false)
   const [editForm, setEditForm] = useState({
       title: "",
       keyword: "",
@@ -503,41 +502,7 @@ export function AnalyzeTab({
     }
   };
 
-const validateTab1 = () => {
-  if (!websiteName.trim()) {
-    toast.showToast({
-      title: "Missing Website URL",
-      description: "Please enter your website URL to continue.",
-      type: "error",
-    });
-    return false;
-  }
-  return true;
-};
 
-const validateTab2 = () => {
-  if (!competitor1.trim() || !competitor2.trim() || !competitor3.trim()) {
-    toast.showToast({
-      title: "Missing Competitors",
-      description: "Please enter all 3 competitors to continue.",
-      type: "error",
-    });
-    return false;
-  }
-  return true;
-};
-
-const validateTab3 = () => {
-  if (!keyword1.trim() || !keyword2.trim() || !keyword3.trim()) {
-    toast.showToast({
-      title: "Missing Keywords",
-      description: "Please enter all 3 keywords before submitting.",
-      type: "error",
-    });
-    return false;
-  }
-  return true;
-};
 
   const handleSubmitOnboarding = async () => {
     setIsSubmitting(true);
@@ -668,9 +633,12 @@ const validateTab3 = () => {
       });
 
       // Refresh articles after a short delay
-      setTimeout(() => {
+      setTimeout(async () => {
         fetchArticles();
-        fetchAnalytics(supabase.auth.getUser().then(({ data: { user } }) => user?.id || ""), selectedWebsiteId);
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          await fetchAnalytics(user.id, selectedWebsiteId);
+        }
       }, 2000);
     } catch (error) {
       toast.showToast({
@@ -770,7 +738,7 @@ const validateTab3 = () => {
   };
 
   return (
-    <div className="flex flex-col md:flex-row gap-5">
+    <div className="flex flex-col md:flex-row gap-2">
       <div className="space-y-6 md:w-3/5 w-full min-w-0">
         <div className="space-y-6">
           <div className="flex items-center justify-between">
@@ -797,9 +765,9 @@ const validateTab3 = () => {
               </Select>
             </div>
           </div>
-
+          <div className="border-r pr-3 flex flex-col gap-5">
           <div className="flex items-center">
-            <Card className="border-border/40 bg-white rounded-none rounded-l-xl backdrop-blur-sm w-[222px] h-[174px]">
+            <Card className="border-border/40 bg-white rounded-none rounded-l-xl backdrop-blur-sm w-[222px] h-[184px]">
               <CardHeader className="flex items-center justify-between">
                 <CardTitle className="text-sm font-normal text-[#00000080]">Articles Generated</CardTitle>
                 <Image src="/dashboardcardimg1.png" alt="" width={20} height={20} />
@@ -811,9 +779,9 @@ const validateTab3 = () => {
               </CardContent>
             </Card>
 
-            <Card className="border-border/40 bg-white rounded-none backdrop-blur-sm w-[222px] h-[174px]">
+            <Card className="border-border/40 bg-white rounded-none backdrop-blur-sm w-[222px] h-[184px]">
               <CardHeader className="flex items-center justify-between">
-                <CardTitle className="text-sm font-normal text-[#00000080]">Articles Live</CardTitle>
+                <CardTitle className="text-sm font-normal text-[#00000080]">Articles <br />Live</CardTitle>
                 <Image src="/dashboardcardimg2.png" alt="" width={20} height={20} />
               </CardHeader>
               <CardContent>
@@ -823,7 +791,7 @@ const validateTab3 = () => {
               </CardContent>
             </Card>
 
-            <Card className="border-border/40 bg-white rounded-none backdrop-blur-sm w-[222px] h-[174px]">
+            <Card className="border-border/40 bg-white rounded-none backdrop-blur-sm w-[222px] h-[184px]">
               <CardHeader className="flex items-center justify-between">
                 <CardTitle className="text-sm font-normal text-[#00000080]">Est. Traffic Potential</CardTitle>
                 <Image src="/dashboardcardimg3.png" alt="" width={20} height={20} />
@@ -835,7 +803,7 @@ const validateTab3 = () => {
               </CardContent>
             </Card>
 
-            <Card className="border-border/40 bg-white rounded-none rounded-r-xl backdrop-blur-sm w-[222px] h-[174px]">
+            <Card className="border-border/40 bg-white rounded-none rounded-r-xl backdrop-blur-sm w-[222px] h-[184px]">
               <CardHeader className="flex items-center justify-between">
                 <CardTitle className="text-sm font-normal text-[#00000080]">Keyword Tracked</CardTitle>
                 <Image src="/dashboardcardimg4.png" alt="" width={20} height={20} />
@@ -854,13 +822,12 @@ const validateTab3 = () => {
               <CardDescription>Turn competitor keywords into SEO ready blog posts in one click.</CardDescription>
               <CardContent className="px-0">
                 <Button 
-                onClick={() => setOpenPostDialog(true)}
                 className="text-base font-normal text-white bg-black px-[60px] py-1 w-[170px] h-[50px] border border-[#00000080] rounded-[10px] hover:bg-transparent hover:text-[#00000080] cursor-pointer">Create Post</Button>
               </CardContent>
             </Card>
           </div>
 
-          <div className="flex items-center gap-5 max-w-[700px]">
+          <div className="flex items-center gap-2.5 max-w-[700px]">
           <Card className="bg-transparent px-4 py-5 w-[350px]">
             <CardTitle className="text-lg font-normal text-[#000000b3] ml-4">Your Websites</CardTitle>
             <CardContent>
@@ -976,6 +943,7 @@ const validateTab3 = () => {
               )}
             </CardContent>
           </Card>
+          </div>
         </div>
       </div>
 

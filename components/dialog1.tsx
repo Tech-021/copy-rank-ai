@@ -7,6 +7,7 @@ import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { useToast } from "./ui/toast";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/client";
+import { Button } from "./ui/button";
 
 interface WebsiteDialogProps {
   open: boolean;
@@ -106,7 +107,7 @@ export function WebsiteDialog({ open, onOpenChange, onSuccess }: WebsiteDialogPr
         <VisuallyHidden>
           <DialogTitle></DialogTitle>
         </VisuallyHidden>
-        <div className="flex flex-col justify-center gap-20 my-10">
+        <div className="flex flex-col gap-10 my-2.5">
           <div className="flex flex-col gap-[30px]">
             <div>
               <h1 className="text-[#000000B3] text-lg font-normal">
@@ -116,6 +117,7 @@ export function WebsiteDialog({ open, onOpenChange, onSuccess }: WebsiteDialogPr
                 Start with your domain
               </p>
             </div>
+            <div className="flex flex-col gap-30">
             <div className="space-y-5">
               {/* Website Name */}
               <div>
@@ -130,10 +132,10 @@ export function WebsiteDialog({ open, onOpenChange, onSuccess }: WebsiteDialogPr
               </div>
             </div>
             <div>
-              <button 
+              <Button 
                 onClick={handleAddWebsite}
                 disabled={isLoading}
-                className="bg-[#5baf57] border border-[#0000001a] text-white px-[60px] py-1 w-[170px] h-[50px] rounded-[10px] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                className="bg-[#5baf57] hover:bg-[#5baf57] border border-[#0000001a] text-white px-[60px] py-1 w-[170px] h-[50px] rounded-[10px] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isLoading ? (
                   <span className="flex items-center justify-center">
@@ -143,7 +145,8 @@ export function WebsiteDialog({ open, onOpenChange, onSuccess }: WebsiteDialogPr
                 ) : (
                   "Submit"
                 )}
-              </button>
+              </Button>
+            </div>
             </div>
           </div>
           <div>
