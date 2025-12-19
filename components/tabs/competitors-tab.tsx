@@ -1002,7 +1002,7 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
                               className="text-red-600 hover:bg-transparent! hover:text-red-600! cursor-pointer"
                               onClick={async () => {
                                 const siteId = selectedWebsiteId || initialWebsiteId || (websites && websites.length > 0 ? websites[0].id : undefined);
-                                await removeKeywordFromWebsite(siteId, row.keyword);
+                                await removeCompetitorFromWebsite(siteId, d.domain);
                               }}
                             >
                               Delete
