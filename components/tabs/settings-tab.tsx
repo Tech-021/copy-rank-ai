@@ -456,28 +456,6 @@ export function SettingsTab() {
               </div>
             </div>
 
-            {/* Queue Size */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-900">Queue size</label>
-              <p className="text-xs text-gray-600 mb-3">
-                Only this number of ready posts will be kept in the publishing queue at a time
-              </p>
-              <Select
-                value={settings.queueSize}
-                onValueChange={(value) => handleSettingChange("queueSize", value)}
-              >
-                <SelectTrigger className="w-28 h-9 border-gray-200 text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1 post">1 post</SelectItem>
-                  <SelectItem value="5 posts">5 posts</SelectItem>
-                  <SelectItem value="10 posts">10 posts</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            </div>
-
             <div className="flex justify-end gap-2">
               <Button
                 variant="outline"
@@ -762,6 +740,7 @@ export function SettingsTab() {
                     Upgrade
                   </button>
                 </div>
+              </div>
 
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-900">API access status</label>
@@ -784,106 +763,7 @@ export function SettingsTab() {
                 disabled
                 className="h-9 bg-gray-50 border-gray-200 text-sm"
               />
-              {/* <Button variant="outline" className="mt-2 h-8 text-xs border-gray-200 bg-white">
-                Change email
-              </Button> */}
             </div>
-
-            {/* <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-900">Password</label>
-              <div className="space-y-3">
-                <div className="relative">
-                  <Input
-                    type={showPasswords.new ? "text" : "password"}
-                    placeholder="New password"
-                    value={passwordData.newPassword}
-                    onChange={(e) =>
-                      setPasswordData((prev) => ({ ...prev, newPassword: e.target.value }))
-                    }
-                    className="h-9 pr-10 border-gray-200 text-sm"
-                  />
-                  <Button
-                    variant="ghost"
-                    className="h-8 px-3 text-xs text-gray-500 hover:text-gray-900 hover:bg-transparent"
-                  >
-                    Change email
-                  </Button>
-                </div>
-
-                {/* Password Section */}
-                <div className="flex items-center px-4 py-5 justify-between pt-4">
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">
-                      Password
-                    </p>
-                    <p className="text-xs text-gray-600">••••••••</p>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    className="h-8 px-3 text-xs text-gray-500 hover:text-gray-900 hover:bg-transparent"
-                  >
-                    Change password
-                  </Button>
-                </div>
-              </div>
-
-              {/* Right Column */}
-              <div className="space-y-6">
-                {/* API Access Status */}
-                <div className="space-y-3 border rounded-[10px] border-gray-200 p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-900">
-                        API access status
-                      </h4>
-                      <p className="text-xs text-gray-600">
-                        Know when competitor analysis finishes
-                      </p>
-                    </div>
-                    <Switch checked={true} className="ml-auto" />
-                  </div>
-                  <div className="space-y-3">
-                    <div className="relative">
-                      <Input
-                        type="text"
-                        value={showApiKey ? apiKey : maskApiKey(apiKey)}
-                        disabled
-                        className="h-9 bg-gray-100 border border-gray-200 text-sm pr-10"
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0 hover:bg-transparent"
-                        onClick={() => setShowApiKey(!showApiKey)}
-                      >
-                        {showApiKey ? (
-                          <EyeOff className="h-4 w-4 text-gray-500" />
-                        ) : (
-                          <Eye className="h-4 w-4 text-gray-500" />
-                        )}
-                      </Button>
-                    </div>
-                    <div className="flex gap-3">
-                      <Button
-                        onClick={handleCopyApiKey}
-                        className="flex-1 h-9 bg-gray-900 hover:bg-gray-800 text-white text-sm"
-                      >
-                        {copiedApiKey ? (
-                          <Check className="h-4 w-4 mr-2" />
-                        ) : (
-                          <Copy className="h-4 w-4 mr-2" />
-                        )}
-                        {copiedApiKey ? "Copied" : "Show key"}
-                      </Button>
-                      <Button className="flex-1 h-9 bg-red-500 hover:bg-red-600 text-white text-sm">
-                        Regenerate key
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div> */}
           </div>
         )}
 
@@ -1055,6 +935,7 @@ export function SettingsTab() {
                   View Invoices
                 </Button>
               </div>
+            </div>
             </div>
           </div>
         )}
