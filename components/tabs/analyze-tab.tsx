@@ -748,7 +748,7 @@ export function AnalyzeTab({
             </div>
             <div>
               <Select value={selectedWebsiteId || undefined} onValueChange={handleWebsiteChange}>
-                <SelectTrigger className="h-10 bg-transparent rounded-[8px] focus-visible:outline-none focus-visible:ring-0 border-[#0000001a] focus-visible:border-[#0000001a] focus:outline-none cursor-pointer outline-none active:outline-none px-3.5 py-2.5 text-[#00000080]">
+                <SelectTrigger className="h-10 bg-transparent rounded-xl focus-visible:outline-none focus-visible:ring-0 border-[#0000001a] focus-visible:border-[#0000001a] focus:outline-none cursor-pointer outline-none active:outline-none px-3.5 py-2.5 text-[#00000080]">
                   <SelectValue placeholder="Select your website" />
                 </SelectTrigger>
                 <SelectContent className="cursor-pointer">
@@ -893,9 +893,9 @@ export function AnalyzeTab({
             </CardContent>
           </Card>
         </div>
-
+<h4>Action Required</h4>
           <Card className="bg-transparent px-4 py-5">
-            <CardTitle className="text-lg font-normal text-white ml-4">Actions Required</CardTitle>
+            <CardTitle className="text-lg font-normal text-white ml-4"></CardTitle>
             <CardContent>
               {showSkeletons ? (
                 <div className="space-y-2">
@@ -906,10 +906,10 @@ export function AnalyzeTab({
                 <div className="flex items-center justify-between border px-4 pb-4 pt-5 rounded-xl border-[#0000001a]">
                   <div className="flex items-center gap-5">
                     <div className="bg-[rgb(247,247,247)] w-[30px] h-[30px] flex items-center justify-center rounded-[10px]">
-                      <Image src="/actionimg2.png" alt="" width={24} height={24} />
+                      <Image src="/dark15.png" alt="" width={24} height={24} />
                     </div>
                     <div>
-                      <p className="text-sm text-[#000000b3] font-normal">You’re all set</p>
+                      <p className="text-sm text-white font-normal">You’re all set</p>
                       <p className="text-xs text-[#00000080] font-normal">No outstanding tasks right now.</p>
                     </div>
                   </div>
@@ -1070,7 +1070,7 @@ export function AnalyzeTab({
               onClick={() => setSelectedArticle(article)}
               className={`relative flex gap-3 p-3 bg-transparent border border-[#000000] rounded-lg cursor-pointer transition-all ${selectedArticle?.id === article.id ? 'border-gray-200 bg-transparent' : 'border-gray-200'}`}
             >
-              <img src={article.generatedImages?.[0] || '/article-image.jpg'} alt={article.title} className="w-20 h-20 rounded object-cover flex-shrink-0" />
+              <img src={article.generatedImages?.[0] || '/article-image.jpg'} alt={article.title} className="w-20 h-20 rounded object-cover shrink-0" />
 
               <div className="flex flex-col min-w-0 flex-1">
                 <div className="flex justify-between gap-2">

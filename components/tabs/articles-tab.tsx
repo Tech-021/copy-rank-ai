@@ -939,7 +939,7 @@ export function ArticlesTab({
           </div>
           <div>
               <Select value={selectedWebsiteId || undefined} onValueChange={handleWebsiteChange}>
-                <SelectTrigger className="h-10 bg-transparent rounded-[8px] focus-visible:outline-none focus-visible:ring-0 border-[#0000001a] focus-visible:border-[#0000001a] focus:outline-none cursor-pointer outline-none active:outline-none px-3.5 py-2.5 text-[#00000080]">
+                <SelectTrigger className="h-10 bg-transparent rounded-xl focus-visible:outline-none focus-visible:ring-0 border-[#0000001a] focus-visible:border-[#0000001a] focus:outline-none cursor-pointer outline-none active:outline-none px-3.5 py-2.5 text-[#00000080]">
                   <SelectValue placeholder="Select your website" />
                 </SelectTrigger>
                 <SelectContent className="cursor-pointer">
@@ -1045,7 +1045,7 @@ export function ArticlesTab({
         <img
           src={article.generatedImages?.[0] || "/article-image.jpg"}
           alt={article.title}
-          className="w-20 h-20 rounded object-cover flex-shrink-0"
+          className="w-20 h-20 rounded object-cover shrink-0"
         />
 
         {/* Main Content Column */}
@@ -1085,7 +1085,7 @@ export function ArticlesTab({
               <Button
                 size="sm"
                 variant="ghost"
-                className="text-gray-400 hover:text-gray-700 h-8 w-8 p-0 flex-shrink-0"
+                className="text-gray-400 hover:text-gray-700 h-8 w-8 p-0 shrink-0"
                 onClick={(e) => {
                   e.stopPropagation();
                   openEditDialog(article);
@@ -1122,7 +1122,7 @@ export function ArticlesTab({
           {selectedArticle && (
             <div className=" max-w-[640px]  bg-white rounded-[9px] border-l border-gray-200 overflow-hidden flex flex-col">
               {/* Header */}
-              <div className="flex items-center justify-between p-4 border-b border-gray-200 flex-shrink-0">
+              <div className="flex items-center justify-between p-4 border-b border-gray-200 shrink-0">
                 <span className="text-sm  text-gray-500">
                   EDIT POST
                 </span>
@@ -1248,7 +1248,7 @@ export function ArticlesTab({
                   {selectedArticle.status === "published" && selectedArticle.slug && (
                     <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
                       <div className="flex items-start gap-2">
-                        <Globe className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                        <Globe className="w-4 h-4 text-green-600 shrink-0 mt-0.5" />
                         <div className="flex-1 min-w-0">
                           <h4 className="text-sm font-semibold text-green-900 mb-1">
                             Live Article URL
@@ -1273,7 +1273,7 @@ export function ArticlesTab({
                                   type: "success",
                                 });
                               }}
-                              className="text-green-600 hover:text-green-800 flex-shrink-0"
+                              className="text-green-600 hover:text-green-800 shrink-0"
                               title="Copy URL"
                             >
                               <Copy className="w-3 h-3" />
@@ -1300,7 +1300,7 @@ export function ArticlesTab({
                       3
                     )}
                     {!isContentExpanded && (
-                      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-white to-transparent" />
+                      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-linear-to-t from-white to-transparent" />
                     )}
                   </div>
                   <div className="mt-4 flex justify-center">
@@ -1316,7 +1316,7 @@ export function ArticlesTab({
               </div>
 
               {/* Footer Actions */}
-              <div className="border-t border-gray-200 p-4 bg-white flex gap-2 flex-shrink-0">
+              <div className="border-t border-gray-200 p-4 bg-white flex gap-2 shrink-0">
                 <Button
                   className="flex-1 bg-black text-white font-medium hover:bg-gray-900 h-10 text-sm rounded disabled:opacity-60"
                   onClick={handlePublish}

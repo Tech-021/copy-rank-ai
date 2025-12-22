@@ -13,15 +13,42 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { getUserPackage, getUserArticleLimit } from "@/lib/articleLimits";
+import { supabase } from "@/lib/client";
+import { createCheckout } from "@/lib/lemonSqueezy";
 import { Switch } from "@/components/ui/switch";
 import { Copy, Check, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { getUser, updatePassword } from "@/lib/auth";
 import Image from "next/image";
+import { useToast } from "@/components/ui/toast";
 
 export function SettingsTab() {
   const [activeTab, setActiveTab] = useState("publishing");
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [userPackage, setUserPackage] = useState<"free" | "pro" | "premium" | null>(null);
+  const [usage, setUsage] = useState({
+    articles: 0,
+    articlesLimit: 0,
+    keywords: 0,
+    keywordLimit: 0,
+    monthlyPosts: 0,
+    monthlyLimit: 0,
+  });
   const [loading, setLoading] = useState(true);
+
+  const [isPlanDialogOpen, setIsPlanDialogOpen] = useState(false);
+  const [selectedPlanVariantId, setSelectedPlanVariantId] = useState<string | null>(null);
+  const [isCreatingCheckout, setIsCreatingCheckout] = useState(false);
+  const toast = useToast();
+  const [isDirty, setIsDirty] = useState(false);
 
   // Mock states
   const [apiKey, setApiKey] = useState("sk_live_51234567890abcdefghijklmnop");
@@ -44,6 +71,15 @@ export function SettingsTab() {
     notifyKeywordSynced: true,
   });
 
+  // Notification option definitions
+  const notificationOptions: { key: string; title: string; description: string }[] = [
+    { key: "notifyPostPublished", title: "Post Published", description: "Get notified when a post goes live" },
+    { key: "notifyDraftGenerated", title: "Draft Generated", description: "Be notified when a new draft is ready to review" },
+    { key: "notifyCompetitorScan", title: "Competitor Scan Complete", description: "Know when competitor analysis finishes" },
+    { key: "notifyWeeklyReport", title: "Weekly Performance Summary", description: "Get a weekly overview of your content activity" },
+    { key: "notifyKeywordSynced", title: "Keyword Synced", description: "Receive updates when new keywords are added" },
+  ];
+
   const [passwordData, setPasswordData] = useState({
     newPassword: "",
     confirmPassword: "",
@@ -58,10 +94,79 @@ export function SettingsTab() {
     const getCurrentUser = async () => {
       const { data: user } = await getUser();
       setCurrentUser(user);
+      if (user?.id) {
+        try {
+          const pkg = await getUserPackage(user.id);
+          setUserPackage(pkg);
+        } catch (e) {
+          // ignore
+        }
+      }
       setLoading(false);
     };
     getCurrentUser();
   }, []);
+
+  // Fetch usage metrics
+  useEffect(() => {
+    const fetchUsage = async () => {
+      if (!currentUser?.id) return;
+
+      try {
+        const artRes = await supabase
+          .from("articles")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", currentUser.id);
+        const articlesCount = (artRes as any).count || 0;
+
+        const start = new Date();
+        start.setDate(1);
+        start.setHours(0, 0, 0, 0);
+        const monthlyRes = await supabase
+          .from("articles")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", currentUser.id)
+          .gte("created_at", start.toISOString());
+        const monthlyCount = (monthlyRes as any).count || 0;
+
+        const { data: sites } = await supabase
+          .from("websites")
+          .select("keywords")
+          .eq("user_id", currentUser.id);
+
+        let keywordsCount = 0;
+        if (Array.isArray(sites)) {
+          sites.forEach((s: any) => {
+            const kw = s?.keywords;
+            if (!kw) return;
+            if (Array.isArray(kw)) keywordsCount += kw.length;
+            else if (kw?.keywords && Array.isArray(kw.keywords)) keywordsCount += kw.keywords.length;
+          });
+        }
+
+        const articleLimit = getUserArticleLimit
+          ? await getUserArticleLimit(currentUser.id)
+          : 0;
+
+        const keywordLimits: Record<string, number> = { free: 100, pro: 1000, premium: 5000 };
+        const monthlyLimits: Record<string, number> = { free: 10, pro: 50, premium: 100 };
+        const pkg = userPackage || "free";
+
+        setUsage({
+          articles: articlesCount,
+          articlesLimit: articleLimit,
+          keywords: keywordsCount,
+          keywordLimit: keywordLimits[pkg],
+          monthlyPosts: monthlyCount,
+          monthlyLimit: monthlyLimits[pkg],
+        });
+      } catch (err) {
+        console.warn("Failed to fetch usage", err);
+      }
+    };
+
+    fetchUsage();
+  }, [currentUser, userPackage]);
 
   const handleCopyApiKey = () => {
     navigator.clipboard.writeText(apiKey);
@@ -76,7 +181,86 @@ export function SettingsTab() {
 
   const handleSettingChange = (key: string, value: any) => {
     setSettings((prev) => ({ ...prev, [key]: value }));
+    setIsDirty(true);
   };
+
+  const loadUserSettings = async (websiteId?: string | null, userId?: string | null) => {
+    try {
+      const uid = userId ?? currentUser?.id ?? null;
+      const params = new URLSearchParams();
+      if (websiteId) params.set("websiteId", String(websiteId));
+      if (uid) params.set("userId", String(uid));
+      const qs = params.toString() ? `?${params.toString()}` : "";
+      const res = await fetch(`/api/user/settings${qs}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.settings) {
+          setSettings((prev) => ({ ...prev, ...data.settings }));
+          setIsDirty(false);
+          return;
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+
+    try {
+      const uid = userId ?? currentUser?.id ?? null;
+      const key = `user_settings${uid ? `_${uid}` : ""}${websiteId ? `_${websiteId}` : ""}`;
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        setSettings(JSON.parse(raw));
+        setIsDirty(false);
+      }
+    } catch (e) {
+      // ignore
+    }
+  };
+
+  const handleSaveSettings = async (websiteId?: string | null) => {
+    try {
+      const body = { settings, websiteId: websiteId || null, userId: currentUser?.id ?? null };
+      const res = await fetch("/api/user/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (res.ok) {
+        toast.showToast({ title: "Saved", description: "Settings saved", type: "success" });
+        setIsDirty(false);
+        return;
+      }
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data?.error || "Failed to save");
+    } catch (err: any) {
+      try {
+        const uid = currentUser?.id ?? null;
+        const key = `user_settings${uid ? `_${uid}` : ""}${websiteId ? `_${websiteId}` : ""}`;
+        localStorage.setItem(key, JSON.stringify(settings));
+        toast.showToast({
+          title: "Saved locally",
+          description: "Settings saved to browser (server failed).",
+          type: "info",
+        });
+        setIsDirty(false);
+      } catch {
+        toast.showToast({
+          title: "Save failed",
+          description: err?.message || "Could not save settings",
+          type: "error",
+        });
+      }
+    }
+  };
+
+  const handleResetSettings = async (websiteId?: string | null) => {
+    await loadUserSettings(websiteId);
+    toast.showToast({ title: "Restored", description: "Settings reloaded", type: "success" });
+  };
+
+  useEffect(() => {
+    loadUserSettings();
+  }, []);
 
   const handlePasswordChange = async () => {
     if (!passwordData.newPassword || !passwordData.confirmPassword) {
@@ -140,7 +324,6 @@ export function SettingsTab() {
         <div className="flex gap-8">
           {tabs.map((tab) => (
             <button
-              // variant={"outline"}
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={`pb-3 text-sm font-medium transition-colors ${
@@ -263,10 +446,36 @@ export function SettingsTab() {
                 </Select>
               </div>
             </div>
+
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                className="h-9"
+                onClick={() => handleResetSettings()}
+                disabled={!isDirty}
+              >
+                Reset
+              </Button>
+              <Button
+                className="h-9 px-4 bg-gray-900 text-white"
+                onClick={() => handleSaveSettings()}
+                disabled={!isDirty}
+              >
+                Save changes
+              </Button>
+            </div>
           </div>
         )}
 
-        {/* Connections Tab */}
+  
+        {/* Preferences Tab */}
+    
+        {/* Notifications Tab */}
+    
+        {/* Account Tab */}
+      
+
+        {/* Billing Tab */}
         {activeTab === "connections" && (
           <div className="border border-gray-200 rounded-lg p-6 space-y-6">
             <div>
@@ -570,12 +779,24 @@ export function SettingsTab() {
                 {/* Profile Section */}
                 <div className="flex items-center justify-between p-2 pb-4 border-b border-gray-200">
                   <div className="flex items-center p-2 gap-4">
-                    <div className="w-12 h-12 rounded-full bg-gray-300" />
+                    {currentUser?.user_metadata?.avatar_url ? (
+                      <Image
+                        src={currentUser.user_metadata.avatar_url}
+                        alt={currentUser.user_metadata?.full_name || currentUser.email || "avatar"}
+                        width={48}
+                        height={48}
+                        className="rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-full bg-gray-300 flex items-center justify-center text-sm text-white">
+                        {((currentUser?.user_metadata?.full_name || currentUser?.email || "U") as string)[0]?.toUpperCase()}
+                      </div>
+                    )}
                     <div>
                       <p className="text-sm font-medium text-gray-900">
-                        Delani Web
+                        {currentUser?.user_metadata?.full_name || currentUser?.email || "Your profile"}
                       </p>
-                      <p className="text-xs text-gray-600">Free Tier</p>
+                      <p className="text-xs text-gray-600">{userPackage ? `${userPackage.charAt(0).toUpperCase() + userPackage.slice(1)} Tier` : "Free Tier"}</p>
                     </div>
                   </div>
                   <button className="h-8 px-3 text-xs hover:bg-gray-800 text-black">
@@ -677,7 +898,7 @@ export function SettingsTab() {
         )}
 
         {/* Billing Tab */}
-        {activeTab === "billing" && (
+          {activeTab === "billing" && (
           <div className="border border-gray-200 rounded-lg p-6 space-y-6">
             <div>
               <h3 className="text-base font-medium text-gray-900 mb-1">

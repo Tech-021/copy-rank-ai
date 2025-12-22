@@ -75,7 +75,7 @@ export function Dashboard({ onLogout, userEmail, userAvatar }: DashboardProps) {
               className="
     flex gap-4 p-1.5 rounded-full
     bg-[rgb(247,247,247)]
-    dark:bg-gradient-to-b
+    dark:bg-linear-to-b
     dark:from-[#2E9839]
     dark:to-[#04230D]
     border border-transparent
@@ -145,7 +145,7 @@ export function Dashboard({ onLogout, userEmail, userAvatar }: DashboardProps) {
   className="
     flex items-center gap-4 p-1.5 rounded-full
     text-[#53F870]
-    dark:bg-gradient-to-b
+    dark:bg-linear-to-b
     dark:from-[#2E9839]
     dark:to-[#04230D]
     border border-transparent
