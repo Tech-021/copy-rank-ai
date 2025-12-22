@@ -53,7 +53,6 @@ import { supabase } from "@/lib/client";
 import { useToast } from "@/components/ui/toast";
 import Image from "next/image";
 
-
 interface Article {
   id: string;
   title: string;
@@ -240,7 +239,9 @@ export function ArticlesTab({
               }
             }
           })
-          .catch((err) => console.error("Error fetching updated article:", err));
+          .catch((err) =>
+            console.error("Error fetching updated article:", err)
+          );
       }, 1200);
     } catch (error) {
       toast.showToast({
@@ -702,87 +703,93 @@ export function ArticlesTab({
   };
 
   const getCompetitorsCount = (keywordsData: any): number => {
-  if (!keywordsData) return 0;
-  if (keywordsData.competitors && Array.isArray(keywordsData.competitors)) {
-    return keywordsData.competitors.length;
-  }
-  return 0;
-};
+    if (!keywordsData) return 0;
+    if (keywordsData.competitors && Array.isArray(keywordsData.competitors)) {
+      return keywordsData.competitors.length;
+    }
+    return 0;
+  };
 
   const fetchAnalytics = async (userId: string, websiteId?: string | null) => {
-      try {
-        let articlesQuery = supabase
-          .from("articles")
-          .select("status, estimated_traffic, keyword, word_count")
-          .eq("user_id", userId);
-  
-        if (websiteId) {
-          articlesQuery = articlesQuery.eq("website_id", websiteId);
-        }
-  
-        const { data: articles, error: articlesError } = await articlesQuery;
-  
-        if (articlesError) throw articlesError;
-  
-        const articlesGenerated = articles?.length || 0;
-        const articlesLive = articles?.filter(a => a.status === "published" || a.status === "UPLOADED").length || 0;
-        const draftArticles = articles?.filter(a => a.status === "draft" || a.status === "DRAFT").length || 0;
-        
-        const estimatedTraffic = articles?.reduce((sum, article) => {
+    try {
+      let articlesQuery = supabase
+        .from("articles")
+        .select("status, estimated_traffic, keyword, word_count")
+        .eq("user_id", userId);
+
+      if (websiteId) {
+        articlesQuery = articlesQuery.eq("website_id", websiteId);
+      }
+
+      const { data: articles, error: articlesError } = await articlesQuery;
+
+      if (articlesError) throw articlesError;
+
+      const articlesGenerated = articles?.length || 0;
+      const articlesLive =
+        articles?.filter(
+          (a) => a.status === "published" || a.status === "UPLOADED"
+        ).length || 0;
+      const draftArticles =
+        articles?.filter((a) => a.status === "draft" || a.status === "DRAFT")
+          .length || 0;
+
+      const estimatedTraffic =
+        articles?.reduce((sum, article) => {
           return sum + (article.estimated_traffic || 0);
         }, 0) || 0;
-  
-        const allKeywords = new Set<string>();
-        articles?.forEach(article => {
-          if (typeof article.keyword === 'string') {
-            article.keyword.split(',').forEach(k => allKeywords.add(k.trim()));
-          }
-        });
-        const keywordsTracked = allKeywords.size;
-  
-        let websitesQuery = supabase
-          .from("websites")
-          .select("keywords")
-          .eq("user_id", userId);
-  
-        if (websiteId) {
-          websitesQuery = websitesQuery.eq("id", websiteId);
+
+      const allKeywords = new Set<string>();
+      articles?.forEach((article) => {
+        if (typeof article.keyword === "string") {
+          article.keyword.split(",").forEach((k) => allKeywords.add(k.trim()));
         }
-  
-        const { data: websitesData, error: websitesError } = await websitesQuery;
-  
-        if (websitesError) throw websitesError;
-  
-        let totalCompetitors = 0;
-        websitesData?.forEach(website => {
-          const competitorCount = getCompetitorsCount(website.keywords);
-          totalCompetitors += competitorCount;
-        });
-  
-        setAnalytics({
-          articlesGenerated,
-          articlesLive,
-          estimatedTraffic,
-          keywordsTracked,
-          draftArticles,
-          totalCompetitors,
-        });
-      } catch (error) {
-        console.error("Error fetching analytics:", error);
+      });
+      const keywordsTracked = allKeywords.size;
+
+      let websitesQuery = supabase
+        .from("websites")
+        .select("keywords")
+        .eq("user_id", userId);
+
+      if (websiteId) {
+        websitesQuery = websitesQuery.eq("id", websiteId);
       }
-    };
+
+      const { data: websitesData, error: websitesError } = await websitesQuery;
+
+      if (websitesError) throw websitesError;
+
+      let totalCompetitors = 0;
+      websitesData?.forEach((website) => {
+        const competitorCount = getCompetitorsCount(website.keywords);
+        totalCompetitors += competitorCount;
+      });
+
+      setAnalytics({
+        articlesGenerated,
+        articlesLive,
+        estimatedTraffic,
+        keywordsTracked,
+        draftArticles,
+        totalCompetitors,
+      });
+    } catch (error) {
+      console.error("Error fetching analytics:", error);
+    }
+  };
 
   const handleWebsiteChange = async (websiteId: string) => {
-      setSelectedWebsiteId(websiteId);
-      
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      
-      if (user) {
-        await fetchAnalytics(user.id, websiteId);
-      }
-    };
+    setSelectedWebsiteId(websiteId);
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (user) {
+      await fetchAnalytics(user.id, websiteId);
+    }
+  };
 
   const handleIndexNow = async (articleId: string, slug: string) => {
     if (!slug) {
@@ -930,53 +937,68 @@ export function ArticlesTab({
       <div>
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-2xl text-gray-700 font-medium">Blogs</h2>
-            <p className="text-gray-500 mt-3 text-sm">
+            <p className="text-3xl text-white font-medium">Blogs</p>
+            <p className="text-[#ffffffb3] mt-3 text-sm">
               Create, review, and publish your AI-generated posts.
             </p>
           </div>
           <div>
-              <Select value={selectedWebsiteId || undefined} onValueChange={handleWebsiteChange}>
-                <SelectTrigger className="h-10 bg-transparent rounded-[8px] focus-visible:outline-none focus-visible:ring-0 border-[#0000001a] focus-visible:border-[#0000001a] focus:outline-none cursor-pointer outline-none active:outline-none px-3.5 py-2.5 text-[#00000080]">
-                  <SelectValue placeholder="Select your website" />
-                </SelectTrigger>
-                <SelectContent className="cursor-pointer">
-                  {websites.map((website, index) => (
-                    <SelectItem
-                      key={website.id}
-                      value={website.id}
-                      className={`cursor-pointer data-[state=checked]:text-[#00000080] data-[state=checked]:opacity-40 ${index < websites.length - 1 ? 'border-b rounded-none border-[#0000001a]' : ''}`}
-                    >
-                      {website.url}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <Select
+              value={selectedWebsiteId || undefined}
+              onValueChange={handleWebsiteChange}
+            >
+              <SelectTrigger className="h-10 bg-transparent rounded-[8px] focus-visible:outline-none focus-visible:ring-0 border-[#0000001a] focus-visible:border-[#0000001a] focus:outline-none cursor-pointer outline-none active:outline-none px-3.5 py-2.5 text-[#00000080]">
+                <SelectValue placeholder="Select your website" />
+              </SelectTrigger>
+              <SelectContent className="cursor-pointer">
+                {websites.map((website, index) => (
+                  <SelectItem
+                    key={website.id}
+                    value={website.id}
+                    className={`cursor-pointer data-[state=checked]:text-[#00000080] data-[state=checked]:opacity-40 ${
+                      index < websites.length - 1
+                        ? "border-b rounded-none border-[#0000001a]"
+                        : ""
+                    }`}
+                  >
+                    {website.url}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         {/* Create a Ranking Post Section */}
-        <Card className="border-gray-200 shadow-none bg-transparent">
+        <Card className="border-[#53f8701a] shadow-none bg-transparent">
           <CardContent className="">
             <div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
+              <h3 className="text-lg font-medium text-white mb-2">
                 Create a Ranking Post
               </h3>
-              <p className="text-sm text-gray-500 mb-4">
+              <p className="text-sm text-[#ffffffb3] mb-4">
                 Turn competitor keywords into SEO-ready blog posts in one click.
               </p>
-              <Button onClick={() => setOpenPostDialog(true)} className="bg-black cursor-pointer py-5 px-8 text-white hover:bg-gray-900">
+              <Button
+                onClick={() => setOpenPostDialog(true)}
+                className="bg-black cursor-pointer py-5 px-8 text-[#53f870] border border-[#53f870] hover:bg-black"
+              >
                 Create Post
               </Button>
             </div>
           </CardContent>
         </Card>
-        <CreatePostDialogDashboard open={openPostDialog} onOpenChange={setOpenPostDialog} websiteId={selectedWebsiteId ?? undefined} onCreated={() => fetchArticles()} />
+        <CreatePostDialogDashboard
+          open={openPostDialog}
+          onOpenChange={setOpenPostDialog}
+          websiteId={selectedWebsiteId ?? undefined}
+          onCreated={() => fetchArticles()}
+        />
 
         {/* Stats Grid */}
-        <div className="flex mt-5 gap-2 text-sm">
+        <div className="flex mt-5 mb-2.5 gap-2 text-sm">
           <Select value={filterStatus} onValueChange={setFilterStatus}>
-            <SelectTrigger className="w-auto border-0 bg-transparent px-0 py-0 text-gray-600 hover:text-gray-900 focus:ring-0 focus:ring-offset-0">
+            <SelectTrigger className="border-none !bg-transparent  ring-0 text-[#ffffff80] focus:ring-0 focus:ring-offset-0">
               <SelectValue placeholder="All" />
             </SelectTrigger>
             <SelectContent>
@@ -991,7 +1013,7 @@ export function ArticlesTab({
           <span className="text-gray-300"></span>
 
           <Select defaultValue="27-jan-2025">
-            <SelectTrigger className="w-auto border-0 bg-transparent px-0 py-0 text-gray-600 hover:text-gray-900 focus:ring-0 focus:ring-offset-0">
+            <SelectTrigger className="border-none !bg-transparent  ring-0 text-[#ffffff80] focus:ring-0 focus:ring-offset-0">
               <SelectValue placeholder="27-Jan, 2025" />
             </SelectTrigger>
             <SelectContent>
@@ -1005,7 +1027,7 @@ export function ArticlesTab({
           <span className="text-gray-300"></span>
 
           <Select defaultValue="4-mar-2025">
-            <SelectTrigger className="w-auto border-0 bg-transparent px-0 py-0 text-gray-600 hover:text-gray-900 focus:ring-0 focus:ring-offset-0">
+            <SelectTrigger className="border-none !bg-transparent  ring-0 text-[#ffffff80] focus:ring-0 focus:ring-offset-0">
               <SelectValue placeholder="4 Mar, 2025" />
             </SelectTrigger>
             <SelectContent>
@@ -1020,110 +1042,108 @@ export function ArticlesTab({
         {/* Main Layout - Articles + Preview */}
         <div className="flex gap-6 h-auto overflow-hidden">
           {/* Left Side - Articles List */}
-       <div className="space-y-3 pr-2">
-  {filteredArticles.length === 0 ? (
-    <div className="text-center py-12 text-gray-400">
-      <p className="text-sm">No articles found</p>
-    </div>
-  ) : (
-    filteredArticles.map((article) => (
-      <div
-        key={article.id}
-        onClick={() => {
-          setSelectedArticle(article);
-          setIsContentExpanded(false);
-        }}
-        className={`relative flex gap-3 p-3 bg-gray-100 border rounded-lg cursor-pointer hover:border-gray-300 hover:shadow-sm transition-all ${
-          selectedArticle?.id === article.id
-            ? "border-gray-200 bg-[#F7F7F7]"
-            : "border-[#0000001a]"
-        }`}
-      >
-        {/* Thumbnail */}
-        <img
-          src={article.generatedImages?.[0] || "/article-image.jpg"}
-          alt={article.title}
-          className="w-20 h-20 rounded object-cover flex-shrink-0"
-        />
-
-        {/* Main Content Column */}
-        <div className="flex flex-col min-w-0 flex-1">
-          {/* Title + Meta */}
-          <div className="flex justify-between gap-2">
-            <div className="min-w-0">
-              <h4 className="font-medium text-gray-900 text-sm line-clamp-2">
-                {article.title}
-              </h4>
-
-              <div className="flex items-center gap-1 mt-1">
-                <Image
-                  src="/clock.png"
-                  height={13}
-                  width={13}
-                  alt="icon"
-                />
-                <p className="text-xs text-gray-500">
-                  {getReadingTime(article.wordCount)}
-                </p>
+          <div className="space-y-3 pr-2">
+            {filteredArticles.length === 0 ? (
+              <div className="text-center py-12 text-gray-400">
+                <p className="text-sm">No articles found</p>
               </div>
+            ) : (
+              filteredArticles.map((article) => (
+                <div
+                  key={article.id}
+                  onClick={() => {
+                    setSelectedArticle(article);
+                    setIsContentExpanded(false);
+                  }}
+                  className={`relative flex gap-3 px-3 py-5  bg-[#101110] border border-[#53f8701a] rounded-lg cursor-pointer  hover:shadow-sm transition-all ${
+                    selectedArticle?.id === article.id
+                      ? "border-[#53f8701a] bg-[#101110]"
+                      : "border-[#53f8701a]"
+                  }`}
+                >
+                  {/* Thumbnail */}
+                  <img
+                    src={article.generatedImages?.[0] || "/article-image.jpg"}
+                    alt={article.title}
+                    className="w-20 h-20 rounded object-cover flex-shrink-0"
+                  />
 
-              <Badge
-                className={`mt-2 text-xs font-medium w-fit ${
-                  (article.status || "").toLowerCase() === "uploaded"
-                    ? "bg-transparent text-green-700 border border-green-600"
-                    : "bg-gray-100 text-gray-600 border border-gray-800"
-                }`}
-              >
-                {article.status}
-              </Badge>
-            </div>
+                  {/* Main Content Column */}
+                  <div className="flex flex-col min-w-0 flex-1">
+                    {/* Title + Meta */}
+                    <div className="flex justify-between gap-2">
+                      <div className="min-w-0">
+                        <h4 className="font-medium text-white text-sm line-clamp-2">
+                          {article.title}
+                        </h4>
 
-            {/* Edit Button */}
-            {selectedArticle?.id !== article.id && (
-              <Button
-                size="sm"
-                variant="ghost"
-                className="text-gray-400 hover:text-gray-700 h-8 w-8 p-0 flex-shrink-0"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  openEditDialog(article);
-                }}
-              >
-                Edit
-              </Button>
+                        <div className="flex items-center gap-1 mt-1">
+                          <Image
+                            src="/clock1.png"
+                            height={13}
+                            width={13}
+                            alt="icon"
+                          />
+                          <p className="text-xs text-[#]">
+                            {getReadingTime(article.wordCount)}
+                          </p>
+                        </div>
+
+                        <Badge
+                          className={`mt-2 text-xs font-medium w-fit ${
+                            (article.status || "").toLowerCase() === "uploaded"
+                              ? "bg-transparent text-green-700 border border-green-600"
+                              : "bg-gray-100 text-gray-600 border border-gray-800"
+                          }`}
+                        >
+                          {article.status}
+                        </Badge>
+                      </div>
+
+                      {/* Edit Button */}
+                      {selectedArticle?.id !== article.id && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-gray-400 hover:text-gray-700 h-8 w-8 p-0 flex-shrink-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEditDialog(article);
+                          }}
+                        >
+                          Edit
+                        </Button>
+                      )}
+                    </div>
+
+                    {/* Preview (FULL WIDTH, NOT under image) */}
+                    <p className="text-xs text-gray-500 line-clamp-2 mt-2">
+                      {article.preview}
+                    </p>
+
+                    {/* Tags */}
+                    <div className="flex gap-1 flex-wrap mt-2">
+                      {article.tags?.slice(0, 5).map((tag) => (
+                        <span
+                          key={tag}
+                          className="text-xs bg-gray-200  text-gray-600 px-2 py-0.5 rounded-2xl border border-gray-200"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ))
             )}
           </div>
-
-          {/* Preview (FULL WIDTH, NOT under image) */}
-          <p className="text-xs text-gray-500 line-clamp-2 mt-2">
-            {article.preview}
-          </p>
-
-          {/* Tags */}
-          <div className="flex gap-1 flex-wrap mt-2">
-            {article.tags?.slice(0, 5).map((tag) => (
-              <span
-                key={tag}
-                className="text-xs bg-gray-200  text-gray-600 px-2 py-0.5 rounded-2xl border border-gray-200"
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
-        </div>
-      </div>
-    ))
-  )}
-</div>
 
           {/* Right Side - Edit/Preview Panel */}
           {selectedArticle && (
             <div className=" max-w-[640px]  bg-white rounded-[9px] border-l border-gray-200 overflow-hidden flex flex-col">
               {/* Header */}
               <div className="flex items-center justify-between p-4 border-b border-gray-200 flex-shrink-0">
-                <span className="text-sm  text-gray-500">
-                  EDIT POST
-                </span>
+                <span className="text-sm  text-gray-500">EDIT POST</span>
                 <button
                   onClick={() => setSelectedArticle(null)}
                   className="text-gray-400 hover:text-gray-600 text-xl leading-none font-bold"
@@ -1155,18 +1175,18 @@ export function ArticlesTab({
                           ? selectedArticle.keyword
                           : selectedArticle.keyword
                           ? String(selectedArticle.keyword)
-                              .split(',')
+                              .split(",")
                               .map((k) => k.trim())
                               .filter(Boolean)
                           : [];
                         return keywords.length > 0 ? (
                           keywords.map((keyword, index) => (
-                          <span
-                            key={index}
-                            className="px-1 py-1  rounded-full text-xs font-medium bg-gray-100 text-gray-600 border border-gray-300 inline-block"
-                          >
-                            {keyword}
-                          </span>
+                            <span
+                              key={index}
+                              className="px-1 py-1  rounded-full text-xs font-medium bg-gray-100 text-gray-600 border border-gray-300 inline-block"
+                            >
+                              {keyword}
+                            </span>
                           ))
                         ) : (
                           <span className="text-xs text-gray-500">
@@ -1199,7 +1219,8 @@ export function ArticlesTab({
                         priority
                       />
                       <p className="text-green-500 text-xs">
-                        {selectedArticle.wordCount?.toLocaleString() || "—"} words
+                        {selectedArticle.wordCount?.toLocaleString() || "—"}{" "}
+                        words
                       </p>
                     </div>
                     {selectedArticle.contentScore && (
@@ -1237,50 +1258,52 @@ export function ArticlesTab({
                         {selectedArticle.metaTitle || selectedArticle.title}
                       </p>
                       <p className="text-gray-600 text-xs leading-relaxed line-clamp-3">
-                        {selectedArticle.metaDescription || selectedArticle.preview}
+                        {selectedArticle.metaDescription ||
+                          selectedArticle.preview}
                       </p>
                     </div>
                   </div>
 
                   {/* Live URL for published articles */}
-                  {selectedArticle.status === "published" && selectedArticle.slug && (
-                    <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                      <div className="flex items-start gap-2">
-                        <Globe className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                        <div className="flex-1 min-w-0">
-                          <h4 className="text-sm font-semibold text-green-900 mb-1">
-                            Live Article URL
-                          </h4>
-                          <div className="flex items-center gap-2">
-                            <a
-                              href={getArticleUrl(selectedArticle.slug)}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-xs text-blue-600 hover:text-blue-800 hover:underline break-all flex-1"
-                            >
-                              {getArticleUrl(selectedArticle.slug)}
-                            </a>
-                            <button
-                              onClick={() => {
-                                navigator.clipboard.writeText(
-                                  getArticleUrl(selectedArticle.slug!)
-                                );
-                                toast.showToast({
-                                  title: "Copied!",
-                                  description: "URL copied to clipboard",
-                                  type: "success",
-                                });
-                              }}
-                              className="text-green-600 hover:text-green-800 flex-shrink-0"
-                              title="Copy URL"
-                            >
-                              <Copy className="w-3 h-3" />
-                            </button>
+                  {selectedArticle.status === "published" &&
+                    selectedArticle.slug && (
+                      <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <div className="flex items-start gap-2">
+                          <Globe className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-sm font-semibold text-green-900 mb-1">
+                              Live Article URL
+                            </h4>
+                            <div className="flex items-center gap-2">
+                              <a
+                                href={getArticleUrl(selectedArticle.slug)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs text-blue-600 hover:text-blue-800 hover:underline break-all flex-1"
+                              >
+                                {getArticleUrl(selectedArticle.slug)}
+                              </a>
+                              <button
+                                onClick={() => {
+                                  navigator.clipboard.writeText(
+                                    getArticleUrl(selectedArticle.slug!)
+                                  );
+                                  toast.showToast({
+                                    title: "Copied!",
+                                    description: "URL copied to clipboard",
+                                    type: "success",
+                                  });
+                                }}
+                                className="text-green-600 hover:text-green-800 flex-shrink-0"
+                                title="Copy URL"
+                              >
+                                <Copy className="w-3 h-3" />
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  )}
+                    )}
 
                   {/* Tags */}
                 </div>
@@ -1346,23 +1369,34 @@ export function ArticlesTab({
                     "Publish"
                   )}
                 </Button>
-                {selectedArticle.status === "published" && selectedArticle.slug && (
-                  <Button
-                    variant="outline"
-                    className="h-10 px-4 flex items-center gap-2"
-                    onClick={() => handleIndexNow(selectedArticle.id, selectedArticle.slug!)}
-                    disabled={indexingArticle === selectedArticle.id}
-                  >
-                    {indexingArticle === selectedArticle.id ? (
-                      <div className="animate-spin">
-                        <Image src="/loader.png" alt="" width={92} height={92} />
-                      </div>
-                    ) : (
-                      <Globe className="w-4 h-4" />
-                    )}
-                    Index Now
-                  </Button>
-                )}
+                {selectedArticle.status === "published" &&
+                  selectedArticle.slug && (
+                    <Button
+                      variant="outline"
+                      className="h-10 px-4 flex items-center gap-2"
+                      onClick={() =>
+                        handleIndexNow(
+                          selectedArticle.id,
+                          selectedArticle.slug!
+                        )
+                      }
+                      disabled={indexingArticle === selectedArticle.id}
+                    >
+                      {indexingArticle === selectedArticle.id ? (
+                        <div className="animate-spin">
+                          <Image
+                            src="/loader.png"
+                            alt=""
+                            width={92}
+                            height={92}
+                          />
+                        </div>
+                      ) : (
+                        <Globe className="w-4 h-4" />
+                      )}
+                      Index Now
+                    </Button>
+                  )}
                 <Button
                   className="h-9 w-14 p-0 rounded-sm text-red-500 bg-red-500 hover:bg-red-300 hover:text-red-700 cursor-pointer"
                   onClick={() => setIsDeleteDialogOpen(true)}
@@ -1493,7 +1527,6 @@ export function ArticlesTab({
         </Card>
       )} */}
 
-     
       <div className="flex gap-4">
         {/* Update Plan Button - only show if user is not premium */}
         {userPackage !== "premium" && (
@@ -1648,7 +1681,7 @@ export function ArticlesTab({
           </Dialog>
         )}
       </div>
-     
+
       <Dialog
         open={isEditDialogOpen}
         onOpenChange={(open) => {
