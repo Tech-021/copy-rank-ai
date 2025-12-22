@@ -140,8 +140,19 @@ export function Dashboard({
               >
                 Competitors
               </Link>
-             
-                <Link
+              <Link
+                href="/dashboard/analyze"
+                className={`cursor-pointer px-6.5 py-3.5 text-[13px] font-medium transition-colors whitespace-nowrap rounded-full
+    ${
+      pathname.includes("/dashboard/articles") || pathname === "/dashboard"
+        ? "bg-green-500 text-black"
+        : "text-[#53F870] hover:text-green-600 hover:bg-green-100"
+    }
+  `}
+              >
+                Articles
+              </Link>
+              <Link
                 href="/dashboard/index"
                 className={`cursor-pointer px-6.5 py-3.5 text-[13px] font-medium transition-colors whitespace-nowrap rounded-full
     ${
@@ -153,7 +164,7 @@ export function Dashboard({
               >
                 Index
               </Link>
-             
+
               <Link
                 href="/dashboard/settings"
                 className={`cursor-pointer px-6.5 py-3.5 text-[13px] font-medium transition-colors whitespace-nowrap rounded-full
