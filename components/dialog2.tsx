@@ -136,10 +136,10 @@ export function CreatePostDialogDashboard({
           </VisuallyHidden>
           <div className="flex flex-col gap-[30px]">
             <div className="flex flex-col gap-2.5">
-              <h2 className="text-3xl text-black font-normal">
+              <h2 className="text-3xl text-white font-normal">
                 Choose what to write about
               </h2>
-              <p className="text-[15px] text-[#00000080]">
+              <p className="text-[15px] text-white">
                 Pick a keyword as the focus for this post
               </p>
             </div>
@@ -147,8 +147,10 @@ export function CreatePostDialogDashboard({
               {/* 1) Competitor selection */}
               <div className="flex flex-col gap-2.5">
                 <Select value={selectedCompetitor ?? undefined} onValueChange={setSelectedCompetitor}>
-                  <SelectTrigger className="w-[588px] h-[50px]! border-[#0000001a]">
-                    <SelectValue placeholder="From Your Competitor" />
+            <SelectTrigger
+  className="w-[588px] h-[60px]! bg-gradient-to-b text-[#53F870]! from-[#002B07] to-[#1A451A] border border-[#53F870]"
+>
+                    <SelectValue placeholder="From  Competitor" />
                   </SelectTrigger>
                   <SelectContent>
                     {competitorOptions.length === 0 ? (
@@ -176,7 +178,7 @@ export function CreatePostDialogDashboard({
                   </SelectContent>
                 </Select> */}
                 {/* 1b) Competitor keyword chips - multi-select */}
-                <div className="flex items-start justify-start gap-1.5 flex-wrap bg-[rgb(247,247,247)] rounded-xl p-3.5 w-full min-h-[82px]">
+                <div className="flex items-start justify-start gap-1.5 flex-wrap bg-transparent border border-[#53F870]! rounded-xl p-3.5 w-full min-h-[82px]">
                   {(competitorKeywordSuggestions.length === 0) ? (
                     <p className="text-xs text-[#00000080]">Select a competitor to see their keywords.</p>
                   ) : (
@@ -188,7 +190,7 @@ export function CreatePostDialogDashboard({
                             prev.includes(kw) ? prev.filter((k) => k !== kw) : [...prev, kw]
                           );
                         }}
-                        className={`border rounded-full px-2 py-1 text-[10px] font-normal cursor-pointer hover:border-black ${selectedCompetitorKeywords.includes(kw) ? 'border-black text-black' : 'border-[#0000004d] text-[#00000080]'}`}
+                        className={`border  rounded-full px-2 py-1 text-[10px] font-normal cursor-pointer hover:border-black ${selectedCompetitorKeywords.includes(kw) ? 'border-black text-[#53F870]' : 'border-[#0000004d] text-[#00000080]'}`}
                         type="button"
                       >
                         {kw}
@@ -226,7 +228,7 @@ export function CreatePostDialogDashboard({
                               prev.includes(kw) ? prev.filter((k) => k !== kw) : [...prev, kw]
                             );
                           }}
-                          className={`border rounded-full px-2 py-1 text-[10px] font-normal cursor-pointer hover:border-black ${selectedSeoKeywords.includes(kw) ? 'border-black text-black' : 'border-[#0000004d] text-[#00000080]'}`}
+                          className={`border rounded-full px-2 py-1 text-[10px] font-normal cursor-pointer hover:border-black ${selectedSeoKeywords.includes(kw) ? 'border-black text-[#53F870]' : 'border-[#0000004d] text-[#00000080]'}`}
                           type="button"
                         >
                           {kw}
@@ -317,7 +319,7 @@ export function CreatePostDialogDashboard({
                 disabled={isSubmitting}
                 className="w-full h-[50px] text-white text-base font-normal bg-[rgb(91,175,87)] hover:bg-[rgb(91,175,87)] cursor-pointer"
               >
-                Generate SEO Post
+                Next
               </Button>
             </div>
           </div>

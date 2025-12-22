@@ -24,7 +24,7 @@ interface DashboardProps {
 export function Dashboard({ onLogout, userEmail, userAvatar, children }: DashboardProps) {
   const pathname = usePathname() || "";
   const [activeTab, setActiveTab] = useState<
-    "analyze" | "keywords" | "competitors" | "articles" | "settings"
+    "analyze" | "keywords" | "competitors" | "articles"| "index" | "settings"
   >(pathname.includes("/dashboard/articles")
     ? "articles"
     : pathname.includes("/dashboard/keywords")
@@ -82,14 +82,14 @@ export function Dashboard({ onLogout, userEmail, userAvatar, children }: Dashboa
       <header className="backdrop-blur-sm sticky top-0 z-50 border-b bg-background/95">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center justify-center gap-16">
-            <div className="w-full h-full rounded-xl bg-primary flex items-center justify-center">
-              <Image src="/logo.png" alt="" width={50} height={50} />
+            <div className="w-full h-full rounded-xl  flex items-center justify-center">
+              <Image src="/newlogo.png" alt="" width={71.4} height={71.4} />
             </div>
             <div
               className="
     flex gap-4 p-1.5 rounded-full
     bg-[rgb(247,247,247)]
-    dark:bg-gradient-to-b
+    dark:bg-linear-to-b
     dark:from-[#2E9839]
     dark:to-[#04230D]
     border border-transparent
@@ -141,6 +141,22 @@ export function Dashboard({ onLogout, userEmail, userAvatar, children }: Dashboa
               >
                 Competitors
               </Link>
+              <button
+                onClick={() => setActiveTab("articles")}
+                className={`cursor-pointer px-6.5 py-3.5 text-[13px] font-medium transition-colors whitespace-nowrap rounded-full
+    ${activeTab === "articles" ? "bg-green-500 text-black" : "text-[#53F870]"}
+  `}
+              >
+                Articles
+              </button>
+              <button
+                onClick={() => setActiveTab("index")}
+                className={`cursor-pointer px-6.5 py-3.5 text-[13px] font-medium transition-colors whitespace-nowrap rounded-full
+    ${activeTab === "index" ? "bg-green-500 text-black" : "text-[#53F870]"}
+  `}
+              >
+                Index
+              </button>
               <Link
                 href="/dashboard/settings"
                 className={`cursor-pointer px-6.5 py-3.5 text-[13px] font-medium transition-colors whitespace-nowrap rounded-full
@@ -155,15 +171,25 @@ export function Dashboard({ onLogout, userEmail, userAvatar, children }: Dashboa
               </Link>
             </div>
           </div>
-          <div className="flex items-center gap-4">
-            {userEmail && (
-              <ProfileDropdown
-                userEmail={userEmail}
-                userAvatar={localAvatar ?? userAvatar}
-                onLogout={onLogout}
-              />
-            )}
-          </div>
+         <div
+  className="
+    flex items-center gap-4 p-1.5 rounded-full
+    text-[#53F870]
+    dark:bg-linear-to-b
+    dark:from-[#2E9839]
+    dark:to-[#04230D]
+    border border-transparent
+    dark:border-[#2E9839]
+  "
+>
+  {userEmail && (
+    <ProfileDropdown
+      userEmail={userEmail}
+      userAvatar={localAvatar ?? userAvatar}
+      onLogout={onLogout}
+    />
+  )}
+</div>
         </div>
       </header>
 
