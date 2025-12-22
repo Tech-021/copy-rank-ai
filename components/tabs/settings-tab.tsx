@@ -26,6 +26,7 @@ import { Switch } from "@/components/ui/switch";
 import { Copy, Check, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { getUser, updatePassword } from "@/lib/auth";
 import Image from "next/image";
+import { useToast } from "@/components/ui/toast";
 
 export function SettingsTab() {
   const [activeTab, setActiveTab] = useState("publishing");
@@ -36,6 +37,8 @@ export function SettingsTab() {
   const [isPlanDialogOpen, setIsPlanDialogOpen] = useState(false);
   const [selectedPlanVariantId, setSelectedPlanVariantId] = useState<string | null>(null);
   const [isCreatingCheckout, setIsCreatingCheckout] = useState(false);
+  const toast = useToast();
+  const [isDirty, setIsDirty] = useState(false);
 
   // Mock states
   const [apiKey, setApiKey] = useState("sk_live_51234567890abcdefghijklmnop");
@@ -98,7 +101,89 @@ export function SettingsTab() {
 
   const handleSettingChange = (key: string, value: any) => {
     setSettings((prev) => ({ ...prev, [key]: value }));
+    setIsDirty(true);
   };
+
+  // Load and save settings (API first, fallback to localStorage)
+  const loadUserSettings = async (websiteId?: string | null, userId?: string | null) => {
+    try {
+      const uid = userId ?? currentUser?.id ?? null;
+      const params = new URLSearchParams();
+      if (websiteId) params.set("websiteId", String(websiteId));
+      if (uid) params.set("userId", String(uid));
+      const qs = params.toString() ? `?${params.toString()}` : "";
+      const res = await fetch(`/api/user/settings${qs}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.settings) {
+          setSettings((prev) => ({ ...prev, ...data.settings }));
+          setIsDirty(false);
+          return;
+        }
+      }
+    } catch (e) {
+      // ignore and fallback to localStorage
+    }
+
+    try {
+      const uid = userId ?? currentUser?.id ?? null;
+      const key = `user_settings${uid ? `_${uid}` : ""}${websiteId ? `_${websiteId}` : ""}`;
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        setSettings(JSON.parse(raw));
+        setIsDirty(false);
+      }
+    } catch (e) {
+      // ignore
+    }
+  };
+
+  const handleSaveSettings = async (websiteId?: string | null) => {
+    try {
+      const body = { settings, websiteId: websiteId || null, userId: currentUser?.id ?? null };
+      const res = await fetch("/api/user/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (res.ok) {
+        toast.showToast({ title: "Saved", description: "Settings saved", type: "success" });
+        setIsDirty(false);
+        return;
+      }
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data?.error || "Failed to save");
+    } catch (err: any) {
+      // fallback: save to localStorage and notify user
+      try {
+        const uid = currentUser?.id ?? null;
+        const key = `user_settings${uid ? `_${uid}` : ""}${websiteId ? `_${websiteId}` : ""}`;
+        localStorage.setItem(key, JSON.stringify(settings));
+        toast.showToast({
+          title: "Saved locally",
+          description: "Settings saved to browser (server failed).",
+          type: "info",
+        });
+        setIsDirty(false);
+      } catch {
+        toast.showToast({
+          title: "Save failed",
+          description: err?.message || "Could not save settings",
+          type: "error",
+        });
+      }
+    }
+  };
+
+  const handleResetSettings = async (websiteId?: string | null) => {
+    await loadUserSettings(websiteId);
+    toast.showToast({ title: "Restored", description: "Settings reloaded", type: "success" });
+  };
+
+  useEffect(() => {
+    // Load persisted settings on mount (falls back to localStorage)
+    loadUserSettings();
+  }, []);
 
   const handlePasswordChange = async () => {
     if (!passwordData.newPassword || !passwordData.confirmPassword) {
@@ -262,6 +347,24 @@ export function SettingsTab() {
                 </SelectContent>
               </Select>
             </div>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                className="h-9"
+                onClick={() => handleResetSettings()}
+                disabled={!isDirty}
+              >
+                Reset
+              </Button>
+              <Button
+                className="h-9 px-4 bg-gray-900 text-white"
+                onClick={() => handleSaveSettings()}
+                disabled={!isDirty}
+              >
+                Save changes
+              </Button>
             </div>
           </div>
         )}
