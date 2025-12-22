@@ -140,26 +140,20 @@ export function Dashboard({
               >
                 Competitors
               </Link>
-              <Link
-                href="/dashboard/articles"
+             
+                <Link
+                href="/dashboard/index"
                 className={`cursor-pointer px-6.5 py-3.5 text-[13px] font-medium transition-colors whitespace-nowrap rounded-full
     ${
-      pathname.includes("/dashboard/articles")
+      pathname.includes("/dashboard/index")
         ? "bg-green-500 text-black"
-        : "text-[#53F870]"
+        : "text-[#53F870] hover:text-green-600 hover:bg-green-100"
     }
   `}
               >
-                Articles
-              </Link>
-              <button
-                onClick={() => setActiveTab("index")}
-                className={`cursor-pointer px-6.5 py-3.5 text-[13px] font-medium transition-colors whitespace-nowrap rounded-full
-    ${activeTab === "index" ? "bg-green-500 text-black" : "text-[#53F870]"}
-  `}
-              >
                 Index
-              </button>
+              </Link>
+             
               <Link
                 href="/dashboard/settings"
                 className={`cursor-pointer px-6.5 py-3.5 text-[13px] font-medium transition-colors whitespace-nowrap rounded-full

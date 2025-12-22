@@ -190,7 +190,7 @@ export function CreatePostDialogDashboard({
                             prev.includes(kw) ? prev.filter((k) => k !== kw) : [...prev, kw]
                           );
                         }}
-                        className={`border  rounded-full px-2 py-1 text-[10px] font-normal cursor-pointer hover:border-black ${selectedCompetitorKeywords.includes(kw) ? 'border-black text-[#53F870]' : 'border-[#0000004d] text-[#00000080]'}`}
+                        className={`border border-[#53F870] bg-[rgba(114,235,98,0.13)] rounded-[5px] px-2 py-1  text-[10px] text-[#53F870] font-normal cursor-pointer hover:border-black ${selectedCompetitorKeywords.includes(kw) ? 'border-black text-[#53F870]' : 'border-[#0000004d] text-[#53F870] '}`}
                         type="button"
                       >
                         {kw}
