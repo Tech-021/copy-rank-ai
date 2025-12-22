@@ -13,15 +13,42 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { getUserPackage, getUserArticleLimit } from "@/lib/articleLimits";
+import { supabase } from "@/lib/client";
+import { createCheckout } from "@/lib/lemonSqueezy";
 import { Switch } from "@/components/ui/switch";
 import { Copy, Check, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { getUser, updatePassword } from "@/lib/auth";
 import Image from "next/image";
+import { useToast } from "@/components/ui/toast";
 
 export function SettingsTab() {
   const [activeTab, setActiveTab] = useState("publishing");
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [userPackage, setUserPackage] = useState<"free" | "pro" | "premium" | null>(null);
+  const [usage, setUsage] = useState({
+    articles: 0,
+    articlesLimit: 0,
+    keywords: 0,
+    keywordLimit: 0,
+    monthlyPosts: 0,
+    monthlyLimit: 0,
+  });
   const [loading, setLoading] = useState(true);
+
+  const [isPlanDialogOpen, setIsPlanDialogOpen] = useState(false);
+  const [selectedPlanVariantId, setSelectedPlanVariantId] = useState<string | null>(null);
+  const [isCreatingCheckout, setIsCreatingCheckout] = useState(false);
+  const toast = useToast();
+  const [isDirty, setIsDirty] = useState(false);
 
   // Mock states
   const [apiKey, setApiKey] = useState("sk_live_51234567890abcdefghijklmnop");
@@ -44,6 +71,15 @@ export function SettingsTab() {
     notifyKeywordSynced: true,
   });
 
+  // Notification option definitions (used to render the Notifications tab dynamically)
+  const notificationOptions: { key: string; title: string; description: string }[] = [
+    { key: "notifyPostPublished", title: "Post Published", description: "Get notified when a post goes live" },
+    { key: "notifyDraftGenerated", title: "Draft Generated", description: "Be notified when a new draft is ready to review" },
+    { key: "notifyCompetitorScan", title: "Competitor Scan Complete", description: "Know when competitor analysis finishes" },
+    { key: "notifyWeeklyReport", title: "Weekly Performance Summary", description: "Get a weekly overview of your content activity" },
+    { key: "notifyKeywordSynced", title: "Keyword Synced", description: "Receive updates when new keywords are added" },
+  ];
+
   const [passwordData, setPasswordData] = useState({
     newPassword: "",
     confirmPassword: "",
@@ -58,10 +94,84 @@ export function SettingsTab() {
     const getCurrentUser = async () => {
       const { data: user } = await getUser();
       setCurrentUser(user);
+      if (user?.id) {
+        try {
+          const pkg = await getUserPackage(user.id);
+          setUserPackage(pkg);
+        } catch (e) {
+          // ignore
+        }
+      }
       setLoading(false);
     };
     getCurrentUser();
   }, []);
+
+  // fetch usage metrics when we have a user or their package
+  useEffect(() => {
+    const fetchUsage = async () => {
+      if (!currentUser?.id) return;
+
+      try {
+        // articles total
+        const artRes = await supabase
+          .from("articles")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", currentUser.id);
+        const articlesCount = (artRes as any).count || 0;
+
+        // articles this month
+        const start = new Date();
+        start.setDate(1);
+        start.setHours(0, 0, 0, 0);
+        const monthlyRes = await supabase
+          .from("articles")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", currentUser.id)
+          .gte("created_at", start.toISOString());
+        const monthlyCount = (monthlyRes as any).count || 0;
+
+        // keywords across all websites
+        const { data: sites } = await supabase
+          .from("websites")
+          .select("keywords")
+          .eq("user_id", currentUser.id);
+
+        let keywordsCount = 0;
+        if (Array.isArray(sites)) {
+          sites.forEach((s: any) => {
+            const kw = s?.keywords;
+            if (!kw) return;
+            if (Array.isArray(kw)) keywordsCount += kw.length;
+            else if (kw?.keywords && Array.isArray(kw.keywords)) keywordsCount += kw.keywords.length;
+          });
+        }
+
+        // compute limits
+        const articleLimit = getUserArticleLimit
+          ? await getUserArticleLimit(currentUser.id)
+          : 0;
+
+        const keywordLimits: Record<string, number> = { free: 100, pro: 1000, premium: 5000 };
+        const monthlyLimits: Record<string, number> = { free: 10, pro: 50, premium: 100 };
+        const pkg = userPackage || "free";
+
+        setUsage({
+          articles: articlesCount,
+          articlesLimit: articleLimit,
+          keywords: keywordsCount,
+          keywordLimit: keywordLimits[pkg],
+          monthlyPosts: monthlyCount,
+          monthlyLimit: monthlyLimits[pkg],
+        });
+      } catch (err) {
+        // ignore usage errors
+        console.warn("Failed to fetch usage", err);
+      }
+    };
+
+    fetchUsage();
+  }, [currentUser, userPackage]);
 
   const handleCopyApiKey = () => {
     navigator.clipboard.writeText(apiKey);
@@ -76,7 +186,89 @@ export function SettingsTab() {
 
   const handleSettingChange = (key: string, value: any) => {
     setSettings((prev) => ({ ...prev, [key]: value }));
+    setIsDirty(true);
   };
+
+  // Load and save settings (API first, fallback to localStorage)
+  const loadUserSettings = async (websiteId?: string | null, userId?: string | null) => {
+    try {
+      const uid = userId ?? currentUser?.id ?? null;
+      const params = new URLSearchParams();
+      if (websiteId) params.set("websiteId", String(websiteId));
+      if (uid) params.set("userId", String(uid));
+      const qs = params.toString() ? `?${params.toString()}` : "";
+      const res = await fetch(`/api/user/settings${qs}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.settings) {
+          setSettings((prev) => ({ ...prev, ...data.settings }));
+          setIsDirty(false);
+          return;
+        }
+      }
+    } catch (e) {
+      // ignore and fallback to localStorage
+    }
+
+    try {
+      const uid = userId ?? currentUser?.id ?? null;
+      const key = `user_settings${uid ? `_${uid}` : ""}${websiteId ? `_${websiteId}` : ""}`;
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        setSettings(JSON.parse(raw));
+        setIsDirty(false);
+      }
+    } catch (e) {
+      // ignore
+    }
+  };
+
+  const handleSaveSettings = async (websiteId?: string | null) => {
+    try {
+      const body = { settings, websiteId: websiteId || null, userId: currentUser?.id ?? null };
+      const res = await fetch("/api/user/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (res.ok) {
+        toast.showToast({ title: "Saved", description: "Settings saved", type: "success" });
+        setIsDirty(false);
+        return;
+      }
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data?.error || "Failed to save");
+    } catch (err: any) {
+      // fallback: save to localStorage and notify user
+      try {
+        const uid = currentUser?.id ?? null;
+        const key = `user_settings${uid ? `_${uid}` : ""}${websiteId ? `_${websiteId}` : ""}`;
+        localStorage.setItem(key, JSON.stringify(settings));
+        toast.showToast({
+          title: "Saved locally",
+          description: "Settings saved to browser (server failed).",
+          type: "info",
+        });
+        setIsDirty(false);
+      } catch {
+        toast.showToast({
+          title: "Save failed",
+          description: err?.message || "Could not save settings",
+          type: "error",
+        });
+      }
+    }
+  };
+
+  const handleResetSettings = async (websiteId?: string | null) => {
+    await loadUserSettings(websiteId);
+    toast.showToast({ title: "Restored", description: "Settings reloaded", type: "success" });
+  };
+
+  useEffect(() => {
+    // Load persisted settings on mount (falls back to localStorage)
+    loadUserSettings();
+  }, []);
 
   const handlePasswordChange = async () => {
     if (!passwordData.newPassword || !passwordData.confirmPassword) {
@@ -263,6 +455,46 @@ export function SettingsTab() {
                 </Select>
               </div>
             </div>
+
+            {/* Queue Size */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-900">Queue size</label>
+              <p className="text-xs text-gray-600 mb-3">
+                Only this number of ready posts will be kept in the publishing queue at a time
+              </p>
+              <Select
+                value={settings.queueSize}
+                onValueChange={(value) => handleSettingChange("queueSize", value)}
+              >
+                <SelectTrigger className="w-28 h-9 border-gray-200 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1 post">1 post</SelectItem>
+                  <SelectItem value="5 posts">5 posts</SelectItem>
+                  <SelectItem value="10 posts">10 posts</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                className="h-9"
+                onClick={() => handleResetSettings()}
+                disabled={!isDirty}
+              >
+                Reset
+              </Button>
+              <Button
+                className="h-9 px-4 bg-gray-900 text-white"
+                onClick={() => handleSaveSettings()}
+                disabled={!isDirty}
+              >
+                Save changes
+              </Button>
+            </div>
           </div>
         )}
 
@@ -439,115 +671,56 @@ export function SettingsTab() {
         {/* Notifications Tab */}
         {activeTab === "notifications" && (
           <div className="border border-gray-200 rounded-lg p-6">
-            <div className="mb-6">
-              <h3 className="text-base font-medium text-gray-900 mb-1">
-                Notifications
-              </h3>
-              <p className="text-sm text-gray-600">
-                Choose which updates you want to receive
-              </p>
+            <div className="mb-6 flex items-start justify-between">
+              <div>
+                <h3 className="text-base font-medium text-gray-900 mb-1">Notifications</h3>
+                <p className="text-sm text-gray-600">Choose which updates you want to receive</p>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  className="h-8"
+                  onClick={() => {
+                    const next = { ...settings } as any;
+                    notificationOptions.forEach((o) => (next[o.key] = true));
+                    setSettings(next);
+                    setIsDirty(true);
+                  }}
+                >
+                  Enable All
+                </Button>
+                <Button
+                  variant="outline"
+                  className="h-8"
+                  onClick={() => {
+                    const next = { ...settings } as any;
+                    notificationOptions.forEach((o) => (next[o.key] = false));
+                    setSettings(next);
+                    setIsDirty(true);
+                  }}
+                >
+                  Disable All
+                </Button>
+              </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-8">
-              {/* Left Column */}
-              <div className="space-y-6 border rounded-[10px] border-gray-200">
-                <div className="flex justify-between p-4 gap-4">
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">
-                      Post Published
-                    </p>
-                    <p className="text-xs text-gray-600 mt-1">
-                      Get notified when a post goes live
-                    </p>
-                  </div>
+            <div className="grid grid-cols-2 gap-4">
+              {notificationOptions.map((opt) => (
+                <div
+                  key={opt.key}
+                  className="flex items-start gap-4 p-4 border border-gray-200 rounded-lg hover:border-gray-300"
+                >
                   <Switch
-                    checked={settings.notifyPostPublished}
-                    onCheckedChange={(value) =>
-                      handleSettingChange("notifyPostPublished", value)
-                    }
+                    checked={(settings as any)[opt.key]}
+                    onCheckedChange={(value) => handleSettingChange(opt.key, value)}
                     className="mt-0.5"
                   />
-                </div>
-                <div className="border border-gray-200" />
-
-                <div className="flex justify-between p-4 gap-4">
                   <div>
-                    <p className="text-sm font-medium text-gray-900">
-                      Competitor Scan Complete
-                    </p>
-                    <p className="text-xs text-gray-600 mt-1">
-                      Know when competitor analysis finishes
-                    </p>
-                  </div>
-                  <Switch
-                    checked={settings.notifyCompetitorScan}
-                    onCheckedChange={(value) =>
-                      handleSettingChange("notifyCompetitorScan", value)
-                    }
-                    className="mt-0.5"
-                  />
-                </div>
-                <div className="border border-gray-200" />
-                <div className="flex justify-between p-4 gap-4">
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">
-                      Keyword Synced
-                    </p>
-                    <p className="text-xs text-gray-600 mt-1">
-                      Receive updates when new keywords are added
-                    </p>
-                  </div>
-                  <Switch
-                    checked={settings.notifyKeywordSynced}
-                    onCheckedChange={(value) =>
-                      handleSettingChange("notifyKeywordSynced", value)
-                    }
-                    className="mt-0.5"
-                  />
-                </div>
-              </div>
-
-              {/* Right Column */}
-              <div className="space-y-6 ">
-                <div className="border border-gray-200 rounded-[10px] max-w-[654px] h-[220px] space-y-9">
-                  <div className="flex justify-between mt-5 px-6 py-2  gap-4">
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">
-                        Draft Generated
-                      </p>
-                      <p className="text-xs text-gray-600 mt-1">
-                        Be notified when a new draft is ready to review
-                      </p>
-                    </div>
-                    <Switch
-                      checked={settings.notifyDraftGenerated}
-                      onCheckedChange={(value) =>
-                        handleSettingChange("notifyDraftGenerated", value)
-                      }
-                      className="mt-0.5"
-                    />
-                  </div>
-                  <div className="border border-gray-200" />
-
-                  <div className="flex justify-between mt-5 px-6  gap-4">
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">
-                        Weekly Performance Summary
-                      </p>
-                      <p className="text-xs text-gray-600 mt-1">
-                        Get a weekly overview of your content activity
-                      </p>
-                    </div>
-                    <Switch
-                      checked={settings.notifyWeeklyReport}
-                      onCheckedChange={(value) =>
-                        handleSettingChange("notifyWeeklyReport", value)
-                      }
-                      className="mt-0.5"
-                    />
+                    <p className="text-sm font-medium text-gray-900">{opt.title}</p>
+                    <p className="text-xs text-gray-600 mt-1">{opt.description}</p>
                   </div>
                 </div>
-              </div>
+              ))}
             </div>
           </div>
         )}
@@ -564,33 +737,71 @@ export function SettingsTab() {
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-12">
-              {/* Left Column */}
-              <div className="space-y-0 border border-gray-200 rounded-lg ">
-                {/* Profile Section */}
-                <div className="flex items-center justify-between p-2 pb-4 border-b border-gray-200">
-                  <div className="flex items-center p-2 gap-4">
-                    <div className="w-12 h-12 rounded-full bg-gray-300" />
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">
-                        Delani Web
-                      </p>
-                      <p className="text-xs text-gray-600">Free Tier</p>
+            <div className="grid grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-900">Profile</label>
+                <div className="flex items-center gap-4 p-4 border border-gray-200 rounded-lg bg-gray-50">
+                  {currentUser?.user_metadata?.avatar_url ? (
+                    <Image
+                      src={currentUser.user_metadata.avatar_url}
+                      alt={currentUser.user_metadata?.full_name || currentUser.email || "avatar"}
+                      width={48}
+                      height={48}
+                      className="rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-12 h-12 rounded-full bg-gray-300 flex items-center justify-center text-sm text-white">
+                      {((currentUser?.user_metadata?.full_name || currentUser?.email || "U") as string)[0]?.toUpperCase()}
                     </div>
+                  )}
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">{currentUser?.user_metadata?.full_name || currentUser?.email || "Your profile"}</p>
+                    <p className="text-xs text-gray-600">{userPackage ? `${userPackage.charAt(0).toUpperCase() + userPackage.slice(1)} Tier` : "Free Tier"}</p>
                   </div>
                   <button className="h-8 px-3 text-xs hover:bg-gray-800 text-black">
                     Upgrade
                   </button>
                 </div>
 
-                {/* Email Section */}
-                <div className="flex items-center justify-between px-4 py-4 border-b border-gray-200">
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">Email</p>
-                    <p className="text-xs text-gray-600">
-                      {currentUser?.email || "admin@delani.pro"}
-                    </p>
-                  </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-900">API access status</label>
+                <p className="text-xs text-gray-600 mb-3">
+                  Know when competitor analysis finishes
+                </p>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-green-500" />
+                  <span className="text-sm text-gray-700">API access active</span>
+                  <Switch checked={true} className="ml-auto" />
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-900">Email</label>
+              <Input
+                type="email"
+                value={currentUser?.email || "admin@delani.pro"}
+                disabled
+                className="h-9 bg-gray-50 border-gray-200 text-sm"
+              />
+              {/* <Button variant="outline" className="mt-2 h-8 text-xs border-gray-200 bg-white">
+                Change email
+              </Button> */}
+            </div>
+
+            {/* <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-900">Password</label>
+              <div className="space-y-3">
+                <div className="relative">
+                  <Input
+                    type={showPasswords.new ? "text" : "password"}
+                    placeholder="New password"
+                    value={passwordData.newPassword}
+                    onChange={(e) =>
+                      setPasswordData((prev) => ({ ...prev, newPassword: e.target.value }))
+                    }
+                    className="h-9 pr-10 border-gray-200 text-sm"
+                  />
                   <Button
                     variant="ghost"
                     className="h-8 px-3 text-xs text-gray-500 hover:text-gray-900 hover:bg-transparent"
@@ -672,7 +883,7 @@ export function SettingsTab() {
                   </div>
                 </div>
               </div>
-            </div>
+            </div> */}
           </div>
         )}
 
@@ -687,70 +898,162 @@ export function SettingsTab() {
                 Manage your subscription settings and usage info
               </p>
             </div>
-            <div className="border border-gray-200 max-w-[654px] rounded-lg ">
-              <div>
-                <h4 className="text-sm p-3 font-medium text-gray-900 px-4 mb-3">
-                  Current plan
-                </h4>
-                <p className="text-sm px-4 text-gray-700">Free Tier</p>
+
+            <div>
+              <h4 className="text-sm font-medium text-gray-900 mb-3">Current plan</h4>
+              <p className="text-sm text-gray-700">{userPackage ? `${userPackage.charAt(0).toUpperCase() + userPackage.slice(1)} Tier` : "Free Tier"}</p>
+            </div>
+
+            <div className="space-y-3">
+              <h4 className="text-sm font-medium text-gray-900">Usage summary</h4>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Articles</span>
+                  <span className="text-gray-900">{usage.articles} / {usage.articlesLimit || "—"}</span>
+                </div>
+                <div className="w-full h-2 bg-gray-200 rounded">
+                  <div className="h-full bg-green-500 rounded" style={{ width: `${usage.articlesLimit ? Math.min(100, Math.round((usage.articles / usage.articlesLimit) * 100)) : 0}%` }} />
+                </div>
               </div>
-              <div className="border border-gray-200" />
-              <div className="space-y-3">
-                <h4 className="text-sm font-medium p-4 text-gray-900">
-                  Usage summary
-                </h4>
-                <div className="space-y-2 text-sm p-2 px-4">
-                  <div className="flex justify-between ">
-                    <span className="text-gray-600">Websites</span>
-                    <span className="text-gray-900">5 / 10</span>
-                  </div>
-                  {/* <div className="w-full h-2 bg-gray-200 rounded">
-                  <div className="h-full w-1/2 bg-green-500 rounded" />
-                </div> */}
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Keywords</span>
+                  <span className="text-gray-900">{usage.keywords} / {usage.keywordLimit || "—"}</span>
                 </div>
-                <div className="space-y-2 text-sm p-2 px-4">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Keywords</span>
-                    <span className="text-gray-900">25 / 100</span>
-                  </div>
-                  {/* <div className="w-full h-2 bg-gray-200 rounded">
-                  <div className="h-full w-1/4 bg-blue-500 rounded" />
-                </div> */}
+                <div className="w-full h-2 bg-gray-200 rounded">
+                  <div className="h-full bg-blue-500 rounded" style={{ width: `${usage.keywordLimit ? Math.min(100, Math.round((usage.keywords / usage.keywordLimit) * 100)) : 0}%` }} />
                 </div>
-                <div className="space-y-2 text-sm p-2 px-4">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Monthly posts</span>
-                    <span className="text-gray-900">8 / 20</span>
-                  </div>
-                  {/* <div className="w-full h-2 bg-gray-200 rounded">
-                  <div className="h-full w-2/5 bg-purple-500 rounded" />
-                </div> */}
+              </div>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Monthly posts</span>
+                  <span className="text-gray-900">{usage.monthlyPosts} / {usage.monthlyLimit || "—"}</span>
+                </div>
+                <div className="w-full h-2 bg-gray-200 rounded">
+                  <div className="h-full bg-purple-500 rounded" style={{ width: `${usage.monthlyLimit ? Math.min(100, Math.round((usage.monthlyPosts / usage.monthlyLimit) * 100)) : 0}%` }} />
                 </div>
               </div>
 
-              <div className="pt-4 p-1 border-t border-gray-200 flex justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-900 px-3 mb-2">
-                    Subscription
-                  </p>
-                  <p className="text-xs text-gray-600 px-3 ">
-                    Upgrade your plan to see more features
-                  </p>
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    className="h-9 border-gray-200 bg-white"
-                  >
-                    Upgrade Plan
+              <div className="pt-4 border-t border-gray-200 flex justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-900 mb-2">Subscription</p>
+                <p className="text-xs text-gray-600">Upgrade your plan to see more features</p>
+              </div>
+              <div className="flex gap-2">
+                {/* Upgrade Plan dialog copied from articles tab */}
+                {userPackage !== "premium" ? (
+                  <Dialog open={isPlanDialogOpen} onOpenChange={setIsPlanDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" className="h-9 border-gray-200 bg-white">
+                        Upgrade Plan
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Update Your Plan</DialogTitle>
+                        <DialogDescription>
+                          Choose a plan to upgrade your account. After selecting, you'll be redirected to LemonSqueezy to complete the purchase.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-3">
+                        <div>
+                          <label className="text-sm font-medium">Plan</label>
+                          <Select onValueChange={(value) => setSelectedPlanVariantId(value)}>
+                            <SelectTrigger className="w-full h-10">
+                              <SelectValue placeholder="Select a plan" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value={process.env?.NEXT_PUBLIC_LEMONSQUEEZY_CHECKOUT_URL_15 || ""}>
+                                Pro — 15 articles
+                              </SelectItem>
+                              <SelectItem value={process.env?.NEXT_PUBLIC_LEMONSQUEEZY_CHECKOUT_URL_30 || ""}>
+                                Premium — 30 articles
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="flex gap-2 justify-end">
+                          <Button variant="ghost" onClick={() => setIsPlanDialogOpen(false)}>
+                            Cancel
+                          </Button>
+                          <Button
+                            disabled={isCreatingCheckout}
+                            onClick={async () => {
+                              if (!currentUser) {
+                                alert("Please sign in to update your plan.");
+                                return setIsPlanDialogOpen(false);
+                              }
+                              if (!selectedPlanVariantId) {
+                                alert("Please select a plan.");
+                                return;
+                              }
+                              try {
+                                setIsCreatingCheckout(true);
+                                if (selectedPlanVariantId) {
+                                  window.location.href = selectedPlanVariantId;
+                                  return; // fallback in case popup is blocked
+                                }
+                                const checkout = await createCheckout(
+                                  selectedPlanVariantId!,
+                                  currentUser.email,
+                                  currentUser.user_metadata?.full_name || currentUser.name,
+                                  currentUser.id
+                                );
+                                if (checkout?.url) {
+                                  window.open(checkout.url, "_blank");
+                                  setIsPlanDialogOpen(false);
+                                  setTimeout(async () => {
+                                    try {
+                                      const pkg = await getUserPackage(currentUser.id);
+                                      setUserPackage(pkg);
+                                    } catch (e) {}
+                                  }, 5000);
+                                } else {
+                                  alert("Failed to create checkout session. Please try again.");
+                                }
+                              } catch (err: any) {
+                                console.error("Create checkout failed", err);
+                                const message = err?.message || err?.error || "Failed to create checkout session. You can try the public checkout URL instead.";
+                                const proVar = process.env.NEXT_PUBLIC_LEMON_VARIANT_PRO || "1087280";
+                                const premVar = process.env.NEXT_PUBLIC_LEMON_VARIANT_PREMIUM || "1087281";
+                                const fallbackUrl15 = process.env.NEXT_PUBLIC_LEMONSQUEEZY_CHECKOUT_URL_15;
+                                const fallbackUrl30 = process.env.NEXT_PUBLIC_LEMONSQUEEZY_CHECKOUT_URL_30;
+                                let fallbackUrl: string | null = null;
+                                const selected = String(selectedPlanVariantId);
+                                if (selected === String(proVar) && fallbackUrl15) fallbackUrl = fallbackUrl15;
+                                if (selected === String(premVar) && fallbackUrl30) fallbackUrl = fallbackUrl30;
+                                const silverVar = process.env.NEXT_PUBLIC_LEMON_VARIANT_SILVER_MONTHLY || "";
+                                if (!fallbackUrl && selected === String(silverVar) && fallbackUrl15) fallbackUrl = fallbackUrl15;
+
+                                if (fallbackUrl) {
+                                  if (confirm(`${message}\n\nWould you like to open the public checkout URL?`)) {
+                                    window.open(fallbackUrl, "_blank");
+                                    setIsPlanDialogOpen(false);
+                                  }
+                                } else {
+                                  alert(message);
+                                }
+                              } finally {
+                                setIsCreatingCheckout(false);
+                              }
+                            }}
+                          >
+                            Proceed
+                          </Button>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                ) : (
+                  <Button variant="outline" className="h-9 border-gray-200 bg-white" disabled>
+                    Upgraded
                   </Button>
-                  <Button
-                    variant="outline"
-                    className="h-9 border-gray-200 bg-white"
-                  >
-                    View Invoices
-                  </Button>
-                </div>
+                )}
+
+                <Button variant="outline" className="h-9 border-gray-200 bg-white">
+                  View Invoices
+                </Button>
               </div>
             </div>
           </div>
