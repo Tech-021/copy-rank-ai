@@ -1,5 +1,13 @@
 import { NextResponse } from "next/server";
-import { supabase } from "@/lib/client";
+import { createClient } from "@supabase/supabase-js";
+
+// Use a server-side Supabase client with the service role key for API routes
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+if (!supabaseUrl || !supabaseServiceRoleKey) {
+  console.warn("Supabase server env missing for user settings route");
+}
+const supabase = createClient(supabaseUrl || "", supabaseServiceRoleKey || "");
 
 // GET /api/user/settings?userId=...&websiteId=...
 export async function GET(req: Request) {

@@ -61,6 +61,15 @@ export function SettingsTab() {
     notifyKeywordSynced: true,
   });
 
+  // Notification option definitions (used to render the Notifications tab dynamically)
+  const notificationOptions: { key: string; title: string; description: string }[] = [
+    { key: "notifyPostPublished", title: "Post Published", description: "Get notified when a post goes live" },
+    { key: "notifyDraftGenerated", title: "Draft Generated", description: "Be notified when a new draft is ready to review" },
+    { key: "notifyCompetitorScan", title: "Competitor Scan Complete", description: "Know when competitor analysis finishes" },
+    { key: "notifyWeeklyReport", title: "Weekly Performance Summary", description: "Get a weekly overview of your content activity" },
+    { key: "notifyKeywordSynced", title: "Keyword Synced", description: "Receive updates when new keywords are added" },
+  ];
+
   const [passwordData, setPasswordData] = useState({
     newPassword: "",
     confirmPassword: "",
@@ -495,83 +504,56 @@ export function SettingsTab() {
         {/* Notifications Tab */}
         {activeTab === "notifications" && (
           <div className="border border-gray-200 rounded-lg p-6">
-            <div className="mb-6">
-              <h3 className="text-base font-medium text-gray-900 mb-1">Notifications</h3>
-              <p className="text-sm text-gray-600">
-                Choose which updates you want to receive
-              </p>
+            <div className="mb-6 flex items-start justify-between">
+              <div>
+                <h3 className="text-base font-medium text-gray-900 mb-1">Notifications</h3>
+                <p className="text-sm text-gray-600">Choose which updates you want to receive</p>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  className="h-8"
+                  onClick={() => {
+                    const next = { ...settings } as any;
+                    notificationOptions.forEach((o) => (next[o.key] = true));
+                    setSettings(next);
+                    setIsDirty(true);
+                  }}
+                >
+                  Enable All
+                </Button>
+                <Button
+                  variant="outline"
+                  className="h-8"
+                  onClick={() => {
+                    const next = { ...settings } as any;
+                    notificationOptions.forEach((o) => (next[o.key] = false));
+                    setSettings(next);
+                    setIsDirty(true);
+                  }}
+                >
+                  Disable All
+                </Button>
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div className="flex items-start gap-4 p-4 border border-gray-200 rounded-lg hover:border-gray-300">
-                <Switch
-                  checked={settings.notifyPostPublished}
-                  onCheckedChange={(value) => handleSettingChange("notifyPostPublished", value)}
-                  className="mt-0.5"
-                />
-                <div>
-                  <p className="text-sm font-medium text-gray-900">Post Published</p>
-                  <p className="text-xs text-gray-600 mt-1">
-                    Get notified when a post goes live
-                  </p>
+              {notificationOptions.map((opt) => (
+                <div
+                  key={opt.key}
+                  className="flex items-start gap-4 p-4 border border-gray-200 rounded-lg hover:border-gray-300"
+                >
+                  <Switch
+                    checked={(settings as any)[opt.key]}
+                    onCheckedChange={(value) => handleSettingChange(opt.key, value)}
+                    className="mt-0.5"
+                  />
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">{opt.title}</p>
+                    <p className="text-xs text-gray-600 mt-1">{opt.description}</p>
+                  </div>
                 </div>
-              </div>
-
-              <div className="flex items-start gap-4 p-4 border border-gray-200 rounded-lg hover:border-gray-300">
-                <Switch
-                  checked={settings.notifyDraftGenerated}
-                  onCheckedChange={(value) => handleSettingChange("notifyDraftGenerated", value)}
-                  className="mt-0.5"
-                />
-                <div>
-                  <p className="text-sm font-medium text-gray-900">Draft Generated</p>
-                  <p className="text-xs text-gray-600 mt-1">
-                    Be notified when a new draft is ready to review
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-4 p-4 border border-gray-200 rounded-lg hover:border-gray-300">
-                <Switch
-                  checked={settings.notifyCompetitorScan}
-                  onCheckedChange={(value) => handleSettingChange("notifyCompetitorScan", value)}
-                  className="mt-0.5"
-                />
-                <div>
-                  <p className="text-sm font-medium text-gray-900">Competitor Scan Complete</p>
-                  <p className="text-xs text-gray-600 mt-1">
-                    Know when competitor analysis finishes
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-4 p-4 border border-gray-200 rounded-lg hover:border-gray-300">
-                <Switch
-                  checked={settings.notifyWeeklyReport}
-                  onCheckedChange={(value) => handleSettingChange("notifyWeeklyReport", value)}
-                  className="mt-0.5"
-                />
-                <div>
-                  <p className="text-sm font-medium text-gray-900">Weekly Performance Summary</p>
-                  <p className="text-xs text-gray-600 mt-1">
-                    Get a weekly overview of your content activity
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-4 p-4 border border-gray-200 rounded-lg hover:border-gray-300">
-                <Switch
-                  checked={settings.notifyKeywordSynced}
-                  onCheckedChange={(value) => handleSettingChange("notifyKeywordSynced", value)}
-                  className="mt-0.5"
-                />
-                <div>
-                  <p className="text-sm font-medium text-gray-900">Keyword Synced</p>
-                  <p className="text-xs text-gray-600 mt-1">
-                    Receive updates when new keywords are added
-                  </p>
-                </div>
-              </div>
+              ))}
             </div>
           </div>
         )}
