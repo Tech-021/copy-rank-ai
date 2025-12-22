@@ -925,7 +925,7 @@ export function AnalyzeTab({
                   return (
                     <div
                       key={action.id}
-                      className={`flex items-center justify-between border px-4 pb-4 pt-5 border-[#0000001a] ${isFirst ? 'rounded-t-xl' : ''} ${isLast ? 'rounded-b-xl' : 'border-b-0'}`}
+                      className={`flex items-center justify-between border px-4 pb-4 pt-5 border-gray-800 ${isFirst ? 'rounded-t-xl' : ''} ${isLast ? 'rounded-b-xl' : 'border-b-0'}`}
                     >
                       <div className="flex items-center gap-5">
                         <div className="bg-transparent w-[30px] h-[30px] flex items-center justify-center rounded-[10px]">
