@@ -937,7 +937,7 @@ export function AnalyzeTab({
                         </div>
                       </div>
                       {action.actionLabel && (
-                        <Button onClick={action.onClick} className="border bg-transparent hover:bg-transparent text-[#00000080] border-[#0000001a] cursor-pointer">
+                        <Button onClick={action.onClick} className="border bg-[rgba(121,195,111,0.13)] hover:bg-transparent text-[#53F870] border-[#0000001a] cursor-pointer">
                           {action.actionLabel}
                         </Button>
                       )}
@@ -1072,14 +1072,14 @@ export function AnalyzeTab({
             <div
               key={article.id}
               onClick={() => setSelectedArticle(article)}
-              className={`relative flex gap-3 p-3 bg-transparent border border-[#000000] rounded-lg cursor-pointer transition-all ${selectedArticle?.id === article.id ? 'border-gray-200 bg-transparent' : 'border-gray-200'}`}
+              className={`relative flex gap-3 p-3 bg-transparent border border-[#000000] rounded-lg cursor-pointer transition-all ${selectedArticle?.id === article.id ? 'border-gray-200 bg-transparent' : 'border-gray-700'}`}
             >
               <img src={article.generatedImages?.[0] || '/article-image.jpg'} alt={article.title} className="w-20 h-20 rounded object-cover shrink-0" />
 
               <div className="flex flex-col min-w-0 flex-1">
                 <div className="flex justify-between gap-2">
                   <div className="min-w-0">
-                    <h4 className="font-medium text-gray-900 text-sm line-clamp-2">{article.title}</h4>
+                    <h4 className="font-medium text-white text-sm line-clamp-2">{article.title}</h4>
                     <div className="flex items-center gap-1 mt-1">
                       <Image src="/clock.png" height={13} width={13} alt="icon" />
                       <p className="text-xs text-gray-500">{article.readingTime || '—'}</p>
@@ -1094,7 +1094,7 @@ export function AnalyzeTab({
 
                 <div className="flex gap-1 flex-wrap mt-2">
                   {article.tags?.slice(0, 5).map((tag) => (
-                    <span key={tag} className="text-xs bg-gray-100  text-gray-600 px-2 py-0.5 rounded-2xl border border-[#0000001a]">{tag}</span>
+                    <span key={tag} className="text-xs bg-[rgba(103,159,95,0.13)]  text-[#53F870] px-2 py-0.5 rounded-2xl border border-[#0000001a]">{tag}</span>
                   ))}
                 </div>
               </div>
