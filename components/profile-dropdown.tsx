@@ -24,8 +24,8 @@ export function ProfileDropdown({ userEmail, userAvatar, onLogout }: ProfileDrop
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button className="flex items-center gap-2 border rounded-full py-1.5 pl-6 pr-1.5 hover:bg-accent transition-colors cursor-pointer">
-          <span className="text-sm text-muted-foreground">{userEmail}</span>
+        <button className="flex items-center gap-2  rounded-full py-1.5 pl-6 pr-1.5 hover:bg-green-600  transition-colors cursor-pointer">
+          <span className="text-sm text-[#53F870]">{userEmail}</span>
           {isExternal ? (
             <img
               src={avatarToShow}
