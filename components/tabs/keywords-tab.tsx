@@ -537,13 +537,13 @@ export function KeywordsTab({
   const getPostStatusColor = (status?: string) => {
     switch (status) {
       case "Live":
-        return "bg-green-100 text-green-700 border-green-200";
+        return "bg-green-50 text-green-700 border border-green-200";
       case "Draft":
-        return "bg-gray-100 text-gray-700 border-gray-200";
-      case "No Plan":
-        return "bg-orange-100 text-orange-700 border-orange-200";
+        return "bg-gray-50 text-gray-700 border border-gray-200";
+      case "No Post":
+        return "bg-gray-50 text-gray-700 border border-gray-200";
       default:
-        return "bg-gray-100 text-gray-700 border-gray-200";
+        return "bg-gray-50 text-gray-700 border border-gray-200";
     }
   };
 
@@ -943,24 +943,21 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
         <div className="flex gap-3">
           <div className="flex ">
           <Button
-            variant="outline"
-            className="gap-2 text-gray-500 border-gray-200 rounded-r-none hover:bg-gray-50 cursor-pointer"
+            className="gap-2 text-[#53f870] border-gray-200 bg-[#53f8701a] rounded-r-none hover:bg-[#53f8701a] cursor-pointer"
             onClick={() => setShowAddKeywordsDialog(true)}
           >
             Add Keywords
             <Plus className="w-4 h-4" />
           </Button>
           <Button
-            variant="outline"
-            className="gap-2 cursor-pointer text-gray-500 border-gray-200 rounded-none hover:bg-gray-50"
+            className="gap-2 cursor-pointer text-[#53f870] rounded-none hover:bg-[#53f8701a] bg-[#53f8701a] border-l border-r border-[#53f870]"
             onClick={() => setShowImportDialog(true)}
           >
             Import CSV
             <Download className="w-4 h-4" />
           </Button>
           <Button
-            variant="outline"
-            className="gap-2 text-gray-500 cursor-pointer border-gray-200 rounded-l-none hover:bg-gray-50"
+            className="gap-2 text-[#53f870] bg-[#53f8701a] cursor-pointer border-gray-200 rounded-l-none hover:bg-[#53f8701a]"
             onClick={() => setShowSyncDialog(true)}
           >
             <ExternalLink className="w-4 h-4" />
@@ -990,63 +987,63 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
 
       {/* Stats Cards - Pixel Perfect */}
       <div className="grid grid-cols-4 rounded-xl shadow-xl">
-        <Card className="border rounded-r-none border-gray-200 bg-[#101110] shadow-xl">
+        <Card className="border rounded-r-none border-[#101110] border-r-[#53f870] bg-[#101110] shadow-xl">
           <CardContent className="flex flex-col justify-start gap-8">
             <div className="flex justify-between">
-              <p className="text-xs font-medium text-gray-600 uppercase tracking-wide ">
+              <p className="text-xs font-medium text-[#ffffffb3] uppercase tracking-wide ">
                 Total Keywords
               </p>
-              <Image src="/stats1.svg" alt="icon" height={15} width={19.5} />
+              <Image src="/keywordcardimg1.png" alt="icon" height={15} width={19.5} />
             </div>
-            <p className="text-4xl flex items-end font-bold  text-gray-900">
+            <p className="text-4xl flex items-end font-bold  text-[#53f870]">
               {stats.totalKeywords}
             </p>
           </CardContent>
         </Card>
 
-        <Card className="border rounded-none border-gray-200 bg-white shadow-xl">
+        <Card className="border rounded-none border-r-[#53f870] bg-[#101110] shadow-xl">
           <CardContent className="flex flex-col justify-start gap-8">
             <div className="flex justify-between">
-              <p className="text-xs font-medium text-gray-600 uppercase tracking-wide ">
+              <p className="text-xs font-medium text-[#ffffffb3] uppercase tracking-wide ">
                 High Potential Keywords
               </p>
-              <Image src="/stats2.svg" alt="icon" height={15} width={19.5} />
+              <Image src="/keywordcardimg2.png" alt="icon" height={15} width={19.5} />
             </div>
-            <p className="text-4xl font-bold text-gray-900">{stats.highPotential}</p>
+            <p className="text-4xl font-bold text-[#53f870]">{stats.highPotential}</p>
           </CardContent>
         </Card>
 
-        <Card className="border rounded-none border-gray-200 bg-white shadow-xl">
+        <Card className="border rounded-none border-r-[#53f870] bg-[#101110] shadow-xl">
           <CardContent className="flex flex-col justify-start gap-8">
             <div className="flex justify-between">
-              <p className="text-xs font-medium text-gray-600 uppercase tracking-wide ">
+              <p className="text-xs font-medium text-[#ffffffb3] uppercase tracking-wide ">
                 With Content
               </p>
-              <Image src="/stats3.svg" alt="icon" height={15} width={19.5} />
+              <Image src="/keywordcardimg3.png" alt="icon" height={15} width={19.5} />
             </div>
-            <p className="text-4xl font-bold text-gray-900">{stats.withContent}</p>
+            <p className="text-4xl font-bold text-[#53f870]">{stats.withContent}</p>
           </CardContent>
         </Card>
 
-        <Card className="border rounded-l-none border-gray-200 bg-white shadow-xl">
+        <Card className="border rounded-l-none border-[#101110] bg-[#101110] shadow-xl">
           <CardContent className="flex flex-col justify-start gap-8">
             <div className="flex justify-between">
-              <p className="text-xs font-medium text-gray-600 uppercase tracking-wide ">
+              <p className="text-xs font-medium text-[#ffffffb3] uppercase tracking-wide ">
                 Without Content
               </p>
-              <Image src="/stats4.svg" alt="icon" height={15} width={19.5} />{" "}
+              <Image src="/keywordcardimg4.png" alt="icon" height={15} width={19.5} />{" "}
             </div>
-            <p className="text-4xl font-bold text-gray-900">{stats.withoutContent}</p>
+            <p className="text-4xl font-bold text-[#53f870]">{stats.withoutContent}</p>
           </CardContent>
         </Card>
       </div>
       <div className="flex items-center justify-between w-full">
         {/* LEFT */}
-        <div className="flex items-center gap-6 text-sm text-gray-500">
+        <div className="flex items-center gap-6 text-sm text-[#ffffffb3]">
           {/* Filters Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="flex items-center gap-1 hover:text-gray-700">
+              <button className="flex items-center gap-1">
                 Filters
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
                   <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" />
@@ -1091,9 +1088,9 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               aria-label="Search keywords"
-              className="h-9 pl-9 pr-3 bg-gray-50 border-gray-200 text-sm placeholder:text-gray-400 focus-visible:ring-1 focus-visible:ring-gray-300"
+              className="h-9 px-3 bg-gray-50 border-[#ffffff10] focus-visible:border-[#ffffff10] text-sm placeholder:text-[#FFFFFF4D] focus-visible:outline-none focus-visible:ring-0"
             />
-            <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Search className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#ffffff4d]" />
           </div>
         </div>
 
@@ -1119,12 +1116,12 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
 
       {/* Filters and Table */}
 
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <table className="w-full border-collapse">
+      <div className="bg-[#d0d0d0] rounded-lg border border-[#53f8701a] overflow-hidden">
+        <table className="w-full border border-[#53f8701a] bg-[#101110] border-collapse">
           {/* ================= HEADER ================= */}
           <thead>
-            <tr className="border-b border-gray-200 bg-white">
-              <th className="px-4 py-4 text-left w-10">
+            <tr className="border-b border-[#53f8701a] bg-[#0d0d0d]">
+              <th className="px-6 py-3 text-left w-10">
                 <input
                   type="checkbox"
                   checked={
@@ -1133,35 +1130,35 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
                   }
                   onChange={toggleSelectAll}
                   aria-label="Select all keywords"
-                  className="w-4 h-4 rounded border-gray-300 focus:ring-0"
+                  className="w-4 h-4 rounded border border-gray-300 bg-transparent cursor-pointer accent-[#53f870]"
                 />
               </th>
-              <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
+              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
                 Keyword
               </th>
-              <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
+              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
                 Search Volume
               </th>
-              <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
+              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
                 Difficulty
               </th>
-              <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
+              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
                 Competition
               </th>
-              <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
+              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
                 Post Status
               </th>
-              <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
+              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
                 Traffic Potential
               </th>
-              <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
+              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
                 Action
               </th>
             </tr>
           </thead>
 
           {/* ================= BODY ================= */}
-          <tbody>
+          <tbody className="border border-[#53f8701a]">
             {filteredAndSortedKeywords.length > 0 ? (
               filteredAndSortedKeywords.map((kw, index) => {
                 const difficultyText = getDifficultyText(kw.difficulty);
@@ -1172,32 +1169,36 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
                 return (
                   <tr
                     key={`${kw.keyword}-${index}`}
-                    className={`${index !== filteredAndSortedKeywords.length - 1 ? "border-b border-gray-200" : ""} hover:bg-gray-50`}
+                    className={`border-b border-[#53f8701a] hover:bg-gray-50 transition-colors`}
                   >
-                    <td className="px-4 py-3 w-10">
+                    <td className="px-6 py-3 w-10">
                       <input
-                        className="w-4 h-4 rounded border-gray-300"
+                        className="w-4 h-4 rounded border border-gray-300 bg-transparent cursor-pointer accent-[#53f870]"
                         type="checkbox"
                         checked={selectedKeywords.has(index)}
                         onChange={() => toggleKeywordSelection(index)}
                         aria-label={`Select keyword ${kw.keyword}`}
                       />
                     </td>
-                    <td className="px-4 text-gray-700 py-3 text-sm">{kw.keyword}</td>
-                    <td className="px-4 text-gray-500 py-3 text-sm">{kw.search_volume?.toLocaleString() || "—"}</td>
-                    <td className="px-4 text-gray-500 py-3 text-sm"><span className={`px-2 py-0.5 text-xs `}>{difficultyText}</span></td>
-                    <td className="px-4 text-gray-500 py-3 text-sm"><span className={`px-2 py-0.5 text-xs  `}>{competitionText}</span></td>
-                    <td className="pl-15 py-3"><span className={`px-3 py-1 text-xs rounded-md ${getPostStatusColor(kw.post_status)}`}>{kw.post_status || "No Plan"}</span></td>
-                    <td className="px-4 text-gray-500 py-3 text-sm">{trafficText}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex justify-end">
-                        <Button className="border rounded-r-none bg-transparent text-black cursor-pointer hover:bg-transparent border-gray-200 rounded-l-md px-8 h-8 text-xs">Edit</Button>
+                    <td className="px-6 text-gray-900 py-3 text-sm font-medium">{kw.keyword}</td>
+                    <td className="px-6 text-gray-600 py-3 text-sm">{kw.search_volume?.toLocaleString() || "—"}</td>
+                    <td className="px-6 text-gray-600 py-3 text-sm">{difficultyText}</td>
+                    <td className="px-6 text-gray-600 py-3 text-sm">{competitionText}</td>
+                    <td className="px-6 py-3">
+                      <span className={`inline-flex items-center px-2.5 py-1 text-xs font-medium border rounded ${getPostStatusColor(kw.post_status)}`}>
+                        {kw.post_status || "No Post"}
+                      </span>
+                    </td>
+                    <td className="px-6 text-gray-600 py-3 text-sm">{trafficText}</td>
+                    <td className="px-6 py-3">
+                      <div className="flex items-center justify-end gap-0">
+                        <Button className="border border-gray-300 rounded-r-none bg-white text-gray-900 hover:bg-gray-50 border-r-0 px-4 h-8 text-xs font-medium">Edit</Button>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant={"outline"} className="border border-l-0 rounded-l-none bg-transparent border-gray-200 rounded-r-md w-8 h-8 p-0 flex items-center justify-center hover:bg-gray-50"><ChevronDown className="w-4 h-4 text-gray-600" /></Button>
+                            <Button className="border border-gray-300 rounded-l-none bg-white hover:bg-gray-50 w-8 h-8 p-0 flex items-center justify-center"><ChevronDown className="w-4 h-4 text-gray-600" /></Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-32">
-                            <DropdownMenuItem onClick={() => handleDeleteKeyword(index)} className="text-red-600 hover:text-red-600 cursor-pointer hover:bg-transparent!">Delete</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleDeleteKeyword(index)} className="text-red-600 hover:bg-red-50 cursor-pointer">Delete</DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
@@ -1207,7 +1208,7 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
               })
             ) : (
               <tr>
-                <td colSpan={8} className="px-4 py-6 text-center text-sm text-muted-foreground">No keywords found for this website</td>
+                <td colSpan={8} className="px-6 py-8 text-center text-sm text-gray-500">No keywords found for this website</td>
               </tr>
             )}
           </tbody>
