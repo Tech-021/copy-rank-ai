@@ -338,7 +338,7 @@ export function AnalyzeTab({
           draftCount > 1 ? "s" : ""
         } waiting for review`,
         description: "Finish them to start ranking.",
-        icon: "/actionimg1.png",
+        icon: "/lastdark1.png",
         actionLabel: "Review drafts",
       });
     }
@@ -354,7 +354,7 @@ export function AnalyzeTab({
           analytics.articlesLive === 0
             ? "Turn on auto-publish to ship faster."
             : "Publish the remaining posts to capture traffic.",
-        icon: "/actionimg2.png",
+        icon: "/lastdark2.png",
         actionLabel: "View posts",
       });
     }
@@ -924,12 +924,12 @@ export function AnalyzeTab({
                       className={`flex items-center justify-between border px-4 pb-4 pt-5 border-[#0000001a] ${isFirst ? 'rounded-t-xl' : ''} ${isLast ? 'rounded-b-xl' : 'border-b-0'}`}
                     >
                       <div className="flex items-center gap-5">
-                        <div className="bg-[rgb(247,247,247)] w-[30px] h-[30px] flex items-center justify-center rounded-[10px]">
+                        <div className="bg-transparent w-[30px] h-[30px] flex items-center justify-center rounded-[10px]">
                           <Image src={action.icon} alt="" width={24} height={24} />
                         </div>
                         <div>
-                          <p className="text-sm text-[#000000b3] font-normal">{action.title}</p>
-                          <p className="text-xs text-[#00000080] font-normal">{action.description}</p>
+                          <p className="text-sm text-white font-normal">{action.title}</p>
+                          <p className="text-xs text-gray-500 font-normal">{action.description}</p>
                         </div>
                       </div>
                       {action.actionLabel && (
