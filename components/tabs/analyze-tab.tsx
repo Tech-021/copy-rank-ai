@@ -744,7 +744,7 @@ export function AnalyzeTab({
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-3xl font-normal">Performance overview</h2>
-              <p className="text-[#00000080] text-sm mt-2">Turn competitor keywords into SEO-ready long blog posts in one click.</p>
+              <p className="text-gray-500 text-sm mt-2">Turn competitor keywords into SEO-ready long blog posts in one click.</p>
             </div>
             <div>
               <Select value={selectedWebsiteId || undefined} onValueChange={handleWebsiteChange}>
@@ -767,49 +767,49 @@ export function AnalyzeTab({
           </div>
           <div className="border-r pr-3 flex flex-col gap-5">
           <div className="flex items-center">
-            <Card className="border-border/40 bg-white rounded-none rounded-l-xl backdrop-blur-sm w-[222px] h-[184px]">
+            <Card className="border-border/40 bg-black rounded-none rounded-l-xl backdrop-blur-sm w-[222px] h-[184px]">
               <CardHeader className="flex items-center justify-between">
-                <CardTitle className="text-sm font-normal text-[#00000080]">Articles Generated</CardTitle>
-                <Image src="/dashboardcardimg1.png" alt="" width={20} height={20} />
+                <CardTitle className="text-sm font-normal text-gray-500">Articles Generated</CardTitle>
+                <Image src="/dark1.png" alt="" width={20} height={20} />
               </CardHeader>
               <CardContent>
-                <div className="text-[#000000b3] text-4xl font-bold mt-12">
+                <div className="text-[#53F870] text-4xl font-bold mt-12">
                   {showSkeletons ? <Skeleton className="h-10 w-16" /> : analytics.articlesGenerated}
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="border-border/40 bg-white rounded-none backdrop-blur-sm w-[222px] h-[184px]">
+            <Card className="border-border/40  bg-black rounded-none backdrop-blur-sm w-[222px] h-[184px]">
               <CardHeader className="flex items-center justify-between">
-                <CardTitle className="text-sm font-normal text-[#00000080]">Articles <br />Live</CardTitle>
-                <Image src="/dashboardcardimg2.png" alt="" width={20} height={20} />
+                <CardTitle className="text-sm font-normal text-gray-500">Articles <br />Live</CardTitle>
+                <Image src="/dark2.png" alt="" width={20} height={20} />
               </CardHeader>
               <CardContent>
-                <div className="text-[#000000b3] text-4xl font-bold mt-12">
+                <div className="text-[#53F870] text-4xl font-bold mt-12">
                   {showSkeletons ? <Skeleton className="h-10 w-16" /> : analytics.articlesLive}
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="border-border/40 bg-white rounded-none backdrop-blur-sm w-[222px] h-[184px]">
+            <Card className="border-border/40 bg-black rounded-none backdrop-blur-sm w-[222px] h-[184px]">
               <CardHeader className="flex items-center justify-between">
-                <CardTitle className="text-sm font-normal text-[#00000080]">Est. Traffic Potential</CardTitle>
-                <Image src="/dashboardcardimg3.png" alt="" width={20} height={20} />
+                <CardTitle className="text-sm font-normal text-gray-500">Est. Traffic Potential</CardTitle>
+                <Image src="/dark3.png" alt="" width={20} height={20} />
               </CardHeader>
               <CardContent>
-                <div className="text-[#000000b3] text-4xl font-bold mt-12">
+                <div className="text-[#53F870] text-4xl font-bold mt-12">
                   {showSkeletons ? <Skeleton className="h-10 w-24" /> : analytics.estimatedTraffic.toLocaleString()}
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="border-border/40 bg-white rounded-none rounded-r-xl backdrop-blur-sm w-[222px] h-[184px]">
+            <Card className="border-border/40 bg-black rounded-none rounded-r-xl backdrop-blur-sm w-[222px] h-[184px]">
               <CardHeader className="flex items-center justify-between">
-                <CardTitle className="text-sm font-normal text-[#00000080]">Keyword Tracked</CardTitle>
-                <Image src="/dashboardcardimg4.png" alt="" width={20} height={20} />
+                <CardTitle className="text-sm font-normal text-gray-500">Keyword Tracked</CardTitle>
+                <Image src="/dark4.png" alt="" width={20} height={20} />
               </CardHeader>
               <CardContent>
-                <div className="text-[#000000b3] text-4xl font-bold mt-12">
+                <div className="text-[#53F870] text-4xl font-bold mt-12">
                   {showSkeletons ? <Skeleton className="h-10 w-16" /> : analytics.keywordsTracked}
                 </div>
               </CardContent>
@@ -822,24 +822,24 @@ export function AnalyzeTab({
               <CardDescription>Turn competitor keywords into SEO ready blog posts in one click.</CardDescription>
               <CardContent className="px-0">
                 <Button 
-                className="text-base font-normal text-white bg-black px-[60px] py-1 w-[170px] h-[50px] border border-[#00000080] rounded-[10px] hover:bg-transparent hover:text-[#00000080] cursor-pointer">Create Post</Button>
+                className="text-base font-normal text-[#53F870] bg-black px-[60px] py-1 w-[170px] h-[50px] border border-[#53F870] rounded-[10px] hover:bg-transparent hover:text-white cursor-pointer">Create Post</Button>
               </CardContent>
             </Card>
           </div>
 
           <div className="flex items-center gap-2.5 max-w-[700px]">
           <Card className="bg-transparent px-4 py-5 w-[350px]">
-            <CardTitle className="text-lg font-normal text-[#000000b3] ml-4">Your Websites</CardTitle>
+            <CardTitle className="text-lg font-normal text-white ml-4">Your Websites</CardTitle>
             <CardContent>
               {websites.length > 0 && (
-                <div className="flex items-center justify-between border px-4 pb-4 pt-5 rounded-t-xl border-[#0000001a] w-[300px]">
+                <div className="flex items-center justify-between border px-4 pb-4 pt-5 rounded-t-xl border-gray-800 w-[300px]">
                   <div className="flex items-center gap-5">
-                  <div className="bg-[rgb(247,247,247)] w-[34px] h-[34px] flex items-center justify-center rounded-[10px]">
-                    <Image src="/globe.png" alt="" width={20} height={20} />
+                  <div className="bg-[#000000] w-[34px] h-[34px] flex items-center justify-center rounded-[10px]">
+                    <Image src="/dark10.png" alt="" width={34} height={34} />
                   </div>
                   <div>
-                    <p className="text-sm text-[#000000b3] font-normal">{websites.length} website{websites.length > 1 ? 's' : ''}</p>
-                    <p className="text-xs text-[#00000080] font-normal">{websites[0]?.url}{websites.length > 1 ? ` and ${websites.length - 1} other${websites.length > 2 ? 's' : ''}` : ''}</p>
+                    <p className="text-sm text-white font-normal">{websites.length} website{websites.length > 1 ? 's' : ''}</p>
+                    <p className="text-xs text-gray-500 font-normal">{websites[0]?.url}{websites.length > 1 ? ` and ${websites.length - 1} other${websites.length > 2 ? 's' : ''}` : ''}</p>
                   </div>
                   </div>
                   <div className="w-[34px] h-[34px] bg-[#00000000] rounded-xl flex items-center justify-center cursor-pointer">
@@ -851,11 +851,11 @@ export function AnalyzeTab({
               onClick={() => setOpenWebsiteDialog(true)}
               className={`flex items-center justify-between border px-4 pb-4 pt-5 ${websites.length > 0 ? 'rounded-b-xl' : 'rounded-xl'} border-[#0000001a] w-[300px] cursor-pointer`}>
                 <div className="flex items-center gap-5 cursor-pointer">
-                <div className="bg-[rgb(247,247,247)] w-[34px] h-[34px] flex items-center justify-center rounded-[10px] cursor-pointer">
+                <div className="bg-[rgb(83,248,112,10)] w-[34px] h-[34px] flex items-center justify-center rounded-[10px] cursor-pointer">
                   <Plus width={20} height={20} className="text-[#65b361] cursor-pointer " />
                 </div>
                 <div>
-                  <p className="text-sm text-[#000000b3] font-normal">Add Website</p>
+                  <p className="text-sm text-white font-normal">Add Website</p>
                 </div>
                 </div>
               </div>
@@ -864,7 +864,7 @@ export function AnalyzeTab({
           <Card className="bg-transparent px-4 py-5 w-[350px]">
             <CardTitle className="text-lg font-normal text-[#000000b3] ml-4">SEO Competitors</CardTitle>
             <CardContent>
-                <div  className="cursor-pointer flex items-center justify-between border px-4 pb-4 pt-5 rounded-t-xl border-[#0000001a] w-[300px]">
+                <div  className="cursor-pointer flex items-center justify-between border px-4 pb-4 pt-5 rounded-t-xl border-gray-800 w-[300px]">
                   <div className="flex items-center gap-5">
                   <div className="bg-[rgb(247,247,247)] w-[34px] h-[34px] flex items-center justify-center rounded-[10px]">
                     <Image src="/globe.png" alt="" width={20} height={20} />

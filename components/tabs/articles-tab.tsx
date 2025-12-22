@@ -52,6 +52,7 @@ import { getUserPackage } from "@/lib/articleLimits";
 import { createCheckout } from "@/lib/lemonSqueezy";
 import { supabase } from "@/lib/client";
 import { useToast } from "@/components/ui/toast";
+import { CreatePostDialogDashboard } from "@/components/dialog2";
 import Image from "next/image";
 
 
@@ -150,6 +151,14 @@ export function ArticlesTab({
     websiteId || null
   );
   const [openPostDialog, setOpenPostDialog] = useState(false);
+  const [analytics, setAnalytics] = useState<AnalyticsData>({
+    articlesGenerated: 0,
+    articlesLive: 0,
+    estimatedTraffic: 0,
+    keywordsTracked: 0,
+    draftArticles: 0,
+    totalCompetitors: 0,
+  });
 
   const loadUserWebsites = async () => {
     try {

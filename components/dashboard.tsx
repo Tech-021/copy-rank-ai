@@ -68,8 +68,8 @@ export function Dashboard({ onLogout, userEmail, userAvatar }: DashboardProps) {
       <header className="backdrop-blur-sm sticky top-0 z-50 border-b bg-background/95">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center justify-center gap-16">
-            <div className="w-full h-full rounded-xl bg-primary flex items-center justify-center">
-              <Image src="/logo.png" alt="" width={50} height={50} />
+            <div className="w-full h-full rounded-xl  flex items-center justify-center">
+              <Image src="/newlogo.png" alt="" width={71.4} height={71.4} />
             </div>
             <div
               className="
@@ -141,15 +141,25 @@ export function Dashboard({ onLogout, userEmail, userAvatar }: DashboardProps) {
               </button>
             </div>
           </div>
-          <div className="flex items-center gap-4">
-            {userEmail && (
-              <ProfileDropdown
-                userEmail={userEmail}
-                userAvatar={localAvatar ?? userAvatar}
-                onLogout={onLogout}
-              />
-            )}
-          </div>
+         <div
+  className="
+    flex items-center gap-4 p-1.5 rounded-full
+    text-[#53F870]
+    dark:bg-gradient-to-b
+    dark:from-[#2E9839]
+    dark:to-[#04230D]
+    border border-transparent
+    dark:border-[#2E9839]
+  "
+>
+  {userEmail && (
+    <ProfileDropdown
+      userEmail={userEmail}
+      userAvatar={localAvatar ?? userAvatar}
+      onLogout={onLogout}
+    />
+  )}
+</div>
         </div>
       </header>
 
