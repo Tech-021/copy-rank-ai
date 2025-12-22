@@ -107,6 +107,15 @@ interface Article {
   estimatedTraffic?: number;
 }
 
+interface AnalyticsData {
+  articlesGenerated: number;
+  articlesLive: number;
+  estimatedTraffic: number;
+  keywordsTracked: number;
+  draftArticles: number;
+  totalCompetitors: number;
+}
+
 // Removed mock data: now pulling real keywords via /api/keyword and websites via Supabase
 
 export function KeywordsTab({
@@ -780,6 +789,98 @@ export function KeywordsTab({
     }
   };
 
+  const getCompetitorsCount = (keywordsData: any): number => {
+  if (!keywordsData) return 0;
+  if (keywordsData.competitors && Array.isArray(keywordsData.competitors)) {
+    return keywordsData.competitors.length;
+  }
+  return 0;
+};
+
+const [analytics, setAnalytics] = useState<AnalyticsData>({
+    articlesGenerated: 0,
+    articlesLive: 0,
+    estimatedTraffic: 0,
+    keywordsTracked: 0,
+    draftArticles: 0,
+    totalCompetitors: 0,
+  });
+
+  const fetchAnalytics = async (userId: string, websiteId?: string | null) => {
+      try {
+        let articlesQuery = supabase
+          .from("articles")
+          .select("status, estimated_traffic, keyword, word_count")
+          .eq("user_id", userId);
+  
+        if (websiteId) {
+          articlesQuery = articlesQuery.eq("website_id", websiteId);
+        }
+  
+        const { data: articles, error: articlesError } = await articlesQuery;
+  
+        if (articlesError) throw articlesError;
+  
+        const articlesGenerated = articles?.length || 0;
+        const articlesLive = articles?.filter(a => a.status === "published" || a.status === "UPLOADED").length || 0;
+        const draftArticles = articles?.filter(a => a.status === "draft" || a.status === "DRAFT").length || 0;
+        
+        const estimatedTraffic = articles?.reduce((sum, article) => {
+          return sum + (article.estimated_traffic || 0);
+        }, 0) || 0;
+  
+        const allKeywords = new Set<string>();
+        articles?.forEach(article => {
+          if (typeof article.keyword === 'string') {
+            article.keyword.split(',').forEach(k => allKeywords.add(k.trim()));
+          }
+        });
+        const keywordsTracked = allKeywords.size;
+  
+        let websitesQuery = supabase
+          .from("websites")
+          .select("keywords")
+          .eq("user_id", userId);
+  
+        if (websiteId) {
+          websitesQuery = websitesQuery.eq("id", websiteId);
+        }
+  
+        const { data: websitesData, error: websitesError } = await websitesQuery;
+  
+        if (websitesError) throw websitesError;
+  
+        let totalCompetitors = 0;
+        websitesData?.forEach(website => {
+          const competitorCount = getCompetitorsCount(website.keywords);
+          totalCompetitors += competitorCount;
+        });
+  
+        setAnalytics({
+          articlesGenerated,
+          articlesLive,
+          estimatedTraffic,
+          keywordsTracked,
+          draftArticles,
+          totalCompetitors,
+        });
+      } catch (error) {
+        console.error("Error fetching analytics:", error);
+      }
+    };
+
+  const handleWebsiteChange = async (websiteId: string) => {
+      setSelectedWebsiteId(websiteId);
+      
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      
+      if (user) {
+        await fetchAnalytics(user.id, websiteId);
+      }
+    };
+
   if (loadingWebsites) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -839,10 +940,11 @@ export function KeywordsTab({
             Track the keywords driving your traffic
           </p>
         </div>
-        <div className="flex ">
+        <div className="flex gap-3">
+          <div className="flex ">
           <Button
             variant="outline"
-            className="gap-2 text-gray-500 border-gray-200 rounded-r-none hover:bg-gray-50"
+            className="gap-2 text-gray-500 border-gray-200 rounded-r-none hover:bg-gray-50 cursor-pointer"
             onClick={() => setShowAddKeywordsDialog(true)}
           >
             Add Keywords
@@ -850,7 +952,7 @@ export function KeywordsTab({
           </Button>
           <Button
             variant="outline"
-            className="gap-2 text-gray-500 border-gray-200 rounded-none hover:bg-gray-50"
+            className="gap-2 cursor-pointer text-gray-500 border-gray-200 rounded-none hover:bg-gray-50"
             onClick={() => setShowImportDialog(true)}
           >
             Import CSV
@@ -858,42 +960,37 @@ export function KeywordsTab({
           </Button>
           <Button
             variant="outline"
-            className="gap-2 text-gray-500 border-gray-200 rounded-l-none hover:bg-gray-50"
+            className="gap-2 text-gray-500 cursor-pointer border-gray-200 rounded-l-none hover:bg-gray-50"
             onClick={() => setShowSyncDialog(true)}
           >
             <ExternalLink className="w-4 h-4" />
             {websiteData.website.url?.replace(/^https?:\/\//, "")}
           </Button>
-          <div className="flex ml-5">
-            <Select
-              value={selectedWebsiteId ?? ""}
-              onValueChange={(val) => setSelectedWebsiteId(val)}
-              disabled={websites.length === 0}
-           >
-              <SelectTrigger className="w-56 h-9 border-gray-200">
-                <SelectValue placeholder="Select website" />
-              </SelectTrigger>
-              <SelectContent>
-                {websites.length > 0 ? (
-                  websites.map((w) => (
-                    <SelectItem key={w.id} value={w.id}>
-                      {w.url?.replace(/^https?:\/\//, "")}
-                    </SelectItem>
-                  ))
-                ) : (
-                  <SelectItem value="" disabled>
-                    No websites found
-                  </SelectItem>
-                )}
-              </SelectContent>
-            </Select>
           </div>
+          <div className="ml-3">
+              <Select value={selectedWebsiteId || undefined} onValueChange={handleWebsiteChange}>
+                <SelectTrigger className="h-10 bg-transparent rounded-[8px] focus-visible:outline-none focus-visible:ring-0 border-[#0000001a] focus-visible:border-[#0000001a] focus:outline-none cursor-pointer outline-none active:outline-none px-3.5 py-2.5 text-[#00000080]">
+                  <SelectValue placeholder="Select your website" />
+                </SelectTrigger>
+                <SelectContent className="cursor-pointer">
+                  {websites.map((website, index) => (
+                    <SelectItem
+                      key={website.id}
+                      value={website.id}
+                      className={`cursor-pointer data-[state=checked]:text-[#00000080] data-[state=checked]:opacity-40 ${index < websites.length - 1 ? 'border-b rounded-none border-[#0000001a]' : ''}`}
+                    >
+                      {website.url}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
         </div>
       </div>
 
       {/* Stats Cards - Pixel Perfect */}
-      <div className="grid grid-cols-4 ">
-        <Card className="border rounded-r-none border-gray-200 bg-white shadow-sm">
+      <div className="grid grid-cols-4 rounded-xl shadow-xl">
+        <Card className="border rounded-r-none border-gray-200 bg-white shadow-xl">
           <CardContent className="flex flex-col justify-start gap-8">
             <div className="flex justify-between">
               <p className="text-xs font-medium text-gray-600 uppercase tracking-wide ">
@@ -907,7 +1004,7 @@ export function KeywordsTab({
           </CardContent>
         </Card>
 
-        <Card className="border rounded-none border-gray-200 bg-white shadow-sm">
+        <Card className="border rounded-none border-gray-200 bg-white shadow-xl">
           <CardContent className="flex flex-col justify-start gap-8">
             <div className="flex justify-between">
               <p className="text-xs font-medium text-gray-600 uppercase tracking-wide ">
@@ -919,7 +1016,7 @@ export function KeywordsTab({
           </CardContent>
         </Card>
 
-        <Card className="border rounded-none border-gray-200 bg-white shadow-sm">
+        <Card className="border rounded-none border-gray-200 bg-white shadow-xl">
           <CardContent className="flex flex-col justify-start gap-8">
             <div className="flex justify-between">
               <p className="text-xs font-medium text-gray-600 uppercase tracking-wide ">
@@ -931,7 +1028,7 @@ export function KeywordsTab({
           </CardContent>
         </Card>
 
-        <Card className="border rounded-l-none border-gray-200 bg-white shadow-sm">
+        <Card className="border rounded-l-none border-gray-200 bg-white shadow-xl">
           <CardContent className="flex flex-col justify-start gap-8">
             <div className="flex justify-between">
               <p className="text-xs font-medium text-gray-600 uppercase tracking-wide ">
@@ -1094,13 +1191,13 @@ export function KeywordsTab({
                     <td className="px-4 text-gray-500 py-3 text-sm">{trafficText}</td>
                     <td className="px-4 py-3">
                       <div className="flex justify-end">
-                        <Button variant={"outline"} className="border rounded-r-none bg-transparent border-gray-200 rounded-l-md px-8 h-8 text-xs">Edit</Button>
+                        <Button className="border rounded-r-none bg-transparent text-black cursor-pointer hover:bg-transparent border-gray-200 rounded-l-md px-8 h-8 text-xs">Edit</Button>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant={"outline"} className="border border-l-0 rounded-l-none bg-transparent border-gray-200 rounded-r-md w-8 h-8 p-0 flex items-center justify-center hover:bg-gray-50"><ChevronDown className="w-4 h-4 text-gray-600" /></Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-32">
-                            <DropdownMenuItem onClick={() => handleDeleteKeyword(index)} className="text-red-600 cursor-pointer">Delete</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleDeleteKeyword(index)} className="text-red-600 hover:text-red-600 cursor-pointer hover:bg-transparent!">Delete</DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
@@ -1116,6 +1213,7 @@ export function KeywordsTab({
           </tbody>
         </table>
       </div>
+
       {/* Selection Bar */}
       {selectedKeywords && selectedKeywords.size > 0 && (
         <div className="mt-4 flex items-center justify-between p-4 bg-blue-50 rounded-lg border border-blue-200">
