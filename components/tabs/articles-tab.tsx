@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { Stepper } from "@/components/ui/stepper";
-import { CreatePostDialogDashboard } from "../dialog2";
+
 
 import {
   Card,

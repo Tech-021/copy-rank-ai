@@ -286,7 +286,8 @@ export function AnalyzeTab({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [open, setOpen] = useState(false)
-  const [ openWebsiteDialog, setOpenWebsiteDialog ] = useState(false)
+  const [openWebsiteDialog, setOpenWebsiteDialog] = useState(false)
+  const [openPostDialog, setOpenPostDialog] = useState(false)
   const [editForm, setEditForm] = useState({
       title: "",
       keyword: "",

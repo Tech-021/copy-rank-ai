@@ -10,8 +10,11 @@ import { SettingsTab } from "@/components/tabs/settings-tab"
 import { CompetitorsTab } from "@/components/tabs/competitors-tab" // NEW: Import CompetitorsTab
 import Image from "next/image"
 import { getUser } from "@/lib/auth"
+import { ProfileDropdown } from "@/components/profile-dropdown"
+import { ThemeToggle } from "@/components/theme-toggle"
 
 interface DashboardProps {
+ 
   onLogout: () => void
   userEmail?: string
   userAvatar?: string | null
@@ -51,9 +54,9 @@ export function Dashboard({ onLogout, userEmail, userAvatar }: DashboardProps) {
   }, [localAvatar])
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background text-foreground">
       {/* Header */}
-      <header className="backdrop-blur-sm sticky top-0 z-50">
+      <header className="backdrop-blur-sm sticky top-0 z-50 border-b bg-background/95">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center justify-center gap-16">
             <div className="w-full h-full rounded-xl bg-primary flex items-center justify-center">
@@ -114,36 +117,13 @@ export function Dashboard({ onLogout, userEmail, userAvatar }: DashboardProps) {
         </div>
           </div>
           <div className="flex items-center gap-4">
+            <ThemeToggle />
             {userEmail && (
-              <div className="flex items-center border rounded-full py-1.5 pl-6 pr-1.5  gap-2">
-                <span className="text-sm text-muted-foreground hidden sm:inline">{userEmail}</span>
-                {(() => {
-                  const avatarToShow = localAvatar ?? userAvatar ?? "/profileimg.png"
-                  const isExternal = typeof avatarToShow === "string" && avatarToShow.startsWith("http")
-                  if (isExternal) {
-                    return (
-                      // Use native img for external URLs to avoid Next/Image domain issues in dev
-                      <img
-                        src={avatarToShow}
-                        alt="Profile"
-                        width={50}
-                        height={50}
-                        className="rounded-full object-cover"
-                      />
-                    )
-                  }
-
-                  return (
-                    <Image
-                      src={avatarToShow}
-                      alt="Profile"
-                      width={50}
-                      height={50}
-                      className="rounded-full object-cover"
-                    />
-                  )
-                })()}
-              </div>
+              <ProfileDropdown 
+                userEmail={userEmail}
+                userAvatar={localAvatar ?? userAvatar}
+                onLogout={onLogout}
+              />
             )}
           </div>
         </div>
@@ -167,11 +147,11 @@ export function Dashboard({ onLogout, userEmail, userAvatar }: DashboardProps) {
           />
         )}
         {activeTab === "keywords" && (
-          <KeywordsTab websiteId={selectedWebsiteId} />
+          <KeywordsTab websiteId={selectedWebsiteId ?? undefined} />
         )}
         {/* NEW: Competitors Tab Content */}
         {activeTab === "competitors" && (
-          <CompetitorsTab websiteId={selectedWebsiteId} />
+          <CompetitorsTab websiteId={selectedWebsiteId ?? null} />
         )}
         {activeTab === "articles" && <ArticlesTab />}
         {activeTab === "settings" && <SettingsTab />}

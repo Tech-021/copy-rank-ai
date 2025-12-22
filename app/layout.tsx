@@ -4,6 +4,7 @@ import { Geist, Geist_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import "./globals.css"
 import { ToastProvider } from "@/components/ui/toast"
+import { ThemeProvider } from "@/components/theme-provider"
 import { Suspense } from "react"
 
 const geist = Geist({ 
@@ -29,17 +30,19 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className={`${geist.variable} ${geistMono.variable}`}>
+    <html lang="en" className={`${geist.variable} ${geistMono.variable}`} suppressHydrationWarning>
       <body className="antialiased" cz-shortcut-listen="true">
-        <ToastProvider>
-          <Suspense fallback={
-            <div className="min-h-screen flex items-center justify-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            </div>
-          }>
-            {children}
-          </Suspense>
-        </ToastProvider>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          <ToastProvider>
+            <Suspense fallback={
+              <div className="min-h-screen flex items-center justify-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              </div>
+            }>
+              {children}
+            </Suspense>
+          </ToastProvider>
+        </ThemeProvider>
         <Analytics />
       </body>
     </html>
