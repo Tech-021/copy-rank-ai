@@ -12,6 +12,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { getUserPackage } from "@/lib/articleLimits";
+import { createCheckout } from "@/lib/lemonSqueezy";
 import { Switch } from "@/components/ui/switch";
 import { Copy, Check, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { getUser, updatePassword } from "@/lib/auth";
@@ -20,7 +30,12 @@ import Image from "next/image";
 export function SettingsTab() {
   const [activeTab, setActiveTab] = useState("publishing");
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [userPackage, setUserPackage] = useState<"free" | "pro" | "premium" | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const [isPlanDialogOpen, setIsPlanDialogOpen] = useState(false);
+  const [selectedPlanVariantId, setSelectedPlanVariantId] = useState<string | null>(null);
+  const [isCreatingCheckout, setIsCreatingCheckout] = useState(false);
 
   // Mock states
   const [apiKey, setApiKey] = useState("sk_live_51234567890abcdefghijklmnop");
@@ -57,6 +72,14 @@ export function SettingsTab() {
     const getCurrentUser = async () => {
       const { data: user } = await getUser();
       setCurrentUser(user);
+      if (user?.id) {
+        try {
+          const pkg = await getUserPackage(user.id);
+          setUserPackage(pkg);
+        } catch (e) {
+          // ignore
+        }
+      }
       setLoading(false);
     };
     getCurrentUser();
@@ -631,15 +654,123 @@ export function SettingsTab() {
               </div>
             </div>
 
-            <div className="pt-4 border-t border-gray-200 flex justify-between">
+              <div className="pt-4 border-t border-gray-200 flex justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-900 mb-2">Subscription</p>
                 <p className="text-xs text-gray-600">Upgrade your plan to see more features</p>
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" className="h-9 border-gray-200 bg-white">
-                  Upgrade Plan
-                </Button>
+                {/* Upgrade Plan dialog copied from articles tab */}
+                {userPackage !== "premium" ? (
+                  <Dialog open={isPlanDialogOpen} onOpenChange={setIsPlanDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" className="h-9 border-gray-200 bg-white">
+                        Upgrade Plan
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Update Your Plan</DialogTitle>
+                        <DialogDescription>
+                          Choose a plan to upgrade your account. After selecting, you'll be redirected to LemonSqueezy to complete the purchase.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-3">
+                        <div>
+                          <label className="text-sm font-medium">Plan</label>
+                          <Select onValueChange={(value) => setSelectedPlanVariantId(value)}>
+                            <SelectTrigger className="w-full h-10">
+                              <SelectValue placeholder="Select a plan" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value={process.env?.NEXT_PUBLIC_LEMONSQUEEZY_CHECKOUT_URL_15 || ""}>
+                                Pro — 15 articles
+                              </SelectItem>
+                              <SelectItem value={process.env?.NEXT_PUBLIC_LEMONSQUEEZY_CHECKOUT_URL_30 || ""}>
+                                Premium — 30 articles
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="flex gap-2 justify-end">
+                          <Button variant="ghost" onClick={() => setIsPlanDialogOpen(false)}>
+                            Cancel
+                          </Button>
+                          <Button
+                            disabled={isCreatingCheckout}
+                            onClick={async () => {
+                              if (!currentUser) {
+                                alert("Please sign in to update your plan.");
+                                return setIsPlanDialogOpen(false);
+                              }
+                              if (!selectedPlanVariantId) {
+                                alert("Please select a plan.");
+                                return;
+                              }
+                              try {
+                                setIsCreatingCheckout(true);
+                                if (selectedPlanVariantId) {
+                                  window.location.href = selectedPlanVariantId;
+                                  return; // fallback in case popup is blocked
+                                }
+                                const checkout = await createCheckout(
+                                  selectedPlanVariantId!,
+                                  currentUser.email,
+                                  currentUser.user_metadata?.full_name || currentUser.name,
+                                  currentUser.id
+                                );
+                                if (checkout?.url) {
+                                  window.open(checkout.url, "_blank");
+                                  setIsPlanDialogOpen(false);
+                                  setTimeout(async () => {
+                                    try {
+                                      const pkg = await getUserPackage(currentUser.id);
+                                      setUserPackage(pkg);
+                                    } catch (e) {}
+                                  }, 5000);
+                                } else {
+                                  alert("Failed to create checkout session. Please try again.");
+                                }
+                              } catch (err: any) {
+                                console.error("Create checkout failed", err);
+                                const message = err?.message || err?.error || "Failed to create checkout session. You can try the public checkout URL instead.";
+                                const proVar = process.env.NEXT_PUBLIC_LEMON_VARIANT_PRO || "1087280";
+                                const premVar = process.env.NEXT_PUBLIC_LEMON_VARIANT_PREMIUM || "1087281";
+                                const fallbackUrl15 = process.env.NEXT_PUBLIC_LEMONSQUEEZY_CHECKOUT_URL_15;
+                                const fallbackUrl30 = process.env.NEXT_PUBLIC_LEMONSQUEEZY_CHECKOUT_URL_30;
+                                let fallbackUrl: string | null = null;
+                                const selected = String(selectedPlanVariantId);
+                                if (selected === String(proVar) && fallbackUrl15) fallbackUrl = fallbackUrl15;
+                                if (selected === String(premVar) && fallbackUrl30) fallbackUrl = fallbackUrl30;
+                                const silverVar = process.env.NEXT_PUBLIC_LEMON_VARIANT_SILVER_MONTHLY || "";
+                                if (!fallbackUrl && selected === String(silverVar) && fallbackUrl15) fallbackUrl = fallbackUrl15;
+
+                                if (fallbackUrl) {
+                                  if (confirm(`${message}\n\nWould you like to open the public checkout URL?`)) {
+                                    window.open(fallbackUrl, "_blank");
+                                    setIsPlanDialogOpen(false);
+                                  }
+                                } else {
+                                  alert(message);
+                                }
+                              } finally {
+                                setIsCreatingCheckout(false);
+                              }
+                            }}
+                          >
+                            Proceed
+                          </Button>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                ) : (
+                  <Button variant="outline" className="h-9 border-gray-200 bg-white" disabled>
+                    Upgraded
+                  </Button>
+                )}
+
                 <Button variant="outline" className="h-9 border-gray-200 bg-white">
                   View Invoices
                 </Button>
