@@ -823,7 +823,7 @@ export function AnalyzeTab({
               <CardContent className="px-0">
                 <Button 
                   onClick={() => setOpenPostDialog(true)}
-                  className="text-base font-normal text-white bg-black px-[60px] py-1 w-[170px] h-[50px] border border-[#00000080] rounded-[10px] hover:bg-transparent hover:text-[#00000080] cursor-pointer"
+                  className="text-base font-normal text-[#53F870] bg-transparent px-[60px] py-1 w-[170px] h-[50px] border border-[#53F870] rounded-[10px] hover:bg-transparent hover:text-white cursor-pointer"
                 >
                   Create Post
                 </Button>
@@ -897,8 +897,8 @@ export function AnalyzeTab({
             </CardContent>
           </Card>
         </div>
-<h4>Action Required</h4>
           <Card className="bg-transparent px-4 py-5">
+<h4>Action Required</h4>
             <CardTitle className="text-lg font-normal text-white ml-4"></CardTitle>
             <CardContent>
               {showSkeletons ? (
