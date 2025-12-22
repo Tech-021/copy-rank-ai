@@ -51,9 +51,8 @@ import { getUserPackage } from "@/lib/articleLimits";
 import { createCheckout } from "@/lib/lemonSqueezy";
 import { supabase } from "@/lib/client";
 import { useToast } from "@/components/ui/toast";
-import { CreatePostDialogDashboard } from "@/components/dialog2";
 import Image from "next/image";
-
+import { CreatePostDialogDashboard } from "@/components/dialog2";
 
 interface Article {
   id: string;
@@ -945,23 +944,30 @@ export function ArticlesTab({
             </p>
           </div>
           <div>
-              <Select value={selectedWebsiteId || undefined} onValueChange={handleWebsiteChange}>
-                <SelectTrigger className="h-10 bg-transparent rounded-xl focus-visible:outline-none focus-visible:ring-0 border-[#0000001a] focus-visible:border-[#0000001a] focus:outline-none cursor-pointer outline-none active:outline-none px-3.5 py-2.5 text-[#00000080]">
-                  <SelectValue placeholder="Select your website" />
-                </SelectTrigger>
-                <SelectContent className="cursor-pointer">
-                  {websites.map((website, index) => (
-                    <SelectItem
-                      key={website.id}
-                      value={website.id}
-                      className={`cursor-pointer data-[state=checked]:text-[#00000080] data-[state=checked]:opacity-40 ${index < websites.length - 1 ? 'border-b rounded-none border-[#0000001a]' : ''}`}
-                    >
-                      {website.url}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <Select
+              value={selectedWebsiteId || undefined}
+              onValueChange={handleWebsiteChange}
+            >
+              <SelectTrigger className="h-10 bg-transparent rounded-[8px] focus-visible:outline-none focus-visible:ring-0 border-[#0000001a] focus-visible:border-[#0000001a] focus:outline-none cursor-pointer outline-none active:outline-none px-3.5 py-2.5 text-[#00000080]">
+                <SelectValue placeholder="Select your website" />
+              </SelectTrigger>
+              <SelectContent className="cursor-pointer">
+                {websites.map((website, index) => (
+                  <SelectItem
+                    key={website.id}
+                    value={website.id}
+                    className={`cursor-pointer data-[state=checked]:text-[#00000080] data-[state=checked]:opacity-40 ${
+                      index < websites.length - 1
+                        ? "border-b rounded-none border-[#0000001a]"
+                        : ""
+                    }`}
+                  >
+                    {website.url}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         {/* Create a Ranking Post Section */}
@@ -1037,31 +1043,31 @@ export function ArticlesTab({
         {/* Main Layout - Articles + Preview */}
         <div className="flex gap-6 h-auto overflow-hidden">
           {/* Left Side - Articles List */}
-       <div className="space-y-3 pr-2">
-  {filteredArticles.length === 0 ? (
-    <div className="text-center py-12 text-gray-400">
-      <p className="text-sm">No articles found</p>
-    </div>
-  ) : (
-    filteredArticles.map((article) => (
-      <div
-        key={article.id}
-        onClick={() => {
-          setSelectedArticle(article);
-          setIsContentExpanded(false);
-        }}
-        className={`relative flex gap-3 p-3 bg-gray-100 border rounded-lg cursor-pointer hover:border-gray-300 hover:shadow-sm transition-all ${
-          selectedArticle?.id === article.id
-            ? "border-gray-200 bg-[#F7F7F7]"
-            : "border-[#0000001a]"
-        }`}
-      >
-        {/* Thumbnail */}
-        <img
-          src={article.generatedImages?.[0] || "/article-image.jpg"}
-          alt={article.title}
-          className="w-20 h-20 rounded object-cover shrink-0"
-        />
+          <div className="space-y-3 pr-2">
+            {filteredArticles.length === 0 ? (
+              <div className="text-center py-12 text-gray-400">
+                <p className="text-sm">No articles found</p>
+              </div>
+            ) : (
+              filteredArticles.map((article) => (
+                <div
+                  key={article.id}
+                  onClick={() => {
+                    setSelectedArticle(article);
+                    setIsContentExpanded(false);
+                  }}
+                  className={`relative flex gap-3 px-3 py-5  bg-[#101110] border border-[#53f8701a] rounded-lg cursor-pointer  hover:shadow-sm transition-all ${
+                    selectedArticle?.id === article.id
+                      ? "border-[#53f8701a] bg-[#101110]"
+                      : "border-[#53f8701a]"
+                  }`}
+                >
+                  {/* Thumbnail */}
+                  <img
+                    src={article.generatedImages?.[0] || "/article-image.jpg"}
+                    alt={article.title}
+                    className="w-20 h-20 rounded object-cover flex-shrink-0"
+                  />
 
                   {/* Main Content Column */}
                   <div className="flex flex-col min-w-0 flex-1">
@@ -1095,21 +1101,21 @@ export function ArticlesTab({
                         </Badge>
                       </div>
 
-            {/* Edit Button */}
-            {selectedArticle?.id !== article.id && (
-              <Button
-                size="sm"
-                variant="ghost"
-                className="text-gray-400 hover:text-gray-700 h-8 w-8 p-0 shrink-0"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  openEditDialog(article);
-                }}
-              >
-                Edit
-              </Button>
-            )}
-          </div>
+                      {/* Edit Button */}
+                      {selectedArticle?.id !== article.id && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-[#53f870] hover:text-[#53f870] bg-[#53f8701a] hover:!bg-[#53f8701a] cursor-pointer h-8 w-8 px-[18px] py-1.5 border-[#53f8701a] flex-shrink-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEditDialog(article);
+                          }}
+                        >
+                          Edit
+                        </Button>
+                      )}
+                    </div>
 
                     {/* Preview (FULL WIDTH, NOT under image) */}
                     <p className="text-xs text-gray-500 line-clamp-2 mt-2">
@@ -1137,10 +1143,8 @@ export function ArticlesTab({
           {selectedArticle && (
             <div className=" max-w-[640px] bg-[#0d0d0d] rounded-[16px] border-l border-[#53f8701a] overflow-hidden flex flex-col">
               {/* Header */}
-              <div className="flex items-center justify-between p-4 border-b border-gray-200 shrink-0">
-                <span className="text-sm  text-gray-500">
-                  EDIT POST
-                </span>
+              <div className="flex items-center justify-between p-4 border-b border-[#53f8701a] flex-shrink-0">
+                <span className="text-sm  text-[#ffffffb3]">EDIT POST</span>
                 <button
                   onClick={() => setSelectedArticle(null)}
                   className="text-gray-400 hover:text-gray-600 text-xl leading-none font-bold"
@@ -1262,44 +1266,45 @@ export function ArticlesTab({
                   </div>
 
                   {/* Live URL for published articles */}
-                  {selectedArticle.status === "published" && selectedArticle.slug && (
-                    <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                      <div className="flex items-start gap-2">
-                        <Globe className="w-4 h-4 text-green-600 shrink-0 mt-0.5" />
-                        <div className="flex-1 min-w-0">
-                          <h4 className="text-sm font-semibold text-green-900 mb-1">
-                            Live Article URL
-                          </h4>
-                          <div className="flex items-center gap-2">
-                            <a
-                              href={getArticleUrl(selectedArticle.slug)}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-xs text-blue-600 hover:text-blue-800 hover:underline break-all flex-1"
-                            >
-                              {getArticleUrl(selectedArticle.slug)}
-                            </a>
-                            <button
-                              onClick={() => {
-                                navigator.clipboard.writeText(
-                                  getArticleUrl(selectedArticle.slug!)
-                                );
-                                toast.showToast({
-                                  title: "Copied!",
-                                  description: "URL copied to clipboard",
-                                  type: "success",
-                                });
-                              }}
-                              className="text-green-600 hover:text-green-800 shrink-0"
-                              title="Copy URL"
-                            >
-                              <Copy className="w-3 h-3" />
-                            </button>
+                  {selectedArticle.status === "published" &&
+                    selectedArticle.slug && (
+                      <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <div className="flex items-start gap-2">
+                          <Globe className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-sm font-semibold text-green-900 mb-1">
+                              Live Article URL
+                            </h4>
+                            <div className="flex items-center gap-2">
+                              <a
+                                href={getArticleUrl(selectedArticle.slug)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs text-blue-600 hover:text-blue-800 hover:underline break-all flex-1"
+                              >
+                                {getArticleUrl(selectedArticle.slug)}
+                              </a>
+                              <button
+                                onClick={() => {
+                                  navigator.clipboard.writeText(
+                                    getArticleUrl(selectedArticle.slug!)
+                                  );
+                                  toast.showToast({
+                                    title: "Copied!",
+                                    description: "URL copied to clipboard",
+                                    type: "success",
+                                  });
+                                }}
+                                className="text-green-600 hover:text-green-800 flex-shrink-0"
+                                title="Copy URL"
+                              >
+                                <Copy className="w-3 h-3" />
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  )}
+                    )}
 
                   {/* Tags */}
                 </div>
@@ -1316,9 +1321,9 @@ export function ArticlesTab({
                       selectedArticle.generatedImages || [],
                       3
                     )}
-                    {!isContentExpanded && (
-                      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-linear-to-t from-white to-transparent" />
-                    )}
+                    {/* {!isContentExpanded && (
+                      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-white to-transparent" />
+                    )} */}
                   </div>
                   <div className="mt-4 flex justify-center">
                     <Button
@@ -1333,7 +1338,7 @@ export function ArticlesTab({
               </div>
 
               {/* Footer Actions */}
-              <div className="border-t border-gray-200 p-4 bg-white flex gap-2 shrink-0">
+              <div className="border-t border-[#53f8701a] p-4 bg-[#0d0d0d] flex gap-2 flex-shrink-0">
                 <Button
                   className="flex-1 bg-[#53f870] text-black font-medium hover:bg-[#53f870] cursor-pointer h-10 text-sm rounded disabled:opacity-60"
                   onClick={handlePublish}
