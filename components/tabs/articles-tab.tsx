@@ -1140,7 +1140,7 @@ export function ArticlesTab({
 
           {/* Right Side - Edit/Preview Panel */}
           {selectedArticle && (
-            <div className=" max-w-[640px]  bg-white rounded-[9px] border-l border-gray-200 overflow-hidden flex flex-col">
+            <div className=" max-w-[640px] bg-[#0d0d0d] rounded-[9px] border-l border-[#53f8701a] overflow-hidden flex flex-col">
               {/* Header */}
               <div className="flex items-center justify-between p-4 border-b border-gray-200 flex-shrink-0">
                 <span className="text-sm  text-gray-500">EDIT POST</span>
@@ -1153,23 +1153,23 @@ export function ArticlesTab({
               </div>
 
               {/* Scrollable Content */}
-              <div className="flex-1 overflow-y-auto">
+              <div className="flex-1  overflow-y-auto">
                 <div className=" space-y-4 p-4">
                   {/* Title */}
-                  <div className="flex gap-3">
-                    <label className="block text-xs mt-1 text-gray-600 ">
-                      Title
+                  <div className="flex items-center gap-3">
+                    <label className="block text-[10px] mt-1 text-[#ffffff80] ">
+                      Title:
                     </label>
-                    <h4>{selectedArticle.title || ""}</h4>
+                    <h4 className="text-lg text-white font-normal">{selectedArticle.title || ""}</h4>
                   </div>
 
                   {/* Keywords */}
                   <div className="flex gap-1">
-                    <label className="block mt-1 text-xs text-gray-600">
+                    <label className="block text-[10px] mt-1 text-[#ffffff80]">
                       Keywords:
                     </label>
 
-                    <div className="flex  gap-2">
+                    <div className="flex text-[8px] font-normal flex-wrap gap-2">
                       {(() => {
                         const keywords = Array.isArray(selectedArticle.keyword)
                           ? selectedArticle.keyword
@@ -1183,7 +1183,7 @@ export function ArticlesTab({
                           keywords.map((keyword, index) => (
                             <span
                               key={index}
-                              className="px-1 py-1  rounded-full text-xs font-medium bg-gray-100 text-gray-600 border border-gray-300 inline-block"
+                              className="px-1 py-1  rounded-full text-xs font-medium bg-[#53f8701a] text-[#53f870] border border-[#53f8701a] inline-block"
                             >
                               {keyword}
                             </span>
@@ -1200,13 +1200,13 @@ export function ArticlesTab({
                   <div className="flex gap-3">
                     <div className="flex items-center gap-1">
                       <Image
-                        src="/smallclock.png"
+                        src="/clock2.png"
                         alt="reading time icon"
                         height={16}
                         width={16}
                         priority
                       />
-                      <p className="text-green-500 text-xs">
+                      <p className="text-[#53f870] text-[10px]">
                         {getReadingTime(selectedArticle.wordCount)}
                       </p>
                     </div>
@@ -1218,7 +1218,7 @@ export function ArticlesTab({
                         width={16}
                         priority
                       />
-                      <p className="text-green-500 text-xs">
+                      <p className="text-[#53f870] text-[10px]">
                         {selectedArticle.wordCount?.toLocaleString() || "—"}{" "}
                         words
                       </p>
@@ -1232,7 +1232,7 @@ export function ArticlesTab({
                           width={16}
                           priority
                         />
-                        <p className="text-green-500 text-xs">
+                        <p className="text-[#53f870] text-[10px]">
                           {selectedArticle.contentScore}% content score
                         </p>
                       </div>
@@ -1250,14 +1250,14 @@ export function ArticlesTab({
 
                   {/* SEO Preview */}
                   <div>
-                    <div className="bg-white border border-gray-200 p-9 rounded-lg shadow-xl">
-                      <label className="block text-[15px]  text-gray-700 mb-2">
+                    <div className="bg-[#101110] border border-[#53f8701a] p-9 rounded-lg shadow-xl">
+                      <label className="block text-[15px]  text-white mb-2">
                         SEO Preview
                       </label>
                       <p className="text-blue-600 font-medium text-sm mb-2 line-clamp-2">
                         {selectedArticle.metaTitle || selectedArticle.title}
                       </p>
-                      <p className="text-gray-600 text-xs leading-relaxed line-clamp-3">
+                      <p className="text-white text-xs leading-relaxed line-clamp-3">
                         {selectedArticle.metaDescription ||
                           selectedArticle.preview}
                       </p>
