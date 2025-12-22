@@ -1,57 +1,66 @@
-"use client"
-
-import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Sparkles, LogOut } from "lucide-react"
-import { AnalyzeTab } from "@/components/tabs/analyze-tab"
-import { KeywordsTab } from "@/components/tabs/keywords-tab"
-import { ArticlesTab } from "@/components/tabs/articles-tab"
-import { SettingsTab } from "@/components/tabs/settings-tab"
-import { CompetitorsTab } from "@/components/tabs/competitors-tab" // NEW: Import CompetitorsTab
-import Image from "next/image"
-import { getUser } from "@/lib/auth"
-import { ProfileDropdown } from "@/components/profile-dropdown"
-import { ThemeToggle } from "@/components/theme-toggle"
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Sparkles, LogOut } from "lucide-react";
+import { AnalyzeTab } from "@/components/tabs/analyze-tab";
+import { KeywordsTab } from "@/components/tabs/keywords-tab";
+import { ArticlesTab } from "@/components/tabs/articles-tab";
+import { SettingsTab } from "@/components/tabs/settings-tab";
+import { CompetitorsTab } from "@/components/tabs/competitors-tab"; // NEW: Import CompetitorsTab
+import Image from "next/image";
+import { getUser } from "@/lib/auth";
+import { ProfileDropdown } from "@/components/profile-dropdown";
 
 interface DashboardProps {
- 
-  onLogout: () => void
-  userEmail?: string
-  userAvatar?: string | null
+  onLogout: () => void;
+  userEmail?: string;
+  userAvatar?: string | null;
 }
 
 export function Dashboard({ onLogout, userEmail, userAvatar }: DashboardProps) {
-  const [activeTab, setActiveTab] = useState<"analyze" | "keywords" | "competitors" | "articles" | "settings">("analyze") // NEW: Added competitors
-  const [selectedWebsiteId, setSelectedWebsiteId] = useState<string | null>(null)
-  const [localAvatar, setLocalAvatar] = useState<string | null>(userAvatar ?? null)
+  const [activeTab, setActiveTab] = useState<
+    "analyze" | "keywords" | "competitors" | "articles" | "settings"
+  >("analyze"); // NEW: Added competitors
+  const [selectedWebsiteId, setSelectedWebsiteId] = useState<string | null>(
+    null
+  );
+  const [localAvatar, setLocalAvatar] = useState<string | null>(
+    userAvatar ?? null
+  );
 
   // Debug: Log props received
-  console.log("=== DASHBOARD COMPONENT PROPS ===")
-  console.log("userEmail:", userEmail)
-  console.log("userAvatar:", userAvatar)
-  console.log("=== END PROPS ===")
+  console.log("=== DASHBOARD COMPONENT PROPS ===");
+  console.log("userEmail:", userEmail);
+  console.log("userAvatar:", userAvatar);
+  console.log("=== END PROPS ===");
 
   // Fallback: if parent didn't pass an avatar, fetch user and try to get it
   useEffect(() => {
     async function fetchAvatarIfMissing() {
-      if (localAvatar) return
+      if (localAvatar) return;
       try {
-        const { data: user } = await getUser()
-        if (!user) return
+        const { data: user } = await getUser();
+        if (!user) return;
 
-        const avatarFromMetadata = user.user_metadata?.avatar_url
-        const pictureFromMetadata = user.user_metadata?.picture
-        const avatarFromIdentity = user.identities?.[0]?.identity_data?.avatar_url
-        const pictureFromIdentity = user.identities?.[0]?.identity_data?.picture
+        const avatarFromMetadata = user.user_metadata?.avatar_url;
+        const pictureFromMetadata = user.user_metadata?.picture;
+        const avatarFromIdentity =
+          user.identities?.[0]?.identity_data?.avatar_url;
+        const pictureFromIdentity =
+          user.identities?.[0]?.identity_data?.picture;
 
-        const avatar = avatarFromMetadata || pictureFromMetadata || avatarFromIdentity || pictureFromIdentity || null
-        if (avatar) setLocalAvatar(avatar)
+        const avatar =
+          avatarFromMetadata ||
+          pictureFromMetadata ||
+          avatarFromIdentity ||
+          pictureFromIdentity ||
+          null;
+        if (avatar) setLocalAvatar(avatar);
       } catch (err) {
-        console.error("Dashboard: failed to fetch avatar fallback", err)
+        console.error("Dashboard: failed to fetch avatar fallback", err);
       }
     }
-    fetchAvatarIfMissing()
-  }, [localAvatar])
+    fetchAvatarIfMissing();
+  }, [localAvatar]);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -62,64 +71,79 @@ export function Dashboard({ onLogout, userEmail, userAvatar }: DashboardProps) {
             <div className="w-full h-full rounded-xl bg-primary flex items-center justify-center">
               <Image src="/logo.png" alt="" width={50} height={50} />
             </div>
-            <div className="flex gap-4 bg-[rgb(247,247,247)] p-1.5 rounded-full">
-          <button
-            onClick={() => setActiveTab("analyze")}
-            className={`cursor-pointer px-6.5 py-3.5 text-[13px] font-medium transition-colors whitespace-nowrap ${
-              activeTab === "analyze"
-                ? "text-white bg-black rounded-full"
-                : "text-[#00000080]"
-            }`}
-          >
-            Dashboard
-          </button>
-          <button
-            onClick={() => setActiveTab("articles")}
-            className={`cursor-pointer px-6.5 py-3.5 text-[13px] font-medium transition-colors whitespace-nowrap ${
-              activeTab === "articles"
-                ? "text-white bg-black rounded-full"
-                : "text-[#00000080] "
-            }`}
-          >
-            Blogs
-          </button>
-          <button
-            onClick={() => setActiveTab("keywords")}
-            className={`cursor-pointer px-6.5 py-3.5 text-[13px] font-medium transition-colors whitespace-nowrap ${
-              activeTab === "keywords"
-                ? "text-white bg-black rounded-full"
-                : "text-[#00000080] "
-            }`}
-          >
-            Keywords
-          </button>
-          {/* NEW: Competitors Tab */}
-          <button
-            onClick={() => setActiveTab("competitors")}
-            className={`cursor-pointer px-6.5 py-3.5 text-[13px] font-medium transition-colors whitespace-nowrap ${
-              activeTab === "competitors"
-                ? "text-white bg-black rounded-full"
-                : "text-[#00000080] "
-            }`}
-          >
-            Competitors
-          </button>
-          <button
-            onClick={() => setActiveTab("settings")}
-           className={`cursor-pointer px-6.5 py-3.5 text-[13px] font-medium transition-colors whitespace-nowrap ${
-              activeTab === "settings"
-                ? "text-white bg-black rounded-full"
-                : "text-[#00000080] "
-            }`}
-          >
-            Settings
-          </button>
-        </div>
+            <div
+              className="
+    flex gap-4 p-1.5 rounded-full
+    bg-[rgb(247,247,247)]
+    dark:bg-gradient-to-b
+    dark:from-[#2E9839]
+    dark:to-[#04230D]
+    border border-transparent
+    dark:border-[#2E9839]
+  "
+            >
+              <button
+                onClick={() => setActiveTab("analyze")}
+                className={`cursor-pointer px-6.5 py-3.5 text-[13px] font-medium transition-colors whitespace-nowrap rounded-full
+    ${
+      activeTab === "analyze"
+        ? "bg-green-500 text-black"
+        : "text-[#53F870] hover:text-green-600 hover:bg-green-100"
+    }
+  `}
+              >
+                Dashboard
+              </button>
+              <button
+                onClick={() => setActiveTab("articles")}
+                className={`cursor-pointer px-6.5 py-3.5 text-[13px] font-medium transition-colors whitespace-nowrap rounded-full
+    ${activeTab === "articles" ? "bg-green-500 text-black" : "text-[#53F870]"}
+  `}
+              >
+                Blogs
+              </button>
+              <button
+                onClick={() => setActiveTab("keywords")}
+                className={`cursor-pointer px-6.5 py-3.5 text-[13px] font-medium transition-colors whitespace-nowrap rounded-full
+    ${
+      activeTab === "keywords"
+        ? "bg-green-500 text-black"
+        : "text-[#53F870] hover:text-green-600 hover:bg-green-100"
+    }
+  `}
+              >
+                Keywords
+              </button>
+              {/* NEW: Competitors Tab */}
+              <button
+                onClick={() => setActiveTab("competitors")}
+                className={`cursor-pointer px-6.5 py-3.5 text-[13px] font-medium transition-colors whitespace-nowrap rounded-full
+    ${
+      activeTab === "competitors"
+        ? "bg-green-500 text-black"
+        : "text-[#53F870] hover:text-green-600 hover:bg-green-100"
+    }
+  `}
+              >
+                Competitors
+              </button>
+              <button
+                onClick={() => setActiveTab("settings")}
+                className={`cursor-pointer px-6.5 py-3.5 text-[13px] font-medium transition-colors whitespace-nowrap rounded-full
+    ${
+      activeTab === "settings"
+        ? "bg-green-500 text-black"
+        : "text-[#53F870] hover:text-green-600 hover:bg-green-100"
+    }
+  `}
+              >
+                Settings
+              </button>
+            </div>
           </div>
           <div className="flex items-center gap-4">
-            <ThemeToggle />
             {userEmail && (
-              <ProfileDropdown 
+              <ProfileDropdown
                 userEmail={userEmail}
                 userAvatar={localAvatar ?? userAvatar}
                 onLogout={onLogout}
@@ -135,15 +159,16 @@ export function Dashboard({ onLogout, userEmail, userAvatar }: DashboardProps) {
 
         {/* Tab Content */}
         {activeTab === "analyze" && (
-          <AnalyzeTab 
+          <AnalyzeTab
             onViewKeywords={(websiteId) => {
-              setSelectedWebsiteId(websiteId)
-              setActiveTab("keywords")
+              setSelectedWebsiteId(websiteId);
+              setActiveTab("keywords");
             }}
-            onViewCompetitors={(websiteId) => { // NEW: Add onViewCompetitors prop
-              setSelectedWebsiteId(websiteId)
-              setActiveTab("competitors")
-            }} 
+            onViewCompetitors={(websiteId) => {
+              // NEW: Add onViewCompetitors prop
+              setSelectedWebsiteId(websiteId);
+              setActiveTab("competitors");
+            }}
           />
         )}
         {activeTab === "keywords" && (
@@ -157,5 +182,5 @@ export function Dashboard({ onLogout, userEmail, userAvatar }: DashboardProps) {
         {activeTab === "settings" && <SettingsTab />}
       </main>
     </div>
-  )
+  );
 }

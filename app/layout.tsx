@@ -30,9 +30,9 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className={`${geist.variable} ${geistMono.variable}`} suppressHydrationWarning>
-      <body className="antialiased" cz-shortcut-listen="true">
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+    <html lang="en" className={`${geist.variable} ${geistMono.variable} dark`} suppressHydrationWarning>
+      <body className="antialiased dark" cz-shortcut-listen="true">
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
           <ToastProvider>
             <Suspense fallback={
               <div className="min-h-screen flex items-center justify-center">
