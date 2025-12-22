@@ -20,7 +20,8 @@ import {
   DialogDescription,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { getUserPackage } from "@/lib/articleLimits";
+import { getUserPackage, getUserArticleLimit } from "@/lib/articleLimits";
+import { supabase } from "@/lib/client";
 import { createCheckout } from "@/lib/lemonSqueezy";
 import { Switch } from "@/components/ui/switch";
 import { Copy, Check, AlertCircle, Eye, EyeOff } from "lucide-react";
@@ -32,6 +33,14 @@ export function SettingsTab() {
   const [activeTab, setActiveTab] = useState("publishing");
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [userPackage, setUserPackage] = useState<"free" | "pro" | "premium" | null>(null);
+  const [usage, setUsage] = useState({
+    articles: 0,
+    articlesLimit: 0,
+    keywords: 0,
+    keywordLimit: 0,
+    monthlyPosts: 0,
+    monthlyLimit: 0,
+  });
   const [loading, setLoading] = useState(true);
 
   const [isPlanDialogOpen, setIsPlanDialogOpen] = useState(false);
@@ -96,6 +105,72 @@ export function SettingsTab() {
     };
     getCurrentUser();
   }, []);
+
+  // fetch usage metrics when we have a user or their package
+  useEffect(() => {
+    const fetchUsage = async () => {
+      if (!currentUser?.id) return;
+
+      try {
+        // articles total
+        const artRes = await supabase
+          .from("articles")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", currentUser.id);
+        const articlesCount = (artRes as any).count || 0;
+
+        // articles this month
+        const start = new Date();
+        start.setDate(1);
+        start.setHours(0, 0, 0, 0);
+        const monthlyRes = await supabase
+          .from("articles")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", currentUser.id)
+          .gte("created_at", start.toISOString());
+        const monthlyCount = (monthlyRes as any).count || 0;
+
+        // keywords across all websites
+        const { data: sites } = await supabase
+          .from("websites")
+          .select("keywords")
+          .eq("user_id", currentUser.id);
+
+        let keywordsCount = 0;
+        if (Array.isArray(sites)) {
+          sites.forEach((s: any) => {
+            const kw = s?.keywords;
+            if (!kw) return;
+            if (Array.isArray(kw)) keywordsCount += kw.length;
+            else if (kw?.keywords && Array.isArray(kw.keywords)) keywordsCount += kw.keywords.length;
+          });
+        }
+
+        // compute limits
+        const articleLimit = getUserArticleLimit
+          ? await getUserArticleLimit(currentUser.id)
+          : 0;
+
+        const keywordLimits: Record<string, number> = { free: 100, pro: 1000, premium: 5000 };
+        const monthlyLimits: Record<string, number> = { free: 10, pro: 50, premium: 100 };
+        const pkg = userPackage || "free";
+
+        setUsage({
+          articles: articlesCount,
+          articlesLimit: articleLimit,
+          keywords: keywordsCount,
+          keywordLimit: keywordLimits[pkg],
+          monthlyPosts: monthlyCount,
+          monthlyLimit: monthlyLimits[pkg],
+        });
+      } catch (err) {
+        // ignore usage errors
+        console.warn("Failed to fetch usage", err);
+      }
+    };
+
+    fetchUsage();
+  }, [currentUser, userPackage]);
 
   const handleCopyApiKey = () => {
     navigator.clipboard.writeText(apiKey);
@@ -572,10 +647,22 @@ export function SettingsTab() {
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-900">Profile</label>
                 <div className="flex items-center gap-4 p-4 border border-gray-200 rounded-lg bg-gray-50">
-                  <div className="w-12 h-12 rounded-full bg-gray-300" />
+                  {currentUser?.user_metadata?.avatar_url ? (
+                    <Image
+                      src={currentUser.user_metadata.avatar_url}
+                      alt={currentUser.user_metadata?.full_name || currentUser.email || "avatar"}
+                      width={48}
+                      height={48}
+                      className="rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-12 h-12 rounded-full bg-gray-300 flex items-center justify-center text-sm text-white">
+                      {((currentUser?.user_metadata?.full_name || currentUser?.email || "U") as string)[0]?.toUpperCase()}
+                    </div>
+                  )}
                   <div>
-                    <p className="text-sm font-medium text-gray-900">Delani Web</p>
-                    <p className="text-xs text-gray-600">Free Tier</p>
+                    <p className="text-sm font-medium text-gray-900">{currentUser?.user_metadata?.full_name || currentUser?.email || "Your profile"}</p>
+                    <p className="text-xs text-gray-600">{userPackage ? `${userPackage.charAt(0).toUpperCase() + userPackage.slice(1)} Tier` : "Free Tier"}</p>
                   </div>
                   <Button variant="outline" className="ml-auto h-8 text-xs border-gray-200 bg-white">
                     Upgrade
@@ -604,12 +691,12 @@ export function SettingsTab() {
                 disabled
                 className="h-9 bg-gray-50 border-gray-200 text-sm"
               />
-              <Button variant="outline" className="mt-2 h-8 text-xs border-gray-200 bg-white">
+              {/* <Button variant="outline" className="mt-2 h-8 text-xs border-gray-200 bg-white">
                 Change email
-              </Button>
+              </Button> */}
             </div>
 
-            <div className="space-y-2">
+            {/* <div className="space-y-2">
               <label className="text-sm font-medium text-gray-900">Password</label>
               <div className="space-y-3">
                 <div className="relative">
@@ -689,7 +776,7 @@ export function SettingsTab() {
                   </Button>
                 </div>
               </div>
-            </div>
+            </div> */}
           </div>
         )}
 
@@ -705,7 +792,7 @@ export function SettingsTab() {
 
             <div>
               <h4 className="text-sm font-medium text-gray-900 mb-3">Current plan</h4>
-              <p className="text-sm text-gray-700">Free Tier</p>
+              <p className="text-sm text-gray-700">{userPackage ? `${userPackage.charAt(0).toUpperCase() + userPackage.slice(1)} Tier` : "Free Tier"}</p>
             </div>
 
             <div className="space-y-3">
@@ -713,28 +800,28 @@ export function SettingsTab() {
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Articles</span>
-                  <span className="text-gray-900">5 / 10</span>
+                  <span className="text-gray-900">{usage.articles} / {usage.articlesLimit || "—"}</span>
                 </div>
                 <div className="w-full h-2 bg-gray-200 rounded">
-                  <div className="h-full w-1/2 bg-green-500 rounded" />
+                  <div className="h-full bg-green-500 rounded" style={{ width: `${usage.articlesLimit ? Math.min(100, Math.round((usage.articles / usage.articlesLimit) * 100)) : 0}%` }} />
                 </div>
               </div>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Keywords</span>
-                  <span className="text-gray-900">25 / 100</span>
+                  <span className="text-gray-900">{usage.keywords} / {usage.keywordLimit || "—"}</span>
                 </div>
                 <div className="w-full h-2 bg-gray-200 rounded">
-                  <div className="h-full w-1/4 bg-blue-500 rounded" />
+                  <div className="h-full bg-blue-500 rounded" style={{ width: `${usage.keywordLimit ? Math.min(100, Math.round((usage.keywords / usage.keywordLimit) * 100)) : 0}%` }} />
                 </div>
               </div>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Monthly posts</span>
-                  <span className="text-gray-900">8 / 20</span>
+                  <span className="text-gray-900">{usage.monthlyPosts} / {usage.monthlyLimit || "—"}</span>
                 </div>
                 <div className="w-full h-2 bg-gray-200 rounded">
-                  <div className="h-full w-2/5 bg-purple-500 rounded" />
+                  <div className="h-full bg-purple-500 rounded" style={{ width: `${usage.monthlyLimit ? Math.min(100, Math.round((usage.monthlyPosts / usage.monthlyLimit) * 100)) : 0}%` }} />
                 </div>
               </div>
             </div>
