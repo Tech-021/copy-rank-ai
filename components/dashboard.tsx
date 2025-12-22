@@ -114,7 +114,7 @@ export function Dashboard({ onLogout, userEmail, userAvatar, children }: Dashboa
     ${pathname.includes("/dashboard/articles") ? "bg-green-500 text-black" : "text-[#53F870]"}
   `}
               >
-                Blogs
+                Articles
               </Link>
               <Link
                 href="/dashboard/keywords"
@@ -141,14 +141,7 @@ export function Dashboard({ onLogout, userEmail, userAvatar, children }: Dashboa
               >
                 Competitors
               </Link>
-              <button
-                onClick={() => setActiveTab("articles")}
-                className={`cursor-pointer px-6.5 py-3.5 text-[13px] font-medium transition-colors whitespace-nowrap rounded-full
-    ${activeTab === "articles" ? "bg-green-500 text-black" : "text-[#53F870]"}
-  `}
-              >
-                Articles
-              </button>
+             
               <button
                 onClick={() => setActiveTab("index")}
                 className={`cursor-pointer px-6.5 py-3.5 text-[13px] font-medium transition-colors whitespace-nowrap rounded-full
