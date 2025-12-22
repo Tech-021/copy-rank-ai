@@ -32,7 +32,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useRouter } from "next/navigation";
-import { Dialog1 } from "@/components/websitedialog"
 import { WebsiteDialog } from "../dialog1";
 import { CreatePostDialogDashboard } from "../dialog2";
 
@@ -947,8 +946,6 @@ export function AnalyzeTab({
           </div>
         </div>
       </div>
-
-      <Dialog1 open={open} onOpenChange={setOpen} />
       <WebsiteDialog open={openWebsiteDialog} onOpenChange={setOpenWebsiteDialog} />
       <CreatePostDialogDashboard open={openPostDialog} onOpenChange={setOpenPostDialog} websiteId={selectedWebsiteId} onCreated={handlePostCreated} />
       {/* Add Competitor Dialog */}

@@ -3,7 +3,6 @@ import { supabase } from "@/lib/client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { getUser } from "@/lib/auth";
-import { Dialog1 } from "@/components/websitedialog";
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -87,8 +86,6 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Dialog1 open={isOpen} onOpenChange={setIsOpen} />
-    </div>
+    router.push('/welcome')
   );
 }
