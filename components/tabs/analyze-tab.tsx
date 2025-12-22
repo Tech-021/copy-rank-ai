@@ -748,15 +748,15 @@ export function AnalyzeTab({
             </div>
             <div>
               <Select value={selectedWebsiteId || undefined} onValueChange={handleWebsiteChange}>
-                <SelectTrigger className="h-10 bg-transparent rounded-xl focus-visible:outline-none focus-visible:ring-0 border-[#0000001a] focus-visible:border-[#0000001a] focus:outline-none cursor-pointer outline-none active:outline-none px-3.5 py-2.5 text-[#00000080]">
+                <SelectTrigger className="h-10  bg-[rgba(83,248,112,0.1)]!  rounded-xl focus-visible:outline-none focus-visible:ring-0 border-[#0000001a] focus-visible:border-[#0000001a] focus:outline-none cursor-pointer outline-none active:outline-none px-3.5 py-2.5 text-[#53F870]">
                   <SelectValue placeholder="Select your website" />
                 </SelectTrigger>
-                <SelectContent className="cursor-pointer">
+                <SelectContent className="cursor-pointer bg-[rgba(83,248,112,0.1)]! ">
                   {websites.map((website, index) => (
                     <SelectItem
                       key={website.id}
                       value={website.id}
-                      className={`cursor-pointer data-[state=checked]:text-[#00000080] data-[state=checked]:opacity-40 ${index < websites.length - 1 ? 'border-b rounded-none border-[#0000001a]' : ''}`}
+                      className={`cursor-pointer data-[state=checked]:text-[#53F870] data-[state=checked]:opacity-40 ${index < websites.length - 1 ? 'border-b rounded-none border-[#0000001a]' : ''}`}
                     >
                       {website.url}
                     </SelectItem>
