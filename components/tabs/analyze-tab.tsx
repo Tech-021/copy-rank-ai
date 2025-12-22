@@ -834,7 +834,7 @@ export function AnalyzeTab({
               {websites.length > 0 && (
                 <div className="flex items-center justify-between border px-4 pb-4 pt-5 rounded-t-xl border-gray-800 w-[300px]">
                   <div className="flex items-center gap-5">
-                  <div className="bg-[#000000] w-[34px] h-[34px] flex items-center justify-center rounded-[10px]">
+                  <div className="bg-[rgba(50,85,45,0.13)] w-[34px] h-[34px] flex items-center justify-center rounded-[10px]">
                     <Image src="/dark10.png" alt="" width={34} height={34} />
                   </div>
                   <div>
@@ -849,10 +849,10 @@ export function AnalyzeTab({
               )}
               <div 
               onClick={() => setOpenWebsiteDialog(true)}
-              className={`flex items-center justify-between border px-4 pb-4 pt-5 ${websites.length > 0 ? 'rounded-b-xl' : 'rounded-xl'} border-[#0000001a] w-[300px] cursor-pointer`}>
+              className={`flex items-center justify-between border px-4 pb-4 pt-5 ${websites.length > 0 ? 'rounded-b-xl' : 'rounded-xl'} border-gray-800 w-[300px] cursor-pointer`}>
                 <div className="flex items-center gap-5 cursor-pointer">
-                <div className="bg-[rgb(83,248,112,10)] w-[34px] h-[34px] flex items-center justify-center rounded-[10px] cursor-pointer">
-                  <Plus width={20} height={20} className="text-[#65b361] cursor-pointer " />
+                <div className="bg-[rgba(50,85,45,0.13)] w-[34px] h-[34px] flex items-center justify-center rounded-[10px] cursor-pointer">
+                 <Image src="/dark13.png" alt="" width={34} height={34} />
                 </div>
                 <div>
                   <p className="text-sm text-white font-normal">Add Website</p>
@@ -866,27 +866,27 @@ export function AnalyzeTab({
             <CardContent>
                 <div  className="cursor-pointer flex items-center justify-between border px-4 pb-4 pt-5 rounded-t-xl border-gray-800 w-[300px]">
                   <div className="flex items-center gap-5">
-                  <div className="bg-[rgb(247,247,247)] w-[34px] h-[34px] flex items-center justify-center rounded-[10px]">
-                    <Image src="/globe.png" alt="" width={20} height={20} />
+                  <div className="bg-[rgba(50,85,45,0.13)] w-[34px] h-[34px] flex items-center justify-center rounded-[10px]">
+                    <Image src="/dark11.png" alt="" width={34} height={34} />
                   </div>
                   <div>
-                    <p className="text-sm text-[#000000b3] font-normal">{analytics.totalCompetitors} Competitor{analytics.totalCompetitors > 1 ? 's' : ''}</p>
-                    <p className="text-xs text-[#00000080] font-normal">Tracked across your websites</p>
+                    <p className="text-sm text-white font-normal">{analytics.totalCompetitors} Competitor{analytics.totalCompetitors > 1 ? 's' : ''}</p>
+                    <p className="text-xs text-gray-500 font-normal">Tracked across your websites</p>
                   </div>
                   </div>
-                  <div className="w-[34px] h-[34px] bg-[#00000000] rounded-xl flex items-center justify-center cursor-pointer">
-                    <Image src="/menudots.png" alt="" width={3} height={17} />
+                  <div className="w-[34px] h-[34px] bg-transparent rounded-xl flex items-center justify-center cursor-pointer">
+                    <Image src="/3dotsblack.png" alt="" width={31} height={17} />
                   </div>
                 </div>
               <div 
               onClick={handleAddCompetitor}
-              className={`cursor-pointer flex items-center justify-between border px-4 pb-4 pt-5 ${analytics.totalCompetitors > 0 ? 'rounded-b-xl' : 'rounded-xl'} border-[#0000001a] w-[300px]`}>
+              className={`cursor-pointer flex items-center justify-between border px-4 pb-4 pt-5 ${analytics.totalCompetitors > 0 ? 'rounded-b-xl' : 'rounded-xl'} border-gray-800 w-[300px]`}>
                 <div className="flex items-center gap-5">
-                <div className="bg-[rgb(247,247,247)] w-[34px] h-[34px] flex items-center justify-center rounded-[10px]">
-                  <Plus width={20} height={20} className="text-[#65b361]" />
+                <div className="bg-[rgba(50,85,45,0.13)] w-[34px] h-[34px] flex items-center justify-center rounded-[10px]">
+                  <Image src="/dark13.png" alt="" width={34} height={34} />
                 </div>
                 <div>
-                  <p className="text-sm text-[#000000b3] font-normal">Add Competitor</p>
+                  <p className="text-sm text-white font-normal">Add Competitor</p>
                 </div>
                 </div>
               </div>
@@ -895,7 +895,7 @@ export function AnalyzeTab({
         </div>
 
           <Card className="bg-transparent px-4 py-5">
-            <CardTitle className="text-lg font-normal text-[#000000b3] ml-4">Actions Required</CardTitle>
+            <CardTitle className="text-lg font-normal text-white ml-4">Actions Required</CardTitle>
             <CardContent>
               {showSkeletons ? (
                 <div className="space-y-2">
