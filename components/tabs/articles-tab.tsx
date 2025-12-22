@@ -1085,16 +1085,16 @@ export function ArticlesTab({
                             width={13}
                             alt="icon"
                           />
-                          <p className="text-xs text-[#]">
+                          <p className="text-xs text-[#ffffff80]">
                             {getReadingTime(article.wordCount)}
                           </p>
                         </div>
 
                         <Badge
-                          className={`mt-2 text-xs font-medium w-fit ${
+                          className={`mt-2 text-xs font-medium rounded-full w-fit ${
                             (article.status || "").toLowerCase() === "uploaded"
                               ? "bg-transparent text-green-700 border border-green-600"
-                              : "bg-gray-100 text-gray-600 border border-gray-800"
+                              : "bg-[#0d0d0d] text-[#58a955] border border-[#58a955]"
                           }`}
                         >
                           {article.status}
@@ -1106,7 +1106,7 @@ export function ArticlesTab({
                         <Button
                           size="sm"
                           variant="ghost"
-                          className="text-gray-400 hover:text-gray-700 h-8 w-8 p-0 flex-shrink-0"
+                          className="text-[#53f870] hover:text-[#53f870] bg-[#53f8701a] hover:!bg-[#53f8701a] cursor-pointer h-8 w-8 px-[18px] py-1.5 border-[#53f8701a] flex-shrink-0"
                           onClick={(e) => {
                             e.stopPropagation();
                             openEditDialog(article);
@@ -1127,7 +1127,7 @@ export function ArticlesTab({
                       {article.tags?.slice(0, 5).map((tag) => (
                         <span
                           key={tag}
-                          className="text-xs bg-gray-200  text-gray-600 px-2 py-0.5 rounded-2xl border border-gray-200"
+                          className="text-xs bg-[#0d0d0d]  text-[#58a955] px-2 py-0.5 rounded-2xl border border-[#53f8701a]"
                         >
                           {tag}
                         </span>
@@ -1141,10 +1141,10 @@ export function ArticlesTab({
 
           {/* Right Side - Edit/Preview Panel */}
           {selectedArticle && (
-            <div className=" max-w-[640px] bg-[#0d0d0d] rounded-[9px] border-l border-[#53f8701a] overflow-hidden flex flex-col">
+            <div className=" max-w-[640px] bg-[#0d0d0d] rounded-[16px] border-l border-[#53f8701a] overflow-hidden flex flex-col">
               {/* Header */}
-              <div className="flex items-center justify-between p-4 border-b border-gray-200 flex-shrink-0">
-                <span className="text-sm  text-gray-500">EDIT POST</span>
+              <div className="flex items-center justify-between p-4 border-b border-[#53f8701a] flex-shrink-0">
+                <span className="text-sm  text-[#ffffffb3]">EDIT POST</span>
                 <button
                   onClick={() => setSelectedArticle(null)}
                   className="text-gray-400 hover:text-gray-600 text-xl leading-none font-bold"
@@ -1308,11 +1308,11 @@ export function ArticlesTab({
 
                   {/* Tags */}
                 </div>
-                <div className="border-b border-gray-200 " />
+                <div className="border-b border-[#53f8701a] " />
                 <div className="p-4">
-                  <h4 className="text-2xl mb-4">{selectedArticle.title}</h4>
+                  {/* <h4 className="text-2xl mb-4">{selectedArticle.title}</h4> */}
                   <div
-                    className={`text-[14px] text-gray-700 leading-relaxed relative ${
+                    className={`text-[14px] text-[#ffffffb3] leading-relaxed relative ${
                       isContentExpanded ? "" : "max-h-[400px] overflow-hidden"
                     }`}
                   >
@@ -1321,14 +1321,14 @@ export function ArticlesTab({
                       selectedArticle.generatedImages || [],
                       3
                     )}
-                    {!isContentExpanded && (
+                    {/* {!isContentExpanded && (
                       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-white to-transparent" />
-                    )}
+                    )} */}
                   </div>
                   <div className="mt-4 flex justify-center">
                     <Button
                       size="sm"
-                      className="bg-gray-400 hover:bg-gray-400 cursor-pointer"
+                      className="bg-[#53f8701a] text-[#53f870] hover:bg-[#53f8701a] rounded-full cursor-pointer"
                       onClick={() => setIsContentExpanded((prev) => !prev)}
                     >
                       {isContentExpanded ? "Show less" : "Read more"}
@@ -1338,9 +1338,9 @@ export function ArticlesTab({
               </div>
 
               {/* Footer Actions */}
-              <div className="border-t border-gray-200 p-4 bg-white flex gap-2 flex-shrink-0">
+              <div className="border-t border-[#53f8701a] p-4 bg-[#0d0d0d] flex gap-2 flex-shrink-0">
                 <Button
-                  className="flex-1 bg-black text-white font-medium hover:bg-gray-900 h-10 text-sm rounded disabled:opacity-60"
+                  className="flex-1 bg-[#53f870] text-black font-medium hover:bg-[#53f870] cursor-pointer h-10 text-sm rounded disabled:opacity-60"
                   onClick={handlePublish}
                   disabled={isPublishing}
                 >
@@ -1399,10 +1399,10 @@ export function ArticlesTab({
                     </Button>
                   )}
                 <Button
-                  className="h-9 w-14 p-0 rounded-sm text-red-500 bg-red-500 hover:bg-red-300 hover:text-red-700 cursor-pointer"
+                  className="h-9 w-14 p-0 rounded-sm text-red-500 bg-[#ff383c] hover:bg-[#ff383c] hover:text-red-700 cursor-pointer"
                   onClick={() => setIsDeleteDialogOpen(true)}
                 >
-                  <Image src="/bin.png" height={11} width={11} alt="icon" />
+                  <Image src="/delete.png" height={20} width={18} alt="icon" />
                 </Button>
 
                 <Dialog
