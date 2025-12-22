@@ -18,7 +18,7 @@ interface DashboardProps {
 
 export function Dashboard({ onLogout, userEmail, userAvatar }: DashboardProps) {
   const [activeTab, setActiveTab] = useState<
-    "analyze" | "keywords" | "competitors" | "articles" | "settings"
+    "analyze" | "keywords" | "competitors" | "articles"| "index" | "settings"
   >("analyze"); // NEW: Added competitors
   const [selectedWebsiteId, setSelectedWebsiteId] = useState<string | null>(
     null
@@ -68,7 +68,7 @@ export function Dashboard({ onLogout, userEmail, userAvatar }: DashboardProps) {
       <header className="backdrop-blur-sm sticky top-0 z-50 border-b bg-background/95">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center justify-center gap-16">
-            <div className="w-full h-full rounded-xl bg-primary flex items-center justify-center">
+            <div className="w-max h-full rounded-2xl bg-transparent flex items-center justify-center">
               <Image src="/logo.png" alt="" width={50} height={50} />
             </div>
             <div
@@ -95,14 +95,6 @@ export function Dashboard({ onLogout, userEmail, userAvatar }: DashboardProps) {
                 Dashboard
               </button>
               <button
-                onClick={() => setActiveTab("articles")}
-                className={`cursor-pointer px-6.5 py-3.5 text-[13px] font-medium transition-colors whitespace-nowrap rounded-full
-    ${activeTab === "articles" ? "bg-green-500 text-black" : "text-[#53F870]"}
-  `}
-              >
-                Blogs
-              </button>
-              <button
                 onClick={() => setActiveTab("keywords")}
                 className={`cursor-pointer px-6.5 py-3.5 text-[13px] font-medium transition-colors whitespace-nowrap rounded-full
     ${
@@ -126,6 +118,22 @@ export function Dashboard({ onLogout, userEmail, userAvatar }: DashboardProps) {
   `}
               >
                 Competitors
+              </button>
+              <button
+                onClick={() => setActiveTab("articles")}
+                className={`cursor-pointer px-6.5 py-3.5 text-[13px] font-medium transition-colors whitespace-nowrap rounded-full
+    ${activeTab === "articles" ? "bg-green-500 text-black" : "text-[#53F870]"}
+  `}
+              >
+                Articles
+              </button>
+              <button
+                onClick={() => setActiveTab("index")}
+                className={`cursor-pointer px-6.5 py-3.5 text-[13px] font-medium transition-colors whitespace-nowrap rounded-full
+    ${activeTab === "index" ? "bg-green-500 text-black" : "text-[#53F870]"}
+  `}
+              >
+                Index
               </button>
               <button
                 onClick={() => setActiveTab("settings")}

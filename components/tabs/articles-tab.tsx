@@ -4,8 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { Stepper } from "@/components/ui/stepper";
-
-
+import { CreatePostDialogDashboard } from "@/components/dialog2";
 import {
   Card,
   CardContent,
@@ -150,6 +149,14 @@ export function ArticlesTab({
     websiteId || null
   );
   const [openPostDialog, setOpenPostDialog] = useState(false);
+  const [analytics, setAnalytics] = useState<AnalyticsData>({
+    articlesGenerated: 0,
+    articlesLive: 0,
+    estimatedTraffic: 0,
+    keywordsTracked: 0,
+    draftArticles: 0,
+    totalCompetitors: 0,
+  });
 
   const loadUserWebsites = async () => {
     try {
