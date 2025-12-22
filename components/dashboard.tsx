@@ -142,14 +142,19 @@ export function Dashboard({ onLogout, userEmail, userAvatar, children }: Dashboa
                 Competitors
               </Link>
              
-              <button
-                onClick={() => setActiveTab("index")}
+                <Link
+                href="/dashboard/index"
                 className={`cursor-pointer px-6.5 py-3.5 text-[13px] font-medium transition-colors whitespace-nowrap rounded-full
-    ${activeTab === "index" ? "bg-green-500 text-black" : "text-[#53F870]"}
+    ${
+      pathname.includes("/dashboard/index")
+        ? "bg-green-500 text-black"
+        : "text-[#53F870] hover:text-green-600 hover:bg-green-100"
+    }
   `}
               >
                 Index
-              </button>
+              </Link>
+             
               <Link
                 href="/dashboard/settings"
                 className={`cursor-pointer px-6.5 py-3.5 text-[13px] font-medium transition-colors whitespace-nowrap rounded-full
