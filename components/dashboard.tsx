@@ -1,3 +1,5 @@
+"use client"
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Sparkles, LogOut } from "lucide-react";
@@ -9,17 +11,29 @@ import { CompetitorsTab } from "@/components/tabs/competitors-tab"; // NEW: Impo
 import Image from "next/image";
 import { getUser } from "@/lib/auth";
 import { ProfileDropdown } from "@/components/profile-dropdown";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 interface DashboardProps {
   onLogout: () => void;
   userEmail?: string;
   userAvatar?: string | null;
+  children?: React.ReactNode;
 }
 
-export function Dashboard({ onLogout, userEmail, userAvatar }: DashboardProps) {
+export function Dashboard({ onLogout, userEmail, userAvatar, children }: DashboardProps) {
+  const pathname = usePathname() || "";
   const [activeTab, setActiveTab] = useState<
     "analyze" | "keywords" | "competitors" | "articles"| "index" | "settings"
-  >("analyze"); // NEW: Added competitors
+  >(pathname.includes("/dashboard/articles")
+    ? "articles"
+    : pathname.includes("/dashboard/keywords")
+    ? "keywords"
+    : pathname.includes("/dashboard/competitors")
+    ? "competitors"
+    : pathname.includes("/dashboard/settings")
+    ? "settings"
+    : "analyze");
   const [selectedWebsiteId, setSelectedWebsiteId] = useState<string | null>(
     null
   );
@@ -82,51 +96,52 @@ export function Dashboard({ onLogout, userEmail, userAvatar }: DashboardProps) {
     dark:border-[#2E9839]
   "
             >
-              <button
-                onClick={() => setActiveTab("analyze")}
+              <Link
+                href="/dashboard/analyze"
                 className={`cursor-pointer px-6.5 py-3.5 text-[13px] font-medium transition-colors whitespace-nowrap rounded-full
     ${
-      activeTab === "analyze"
+      pathname.includes("/dashboard/analyze") || pathname === "/dashboard"
         ? "bg-green-500 text-black"
         : "text-[#53F870] hover:text-green-600 hover:bg-green-100"
     }
   `}
               >
                 Dashboard
-              </button>
-              <button
-                onClick={() => setActiveTab("keywords")}
+              </Link>
+              <Link
+                href="/dashboard/articles"
+                className={`cursor-pointer px-6.5 py-3.5 text-[13px] font-medium transition-colors whitespace-nowrap rounded-full
+    ${pathname.includes("/dashboard/articles") ? "bg-green-500 text-black" : "text-[#53F870]"}
+  `}
+              >
+                Articles
+              </Link>
+              <Link
+                href="/dashboard/keywords"
                 className={`cursor-pointer px-6.5 py-3.5 text-[13px] font-medium transition-colors whitespace-nowrap rounded-full
     ${
-      activeTab === "keywords"
+      pathname.includes("/dashboard/keywords")
         ? "bg-green-500 text-black"
         : "text-[#53F870] hover:text-green-600 hover:bg-green-100"
     }
   `}
               >
                 Keywords
-              </button>
+              </Link>
               {/* NEW: Competitors Tab */}
-              <button
-                onClick={() => setActiveTab("competitors")}
+              <Link
+                href="/dashboard/competitors"
                 className={`cursor-pointer px-6.5 py-3.5 text-[13px] font-medium transition-colors whitespace-nowrap rounded-full
     ${
-      activeTab === "competitors"
+      pathname.includes("/dashboard/competitors")
         ? "bg-green-500 text-black"
         : "text-[#53F870] hover:text-green-600 hover:bg-green-100"
     }
   `}
               >
                 Competitors
-              </button>
-              <button
-                onClick={() => setActiveTab("articles")}
-                className={`cursor-pointer px-6.5 py-3.5 text-[13px] font-medium transition-colors whitespace-nowrap rounded-full
-    ${activeTab === "articles" ? "bg-green-500 text-black" : "text-[#53F870]"}
-  `}
-              >
-                Articles
-              </button>
+              </Link>
+             
               <button
                 onClick={() => setActiveTab("index")}
                 className={`cursor-pointer px-6.5 py-3.5 text-[13px] font-medium transition-colors whitespace-nowrap rounded-full
@@ -135,18 +150,18 @@ export function Dashboard({ onLogout, userEmail, userAvatar }: DashboardProps) {
               >
                 Index
               </button>
-              <button
-                onClick={() => setActiveTab("settings")}
+              <Link
+                href="/dashboard/settings"
                 className={`cursor-pointer px-6.5 py-3.5 text-[13px] font-medium transition-colors whitespace-nowrap rounded-full
     ${
-      activeTab === "settings"
+      pathname.includes("/dashboard/settings")
         ? "bg-green-500 text-black"
         : "text-[#53F870] hover:text-green-600 hover:bg-green-100"
     }
   `}
               >
                 Settings
-              </button>
+              </Link>
             </div>
           </div>
          <div
@@ -173,31 +188,33 @@ export function Dashboard({ onLogout, userEmail, userAvatar }: DashboardProps) {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Tabs */}
-
-        {/* Tab Content */}
-        {activeTab === "analyze" && (
-          <AnalyzeTab
-            onViewKeywords={(websiteId) => {
-              setSelectedWebsiteId(websiteId);
-              setActiveTab("keywords");
-            }}
-            onViewCompetitors={(websiteId) => {
-              // NEW: Add onViewCompetitors prop
-              setSelectedWebsiteId(websiteId);
-              setActiveTab("competitors");
-            }}
-          />
+        {/* If `children` are provided (app router nested pages), render them. Otherwise fallback to old tab behaviour. */}
+        {children ? (
+          children
+        ) : (
+          <>
+            {activeTab === "analyze" && (
+              <AnalyzeTab
+                onViewKeywords={(websiteId) => {
+                  setSelectedWebsiteId(websiteId);
+                  setActiveTab("keywords");
+                }}
+                onViewCompetitors={(websiteId) => {
+                  setSelectedWebsiteId(websiteId);
+                  setActiveTab("competitors");
+                }}
+              />
+            )}
+            {activeTab === "keywords" && (
+              <KeywordsTab websiteId={selectedWebsiteId ?? undefined} />
+            )}
+            {activeTab === "competitors" && (
+              <CompetitorsTab websiteId={selectedWebsiteId ?? null} />
+            )}
+            {activeTab === "articles" && <ArticlesTab />}
+            {activeTab === "settings" && <SettingsTab />}
+          </>
         )}
-        {activeTab === "keywords" && (
-          <KeywordsTab websiteId={selectedWebsiteId ?? undefined} />
-        )}
-        {/* NEW: Competitors Tab Content */}
-        {activeTab === "competitors" && (
-          <CompetitorsTab websiteId={selectedWebsiteId ?? null} />
-        )}
-        {activeTab === "articles" && <ArticlesTab />}
-        {activeTab === "settings" && <SettingsTab />}
       </main>
     </div>
   );

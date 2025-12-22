@@ -66,6 +66,7 @@ export async function middleware(request: NextRequest) {
     '/auth/callback',
     '/auth/reset-password',
     '/paywall', // Add paywall to public routes
+    '/dashboard', // Allow dashboard client-side to handle auth (avoid server redirect)
     '/payment/callback', // Payment callback should also be public
     '/payment/fail', // Payment fail page should be public
     '/about-yourself', // Payment fail page should be public
