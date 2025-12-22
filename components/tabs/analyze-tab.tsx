@@ -32,7 +32,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useRouter } from "next/navigation";
-import { Dialog1 } from "@/components/websitedialog"
 import { WebsiteDialog } from "../dialog1";
 import { CreatePostDialogDashboard } from "../dialog2";
 
@@ -286,7 +285,7 @@ export function AnalyzeTab({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [open, setOpen] = useState(false)
-  const [openWebsiteDialog, setOpenWebsiteDialog] = useState(false)
+  const [ openWebsiteDialog, setOpenWebsiteDialog ] = useState(false)
   const [openPostDialog, setOpenPostDialog] = useState(false)
   const [editForm, setEditForm] = useState({
       title: "",
@@ -947,8 +946,6 @@ export function AnalyzeTab({
           </div>
         </div>
       </div>
-
-      <Dialog1 open={open} onOpenChange={setOpen} />
       <WebsiteDialog open={openWebsiteDialog} onOpenChange={setOpenWebsiteDialog} />
       <CreatePostDialogDashboard open={openPostDialog} onOpenChange={setOpenPostDialog} websiteId={selectedWebsiteId} onCreated={handlePostCreated} />
       {/* Add Competitor Dialog */}
