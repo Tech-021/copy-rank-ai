@@ -822,7 +822,11 @@ export function AnalyzeTab({
               <CardDescription>Turn competitor keywords into SEO ready blog posts in one click.</CardDescription>
               <CardContent className="px-0">
                 <Button 
-                className="text-base font-normal text-[#53F870] bg-black px-[60px] py-1 w-[170px] h-[50px] border border-[#53F870] rounded-[10px] hover:bg-transparent hover:text-white cursor-pointer">Create Post</Button>
+                  onClick={() => setOpenPostDialog(true)}
+                  className="text-base font-normal text-white bg-black px-[60px] py-1 w-[170px] h-[50px] border border-[#00000080] rounded-[10px] hover:bg-transparent hover:text-[#00000080] cursor-pointer"
+                >
+                  Create Post
+                </Button>
               </CardContent>
             </Card>
           </div>

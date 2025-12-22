@@ -54,7 +54,7 @@ import { supabase } from "@/lib/client";
 import { useToast } from "@/components/ui/toast";
 import { CreatePostDialogDashboard } from "@/components/dialog2";
 import Image from "next/image";
-
+import { CreatePostDialogDashboard } from "@/components/dialog2";
 
 interface Article {
   id: string;
