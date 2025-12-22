@@ -990,7 +990,7 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
 
       {/* Stats Cards - Pixel Perfect */}
       <div className="grid grid-cols-4 rounded-xl shadow-xl">
-        <Card className="border rounded-r-none border-gray-200 bg-white shadow-xl">
+        <Card className="border rounded-r-none border-gray-200 bg-[#101110] shadow-xl">
           <CardContent className="flex flex-col justify-start gap-8">
             <div className="flex justify-between">
               <p className="text-xs font-medium text-gray-600 uppercase tracking-wide ">

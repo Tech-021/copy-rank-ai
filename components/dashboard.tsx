@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -21,19 +21,26 @@ interface DashboardProps {
   children?: React.ReactNode;
 }
 
-export function Dashboard({ onLogout, userEmail, userAvatar, children }: DashboardProps) {
+export function Dashboard({
+  onLogout,
+  userEmail,
+  userAvatar,
+  children,
+}: DashboardProps) {
   const pathname = usePathname() || "";
   const [activeTab, setActiveTab] = useState<
-    "analyze" | "keywords" | "competitors" | "articles"| "index" | "settings"
-  >(pathname.includes("/dashboard/articles")
-    ? "articles"
-    : pathname.includes("/dashboard/keywords")
-    ? "keywords"
-    : pathname.includes("/dashboard/competitors")
-    ? "competitors"
-    : pathname.includes("/dashboard/settings")
-    ? "settings"
-    : "analyze");
+    "analyze" | "keywords" | "competitors" | "articles" | "index" | "settings"
+  >(
+    pathname.includes("/dashboard/articles")
+      ? "articles"
+      : pathname.includes("/dashboard/keywords")
+      ? "keywords"
+      : pathname.includes("/dashboard/competitors")
+      ? "competitors"
+      : pathname.includes("/dashboard/settings")
+      ? "settings"
+      : "analyze"
+  );
   const [selectedWebsiteId, setSelectedWebsiteId] = useState<string | null>(
     null
   );
@@ -109,14 +116,6 @@ export function Dashboard({ onLogout, userEmail, userAvatar, children }: Dashboa
                 Dashboard
               </Link>
               <Link
-                href="/dashboard/articles"
-                className={`cursor-pointer px-6.5 py-3.5 text-[13px] font-medium transition-colors whitespace-nowrap rounded-full
-    ${pathname.includes("/dashboard/articles") ? "bg-green-500 text-black" : "text-[#53F870]"}
-  `}
-              >
-                Articles
-              </Link>
-              <Link
                 href="/dashboard/keywords"
                 className={`cursor-pointer px-6.5 py-3.5 text-[13px] font-medium transition-colors whitespace-nowrap rounded-full
     ${
@@ -141,7 +140,18 @@ export function Dashboard({ onLogout, userEmail, userAvatar, children }: Dashboa
               >
                 Competitors
               </Link>
-             
+              <Link
+                href="/dashboard/articles"
+                className={`cursor-pointer px-6.5 py-3.5 text-[13px] font-medium transition-colors whitespace-nowrap rounded-full
+    ${
+      pathname.includes("/dashboard/articles")
+        ? "bg-green-500 text-black"
+        : "text-[#53F870]"
+    }
+  `}
+              >
+                Articles
+              </Link>
               <button
                 onClick={() => setActiveTab("index")}
                 className={`cursor-pointer px-6.5 py-3.5 text-[13px] font-medium transition-colors whitespace-nowrap rounded-full
@@ -164,8 +174,8 @@ export function Dashboard({ onLogout, userEmail, userAvatar, children }: Dashboa
               </Link>
             </div>
           </div>
-         <div
-  className="
+          <div
+            className="
     flex items-center gap-4 p-1.5 rounded-full
     text-[#53F870]
     dark:bg-linear-to-b
@@ -174,15 +184,15 @@ export function Dashboard({ onLogout, userEmail, userAvatar, children }: Dashboa
     border border-transparent
     dark:border-[#2E9839]
   "
->
-  {userEmail && (
-    <ProfileDropdown
-      userEmail={userEmail}
-      userAvatar={localAvatar ?? userAvatar}
-      onLogout={onLogout}
-    />
-  )}
-</div>
+          >
+            {userEmail && (
+              <ProfileDropdown
+                userEmail={userEmail}
+                userAvatar={localAvatar ?? userAvatar}
+                onLogout={onLogout}
+              />
+            )}
+          </div>
         </div>
       </header>
 
