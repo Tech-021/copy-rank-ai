@@ -935,8 +935,8 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl text-gray-700 font-medium">Keywords</h2>
-          <p className="text-sm text-gray-600 mt-1">
+          <h2 className="text-2xl text-white font-medium">Keywords</h2>
+          <p className="text-sm text-[#ffffff3b] mt-1">
             Track the keywords driving your traffic
           </p>
         </div>
