@@ -313,14 +313,14 @@ export function SettingsTab() {
     <div className="space-y-6 p-6">
       {/* Header */}
       <div>
-        <h2 className="text-2xl text-gray-900 font-medium">Settings</h2>
-        <p className="text-sm text-gray-600 mt-1">
+        <h2 className="text-2xl text-white font-medium">Settings</h2>
+        <p className="text-sm text-gray-500 mt-1">
           Manage publishing, integrations, and your account
         </p>
       </div>
 
       {/* Tabs */}
-      <div className="border-b  border-gray-200">
+      <div className="border-b  border-gray-800">
         <div className="flex gap-8">
           {tabs.map((tab) => (
             <button
@@ -328,7 +328,7 @@ export function SettingsTab() {
               onClick={() => setActiveTab(tab.id)}
               className={`pb-3 text-sm font-medium transition-colors ${
                 activeTab === tab.id
-                  ? "text-green-600 border w-27 py-2 rounded-2xl rounded-b-none"
+                  ? "text-green-600 bg-[rgba(83,248,112,0.1)] border w-27 py-2 rounded-2xl rounded-b-none"
                   : "text-gray-600 hover:text-gray-900"
               }`}
             >
@@ -342,24 +342,24 @@ export function SettingsTab() {
       <div>
         {/* Publishing Tab */}
         {activeTab === "publishing" && (
-          <div className="border border-gray-200 rounded-lg p-6  space-y-6">
+          <div className="border border-gray-800 rounded-lg p-6  space-y-6">
             <div>
-              <h3 className="text-base  font-medium text-gray-900 mb-1">
+              <h3 className="text-base  font-medium text-white mb-1">
                 Publishing
               </h3>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-gray-500">
                 Control how and when your blog posts go live
               </p>
             </div>
 
             {/* Auto-publish Posts */}
-            <div className="border  border-gray-200 max-w-[654px] rounded-[10px] ">
+            <div className="border  border-gray-800 max-w-[654px] rounded-[10px] ">
               <div className=" space-y-2">
-                <label className="text-sm font-medium p-3 text-gray-900">
+                <label className="text-sm font-medium p-3 text-white">
                   Auto-publish posts
                 </label>
                 <div className="flex justify-between p-3">
-                  <p className="text-xs text-gray-600 mb-3">
+                  <p className="text-xs text-gray-500 mb-3">
                     When turned on, new posts will be published automatically
                     after generation
                   </p>
@@ -372,15 +372,15 @@ export function SettingsTab() {
                     />
                   </div>
                 </div>
-                <div className="border w-full border-gray-200" />
+                <div className="border w-full border-gray-800" />
               </div>
 
               {/* Publishing Schedule */}
               <div className="space-y-2">
-                <label className="text-sm font-medium p-3 text-gray-900">
+                <label className="text-sm font-medium p-3 text-white">
                   Publishing Schedule
                 </label>
-                <p className="text-xs text-gray-600 p-3 mb-3">
+                <p className="text-xs text-gray-500 p-3 mb-3">
                   Posts will be published based on your selected schedule
                 </p>
                 <div className="flex px-3 ">
@@ -390,7 +390,7 @@ export function SettingsTab() {
                       handleSettingChange("publishingFrequency", value)
                     }
                   >
-                    <SelectTrigger className="w-28 h-9 rounded-r-none border-gray-200 text-sm">
+                    <SelectTrigger className="w-28 h-9 rounded-r-none border-gray-800 text-sm">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -406,7 +406,7 @@ export function SettingsTab() {
                       handleSettingChange("publishingTime", value)
                     }
                   >
-                    <SelectTrigger className="w-28 h-9 rounded-l-none border-gray-200 text-sm">
+                    <SelectTrigger className="w-28 h-9 rounded-l-none border-gray-800 text-sm">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -420,12 +420,12 @@ export function SettingsTab() {
 
               {/* Queue Size */}
               <div className="py-3 space-y-2">
-                <div className="border border-gray-200 " />
+                <div className="border border-gray-800 " />
 
-                <label className="text-sm font-medium p-3 text-gray-900">
+                <label className="text-sm font-medium p-3 text-white">
                   Queue size
                 </label>
-                <p className="text-xs text-gray-600 p-3 mb-3">
+                <p className="text-xs text-gray-500 p-3 mb-3">
                   Only this number of ready posts will be kept in the publishing
                   queue at a time
                 </p>
@@ -435,7 +435,7 @@ export function SettingsTab() {
                     handleSettingChange("queueSize", value)
                   }
                 >
-                  <SelectTrigger className="w-28 h-9   ml-4 border-gray-200 text-sm">
+                  <SelectTrigger className="w-28 h-9   ml-4 border-gray-800 text-sm">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -449,15 +449,15 @@ export function SettingsTab() {
 
             <div className="flex justify-end gap-2">
               <Button
-                variant="outline"
-                className="h-9"
+               
+                className="h-9 bg-transparent text-gray-100 border border-gray-600"
                 onClick={() => handleResetSettings()}
                 disabled={!isDirty}
               >
                 Reset
               </Button>
               <Button
-                className="h-9 px-4 bg-gray-900 text-white"
+                className="h-9 bg-transparent text-gray-100 border border-gray-600"
                 onClick={() => handleSaveSettings()}
                 disabled={!isDirty}
               >
@@ -477,28 +477,28 @@ export function SettingsTab() {
 
         {/* Billing Tab */}
         {activeTab === "connections" && (
-          <div className="border border-gray-200 rounded-lg p-6 space-y-6">
+          <div className="border border-gray-800 rounded-lg p-6 space-y-6">
             <div>
-              <h3 className="text-base font-medium text-gray-900 mb-1">
+              <h3 className="text-base font-medium text-white mb-1">
                 Connections
               </h3>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-gray-500">
                 Choose where your posts should be published
               </p>
             </div>
 
-            <div className="border border-gray-300 max-w-[654px] p-4 rounded-[10px]">
-              <h4 className="text-sm font-medium text-gray-900 mb-3">
+            <div className="border border-gray-800 max-w-[654px] p-4 rounded-[10px]">
+              <h4 className="text-sm font-medium text-white mb-3">
                 Connected Websites
               </h4>
               <div className="space-y-2">
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded">
+                <div className="flex items-center justify-between p-3 bg-transparent rounded">
                   <span className="text-sm text-gray-700">www.delani.pro</span>
                   <span className="text-xs text-green-600 font-medium">
                     Active
                   </span>
                 </div>
-                <div className="flex items-center justify-between px-3 bg-gray-50 rounded">
+                <div className="flex items-center justify-between px-3 bg-transparent rounded">
                   <span className="text-sm text-gray-700">
                     www.lander.studio
                   </span>
@@ -520,24 +520,24 @@ export function SettingsTab() {
 
         {/* Preferences Tab */}
         {activeTab === "preferences" && (
-          <div className="border border-gray-200 rounded-lg p-6">
+          <div className="border border-gray-800 rounded-lg p-6">
             <div className="mb-6">
-              <h3 className="text-base font-medium text-gray-900 mb-1">
+              <h3 className="text-base font-medium text-white mb-1">
                 Preferences
               </h3>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-gray-500">
                 Customize how your posts are generated
               </p>
             </div>
 
             <div className="grid grid-cols-1 gap-6">
-              <div className="border space-y-3 rounded-[10px] border-gray-200 max-w-[654px] ">
+              <div className="border space-y-3 rounded-[10px] border-gray-800 max-w-[654px] ">
                 <div className="space-y-2 p-4">
-                  <label className="text-sm font-medium text-gray-900">
+                  <label className="text-sm font-medium text-white">
                     Default Language
                   </label>
                   <div className="flex justify-between">
-                    <p className="text-xs py-2 text-gray-600 mb-3">
+                    <p className="text-xs py-2 text-gray-500 mb-3">
                       Select the language your posts will be written in by
                       default
                     </p>
@@ -547,7 +547,7 @@ export function SettingsTab() {
                         handleSettingChange("defaultLanguage", value)
                       }
                     >
-                      <SelectTrigger className="h-9 w-27 border-gray-200 text-sm">
+                      <SelectTrigger className="h-9 w-27 border-gray-800 text-sm">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -560,12 +560,12 @@ export function SettingsTab() {
                 </div>
 
                 <div className="space-y-2">
-                  <div className="border border-gray-200" />
-                  <label className="text-sm font-medium text-gray-900 p-3">
+                  <div className="border border-gray-800" />
+                  <label className="text-sm font-medium text-white p-3">
                     Writing tone
                   </label>
                   <div className="flex justify-between p-3">
-                    <p className="text-xs text-gray-600 mb-3">
+                    <p className="text-xs text-gray-500 mb-3">
                       Defines the overall style and personality of your content
                     </p>
                     <Select
@@ -574,7 +574,7 @@ export function SettingsTab() {
                         handleSettingChange("writingTone", value)
                       }
                     >
-                      <SelectTrigger className="h-9 border-gray-200 text-sm">
+                      <SelectTrigger className="h-9 border-gray-800 text-sm">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -589,12 +589,12 @@ export function SettingsTab() {
                 </div>
 
                 <div className="space-y-2 ">
-                  <div className="border  border-gray-200" />
-                  <label className="text-sm font-medium p-3 text-gray-900">
+                  <div className="border  border-gray-800" />
+                  <label className="text-sm font-medium p-3 text-white">
                     Post length
                   </label>
                   <div className="flex justify-between">
-                    <p className="text-xs text-gray-600 p-3 mb-3">
+                    <p className="text-xs text-gray-500 p-3 mb-3">
                       Controls how detailed each generated post will be
                     </p>
                     <div className="flex items-center p-3 gap-2">
@@ -605,7 +605,7 @@ export function SettingsTab() {
                           handleSettingChange("postLength", e.target.value)
                         }
                         placeholder="e.g.1200"
-                        className="h-9 w-27 mr-1 border-gray-200 text-sm"
+                        className="h-9 w-27 mr-1 border-gray-800 text-sm"
                       />
                     </div>
                     {/* <span className="text-xs text-gray-600">words</span> */}
@@ -613,12 +613,12 @@ export function SettingsTab() {
                 </div>
 
                 <div className="space-y-2 ">
-                  <div className="border border-gray-200" />
-                  <label className="text-sm font-medium p-4 text-gray-900">
+                  <div className="border border-gray-800" />
+                  <label className="text-sm font-medium p-4 text-white">
                     SEO optimization level
                   </label>
                   <div className="flex justify-between ">
-                    <p className="text-xs text-gray-600 p-4 mb-3">
+                    <p className="text-xs text-gray-500 p-4 mb-3">
                       Controls how heavily keywords are used
                     </p>
                     <Select
@@ -627,7 +627,7 @@ export function SettingsTab() {
                         handleSettingChange("seoLevel", value)
                       }
                     >
-                      <SelectTrigger className="h-9 mr-4  border-gray-200 text-sm">
+                      <SelectTrigger className="h-9 mr-4  border-gray-800 text-sm">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -647,25 +647,25 @@ export function SettingsTab() {
 
         {/* Notifications Tab */}
         {activeTab === "notifications" && (
-          <div className="border border-gray-200 rounded-lg p-6">
+          <div className="border border-gray-800 rounded-lg p-6">
             <div className="mb-6">
-              <h3 className="text-base font-medium text-gray-900 mb-1">
+              <h3 className="text-base font-medium text-white mb-1">
                 Notifications
               </h3>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-gray-500">
                 Choose which updates you want to receive
               </p>
             </div>
 
             <div className="grid grid-cols-2 gap-8">
               {/* Left Column */}
-              <div className="space-y-6 border rounded-[10px] border-gray-200">
+              <div className="space-y-6 border rounded-[10px] border-gray-800">
                 <div className="flex justify-between p-4 gap-4">
                   <div>
-                    <p className="text-sm font-medium text-gray-900">
+                    <p className="text-sm font-medium text-white">
                       Post Published
                     </p>
-                    <p className="text-xs text-gray-600 mt-1">
+                    <p className="text-xs text-gray-500 mt-1">
                       Get notified when a post goes live
                     </p>
                   </div>
@@ -677,14 +677,14 @@ export function SettingsTab() {
                     className="mt-0.5"
                   />
                 </div>
-                <div className="border border-gray-200" />
+                <div className="border border-gray-800" />
 
                 <div className="flex justify-between p-4 gap-4">
                   <div>
-                    <p className="text-sm font-medium text-gray-900">
+                    <p className="text-sm font-medium text-white">
                       Competitor Scan Complete
                     </p>
-                    <p className="text-xs text-gray-600 mt-1">
+                    <p className="text-xs text-gray-500 mt-1">
                       Know when competitor analysis finishes
                     </p>
                   </div>
@@ -696,35 +696,47 @@ export function SettingsTab() {
                     className="mt-0.5"
                   />
                 </div>
-                <div className="border border-gray-200" />
+                <div className="border border-gray-800" />
                 <div className="flex justify-between p-4 gap-4">
                   <div>
-                    <p className="text-sm font-medium text-gray-900">
+                    <p className="text-sm font-medium text-white">
                       Keyword Synced
                     </p>
-                    <p className="text-xs text-gray-600 mt-1">
+                    <p className="text-xs text-gray-500 mt-1">
                       Receive updates when new keywords are added
                     </p>
                   </div>
-                  <Switch
-                    checked={settings.notifyKeywordSynced}
-                    onCheckedChange={(value) =>
-                      handleSettingChange("notifyKeywordSynced", value)
-                    }
-                    className="mt-0.5"
-                  />
+   <Switch
+  checked={settings.notifyKeywordSynced}
+  onCheckedChange={(value) =>
+    handleSettingChange("notifyKeywordSynced", value)
+  }
+  className="
+    mt-0.5
+    h-[18px] w-[34px]
+    rounded-full
+    border border-[#53F870]
+
+    bg-[#020D05]
+    data-[state=checked]:bg-[#020D05]
+    data-[state=unchecked]:bg-[#020D05]
+
+    focus-visible:ring-0
+    focus-visible:ring-offset-0
+  "
+/>
                 </div>
               </div>
 
               {/* Right Column */}
               <div className="space-y-6 ">
-                <div className="border border-gray-200 rounded-[10px] max-w-[654px] h-[220px] space-y-9">
+                <div className="border border-gray-800 rounded-[10px] max-w-[654px] h-[220px] space-y-9">
                   <div className="flex justify-between mt-5 px-6 py-2  gap-4">
                     <div>
-                      <p className="text-sm font-medium text-gray-900">
+                      <p className="text-sm font-medium text-white">
                         Draft Generated
                       </p>
-                      <p className="text-xs text-gray-600 mt-1">
+                      <p className="text-xs text-gray-500 mt-1">
                         Be notified when a new draft is ready to review
                       </p>
                     </div>
@@ -736,14 +748,14 @@ export function SettingsTab() {
                       className="mt-0.5"
                     />
                   </div>
-                  <div className="border border-gray-200" />
+                  <div className="border border-gray-800" />
 
                   <div className="flex justify-between mt-5 px-6  gap-4">
                     <div>
-                      <p className="text-sm font-medium text-gray-900">
+                      <p className="text-sm font-medium text-white">
                         Weekly Performance Summary
                       </p>
-                      <p className="text-xs text-gray-600 mt-1">
+                      <p className="text-xs text-gray-500 mt-1">
                         Get a weekly overview of your content activity
                       </p>
                     </div>
@@ -763,21 +775,21 @@ export function SettingsTab() {
 
         {/* Account Tab */}
         {activeTab === "account" && (
-          <div className="border border-gray-200 rounded-lg p-6">
+          <div className="border border-gray-800 rounded-lg p-6">
             <div className="mb-6">
-              <h3 className="text-base font-medium text-gray-900 mb-1">
+              <h3 className="text-base font-medium text-white mb-1">
                 Account
               </h3>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-gray-500">
                 Manage your account details and preferences
               </p>
             </div>
 
             <div className="grid grid-cols-2 gap-12">
               {/* Left Column */}
-              <div className="space-y-0 border border-gray-200 rounded-lg ">
+              <div className="space-y-0 border border-gray-800 rounded-lg ">
                 {/* Profile Section */}
-                <div className="flex items-center justify-between p-2 pb-4 border-b border-gray-200">
+                <div className="flex items-center justify-between p-2 pb-4 border-b border-gray-800">
                   <div className="flex items-center p-2 gap-4">
                     {currentUser?.user_metadata?.avatar_url ? (
                       <Image
@@ -793,22 +805,22 @@ export function SettingsTab() {
                       </div>
                     )}
                     <div>
-                      <p className="text-sm font-medium text-gray-900">
+                      <p className="text-sm font-medium text-white">
                         {currentUser?.user_metadata?.full_name || currentUser?.email || "Your profile"}
                       </p>
-                      <p className="text-xs text-gray-600">{userPackage ? `${userPackage.charAt(0).toUpperCase() + userPackage.slice(1)} Tier` : "Free Tier"}</p>
+                      <p className="text-xs text-gray-500">{userPackage ? `${userPackage.charAt(0).toUpperCase() + userPackage.slice(1)} Tier` : "Free Tier"}</p>
                     </div>
                   </div>
-                  <button className="h-8 px-3 text-xs hover:bg-gray-800 text-black">
+                  <button className="h-8 px-3 text-xs hover:bg-gray-800 text-white">
                     Upgrade
                   </button>
                 </div>
 
                 {/* Email Section */}
-                <div className="flex items-center justify-between px-4 py-4 border-b border-gray-200">
+                <div className="flex items-center justify-between px-4 py-4 border-b border-gray-800">
                   <div>
-                    <p className="text-sm font-medium text-gray-900">Email</p>
-                    <p className="text-xs text-gray-600">
+                    <p className="text-sm font-medium text-white">Email</p>
+                    <p className="text-xs text-gray-500">
                       {currentUser?.email || "admin@delani.pro"}
                     </p>
                   </div>
@@ -823,7 +835,7 @@ export function SettingsTab() {
                 {/* Password Section */}
                 <div className="flex items-center px-4 py-5 justify-between pt-4">
                   <div>
-                    <p className="text-sm font-medium text-gray-900">
+                    <p className="text-sm font-medium text-white">
                       Password
                     </p>
                     <p className="text-xs text-gray-600">••••••••</p>
@@ -840,13 +852,13 @@ export function SettingsTab() {
               {/* Right Column */}
               <div className="space-y-6">
                 {/* API Access Status */}
-                <div className="space-y-3 border rounded-[10px] border-gray-200 p-4">
+                <div className="space-y-3 border rounded-[10px] border-gray-800 p-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h4 className="text-sm font-medium text-gray-900">
+                      <h4 className="text-sm font-medium text-white">
                         API access status
                       </h4>
-                      <p className="text-xs text-gray-600">
+                      <p className="text-xs text-gray-500">
                         Know when competitor analysis finishes
                       </p>
                     </div>
@@ -899,31 +911,31 @@ export function SettingsTab() {
 
         {/* Billing Tab */}
           {activeTab === "billing" && (
-          <div className="border border-gray-200 rounded-lg p-6 space-y-6">
+          <div className="border border-gray-800 rounded-lg p-6 space-y-6">
             <div>
-              <h3 className="text-base font-medium text-gray-900 mb-1">
+              <h3 className="text-base font-medium text-white mb-1">
                 Billing & Plan
               </h3>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-gray-500">
                 Manage your subscription settings and usage info
               </p>
             </div>
-            <div className="border border-gray-200 max-w-[654px] rounded-lg ">
+            <div className="border border-gray-800 max-w-[654px] rounded-lg ">
               <div>
-                <h4 className="text-sm p-3 font-medium text-gray-900 px-4 mb-3">
+                <h4 className="text-sm p-3 font-medium text-white px-4 mb-3">
                   Current plan
                 </h4>
-                <p className="text-sm px-4 text-gray-700">Free Tier</p>
+                <p className="text-sm px-4 text-gray-500">Free Tier</p>
               </div>
-              <div className="border border-gray-200" />
+              <div className="border border-gray-800" />
               <div className="space-y-3">
-                <h4 className="text-sm font-medium p-4 text-gray-900">
+                <h4 className="text-sm font-medium p-4 text-white">
                   Usage summary
                 </h4>
                 <div className="space-y-2 text-sm p-2 px-4">
                   <div className="flex justify-between ">
-                    <span className="text-gray-600">Websites</span>
-                    <span className="text-gray-900">5 / 10</span>
+                    <span className="text-gray-500">Websites</span>
+                    <span className="text-gray-500">5 / 10</span>
                   </div>
                   {/* <div className="w-full h-2 bg-gray-200 rounded">
                   <div className="h-full w-1/2 bg-green-500 rounded" />
@@ -931,8 +943,8 @@ export function SettingsTab() {
                 </div>
                 <div className="space-y-2 text-sm p-2 px-4">
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Keywords</span>
-                    <span className="text-gray-900">25 / 100</span>
+                    <span className="text-gray-500">Keywords</span>
+                    <span className="text-gray-500">25 / 100</span>
                   </div>
                   {/* <div className="w-full h-2 bg-gray-200 rounded">
                   <div className="h-full w-1/4 bg-blue-500 rounded" />
@@ -940,8 +952,8 @@ export function SettingsTab() {
                 </div>
                 <div className="space-y-2 text-sm p-2 px-4">
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Monthly posts</span>
-                    <span className="text-gray-900">8 / 20</span>
+                    <span className="text-gray-500">Monthly posts</span>
+                    <span className="text-gray-500">8 / 20</span>
                   </div>
                   {/* <div className="w-full h-2 bg-gray-200 rounded">
                   <div className="h-full w-2/5 bg-purple-500 rounded" />
@@ -949,9 +961,9 @@ export function SettingsTab() {
                 </div>
               </div>
 
-              <div className="pt-4 p-1 border-t border-gray-200 flex justify-between">
+              <div className="pt-4 p-1 border-t border-gray-800 flex justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-900 px-3 mb-2">
+                  <p className="text-sm font-medium text-white px-3 mb-2">
                     Subscription
                   </p>
                   <p className="text-xs text-gray-600 px-3 ">
