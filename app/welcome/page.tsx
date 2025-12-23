@@ -2,18 +2,15 @@
 import Image from "next/image";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { ChevronLeft } from "lucide-react";
-import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "@/components/ui/dialog";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { Button } from "@/components/ui/button";
+import { ChevronLeft, Zap, X } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/client";
 
 export default function WelcomePage() {
-    const [tab, setTab] = useState("tab1");
+  const [tab, setTab] = useState("tab1");
   const toast = useToast();
-  const [ isDialogOpen, setIsDialogOpen ] = useState(true)
   const [websiteName, setWebsiteName] = useState("");
   const [competitor1, setCompetitor1] = useState("");
   const [competitor2, setCompetitor2] = useState("");
@@ -24,46 +21,45 @@ export default function WelcomePage() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const validateTab1 = () => {
-  if (!websiteName.trim()) {
-    toast.showToast({
-      title: "Missing Website URL",
-      description: "Please enter your website URL to continue.",
-      type: "error",
-    });
-    return false;
-  }
-  return true;
-};
+    if (!websiteName.trim()) {
+      toast.showToast({
+        title: "Missing Website URL",
+        description: "Please enter your website URL to continue.",
+        type: "error",
+      });
+      return false;
+    }
+    return true;
+  };
 
-const validateTab2 = () => {
-  if (!competitor1.trim() || !competitor2.trim() || !competitor3.trim()) {
-    toast.showToast({
-      title: "Missing Competitors",
-      description: "Please enter all 3 competitors to continue.",
-      type: "error",
-    });
-    return false;
-  }
-  return true;
-};
+  const validateTab2 = () => {
+    if (!competitor1.trim() || !competitor2.trim() || !competitor3.trim()) {
+      toast.showToast({
+        title: "Missing Competitors",
+        description: "Please enter all 3 competitors to continue.",
+        type: "error",
+      });
+      return false;
+    }
+    return true;
+  };
 
-const validateTab3 = () => {
-  if (!keyword1.trim() || !keyword2.trim() || !keyword3.trim()) {
-    toast.showToast({
-      title: "Missing Keywords",
-      description: "Please enter all 3 keywords before submitting.",
-      type: "error",
-    });
-    return false;
-  }
-  return true;
-};
+  const validateTab3 = () => {
+    if (!keyword1.trim() || !keyword2.trim() || !keyword3.trim()) {
+      toast.showToast({
+        title: "Missing Keywords",
+        description: "Please enter all 3 keywords before submitting.",
+        type: "error",
+      });
+      return false;
+    }
+    return true;
+  };
 
-const handleNext = async () => {
+  const handleNext = async () => {
     setIsLoading(true);
     
     try {
-      // Get current user
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
@@ -76,9 +72,8 @@ const handleNext = async () => {
         return;
       }
   
-      // Prepare onboarding data
       const onboardingData = {
-        clientDomain: websiteName.trim(), // Client website URL
+        clientDomain: websiteName.trim(),
         competitors: [
           competitor1.trim(),
           competitor2.trim(),
@@ -94,7 +89,6 @@ const handleNext = async () => {
   
       console.log("Onboarding Data:", onboardingData);
   
-      // Call onboarding API
       const response = await fetch('/api/onboarding', {
         method: 'POST',
         headers: { 
@@ -111,19 +105,15 @@ const handleNext = async () => {
   
       console.log("✅ Onboarding successful:", data);
       
-      // Show success toast with article generation message
       toast.showToast({
         title: "Website Added Successfully!",
         description: `Found ${data.totalKeywords} keywords. 30 articles are being generated in the background.`,
         type: "success",
       });
       
-      // Small delay to show the toast before navigation
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Close dialog and navigate to dashboard
-      setIsDialogOpen(false);
-      router.push("/");
+      router.push("/dashboard");
       
     } catch (error) {
       console.error("Error during onboarding:", error);
@@ -137,236 +127,290 @@ const handleNext = async () => {
     }
   };
 
-    return (
-        <div className="dialog flex gap-[60px] w-full">
-              {/* Left section */}
-              <div className="relative w-[650px] h-[780px] bg-[linear-gradient(to_top,rgb(31,135,61)_0%,rgb(44,162,74)_100%)] overflow-hidden p-10 flex flex-col gap-10">
-                <div className="ml-10">
-                  <Image src="/dialog_logo.png" alt="" width={50} height={50} />
-                </div>
-                <div className="flex flex-col gap-4 relative items-center justify-center mt-14">
-                  <h1 className="text-white font-normal text-[38px]">
-                    A few clicks away <br />
-                    from generating your <br />
-                    SEO optimized blogs
-                  </h1>
-                  <p className="text-white font-normal ml-10 text-sm max-w-lg">
-                    Instantly analyze your niche, target high-volume keywords, and{" "}
-                    <br />
-                    publish content that converts.
-                  </p>
-                  <Image
-                    src="/dialog_bg.png"
-                    alt=""
-                    width={650}
-                    height={420}
-                    className="absolute -right-38 -bottom-64"
-                  />
-                </div>
-                <Image
-                  src="/line1.png"
-                  alt=""
-                  width={968}
-                  height={558}
-                  className="absolute top-100 left-0"
-                />
-                <Image
-                  src="/line2.png"
-                  alt=""
-                  width={682}
-                  height={398}
-                  className="absolute top-82 left-0"
-                />
-                <Image
-                  src="/line3.png"
-                  alt=""
-                  width={1148}
-                  height={662}
-                  className="absolute top-16 left-0"
+  const getStepNumber = () => {
+    if (tab === "tab1") return "1 of 5";
+    if (tab === "tab2") return "2 of 5";
+    if (tab === "tab3") return "5 of 5";
+    return "1 of 5";
+  };
+
+  const getStepTitle = () => {
+    if (tab === "tab1") return "Let's start with your website";
+    if (tab === "tab2") return "Who are your top 3 competitors?";
+    if (tab === "tab3") return "Add 3 keywords related to your business";
+    return "";
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-black via-[#0a2818] to-black relative overflow-hidden flex items-center justify-center">
+      {/* Background Image */}
+      <Image
+        src="/planet.png"
+        alt="background"
+        fill
+        className="absolute bottom-0 right-0 object-cover opacity-40 pointer-events-none"
+        priority
+      />
+
+      {/* Background decorative elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-20 left-1/2 -translate-x-1/2 w-96 h-96 bg-green-500/5 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-green-500/10 to-transparent"></div>
+      </div>
+
+      {/* Main Content */}
+      <div className="relative z-10 w-full max-w-2xl mx-auto px-4 py-12">
+        {/* Header */}
+        <div className="text-center mb-12">
+          <div className="flex items-center justify-center mb-8">
+            <div className=" rounded-3xl p-4">
+             <Image
+             src="/logo.png"
+            height={71}
+            width={71}
+             alt="icon"
+             />
+            </div>
+          </div>
+          <p className="text-green-400/70 text-sm tracking-wider mb-6">
+            Getting your dashboard ready
+          </p>
+          <h4 className="text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-green-300 mb-6">
+            CopyRank
+          </h4>
+        </div>
+
+        {/* Form Container */}
+        <div className="bg-black/60 backdrop-blur-md border border-green-500/20 rounded-2xl p-8 space-y-8">
+          {/* Step Title */}
+          <div className="text-center space-y-2">
+            <h2 className="text-2xl font-semibold text-white">
+              {getStepTitle()}
+            </h2>
+          </div>
+
+          {/* Tab 1 - Website */}
+          {tab === "tab1" && (
+            <div className="space-y-6">
+              <div className="space-y-4">
+                <Input
+                  type="url"
+                  placeholder="www.mywebsite.com"
+                  value={websiteName}
+                  onChange={(e) => setWebsiteName(e.target.value)}
+                  className="w-full h-12 bg-green-500/10 border border-green-500/30 rounded-lg text-white placeholder-gray-500 focus:border-green-500/60 focus:ring-green-500/20"
                 />
               </div>
-              {/* Right section */}
-              <div className="py-10 pr-10 flex flex-col gap-[140px] w-[700px]">
-                <div className="w-[600px] text-right">
-                  <p className="text-[15px] font-normal text-[#00000080]">
-                    Having troubles?{" "}
-                    <span className="text-[#5baf57] font-normal cursor-pointer">
-                      Get Help
-                    </span>
-                  </p>
+              <Button
+                onClick={() => {
+                  if (validateTab1()) {
+                    setTab("tab2");
+                  }
+                }}
+                className="w-full h-12 bg-green-500 hover:bg-green-600 text-black font-semibold rounded-lg transition-colors"
+              >
+                Next
+              </Button>
+              <p className="text-center text-gray-500 text-sm">{getStepNumber()}</p>
+            </div>
+          )}
+
+          {/* Tab 2 - Competitors */}
+          {tab === "tab2" && (
+            <div className="space-y-6">
+              <div className="space-y-3">
+                <Input
+                  type="text"
+                  placeholder="www.competitor1.com"
+                  value={competitor1}
+                  onChange={(e) => setCompetitor1(e.target.value)}
+                  className="w-full h-12 bg-green-500/10 border border-green-500/30 rounded-lg text-white placeholder-gray-500 focus:border-green-500/60 focus:ring-green-500/20"
+                />
+                <Input
+                  type="text"
+                  placeholder="www.competitor2.com"
+                  value={competitor2}
+                  onChange={(e) => setCompetitor2(e.target.value)}
+                  className="w-full h-12 bg-green-500/10 border border-green-500/30 rounded-lg text-white placeholder-gray-500 focus:border-green-500/60 focus:ring-green-500/20"
+                />
+                <Input
+                  type="text"
+                  placeholder="www.competitor3.com"
+                  value={competitor3}
+                  onChange={(e) => setCompetitor3(e.target.value)}
+                  className="w-full h-12 bg-green-500/10 border border-green-500/30 rounded-lg text-white placeholder-gray-500 focus:border-green-500/60 focus:ring-green-500/20"
+                />
+              </div>
+
+              {/* Competitor Tags Display */}
+              {(competitor1 || competitor2 || competitor3) && (
+                <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
+                  <div className="flex flex-wrap gap-2">
+                    {competitor1 && (
+                      <div className="flex items-center gap-2 bg-green-500/20 border border-green-500/30 rounded-full px-3 py-1">
+                        <span className="text-sm text-green-300">{competitor1}</span>
+                        <button
+                          onClick={() => setCompetitor1("")}
+                          className="text-green-400 hover:text-green-300"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
+                    {competitor2 && (
+                      <div className="flex items-center gap-2 bg-green-500/20 border border-green-500/30 rounded-full px-3 py-1">
+                        <span className="text-sm text-green-300">{competitor2}</span>
+                        <button
+                          onClick={() => setCompetitor2("")}
+                          className="text-green-400 hover:text-green-300"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
+                    {competitor3 && (
+                      <div className="flex items-center gap-2 bg-green-500/20 border border-green-500/30 rounded-full px-3 py-1">
+                        <span className="text-sm text-green-300">{competitor3}</span>
+                        <button
+                          onClick={() => setCompetitor3("")}
+                          className="text-green-400 hover:text-green-300"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                {tab === "tab1" && (
-                  <div className="flex flex-col gap-60">
-                    <div className="flex flex-col gap-[30px]">
-                      <div>
-                        <h1 className="text-[#000000B3] text-lg font-normal">
-                          Website URL
-                        </h1>
-                        <p className="text-[15px] text-[#00000080] font-normal">
-                          Start with your domain
-                        </p>
-                      </div>
-                      <div className="space-y-5">
-                        {/* Website Name */}
-                        <div>
-                          <Input
-                            type="text"
-                            placeholder="Enter your website URL"
-                            value={websiteName}
-                            onChange={(e) => setWebsiteName(e.target.value)}
-                            className="w-[500px] h-[50px] border border-solid border-[#0000001a] focus-visible:border focus-visible:border-[#0000001a] focus-visible:ring-0 placeholder:text-[#0000004d]"
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <button
-                          onClick={() => {
-                            if (validateTab1()) {
-                              setTab("tab2");
-                            }
-                          }}
-                          className="bg-[#5baf57] border border-[#0000001a] text-white px-[60px] py-1 w-[170px] h-[50px] rounded-[10px] cursor-pointer"
-                        >
-                          Next
-                        </button>
-                      </div>
-                      <div>
-                        <p className="text-sm text-[#0000004D] font-normal">1 of 3</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                {tab === "tab2" && (
-                  <div className="flex flex-col gap-30">
-                    <div className="flex flex-col gap-[30px]">
-                      <div>
-                        <h1 className="text-[#000000B3] text-lg font-normal">
-                          Top 3 Competitiors
-                        </h1>
-                        <p className="text-[15px] text-[#00000080] font-normal">
-                          Who are you Beating
-                        </p>
-                      </div>
-                      <div className="space-y-5">
-                        {/* Competitors Name */}
-                        <div className="space-y-2">
-                          <Input
-                            type="text"
-                            placeholder="Competitor 1"
-                            value={competitor1}
-                            onChange={(e) => setCompetitor1(e.target.value)}
-                            className="w-[500px] h-[50px] border border-solid border-[#0000001a] focus-visible:border focus-visible:border-[#0000001a] focus-visible:ring-0 placeholder:text-[#0000004d]"
-                          />
-                          <Input
-                            type="text"
-                            placeholder="Competitor 2"
-                            value={competitor2}
-                            onChange={(e) => setCompetitor2(e.target.value)}
-                            className="w-[500px] h-[50px] border border-solid border-[#0000001a] focus-visible:border focus-visible:border-[#0000001a] focus-visible:ring-0 placeholder:text-[#0000004d]"
-                          />
-                          <Input
-                            type="text"
-                            placeholder="Competitor 3"
-                            value={competitor3}
-                            onChange={(e) => setCompetitor3(e.target.value)}
-                            className="w-[500px] h-[50px] border border-solid border-[#0000001a] focus-visible:border focus-visible:border-[#0000001a] focus-visible:ring-0 placeholder:text-[#0000004d]"
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <button
-                          onClick={() => {
-                            if (validateTab2()) {
-                              setTab("tab3");
-                            }
-                          }}
-                          className="bg-[#5baf57] border border-[#0000001a] text-white px-[60px] py-1 w-[170px] h-[50px] rounded-[10px] cursor-pointer"
-                        >
-                          Next
-                        </button>
-                      </div>
-                      <div>
-                        <p className="text-sm text-[#0000004D] font-normal">2 of 3</p>
-                      </div>
-                    </div>
-                    <div>
-                        <button
-                        onClick={() => setTab('tab1')}
-                        className="flex text-[#000000b3] text-[15px] items-center cursor-pointer"
-                        ><ChevronLeft />Back</button>
-                    </div>
-                  </div>
-                )}
-                {tab === "tab3" && (
-                  <div className="flex flex-col gap-30">
-                    <div className="flex flex-col gap-[30px]">
-                      <div>
-                        <h1 className="text-[#000000B3] text-lg font-normal">
-                          Keywords
-                        </h1>
-                        <p className="text-[15px] text-[#00000080] font-normal">
-                          What do you want rank for?
-                        </p>
-                      </div>
-                      <div className="space-y-5">
-                        {/* Website Name */}
-                        <div className="space-y-2">
-                          <Input
-                            type="text"
-                            placeholder="Keyword 1"
-                            value={keyword1}
-                            onChange={(e) => setKeyword1(e.target.value)}
-                            className="w-[500px] h-[50px] border border-solid border-[#0000001a] focus-visible:border focus-visible:border-[#0000001a] focus-visible:ring-0 placeholder:text-[#0000004d]"
-                          />
-                          <Input
-                            type="text"
-                            placeholder="Keyword 2"
-                            value={keyword2}
-                            onChange={(e) => setKeyword2(e.target.value)}
-                            className="w-[500px] h-[50px] border border-solid border-[#0000001a] focus-visible:border focus-visible:border-[#0000001a] focus-visible:ring-0 placeholder:text-[#0000004d]"
-                          />
-                          <Input
-                            type="text"
-                            placeholder="Keyword 3"
-                            value={keyword3}
-                            onChange={(e) => setKeyword3(e.target.value)}
-                            className="w-[500px] h-[50px] border border-solid border-[#0000001a] focus-visible:border focus-visible:border-[#0000001a] focus-visible:ring-0 placeholder:text-[#0000004d]"
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <button
-                          onClick={() => {
-                            if (validateTab3()) {
-                              handleNext();
-                            }
-                          }}
-                          disabled={isLoading}
-                          className="bg-[#5baf57] border border-[#0000001a] text-white px-[60px] py-1 w-[170px] h-[50px] rounded-[10px] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {isLoading ? (
-                            <span className="flex items-center justify-center">
-                              <span className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></span>
-                              Submitting...
-                            </span>
-                          ) : (
-                            "Submit"
-                          )}
-                        </button>
-                      </div>
-                      <div>
-                        <p className="text-sm text-[#0000004D] font-normal">3 of 3</p>
-                      </div>
-                    </div>
-                    <div>
-                        <button
-                        onClick={() => setTab('tab2')}
-                        className="flex text-[#000000b3] text-[15px] items-center cursor-pointer"
-                        ><ChevronLeft />Back</button>
-                    </div>
-                  </div>
-                )}
+              )}
+
+              <Button
+                onClick={() => {
+                  if (validateTab2()) {
+                    setTab("tab3");
+                  }
+                }}
+                className="w-full h-12 bg-green-500 hover:bg-green-600 text-black font-semibold rounded-lg transition-colors"
+              >
+                Next
+              </Button>
+              <div className="flex items-center justify-between">
+                <button
+                  onClick={() => setTab("tab1")}
+                  className="flex items-center text-green-400 hover:text-green-300 transition-colors"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                  Back
+                </button>
+                <p className="text-gray-500 text-sm">{getStepNumber()}</p>
               </div>
             </div>
-    )
+          )}
+
+          {/* Tab 3 - Keywords */}
+          {tab === "tab3" && (
+            <div className="space-y-6">
+              <div className="space-y-3">
+                <Input
+                  type="text"
+                  placeholder="Keyword 1"
+                  value={keyword1}
+                  onChange={(e) => setKeyword1(e.target.value)}
+                  className="w-full h-12 bg-green-500/10 border border-green-500/30 rounded-lg text-white placeholder-gray-500 focus:border-green-500/60 focus:ring-green-500/20"
+                />
+                <Input
+                  type="text"
+                  placeholder="Keyword 2"
+                  value={keyword2}
+                  onChange={(e) => setKeyword2(e.target.value)}
+                  className="w-full h-12 bg-green-500/10 border border-green-500/30 rounded-lg text-white placeholder-gray-500 focus:border-green-500/60 focus:ring-green-500/20"
+                />
+                <Input
+                  type="text"
+                  placeholder="Keyword 3"
+                  value={keyword3}
+                  onChange={(e) => setKeyword3(e.target.value)}
+                  className="w-full h-12 bg-green-500/10 border border-green-500/30 rounded-lg text-white placeholder-gray-500 focus:border-green-500/60 focus:ring-green-500/20"
+                />
+              </div>
+
+              {/* Keyword Tags Display */}
+              {(keyword1 || keyword2 || keyword3) && (
+                <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
+                  <div className="flex flex-wrap gap-2">
+                    {keyword1 && (
+                      <div className="flex items-center gap-2 bg-green-500/20 border border-green-500/30 rounded-full px-3 py-1">
+                        <span className="text-sm text-green-300">{keyword1}</span>
+                        <button
+                          onClick={() => setKeyword1("")}
+                          className="text-green-400 hover:text-green-300"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
+                    {keyword2 && (
+                      <div className="flex items-center gap-2 bg-green-500/20 border border-green-500/30 rounded-full px-3 py-1">
+                        <span className="text-sm text-green-300">{keyword2}</span>
+                        <button
+                          onClick={() => setKeyword2("")}
+                          className="text-green-400 hover:text-green-300"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
+                    {keyword3 && (
+                      <div className="flex items-center gap-2 bg-green-500/20 border border-green-500/30 rounded-full px-3 py-1">
+                        <span className="text-sm text-green-300">{keyword3}</span>
+                        <button
+                          onClick={() => setKeyword3("")}
+                          className="text-green-400 hover:text-green-300"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <Button
+                onClick={() => {
+                  if (validateTab3()) {
+                    handleNext();
+                  }
+                }}
+                disabled={isLoading}
+                className="w-full h-12 bg-green-500 hover:bg-green-600 text-black font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isLoading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <span className="animate-spin rounded-full h-4 w-4 border-2 border-black border-t-transparent"></span>
+                    Submitting...
+                  </span>
+                ) : (
+                  "Submit"
+                )}
+              </Button>
+              <div className="flex items-center justify-between">
+                <button
+                  onClick={() => setTab("tab2")}
+                  className="flex items-center text-green-400 hover:text-green-300 transition-colors"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                  Back
+                </button>
+                <p className="text-gray-500 text-sm">{getStepNumber()}</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="mt-12 text-center text-gray-500 text-sm">
+          <p>Terms & Conditions • Privacy Policy</p>
+        </div>
+      </div>
+    </div>
+  );
 }

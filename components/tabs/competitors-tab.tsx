@@ -1112,9 +1112,9 @@ export function CompetitorsTab({
                                   (websites && websites.length > 0
                                     ? websites[0].id
                                     : undefined);
-                                await removeCompetitorFromWebsite(
+                                await removeKeywordFromWebsite(
                                   siteId,
-                                  d.domain
+                                  row.keyword
                                 );
                               }}
                             >
@@ -1260,9 +1260,9 @@ export function CompetitorsTab({
                                   (websites && websites.length > 0
                                     ? websites[0].id
                                     : undefined);
-                                await removeKeywordFromWebsite(
+                                await removeCompetitorFromWebsite(
                                   siteId,
-                                  row.keyword
+                                  d.domain
                                 );
                               }}
                             >
@@ -1297,7 +1297,7 @@ export function CompetitorsTab({
       {/* Add Competitor Dialog */}
       {showAddCompetitorDialog && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg w-full max-w-[550px] p-8 relative">
+          <div className="bg-black rounded-lg w-full max-w-[550px] p-8 relative">
             {/* Close Button */}
             <button
               onClick={() => {
@@ -1316,22 +1316,32 @@ export function CompetitorsTab({
                 {/* Add New Competitor State */}
                 <div className="space-y-6">
                   <div>
-                    <h2 className="text-2xl font-semibold text-gray-900">
+                    <h2 className="text-2xl font-semibold text-white">
                       Add New Competitor
                     </h2>
-                    <p className="text-sm text-gray-600 mt-1">
+                    <p className="text-sm text-gray-500 mt-1">
                       Type in the URL of your competitor
                     </p>
                   </div>
                   {/* Input Field */}
                   <div>
-                    <Input
-                      type="text"
-                      placeholder="www.example.com"
-                      value={competitorInput}
-                      onChange={(e) => setCompetitorInput(e.target.value)}
-                      className="h-10 border-gray-200 bg-gray-50"
-                    />
+              <Input
+  type="text"
+  placeholder="www.example.com"
+  value={competitorInput}
+  onChange={(e) => setCompetitorInput(e.target.value)}
+  className="
+    h-14
+    border border-[#2E9839]
+    bg-gradient-to-b
+    from-[rgba(46,152,57,0.38)]
+    to-[rgba(4,35,13,1)]
+    text-white
+    placeholder:text-white/70
+    focus-visible:ring-0
+    focus-visible:border-[#2E9839]
+  "
+/>
                   </div>
                   Tags
                   <div className="bg-gray-200 border border-gray-300 rounded-2xl w-full h-[81px]">
