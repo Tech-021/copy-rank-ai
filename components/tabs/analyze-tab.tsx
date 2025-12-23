@@ -866,7 +866,7 @@ export function AnalyzeTab({
             </CardContent>
           </Card>
           <Card className="bg-transparent px-4 py-5 w-[350px]">
-            <CardTitle className="text-lg font-normal text-[#000000b3] ml-4">SEO Competitors</CardTitle>
+            <CardTitle className="text-lg font-normal text-white ml-4">SEO Competitors</CardTitle>
             <CardContent>
                 <div  className="cursor-pointer flex items-center justify-between border px-4 pb-4 pt-5 rounded-t-xl border-gray-800 w-[300px]">
                   <div className="flex items-center gap-5">
