@@ -943,14 +943,7 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
         <div className="flex gap-3">
           <div className="flex ">
           <Button
-            className="gap-2 text-[#53f870] border-gray-200 bg-[#53f8701a] rounded-r-none hover:bg-[#53f8701a] cursor-pointer"
-            onClick={() => setShowAddKeywordsDialog(true)}
-          >
-            Add Keywords
-            <Plus className="w-4 h-4" />
-          </Button>
-          <Button
-            className="gap-2 cursor-pointer text-[#53f870] rounded-none hover:bg-[#53f8701a] bg-[#53f8701a] border-l border-r border-[#53f870]"
+            className="gap-2 cursor-pointer text-[#53f870] rounded-l-lg rounded-r-none hover:bg-[#53f8701a] bg-[#53f8701a] border-r border-[#53f870]"
             onClick={() => setShowImportDialog(true)}
           >
             Import CSV
@@ -1269,15 +1262,6 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
       <SyncCompetitorsDialog
         isOpen={showSyncDialog}
         onClose={() => setShowSyncDialog(false)}
-      />
-
-      {/* Add Keywords Dialog */}
-      <AddKeywordsDialog
-        isOpen={showAddKeywordsDialog}
-        onClose={() => setShowAddKeywordsDialog(false)}
-        onAdd={async (keywords) => {
-          await importKeywordsFromCSV(keywords)
-        }}
       />
 
       {/* Delete Keyword Dialog */}

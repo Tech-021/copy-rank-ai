@@ -67,7 +67,7 @@ export function CreatePostDialog({
               <div className="flex justify-center py-8">
                 <div className=" flex items-center justify-center">
                   <Image
-                  src="/check.png"
+                  src="/checkfordark.png"
                   height={81}
                   width={81}
                   alt="icon"

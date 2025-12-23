@@ -1034,7 +1034,7 @@ export function AnalyzeTab({
                         {/* Success Checkmark */}
                         <div className="flex justify-center py-8">
                           <Image
-                            src="/check.png"
+                            src="/checkfordark.png"
                             height={81}
                             width={81}
                             alt="Success"
