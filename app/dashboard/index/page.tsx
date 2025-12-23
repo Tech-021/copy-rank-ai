@@ -132,7 +132,7 @@ export default function DashboardIndexPage() {
           </Card>
 
           {/* Card 2 */}
-          <Card className="border border-t-0 border-b-0  rounded-none border-gray-800 bg-black shadow-xl">
+          <Card className="border border-t-0 border-b-0  rounded-none border-[#53f8704b] bg-black shadow-xl">
             <CardContent className="flex flex-col justify-start gap-8">
               <div className="flex justify-between">
                 <p className="text-xs font-medium text-white tracking-wide">
@@ -147,7 +147,7 @@ export default function DashboardIndexPage() {
           </Card>
 
           {/* Card 3 */}
-          <Card className="border  border-t-0 border-b-0   rounded-none border-gray-800 bg-black shadow-xl">
+          <Card className="border  border-t-0 border-b-0   rounded-none border-[#53f8704b] bg-black shadow-xl">
             <CardContent className="flex flex-col justify-start gap-8">
               <div className="flex justify-between">
                 <p className="text-xs font-medium text-white tracking-wide">
@@ -160,7 +160,7 @@ export default function DashboardIndexPage() {
           </Card>
 
           {/* Card 4 */}
-          <Card className="border  border-t-0 border-b-0 border-r-0 rounded-l-none border-gray-800 bg-black shadow-xl">
+          <Card className="border  border-t-0 border-b-0 border-r-0 rounded-l-none border-[#53f8704b] bg-black shadow-xl">
             <CardContent className="flex flex-col justify-start gap-8">
               <div className="flex justify-between">
                 <p className="text-xs font-medium text-white tracking-wide">
