@@ -951,24 +951,17 @@ export function CompetitorsTab({
             </Button>
 
             {/* Website Select */}
-            <div className="ml-3 w-48">
-              <Select
-                value={selectedWebsiteId || undefined}
-                onValueChange={handleWebsiteChange}
-              >
-                <SelectTrigger className="h-10 bg-[rgba(83,248,112,0.1)]! border border-gray-700  rounded-lg focus-visible:outline-none focus-visible:ring-0 px-3 py-2 text-[#53F870] font-medium text-sm">
+            <div>
+              <Select value={selectedWebsiteId || undefined} onValueChange={handleWebsiteChange}>
+                <SelectTrigger className="h-10  bg-[rgba(83,248,112,0.1)]!  rounded-[5px] focus-visible:outline-none focus-visible:ring-0 border-[#0000001a] focus-visible:border-[#0000001a] focus:outline-none cursor-pointer outline-none active:outline-none px-3.5 py-2.5 text-[#53F870]">
                   <SelectValue placeholder="Select your website" />
                 </SelectTrigger>
-                <SelectContent className="bg-black border border-gray-700 rounded-lg">
+                <SelectContent className="cursor-pointer bg-[#142517]! ">
                   {websites.map((website, index) => (
                     <SelectItem
                       key={website.id}
                       value={website.id}
-                      className={`cursor-pointer text-green-600 ${
-                        index < websites.length - 1
-                          ? "border-b border-gray-700 rounded-none"
-                          : ""
-                      }`}
+                      className={`cursor-pointer data-[state=checked]:text-[#53F870] data-[state=checked]:opacity-40 ${index < websites.length - 1 ? 'border-b rounded-none border-[#0000001a]' : ''}`}
                     >
                       {website.url}
                     </SelectItem>
@@ -1112,9 +1105,9 @@ export function CompetitorsTab({
                                   (websites && websites.length > 0
                                     ? websites[0].id
                                     : undefined);
-                                await removeCompetitorFromWebsite(
+                                await removeKeywordFromWebsite(
                                   siteId,
-                                  d.domain
+                                  row.keyword
                                 );
                               }}
                             >
@@ -1260,9 +1253,9 @@ export function CompetitorsTab({
                                   (websites && websites.length > 0
                                     ? websites[0].id
                                     : undefined);
-                                await removeKeywordFromWebsite(
+                                await removeCompetitorFromWebsite(
                                   siteId,
-                                  row.keyword
+                                  d.domain
                                 );
                               }}
                             >

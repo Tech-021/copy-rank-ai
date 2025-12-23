@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ChevronDown } from "lucide-react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/lib/client";
 import {
   Card,
   CardContent,
@@ -21,14 +22,129 @@ interface IndexPost {
   visibility: "high" | "medium" | "low";
 }
 
+interface AnalyticsData {
+  articlesGenerated: number;
+  articlesLive: number;
+  estimatedTraffic: number;
+  keywordsTracked: number;
+  draftArticles: number;
+  totalCompetitors: number;
+}
+
+interface Website {
+  id: string;
+  url: string;
+  topic: string;
+  keywords: any;
+  auto_publish?: boolean;
+  autoPublish?: boolean;
+  is_active?: boolean;
+  isAnalyzing?: boolean;
+  user_id?: string;
+  created_at?: string;
+}
+
+const getCompetitorsCount = (keywordsData: any): number => {
+  if (!keywordsData) return 0;
+  if (keywordsData.competitors && Array.isArray(keywordsData.competitors)) {
+    return keywordsData.competitors.length;
+  }
+  return 0;
+};
+
 export default function DashboardIndexPage() {
   const [selectedWebsite, setSelectedWebsite] = useState("www.delani.pro");
   const stats = {
     totalCompetitors: 3,
     avgOverlap: 12,
   };
+
+  const [analytics, setAnalytics] = useState<AnalyticsData>({
+      articlesGenerated: 0,
+      articlesLive: 0,
+      estimatedTraffic: 0,
+      keywordsTracked: 0,
+      draftArticles: 0,
+      totalCompetitors: 0,
+    });
+
+  const fetchAnalytics = async (userId: string, websiteId?: string | null) => {
+      try {
+        let articlesQuery = supabase
+          .from("articles")
+          .select("status, estimated_traffic, keyword, word_count")
+          .eq("user_id", userId);
+  
+        if (websiteId) {
+          articlesQuery = articlesQuery.eq("website_id", websiteId);
+        }
+  
+        const { data: articles, error: articlesError } = await articlesQuery;
+  
+        if (articlesError) throw articlesError;
+  
+        const articlesGenerated = articles?.length || 0;
+        const articlesLive = articles?.filter(a => a.status === "published" || a.status === "UPLOADED").length || 0;
+        const draftArticles = articles?.filter(a => a.status === "draft" || a.status === "DRAFT").length || 0;
+        
+        const estimatedTraffic = articles?.reduce((sum, article) => {
+          return sum + (article.estimated_traffic || 0);
+        }, 0) || 0;
+  
+        const allKeywords = new Set<string>();
+        articles?.forEach(article => {
+          if (typeof article.keyword === 'string') {
+            article.keyword.split(',').forEach(k => allKeywords.add(k.trim()));
+          }
+        });
+        const keywordsTracked = allKeywords.size;
+  
+        let websitesQuery = supabase
+          .from("websites")
+          .select("keywords")
+          .eq("user_id", userId);
+  
+        if (websiteId) {
+          websitesQuery = websitesQuery.eq("id", websiteId);
+        }
+  
+        const { data: websitesData, error: websitesError } = await websitesQuery;
+  
+        if (websitesError) throw websitesError;
+  
+        let totalCompetitors = 0;
+        websitesData?.forEach(website => {
+          const competitorCount = getCompetitorsCount(website.keywords);
+          totalCompetitors += competitorCount;
+        });
+  
+        setAnalytics({
+          articlesGenerated,
+          articlesLive,
+          estimatedTraffic,
+          keywordsTracked,
+          draftArticles,
+          totalCompetitors,
+        });
+      } catch (error) {
+        console.error("Error fetching analytics:", error);
+      }
+    };
   
   const formatNumber = (num: number) => num.toString();
+  const [websites, setWebsites] = useState<Website[]>([]);
+
+  const handleWebsiteChange = async (websiteId: string) => {
+      setSelectedWebsiteId(websiteId);
+      
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      
+      if (user) {
+        await fetchAnalytics(user.id, websiteId);
+      }
+    };
   
   const [posts] = useState<IndexPost[]>([
     {
@@ -60,6 +176,7 @@ export default function DashboardIndexPage() {
       visibility: "low",
     },
   ]);
+  const [selectedWebsiteId, setSelectedWebsiteId] = useState<string | null>(null);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -97,21 +214,24 @@ export default function DashboardIndexPage() {
           <h2 className="text-3xl font-normal text-white">Index Posts</h2>
           <p className="text-sm text-gray-500 mt-2">Publish posts to be detected and indexed by search engines.</p>
         </div>
-        <div className="w-48">
-          <Select value={selectedWebsite} onValueChange={setSelectedWebsite}>
-            <SelectTrigger className="h-10 bg-transparent border border-green-700 rounded-lg focus-visible:outline-none focus-visible:ring-0 px-3 py-2 text-green-600 font-medium text-sm">
-              <SelectValue placeholder="Select website" />
-            </SelectTrigger>
-            <SelectContent className="bg-black border border-green-700 rounded-lg">
-              <SelectItem value="www.delani.pro" className="cursor-pointer text-green-600">
-                www.delani.pro
-              </SelectItem>
-              <SelectItem value="www.delium.com" className="cursor-pointer text-green-600">
-                www.delium.com
-              </SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        <div>
+              <Select value={selectedWebsiteId || undefined} onValueChange={handleWebsiteChange}>
+                <SelectTrigger className="h-10  bg-[rgba(83,248,112,0.1)]!  rounded-[5px] focus-visible:outline-none focus-visible:ring-0 border-[#0000001a] focus-visible:border-[#0000001a] focus:outline-none cursor-pointer outline-none active:outline-none px-3.5 py-2.5 text-[#53F870]">
+                  <SelectValue placeholder="Select your website" />
+                </SelectTrigger>
+                <SelectContent className="cursor-pointer bg-[#142517]! ">
+                  {websites.map((website, index) => (
+                    <SelectItem
+                      key={website.id}
+                      value={website.id}
+                      className={`cursor-pointer data-[state=checked]:text-[#53F870] data-[state=checked]:opacity-40 ${index < websites.length - 1 ? 'border-b rounded-none border-[#0000001a]' : ''}`}
+                    >
+                      {website.url}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
       </div>
 
       {/* Stats Cards */}

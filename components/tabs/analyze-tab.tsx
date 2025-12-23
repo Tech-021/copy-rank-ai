@@ -751,7 +751,7 @@ export function AnalyzeTab({
                 <SelectTrigger className="h-10  bg-[rgba(83,248,112,0.1)]!  rounded-[5px] focus-visible:outline-none focus-visible:ring-0 border-[#0000001a] focus-visible:border-[#0000001a] focus:outline-none cursor-pointer outline-none active:outline-none px-3.5 py-2.5 text-[#53F870]">
                   <SelectValue placeholder="Select your website" />
                 </SelectTrigger>
-                <SelectContent className="cursor-pointer bg-[rgba(83,248,112,0.1)]! ">
+                <SelectContent className="cursor-pointer bg-[#142517]! ">
                   {websites.map((website, index) => (
                     <SelectItem
                       key={website.id}

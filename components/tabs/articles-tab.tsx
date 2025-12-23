@@ -944,30 +944,23 @@ export function ArticlesTab({
             </p>
           </div>
           <div>
-            <Select
-              value={selectedWebsiteId || undefined}
-              onValueChange={handleWebsiteChange}
-            >
-              <SelectTrigger className="h-10 bg-transparent rounded-[8px] focus-visible:outline-none focus-visible:ring-0 border-[#0000001a] focus-visible:border-[#0000001a] focus:outline-none cursor-pointer outline-none active:outline-none px-3.5 py-2.5 text-[#00000080]">
-                <SelectValue placeholder="Select your website" />
-              </SelectTrigger>
-              <SelectContent className="cursor-pointer">
-                {websites.map((website, index) => (
-                  <SelectItem
-                    key={website.id}
-                    value={website.id}
-                    className={`cursor-pointer data-[state=checked]:text-[#00000080] data-[state=checked]:opacity-40 ${
-                      index < websites.length - 1
-                        ? "border-b rounded-none border-[#0000001a]"
-                        : ""
-                    }`}
-                  >
-                    {website.url}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+              <Select value={selectedWebsiteId || undefined} onValueChange={handleWebsiteChange}>
+                <SelectTrigger className="h-10  bg-[rgba(83,248,112,0.1)]!  rounded-[5px] focus-visible:outline-none focus-visible:ring-0 border-[#0000001a] focus-visible:border-[#0000001a] focus:outline-none cursor-pointer outline-none active:outline-none px-3.5 py-2.5 text-[#53F870]">
+                  <SelectValue placeholder="Select your website" />
+                </SelectTrigger>
+                <SelectContent className="cursor-pointer bg-[#142517]! ">
+                  {websites.map((website, index) => (
+                    <SelectItem
+                      key={website.id}
+                      value={website.id}
+                      className={`cursor-pointer data-[state=checked]:text-[#53F870] data-[state=checked]:opacity-40 ${index < websites.length - 1 ? 'border-b rounded-none border-[#0000001a]' : ''}`}
+                    >
+                      {website.url}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
         </div>
 
         {/* Create a Ranking Post Section */}
@@ -1373,8 +1366,7 @@ export function ArticlesTab({
                 {selectedArticle.status === "published" &&
                   selectedArticle.slug && (
                     <Button
-                      variant="outline"
-                      className="h-10 px-4 flex items-center gap-2"
+                      className="h-10 px-4 flex bg-[#101110] hover:bg-[#101110] text-[#ffffffd3] hover:!text-[#ffffffd3] items-center gap-2"
                       onClick={() =>
                         handleIndexNow(
                           selectedArticle.id,
@@ -1409,18 +1401,18 @@ export function ArticlesTab({
                   open={isDeleteDialogOpen}
                   onOpenChange={setIsDeleteDialogOpen}
                 >
-                  <DialogContent className="sm:max-w-[550px] text-center p-0 border-0">
+                  <DialogContent className="sm:max-w-[550px] bg-[#101110] text-center p-0 border-0">
                     <VisuallyHidden>
                       <DialogTitle>Confirm delete</DialogTitle>
                     </VisuallyHidden>
 
                     <div className="flex flex-col items-center gap-4 py-8 px-6">
-                      <h2 className="text-2xl  text-gray-900">
+                      <h2 className="text-2xl  text-white">
                         Confirm delete
                       </h2>
                       <div className=" flex items-center justify-center">
                         <Image
-                          src="/deletedocument.png"
+                          src={isDeleteCompletedDialogOpen ? "/checkfordark.png" : "/deletedocumentfordark.png"}
                           height={60}
                           width={60}
                           alt="delete"
@@ -1432,67 +1424,23 @@ export function ArticlesTab({
 
                     <div className="flex gap-3 px-6 pb-6">
                       <Button
-                        className="flex-1 h-11  bg-red-500 hover:bg-red-600 text-white font-medium"
+                        className="flex-1 h-11  bg-red-500 cursor-pointer hover:bg-red-600 text-white font-medium"
                         onClick={async () => {
                           if (selectedArticle) {
                             setIsDeleteDialogOpen(false);
                             await handleDeleteArticle(selectedArticle.id);
                             setSelectedArticle(null);
-                            setTimeout(() => {
                               setIsDeleteCompletedDialogOpen(true);
-                            }, 300);
                           }
                         }}
                       >
                         Delete
                       </Button>
                       <Button
-                        variant="outline"
-                        className="flex-1 h-11 text-gray-700 bg-gray-200 border-gray-200 hover:bg-gray-50"
+                        className="flex-1 h-11 text-[#5aff78] cursor-pointer bg-transparent hover:text-[#5aff78] border border-[#5aff78] hover:bg-transparent"
                         onClick={() => setIsDeleteDialogOpen(false)}
                       >
                         Cancel
-                      </Button>
-                    </div>
-                  </DialogContent>
-                </Dialog>
-
-                <Dialog
-                  open={isDeleteCompletedDialogOpen}
-                  onOpenChange={setIsDeleteCompletedDialogOpen}
-                >
-                  <DialogContent className="sm:max-w-[550px] text-center p-0 border-0">
-                    <VisuallyHidden>
-                      <DialogTitle>Delete completed</DialogTitle>
-                    </VisuallyHidden>
-
-                    <div className="flex flex-col items-center  gap-4 py-8 px-6">
-                      <h2 className="text-2xl  text-gray-900">Completed!</h2>
-                      <div className=" flex items-center justify-center">
-                        <Image
-                          src="/checkfordark.png"
-                          alt="icon"
-                          height={81}
-                          width={81}
-                          className="mt-9"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="px-6 pb-6">
-                      <Button
-                        className="w-full h-11 bg-green-600 hover:bg-green-600 text-white font-medium rounded-lg"
-                        onClick={() => {
-                          setIsDeleteCompletedDialogOpen(false);
-                          toast.showToast({
-                            title: "Article deleted",
-                            description:
-                              "The article has been permanently deleted.",
-                            type: "success",
-                          });
-                        }}
-                      >
-                        Done
                       </Button>
                     </div>
                   </DialogContent>
