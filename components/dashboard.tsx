@@ -94,7 +94,7 @@ export function Dashboard({
             </div>
             <div
               className="
-    flex gap-4 p-1.5 rounded-full
+    flex gap-4 p-1.5  rounded-full
     bg-[rgb(247,247,247)]
     dark:bg-linear-to-b
     dark:from-[#2E9839]
