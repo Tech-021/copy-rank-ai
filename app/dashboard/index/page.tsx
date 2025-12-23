@@ -3,6 +3,15 @@
 import { useState } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChevronDown } from "lucide-react";
+import Image from "next/image";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 interface IndexPost {
   id: string;
@@ -14,6 +23,13 @@ interface IndexPost {
 
 export default function DashboardIndexPage() {
   const [selectedWebsite, setSelectedWebsite] = useState("www.delani.pro");
+  const stats = {
+    totalCompetitors: 3,
+    avgOverlap: 12,
+  };
+  
+  const formatNumber = (num: number) => num.toString();
+  
   const [posts] = useState<IndexPost[]>([
     {
       id: "1",
@@ -47,7 +63,7 @@ export default function DashboardIndexPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "indexed":
+      case "":
         return "text-green-600";
       case "requested":
         return "text-gray-400";
@@ -62,7 +78,7 @@ export default function DashboardIndexPage() {
 
   const getVisibilityColor = (visibility: string) => {
     switch (visibility) {
-      case "high":
+      case "":
         return "text-green-600";
       case "medium":
         return "text-gray-400";
@@ -99,54 +115,74 @@ export default function DashboardIndexPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-4 gap-4">
-        {/* Indexed Posts */}
-        <div className="bg-black border border-gray-800 rounded-lg p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-5 h-5 bg-green-600 rounded"></div>
-            <p className="text-xs text-gray-500 font-normal">Indexed Posts</p>
-          </div>
-          <div className="text-4xl font-bold text-green-600">3</div>
-        </div>
+       <div className="grid grid-cols-4 rounded-xl shadow-xl">
+          {/* Card 1 */}
+          <Card className="border-r border-l-0 border-t-0 border-b-0 rounded-r-none border-gray-800 bg-black shadow-xl">
+            <CardContent className="flex flex-col justify-start gap-8">
+              <div className="flex justify-between">
+                <p className="text-xs font-medium text-white  tracking-wide">
+               Indexed Posts
+                </p>
+                <Image src="/index1.png" alt="icon" height={24} width={24} />
+              </div>
+              <p className="text-4xl font-bold text-[#53F870]">
+                {stats.totalCompetitors}
+              </p>
+            </CardContent>
+          </Card>
 
-        {/* Requested Index */}
-        <div className="bg-black border border-gray-800 rounded-lg p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-5 h-5 bg-yellow-600 rounded"></div>
-            <p className="text-xs text-gray-500 font-normal">Requested Index</p>
-          </div>
-          <div className="text-4xl font-bold text-yellow-600">12</div>
-        </div>
+          {/* Card 2 */}
+          <Card className="border border-t-0 border-b-0  rounded-none border-gray-800 bg-black shadow-xl">
+            <CardContent className="flex flex-col justify-start gap-8">
+              <div className="flex justify-between">
+                <p className="text-xs font-medium text-white tracking-wide">
+                  Requested Index
+                </p>
+                <Image src="/index2.png" alt="icon" height={24} width={24} />
+              </div>
+              <p className="text-4xl font-bold text-[#53F870]">
+                {formatNumber(stats.avgOverlap)}
+              </p>
+            </CardContent>
+          </Card>
 
-        {/* Pending Index */}
-        <div className="bg-black border border-gray-800 rounded-lg p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-5 h-5 bg-blue-600 rounded"></div>
-            <p className="text-xs text-gray-500 font-normal">Pending Index</p>
-          </div>
-          <div className="text-4xl font-bold text-blue-600">9</div>
-        </div>
+          {/* Card 3 */}
+          <Card className="border  border-t-0 border-b-0   rounded-none border-gray-800 bg-black shadow-xl">
+            <CardContent className="flex flex-col justify-start gap-8">
+              <div className="flex justify-between">
+                <p className="text-xs font-medium text-white tracking-wide">
+                  Pending Index
+                </p>
+                <Image src="/index3.png" alt="icon" height={24} width={24} />
+              </div>
+              <p className="text-4xl font-bold text-[#53F870]">9</p>
+            </CardContent>
+          </Card>
 
-        {/* Un-Indexed Posts */}
-        <div className="bg-black border border-gray-800 rounded-lg p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-5 h-5 bg-red-600 rounded"></div>
-            <p className="text-xs text-gray-500 font-normal">Un-Indexed Posts</p>
-          </div>
-          <div className="text-4xl font-bold text-red-600">4</div>
+          {/* Card 4 */}
+          <Card className="border  border-t-0 border-b-0 border-r-0 rounded-l-none border-gray-800 bg-black shadow-xl">
+            <CardContent className="flex flex-col justify-start gap-8">
+              <div className="flex justify-between">
+                <p className="text-xs font-medium text-white tracking-wide">
+                  Un-Indexed Posts 
+                </p>
+                <Image src="/index4.png" alt="icon" height={34} width={34} />
+              </div>
+              <p className="text-4xl font-bold text-[#53F870]">4</p>
+            </CardContent>
+          </Card>
         </div>
-      </div>
 
       {/* Table Section */}
-      <div className="bg-black border border-gray-800 rounded-lg">
-        <div className="p-6 border-b border-gray-800">
+      <div className="bg-black border h-[420px]  border-gray-600 rounded-lg">
+        <div className="p-4 border-b  border-gray-700">
           <h3 className="text-lg font-normal text-white">Index Your Posts</h3>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-800">
+        <div className="  overflow-x-auto">
+          <table className="border border-gray-700  w-full">
+            <thead className="">
+              <tr className="border-b  border-gray-800">
                 <th className="text-left py-4 px-6 text-xs font-normal text-gray-500">Post</th>
                 <th className="text-left py-4 px-6 text-xs font-normal text-gray-500">Status</th>
                 <th className="text-left py-4 px-6 text-xs font-normal text-gray-500">Keyword</th>
@@ -158,7 +194,7 @@ export default function DashboardIndexPage() {
               {posts.map((post, index) => (
                 <tr key={post.id} className={`${index !== posts.length - 1 ? "border-b border-gray-800" : ""}`}>
                   <td className="py-4 px-6">
-                    <span className={`text-sm font-normal ${getStatusColor(post.status)}`}>{post.title}</span>
+                    <span className={`text-sm text-[#53F870]! font-normal ${getStatusColor(post.status)}`}>{post.title}</span>
                   </td>
                   <td className="py-4 px-6">
                     <span className={`text-xs font-normal capitalize ${getStatusColor(post.status)}`}>
@@ -174,11 +210,13 @@ export default function DashboardIndexPage() {
                     </span>
                   </td>
                   <td className="py-4 px-6">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-gray-500 font-normal">
+                    <div className="flex items-center  ">
+                      <Button  className=" bg-transparent px-8 rounded-r-none hover:bg-gray-400 border border-gray-600 text-xs text-gray-500 font-normal">
                         {post.status === "indexed" ? "Request Index" : "Requested"}
-                      </span>
+                      </Button>
+                      <Button className="bg-transparent hover:bg-gray-400 rounded-l-none border border-gray-600">
                       <ChevronDown className="w-4 h-4 text-gray-600" />
+                    </Button>
                     </div>
                   </td>
                 </tr>
