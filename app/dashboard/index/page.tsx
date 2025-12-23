@@ -214,24 +214,21 @@ export default function DashboardIndexPage() {
           <h2 className="text-3xl font-normal text-white">Index Posts</h2>
           <p className="text-sm text-gray-500 mt-2">Publish posts to be detected and indexed by search engines.</p>
         </div>
-        <div>
-              <Select value={selectedWebsiteId || undefined} onValueChange={handleWebsiteChange}>
-                <SelectTrigger className="h-10  bg-[rgba(83,248,112,0.1)]!  rounded-[5px] focus-visible:outline-none focus-visible:ring-0 border-[#0000001a] focus-visible:border-[#0000001a] focus:outline-none cursor-pointer outline-none active:outline-none px-3.5 py-2.5 text-[#53F870]">
-                  <SelectValue placeholder="Select your website" />
-                </SelectTrigger>
-                <SelectContent className="cursor-pointer bg-[#142517]! ">
-                  {websites.map((website, index) => (
-                    <SelectItem
-                      key={website.id}
-                      value={website.id}
-                      className={`cursor-pointer data-[state=checked]:text-[#53F870] data-[state=checked]:opacity-40 ${index < websites.length - 1 ? 'border-b rounded-none border-[#0000001a]' : ''}`}
-                    >
-                      {website.url}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+        <div className="w-48">
+          <Select value={selectedWebsite} onValueChange={setSelectedWebsite}>
+            <SelectTrigger className="h-10 bg-transparent border border-green-700 rounded-lg focus-visible:outline-none focus-visible:ring-0 px-3 py-2 text-green-600 font-medium text-sm">
+              <SelectValue placeholder="Select website" />
+            </SelectTrigger>
+            <SelectContent className="bg-black border border-green-700 rounded-lg">
+              <SelectItem value="www.delani.pro" className="cursor-pointer text-green-600">
+                www.delani.pro
+              </SelectItem>
+              <SelectItem value="www.delium.com" className="cursor-pointer text-green-600">
+                www.delium.com
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* Stats Cards */}
