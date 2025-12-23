@@ -200,7 +200,7 @@ export function CreatePostDialogDashboard({
                 </div>
                 {/* 2) Current website SEO keywords select */}
                 <Select value={selectedSeoKeyword ?? undefined} onValueChange={setSelectedSeoKeyword}>
-                  <SelectTrigger className="w-[588px] h-[50px]! border-[#0000001a]">
+                  <SelectTrigger className="w-[588px]  h-[60px]! bg-gradient-to-b text-[#53F870]! from-[#002B07] to-[#1A451A]  border-[#0000001a]">
                     <SelectValue placeholder="From Your Keywords" />
                   </SelectTrigger>
                   <SelectContent>
@@ -214,7 +214,7 @@ export function CreatePostDialogDashboard({
                   </SelectContent>
                 </Select>
                 {/* 2b) Current website SEO keyword chips - multi-select */}
-                <div className="flex items-start justify-start gap-1.5 flex-wrap bg-[rgb(247,247,247)] rounded-xl p-3.5 w-full min-h-[82px]">
+                <div className="flex items-start justify-start bg-transparent border border-[#53F870]! gap-1.5 flex-wrap bg-[rgb(247,247,247)] rounded-xl p-3.5 w-full min-h-[82px]">
                   {loadingOptions ? (
                     <p className="text-xs text-[#00000080]">Loading keywords…</p>
                   ) : (
@@ -228,7 +228,7 @@ export function CreatePostDialogDashboard({
                               prev.includes(kw) ? prev.filter((k) => k !== kw) : [...prev, kw]
                             );
                           }}
-                          className={`border rounded-full px-2 py-1 text-[10px] font-normal cursor-pointer hover:border-black ${selectedSeoKeywords.includes(kw) ? 'border-black text-[#53F870]' : 'border-[#0000004d] text-[#00000080]'}`}
+                          className={`border rounded-full px-2 py-1 text-[10px] font-normal cursor-pointer hover:border-black ${selectedSeoKeywords.includes(kw) ? 'border-black text-[#53F870]' : 'border-[#0000004d] text-[#53F870]'}`}
                           type="button"
                         >
                           {kw}
@@ -236,18 +236,52 @@ export function CreatePostDialogDashboard({
                       ))
                   )}
                 </div>
+              
+              
+              <div className="flex flex-col gap-2.5">
+                  <Select value={selectedSeoKeyword ?? undefined} onValueChange={setSelectedSeoKeyword}>
+                  <SelectTrigger className="w-[588px]  h-[60px]! bg-gradient-to-b text-[#53F870]! from-[#002B07] to-[#1A451A]  border-[#0000001a]">
+                    <SelectValue placeholder="From Your Keywords" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {keywordSuggestions.length === 0 ? (
+                      <SelectItem value="__none__" disabled>No keywords found</SelectItem>
+                    ) : (
+                      keywordSuggestions.slice(0, 50).map((kw) => (
+                        <SelectItem key={kw} value={kw}>{kw}</SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+                 <div className="flex items-start justify-start bg-transparent border border-[#53F870]! gap-1.5 flex-wrap bg-[rgb(247,247,247)] rounded-xl p-3.5 w-full min-h-[82px]">
+                  {loadingOptions ? (
+                    <p className="text-xs text-[#00000080]">Loading keywords…</p>
+                  ) : (
+                    (keywordSuggestions.length > 0 ? keywordSuggestions : fallbackSuggestions)
+                      .slice(0, 16)
+                      .map((kw) => (
+                        <button
+                          key={kw}
+                          onClick={() => {
+                            setSelectedSeoKeywords((prev) => 
+                              prev.includes(kw) ? prev.filter((k) => k !== kw) : [...prev, kw]
+                            );
+                          }}
+                          className={`border rounded-full px-2 py-1 text-[10px] font-normal cursor-pointer hover:border-black ${selectedSeoKeywords.includes(kw) ? 'border-black text-[#53F870]' : 'border-[#0000004d] text-[#53F870]'}`}
+                          type="button"
+                        >
+                          {kw}
+                        </button>
+                      ))
+                  )}
+                </div>
+        
+              </div>
+              
+              
               </div>
 
               {/* 4) Custom keyword */}
-              <div className="flex flex-col gap-2.5">
-                <Input
-                  placeholder="Custom Keyword"
-                  className="w-[588px] h-[50px]! border-[#0000001a]"
-                  value={customKeyword}
-                  onChange={(e) => setCustomKeyword(e.target.value)}
-                />
-                <div className="flex items-start justify-start gap-1.5 flex-wrap bg-[rgb(247,247,247)] rounded-xl p-3.5 w-full h-[82px]" />
-              </div>
             </div>
 
             <div>
