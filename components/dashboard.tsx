@@ -141,7 +141,7 @@ export function Dashboard({
                 Competitors
               </Link>
               <Link
-                href="/dashboard/analyze"
+                href="/dashboard/articles"
                 className={`cursor-pointer px-6.5 py-3.5 text-[13px] font-medium transition-colors whitespace-nowrap rounded-full
     ${
       pathname.includes("/dashboard/articles") || pathname === "/dashboard"
