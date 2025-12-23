@@ -53,8 +53,6 @@ interface Website {
   url: string;
   topic: string;
   created_at?: string;
-
-
 }
 
 interface Competitor {
@@ -101,7 +99,9 @@ interface WebsiteData {
   };
 }
 
-export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabProps) {
+export function CompetitorsTab({
+  websiteId: initialWebsiteId,
+}: CompetitorsTabProps) {
   const [selectedWebsiteId, setSelectedWebsiteId] = useState<string | null>(
     initialWebsiteId
   );
@@ -247,7 +247,8 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
       const normalized = extractedKeywords.map((k: any) => ({
         keyword: k.keyword || k.key || k.name || String(k),
         volume: k.volume || k.search_volume || k.searchVolume || undefined,
-        difficulty: k.difficulty || k.difficulty_level || k.difficultyLevel || "N/A",
+        difficulty:
+          k.difficulty || k.difficulty_level || k.difficultyLevel || "N/A",
         sites: k.sites || k.sites_count || k.competition || "N/A",
       }));
 
@@ -395,97 +396,103 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
     return num.toString();
   };
 
-    const getCompetitorsCount = (keywordsData: any): number => {
+  const getCompetitorsCount = (keywordsData: any): number => {
     if (!keywordsData) return 0;
     if (keywordsData.competitors && Array.isArray(keywordsData.competitors)) {
       return keywordsData.competitors.length;
     }
     return 0;
   };
-  
+
   const [analytics, setAnalytics] = useState<AnalyticsData>({
-      articlesGenerated: 0,
-      articlesLive: 0,
-      estimatedTraffic: 0,
-      keywordsTracked: 0,
-      draftArticles: 0,
-      totalCompetitors: 0,
-    });
-  
-    const fetchAnalytics = async (userId: string, websiteId?: string | null) => {
-        try {
-          let articlesQuery = supabase
-            .from("articles")
-            .select("status, estimated_traffic, keyword, word_count")
-            .eq("user_id", userId);
-    
-          if (websiteId) {
-            articlesQuery = articlesQuery.eq("website_id", websiteId);
-          }
-    
-          const { data: articles, error: articlesError } = await articlesQuery;
-    
-          if (articlesError) throw articlesError;
-    
-          const articlesGenerated = articles?.length || 0;
-          const articlesLive = articles?.filter(a => a.status === "published" || a.status === "UPLOADED").length || 0;
-          const draftArticles = articles?.filter(a => a.status === "draft" || a.status === "DRAFT").length || 0;
-          
-          const estimatedTraffic = articles?.reduce((sum, article) => {
-            return sum + (article.estimated_traffic || 0);
-          }, 0) || 0;
-    
-          const allKeywords = new Set<string>();
-          articles?.forEach(article => {
-            if (typeof article.keyword === 'string') {
-              article.keyword.split(',').forEach(k => allKeywords.add(k.trim()));
-            }
-          });
-          const keywordsTracked = allKeywords.size;
-    
-          let websitesQuery = supabase
-            .from("websites")
-            .select("keywords")
-            .eq("user_id", userId);
-    
-          if (websiteId) {
-            websitesQuery = websitesQuery.eq("id", websiteId);
-          }
-    
-          const { data: websitesData, error: websitesError } = await websitesQuery;
-    
-          if (websitesError) throw websitesError;
-    
-          let totalCompetitors = 0;
-          websitesData?.forEach(website => {
-            const competitorCount = getCompetitorsCount(website.keywords);
-            totalCompetitors += competitorCount;
-          });
-    
-          setAnalytics({
-            articlesGenerated,
-            articlesLive,
-            estimatedTraffic,
-            keywordsTracked,
-            draftArticles,
-            totalCompetitors,
-          });
-        } catch (error) {
-          console.error("Error fetching analytics:", error);
+    articlesGenerated: 0,
+    articlesLive: 0,
+    estimatedTraffic: 0,
+    keywordsTracked: 0,
+    draftArticles: 0,
+    totalCompetitors: 0,
+  });
+
+  const fetchAnalytics = async (userId: string, websiteId?: string | null) => {
+    try {
+      let articlesQuery = supabase
+        .from("articles")
+        .select("status, estimated_traffic, keyword, word_count")
+        .eq("user_id", userId);
+
+      if (websiteId) {
+        articlesQuery = articlesQuery.eq("website_id", websiteId);
+      }
+
+      const { data: articles, error: articlesError } = await articlesQuery;
+
+      if (articlesError) throw articlesError;
+
+      const articlesGenerated = articles?.length || 0;
+      const articlesLive =
+        articles?.filter(
+          (a) => a.status === "published" || a.status === "UPLOADED"
+        ).length || 0;
+      const draftArticles =
+        articles?.filter((a) => a.status === "draft" || a.status === "DRAFT")
+          .length || 0;
+
+      const estimatedTraffic =
+        articles?.reduce((sum, article) => {
+          return sum + (article.estimated_traffic || 0);
+        }, 0) || 0;
+
+      const allKeywords = new Set<string>();
+      articles?.forEach((article) => {
+        if (typeof article.keyword === "string") {
+          article.keyword.split(",").forEach((k) => allKeywords.add(k.trim()));
         }
-      };
-  
-    const handleWebsiteChange = async (websiteId: string) => {
-        setSelectedWebsiteId(websiteId);
-        
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-        
-        if (user) {
-          await fetchAnalytics(user.id, websiteId);
-        }
-      };
+      });
+      const keywordsTracked = allKeywords.size;
+
+      let websitesQuery = supabase
+        .from("websites")
+        .select("keywords")
+        .eq("user_id", userId);
+
+      if (websiteId) {
+        websitesQuery = websitesQuery.eq("id", websiteId);
+      }
+
+      const { data: websitesData, error: websitesError } = await websitesQuery;
+
+      if (websitesError) throw websitesError;
+
+      let totalCompetitors = 0;
+      websitesData?.forEach((website) => {
+        const competitorCount = getCompetitorsCount(website.keywords);
+        totalCompetitors += competitorCount;
+      });
+
+      setAnalytics({
+        articlesGenerated,
+        articlesLive,
+        estimatedTraffic,
+        keywordsTracked,
+        draftArticles,
+        totalCompetitors,
+      });
+    } catch (error) {
+      console.error("Error fetching analytics:", error);
+    }
+  };
+
+  const handleWebsiteChange = async (websiteId: string) => {
+    setSelectedWebsiteId(websiteId);
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (user) {
+      await fetchAnalytics(user.id, websiteId);
+    }
+  };
 
   const formatCurrency = (num: number) => {
     if (num >= 1000000) return "$" + (num / 1000000).toFixed(1) + "M";
@@ -538,10 +545,15 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
       try {
         const toAdd: string[] = [];
         if (competitorInput.trim()) {
-          toAdd.push(...competitorInput.split(/[\n,]+/).map(s => s.trim()).filter(Boolean));
+          toAdd.push(
+            ...competitorInput
+              .split(/[\n,]+/)
+              .map((s) => s.trim())
+              .filter(Boolean)
+          );
         }
         if (competitorTags.length > 0) {
-          toAdd.push(...competitorTags.map(t => t.trim()).filter(Boolean));
+          toAdd.push(...competitorTags.map((t) => t.trim()).filter(Boolean));
         }
 
         if (toAdd.length === 0) {
@@ -556,7 +568,10 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
           return;
         }
 
-        const siteId = selectedWebsiteId || initialWebsiteId || (websites && websites.length > 0 ? websites[0].id : undefined);
+        const siteId =
+          selectedWebsiteId ||
+          initialWebsiteId ||
+          (websites && websites.length > 0 ? websites[0].id : undefined);
         if (!siteId) {
           // fallback: try to load websites to allow selection
           await loadUserWebsites();
@@ -587,7 +602,10 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
   };
 
   // Persist competitor domains into the website.keywords.competitors array
-  const persistCompetitorsToWebsite = async (siteId: string, domains: string[]) => {
+  const persistCompetitorsToWebsite = async (
+    siteId: string,
+    domains: string[]
+  ) => {
     try {
       // fetch current website keywords payload
       const { data: siteData, error: siteErr } = await supabase
@@ -624,7 +642,9 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
           domain,
           topic: existing.topic || null,
           keywords: existing.keywords || [],
-          keywords_count: existing.keywords_count || (existing.keywords ? existing.keywords.length : 0),
+          keywords_count:
+            existing.keywords_count ||
+            (existing.keywords ? existing.keywords.length : 0),
           success: existing.success !== false,
         });
       });
@@ -665,14 +685,23 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
 
   const toast = useToast();
 
-  const removeCompetitorFromWebsite = async (siteId: string | undefined, domain: string) => {
+  const removeCompetitorFromWebsite = async (
+    siteId: string | undefined,
+    domain: string
+  ) => {
     try {
       if (!siteId) {
-        toast.showToast({ title: "No website selected", description: "Please select a website first.", type: "error" });
+        toast.showToast({
+          title: "No website selected",
+          description: "Please select a website first.",
+          type: "error",
+        });
         return;
       }
 
-      const confirmed = window.confirm(`Remove competitor ${domain}? This will delete it from the website record.`);
+      const confirmed = window.confirm(
+        `Remove competitor ${domain}? This will delete it from the website record.`
+      );
       if (!confirmed) return;
 
       const { data: siteData, error: siteErr } = await supabase
@@ -688,7 +717,9 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
         ? existingPayload.competitors
         : [];
 
-      const filtered = existingList.filter((c) => String(c.domain || "").toLowerCase() !== domain.toLowerCase());
+      const filtered = existingList.filter(
+        (c) => String(c.domain || "").toLowerCase() !== domain.toLowerCase()
+      );
 
       const newPayload = {
         ...existingPayload,
@@ -707,22 +738,40 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
 
       if (updateErr) throw updateErr;
 
-      toast.showToast({ title: "Removed", description: `${domain} removed from competitors.`, type: "success" });
+      toast.showToast({
+        title: "Removed",
+        description: `${domain} removed from competitors.`,
+        type: "success",
+      });
       await fetchCompetitors(siteId);
     } catch (err) {
       console.error("Error removing competitor:", err);
-      toast.showToast({ title: "Delete Failed", description: err instanceof Error ? err.message : "Failed to remove competitor", type: "error" });
+      toast.showToast({
+        title: "Delete Failed",
+        description:
+          err instanceof Error ? err.message : "Failed to remove competitor",
+        type: "error",
+      });
     }
   };
 
-  const removeKeywordFromWebsite = async (siteId: string | undefined, keyword: string) => {
+  const removeKeywordFromWebsite = async (
+    siteId: string | undefined,
+    keyword: string
+  ) => {
     try {
       if (!siteId) {
-        toast.showToast({ title: "No website selected", description: "Please select a website first.", type: "error" });
+        toast.showToast({
+          title: "No website selected",
+          description: "Please select a website first.",
+          type: "error",
+        });
         return;
       }
 
-      const confirmed = window.confirm(`Remove keyword "${keyword}"? This will delete it from the website record.`);
+      const confirmed = window.confirm(
+        `Remove keyword "${keyword}"? This will delete it from the website record.`
+      );
       if (!confirmed) return;
 
       const { data: siteData, error: siteErr } = await supabase
@@ -735,7 +784,12 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
 
       const existingPayload = (siteData as any)?.keywords || {};
 
-      const triedKeys = ["site_keywords", "keywords", "opportunities", "top_keywords"];
+      const triedKeys = [
+        "site_keywords",
+        "keywords",
+        "opportunities",
+        "top_keywords",
+      ];
       let mutated = false;
 
       const newPayload = { ...existingPayload };
@@ -745,7 +799,8 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
         if (!Array.isArray(arr)) continue;
 
         const filtered = arr.filter((item: any) => {
-          if (typeof item === "string") return String(item).toLowerCase() !== keyword.toLowerCase();
+          if (typeof item === "string")
+            return String(item).toLowerCase() !== keyword.toLowerCase();
           if (item && typeof item === "object") {
             const cand = item.keyword || item.key || item.name || String(item);
             return String(cand).toLowerCase() !== keyword.toLowerCase();
@@ -759,8 +814,12 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
         }
       }
 
-    if (!mutated) {
-        toast.showToast({ title: "Not found", description: `Keyword \"${keyword}\" not present in stored payload.`, type: "error" });
+      if (!mutated) {
+        toast.showToast({
+          title: "Not found",
+          description: `Keyword \"${keyword}\" not present in stored payload.`,
+          type: "error",
+        });
         return;
       }
       const { error: updateErr } = await supabase
@@ -770,11 +829,20 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
 
       if (updateErr) throw updateErr;
 
-      toast.showToast({ title: "Removed", description: `Keyword \"${keyword}\" removed.`, type: "success" });
+      toast.showToast({
+        title: "Removed",
+        description: `Keyword \"${keyword}\" removed.`,
+        type: "success",
+      });
       await fetchCompetitors(siteId);
     } catch (err) {
       console.error("Error removing keyword:", err);
-      toast.showToast({ title: "Delete Failed", description: err instanceof Error ? err.message : "Failed to remove keyword", type: "error" });
+      toast.showToast({
+        title: "Delete Failed",
+        description:
+          err instanceof Error ? err.message : "Failed to remove keyword",
+        type: "error",
+      });
     }
   };
 
@@ -821,7 +889,7 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
           <p className="text-destructive mb-4">{error}</p>
-           <Button onClick={() => fetchCompetitors()} variant="outline">
+          <Button onClick={() => fetchCompetitors()} variant="outline">
             Try Again
           </Button>
         </div>
@@ -842,19 +910,19 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
         <div className="flex items-center justify-between">
           {/* Left side */}
           <div>
-            <h2 className="text-2xl text-gray-700 font-medium">Competitors</h2>
-            <p className="text-sm text-gray-600 mt-1">
+            <h2 className="text-2xl text-white font-medium">Competitors</h2>
+            <p className="text-sm text-gray-500 mt-1">
               Track and compare your competitors
             </p>
           </div>
 
           {/* Right side */}
-          <div className="flex ">
+          <div className="flex items-center ">
             {/* Add Competitors */}
             <Button
               onClick={handleAddCompetitor}
               variant="outline"
-              className="gap-2 text-gray-500 border-gray-200 rounded-r-none hover:bg-gray-50 cursor-pointer"
+              className="gap-2 text-[#53F870] border border-gray-700! rounded-r-none cursor-pointer bg-[rgba(83,248,112,0.1)]! hover:bg-[rgba(83,248,112,0.2)]"
             >
               Add Competitors
               <Plus />
@@ -863,9 +931,14 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
             {/* Sync */}
             <Button
               variant="outline"
-              className="gap-2 text-gray-500 border-gray-200 rounded-l-none hover:bg-gray-50 cursor-pointer"
+              className="gap-2 text-[#53F870] border border-gray-700! rounded-l-none cursor-pointer bg-[rgba(83,248,112,0.1)]! hover:bg-[rgba(83,248,112,0.2)]"
               onClick={async () => {
-                const fallbackId = initialWebsiteId || selectedWebsiteId || (websites && websites.length > 0 ? websites[0].id : undefined);
+                const fallbackId =
+                  initialWebsiteId ||
+                  selectedWebsiteId ||
+                  (websites && websites.length > 0
+                    ? websites[0].id
+                    : undefined);
                 if (!fallbackId) {
                   await loadUserWebsites();
                   return;
@@ -877,18 +950,25 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
               <RefreshCcw />
             </Button>
 
-            {/* Website */}
-            <div className="ml-3">
-              <Select value={selectedWebsiteId || undefined} onValueChange={handleWebsiteChange}>
-                <SelectTrigger className="h-10 bg-transparent rounded-[8px] focus-visible:outline-none focus-visible:ring-0 border-[#0000001a] focus-visible:border-[#0000001a] focus:outline-none cursor-pointer outline-none active:outline-none px-3.5 py-2.5 text-[#00000080]">
+            {/* Website Select */}
+            <div className="ml-3 w-48">
+              <Select
+                value={selectedWebsiteId || undefined}
+                onValueChange={handleWebsiteChange}
+              >
+                <SelectTrigger className="h-10 bg-[rgba(83,248,112,0.1)]! border border-gray-700  rounded-lg focus-visible:outline-none focus-visible:ring-0 px-3 py-2 text-[#53F870] font-medium text-sm">
                   <SelectValue placeholder="Select your website" />
                 </SelectTrigger>
-                <SelectContent className="cursor-pointer">
+                <SelectContent className="bg-black border border-gray-700 rounded-lg">
                   {websites.map((website, index) => (
                     <SelectItem
                       key={website.id}
                       value={website.id}
-                      className={`cursor-pointer data-[state=checked]:text-[#00000080] data-[state=checked]:opacity-40 ${index < websites.length - 1 ? 'border-b rounded-none border-[#0000001a]' : ''}`}
+                      className={`cursor-pointer text-green-600 ${
+                        index < websites.length - 1
+                          ? "border-b border-gray-700 rounded-none"
+                          : ""
+                      }`}
                     >
                       {website.url}
                     </SelectItem>
@@ -902,68 +982,68 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
         {/* Stats Cards - 4 Column Grid */}
         <div className="grid grid-cols-4 rounded-xl shadow-xl">
           {/* Card 1 */}
-          <Card className="border rounded-r-none border-gray-200 bg-white shadow-xl">
+          <Card className="border-r border-l-0 border-t-0 border-b-0 rounded-r-none border-[#53f8704b] bg-black shadow-xl">
             <CardContent className="flex flex-col justify-start gap-8">
               <div className="flex justify-between">
-                <p className="text-xs font-medium text-gray-600 uppercase tracking-wide">
+                <p className="text-xs font-medium text-white tracking-wide">
                   Total Competitors
                 </p>
-                <Image src="/stats1.svg" alt="icon" height={15} width={19.5} />
+                <Image src="/compdark1.png" alt="icon" height={24} width={24} />
               </div>
-              <p className="text-4xl font-bold text-gray-900">
+              <p className="text-4xl font-bold text-[#53F870]">
                 {stats.totalCompetitors}
               </p>
             </CardContent>
           </Card>
 
           {/* Card 2 */}
-          <Card className="border rounded-none border-gray-200 bg-white shadow-xl">
+          <Card className="border border-t-0 border-b-0 rounded-none border-[#53f8704b] bg-black shadow-xl">
             <CardContent className="flex flex-col justify-start gap-8">
               <div className="flex justify-between">
-                <p className="text-xs font-medium text-gray-600 uppercase tracking-wide">
+                <p className="text-xs font-medium text-white tracking-wide">
                   Shared Keywords
                 </p>
-                <Image src="/stats2.svg" alt="icon" height={15} width={19.5} />
+                <Image src="/compdark2.png" alt="icon" height={24} width={24} />
               </div>
-              <p className="text-4xl font-bold text-gray-900">
+              <p className="text-4xl font-bold text-[#53F870]">
                 {formatNumber(stats.avgOverlap)}
               </p>
             </CardContent>
           </Card>
 
           {/* Card 3 */}
-          <Card className="border rounded-none border-gray-200 bg-white shadow-xl">
+          <Card className="border border-t-0 border-b-0 rounded-none border-[#53f8704b] bg-black shadow-xl">
             <CardContent className="flex flex-col justify-start gap-8">
               <div className="flex justify-between">
-                <p className="text-xs font-medium text-gray-600 uppercase tracking-wide">
+                <p className="text-xs font-medium text-white tracking-wide">
                   Keyword Gaps
                 </p>
-                <Image src="/stats3.svg" alt="icon" height={15} width={19.5} />
+                <Image src="/compdark3.png" alt="icon" height={24} width={24} />
               </div>
-              <p className="text-4xl font-bold text-gray-900">9</p>
+              <p className="text-4xl font-bold text-[#53F870]">9</p>
             </CardContent>
           </Card>
 
           {/* Card 4 */}
-          <Card className="border rounded-l-none border-gray-200 bg-white shadow-xl">
+          <Card className="border border-t-0 border-b-0 border-r-0 rounded-l-none border-[#53f8704b] bg-black shadow-xl">
             <CardContent className="flex flex-col justify-start gap-8">
               <div className="flex justify-between">
-                <p className="text-xs font-medium text-gray-600 uppercase tracking-wide">
+                <p className="text-xs font-medium text-white tracking-wide">
                   High Value Gaps
                 </p>
-                <Image src="/stats4.svg" alt="icon" height={15} width={19.5} />
+                <Image src="/compdark4.png" alt="icon" height={30} width={30} />
               </div>
-              <p className="text-4xl font-bold text-gray-900">4</p>
+              <p className="text-4xl font-bold text-[#53F870]">4</p>
             </CardContent>
           </Card>
         </div>
-
         {/* Best Keyword Opportunities Table */}
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-            <table className="w-full border-collapse">
+        <div className="bg-black rounded-xl border border-gray-700 overflow-hidden">
+          <h4 className="text-white p-4">Best Keyword Opportunities</h4>
+          <table className="w-full border-collapse">
             {/* ================= HEADER ================= */}
             <thead>
-              <tr className="border-b border-gray-200 bg-white">
+              <tr className="border-b border-gray-800 bg-black">
                 <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
                   Keyword
                 </th>
@@ -986,24 +1066,56 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
             <tbody>
               {siteKeywords && siteKeywords.length > 0 ? (
                 siteKeywords.map((row, index) => (
-                  <tr key={row.keyword + index} className={`${index !== siteKeywords.length - 1 ? "border-b border-gray-200" : ""} hover:bg-gray-50`}>
-                    <td className="px-4 py-3 text-sm text-gray-700">{row.keyword}</td>
-                    <td className="px-4 py-3 text-sm text-gray-500">{row.volume ? row.volume.toLocaleString() : "-"}</td>
-                    <td className="px-4 py-3 text-sm text-gray-500"><span className="px-2 py-0.5 text-xs">{row.difficulty}</span></td>
-                    <td className="px-4 py-3 text-sm text-gray-500"><span className="px-2 py-0.5 text-xs">{row.sites}</span></td>
+                  <tr
+                    key={row.keyword + index}
+                    className={`${
+                      index !== siteKeywords.length - 1
+                        ? "border-b border-gray-700"
+                        : ""
+                    } hover:bg-gray-900`}
+                  >
+                    <td className="px-4 py-3 text-sm text-[#53F870]">
+                      {row.keyword}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-500">
+                      {row.volume ? row.volume.toLocaleString() : "-"}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-500">
+                      <span className="px-2 py-0.5 text-xs">
+                        {row.difficulty}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-500">
+                      <span className="px-2 py-0.5 text-xs">{row.sites}</span>
+                    </td>
                     <td className="px-4 py-3">
                       <div className="flex justify-start">
-                        <Button className="border rounded-r-none bg-transparent hover:bg-transparent text-black cursor-pointer border-gray-200 rounded-l-md px-6 h-8 text-xs">View</Button>
+                        <Button className="border rounded-r-none bg-transparent hover:bg-transparent text-gray-300 cursor-pointer  border-gray-700 rounded-l-md px-6 h-8 text-xs">
+                          View
+                        </Button>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="outline" className="border border-l-0 rounded-l-none bg-transparent border-gray-200 rounded-r-md w-8 h-8 p-0 flex items-center justify-center hover:bg-gray-50"><ChevronDown className="w-4 h-4 text-gray-600" /></Button>
+                            <Button
+                           
+                              className="border border-l-0 rounded-l-none bg-transparent border-gray-600 rounded-r-md w-8 h-8 p-0 flex items-center justify-center hover:bg-gray-50"
+                            >
+                              <ChevronDown className="w-4 h-4 text-gray-300" />
+                            </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-32">
                             <DropdownMenuItem
                               className="text-red-600 hover:bg-transparent! hover:text-red-600! cursor-pointer"
                               onClick={async () => {
-                                const siteId = selectedWebsiteId || initialWebsiteId || (websites && websites.length > 0 ? websites[0].id : undefined);
-                                await removeCompetitorFromWebsite(siteId, d.domain);
+                                const siteId =
+                                  selectedWebsiteId ||
+                                  initialWebsiteId ||
+                                  (websites && websites.length > 0
+                                    ? websites[0].id
+                                    : undefined);
+                                await removeCompetitorFromWebsite(
+                                  siteId,
+                                  d.domain
+                                );
                               }}
                             >
                               Delete
@@ -1016,13 +1128,23 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
                 ))
               ) : (
                 <tr>
-                  <td colSpan={5} className="px-4 py-6 text-center text-sm text-muted-foreground">No keyword opportunities found for this website</td>
+                  <td
+                    colSpan={5}
+                    className="px-4 py-6 text-center text-sm text-muted-foreground"
+                  >
+                    No keyword opportunities found for this website
+                  </td>
                 </tr>
               )}
               <tr>
-                <td colSpan={5} className="bg-white">
+                <td colSpan={5} className="">
                   <div className="mt-6 flex justify-end mr-4">
-                    <Button onClick={handleCreatePost} className="bg-[#171717] px-6 hover:bg-gray-500">Create post</Button>
+                    <Button
+                      onClick={handleCreatePost}
+                      className="bg-gray-400 px-6 mb-5 hover:bg-gray-500"
+                    >
+                      Create post
+                    </Button>
                   </div>
                 </td>
               </tr>
@@ -1031,11 +1153,12 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
         </div>
 
         {/* Competitor Overview Table */}
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="bg-black rounded-xl border border-gray-800 overflow-hidden">
+          <h4 className="text-white p-4">Competitor Overview</h4>
           <table className="w-full border-collapse">
             {/* ================= HEADER ================= */}
             <thead>
-              <tr className="border-b border-gray-200 bg-white">
+              <tr className="border-b border-gray-700 bg-black">
                 <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
                   Competitor
                 </th>
@@ -1060,46 +1183,87 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
               </tr>
             </thead>
 
-    {/* ================= BODY ================= */}
-    <tbody>
-      {filteredAndSortedCompetitors.map((comp, idx) => {
-        const d = getCompetitorDisplayData(comp);
-        const lastSeen = comp && (comp.generatedAt || comp.organic_traffic?.last_seen || "-");
-        const shared = d.keywordsCount || comp.common_keywords || 0;
-        const unique = Math.max(0, (comp.organic_traffic?.total_keywords || 0) - shared);
-        const highValue = 0;
+            {/* ================= BODY ================= */}
+            <tbody>
+              {filteredAndSortedCompetitors.map((comp, idx) => {
+                const d = getCompetitorDisplayData(comp);
+                const lastSeen =
+                  comp &&
+                  (comp.generatedAt || comp.organic_traffic?.last_seen || "-");
+                const shared = d.keywordsCount || comp.common_keywords || 0;
+                const unique = Math.max(
+                  0,
+                  (comp.organic_traffic?.total_keywords || 0) - shared
+                );
+                const highValue = 0;
 
-        return (
-          <tr key={d.domain + idx} className={`${idx !== filteredAndSortedCompetitors.length - 1 ? "border-b border-gray-200" : ""} hover:bg-gray-50`}>
-            <td className="px-4 py-3 text-sm text-gray-700 font-medium">
-              <div className="flex items-center gap-3">
-                <img src={`https://ui-avatars.com/api/?name=${d.domain}&background=random&color=fff&bold=true&size=32`} alt={d.domain} className="w-5 h-5 rounded-full" />
-                {d.domain}
-              </div>
-            </td>
-            <td className="px-4 py-3 text-sm text-gray-700">{d.topic}</td>
-            <td className="px-4 py-3 text-sm text-gray-500">{shared}</td>
-            <td className="px-4 py-3 text-sm text-gray-500">{unique}</td>
-            <td className="px-4 py-3 text-sm text-gray-500">{highValue}</td>
-            <td className="px-4 py-3 text-sm text-gray-500">{lastSeen || "-"}</td>
-            <td className="px-4 py-3">
-              <div className="flex justify-start">
-                        <Button className="border rounded-r-none bg-transparent hover:bg-transparent text-black cursor-pointer border-gray-200 rounded-l-md px-6 h-8 text-xs">Visit</Button>
+                return (
+                  <tr
+                    key={d.domain + idx}
+                    className={`${
+                      idx !== filteredAndSortedCompetitors.length - 1
+                        ? "border-b border-gray-700"
+                        : ""
+                    } hover:bg-gray-900`}
+                  >
+                    <td className="px-4 py-3 text-sm text-gray-700 font-medium">
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={`https://ui-avatars.com/api/?name=${d.domain}&background=random&color=fff&bold=true&size=32`}
+                          alt={d.domain}
+                          className="w-5 h-5 rounded-full"
+                        />
+                        {d.domain}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-700">
+                      {d.topic}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-500">
+                      {shared}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-500">
+                      {unique}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-500">
+                      {highValue}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-500">
+                      {lastSeen || "-"}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex justify-start">
+                        <Button className="border text-gray-300 rounded-r-none bg-transparent hover:bg-transparent text-gray-300cursor-pointer border-gray-700 rounded-l-md px-6 h-8 text-xs">
+                          Visit
+                        </Button>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button className="border border-l-0 rounded-l-none bg-transparent border-gray-200 rounded-r-md w-8 h-8 p-0 flex items-center justify-center hover:bg-gray-50"><ChevronDown className="w-4 h-4 text-gray-600" /></Button>
+                            <Button className="border border-l-0 rounded-l-none bg-transparent border-gray-700 rounded-r-md w-8 h-8 p-0 flex items-center justify-center hover:bg-gray-50">
+                              <ChevronDown className="w-4 h-4 text-gray-600" />
+                            </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-32">
-                            <DropdownMenuItem 
-                            className="text-black hover:bg-transparent! hover:text-black cursor-pointer"
-                            onClick={() => window.open(`https://${d.domain}`, "_blank")}>
-                        Visit Website
-                      </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="text-black hover:bg-transparent! hover:text-black cursor-pointer"
+                              onClick={() =>
+                                window.open(`https://${d.domain}`, "_blank")
+                              }
+                            >
+                              Visit Website
+                            </DropdownMenuItem>
                             <DropdownMenuItem
                               className="text-red-600 hover:bg-transparent! hover:text-red-600! cursor-pointer"
                               onClick={async () => {
-                                const siteId = selectedWebsiteId || initialWebsiteId || (websites && websites.length > 0 ? websites[0].id : undefined);
-                                await removeKeywordFromWebsite(siteId, row.keyword);
+                                const siteId =
+                                  selectedWebsiteId ||
+                                  initialWebsiteId ||
+                                  (websites && websites.length > 0
+                                    ? websites[0].id
+                                    : undefined);
+                                await removeKeywordFromWebsite(
+                                  siteId,
+                                  row.keyword
+                                );
                               }}
                             >
                               Delete
@@ -1107,13 +1271,13 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
-            </td>
-          </tr>
-        );
-      })}
-    </tbody>
-  </table>
-</div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Create Post Dialog (enqueue-backed) */}
@@ -1159,7 +1323,6 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
                       Type in the URL of your competitor
                     </p>
                   </div>
-
                   {/* Input Field */}
                   <div>
                     <Input
@@ -1170,12 +1333,14 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
                       className="h-10 border-gray-200 bg-gray-50"
                     />
                   </div>
-
                   Tags
-                 <div className="bg-gray-200 border border-gray-300 rounded-2xl w-full h-[81px]">
-                  <div className="flex gap-2 p-3 flex-wrap">
-                    {["www.designjoy.com", "www.lander.studio", "www.webflow.com"].map(
-                      (tag) => (
+                  <div className="bg-gray-200 border border-gray-300 rounded-2xl w-full h-[81px]">
+                    <div className="flex gap-2 p-3 flex-wrap">
+                      {[
+                        "www.designjoy.com",
+                        "www.lander.studio",
+                        "www.webflow.com",
+                      ].map((tag) => (
                         <button
                           key={tag}
                           onClick={() => toggleCompetitorTag(tag)}
@@ -1187,11 +1352,9 @@ export function CompetitorsTab({ websiteId: initialWebsiteId }: CompetitorsTabPr
                         >
                           {tag}
                         </button>
-                      )
-                    )}
+                      ))}
+                    </div>
                   </div>
-                  </div>
-
                   {/* Done Button */}
                   <button
                     onClick={handleAddCompetitorSubmit}
