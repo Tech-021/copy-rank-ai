@@ -52,16 +52,16 @@ export function ProfileDropdown({ userEmail, userAvatar, onLogout }: ProfileDrop
               <img
                 src={avatarToShow}
                 alt="Profile"
-                width={40}
-                height={40}
+                width={30}
+                height={30}
                 className="rounded-full object-cover"
               />
             ) : (
               <Image
                 src={avatarToShow}
                 alt="Profile"
-                width={40}
-                height={40}
+                width={30}
+                height={30}
                 className="rounded-full object-cover"
               />
             )}

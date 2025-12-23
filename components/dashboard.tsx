@@ -92,17 +92,18 @@ export function Dashboard({
             <div className="w-full h-full rounded-xl  flex items-center justify-center">
               <Image src="/newlogo.png" alt="" width={71.4} height={71.4} />
             </div>
-            <div
-              className="
-    flex gap-4 p-1.5  rounded-full
-    bg-[rgb(247,247,247)]
-    dark:bg-linear-to-b
-    dark:from-[#2E9839]
-    dark:to-[#04230D]
+           <div
+  className="
+    flex gap-4 p-1.5 rounded-full
+    
+    dark:bg-gradient-to-b
+    dark:from-[rgba(46,152,57,0.38)]
+    dark:via-[rgba(26,69,26,1)]
+    dark:to-[rgba(4,35,13,1)]
     border border-transparent
     dark:border-[#2E9839]
   "
-            >
+>
               <Link
                 href="/dashboard/analyze"
                 className={`cursor-pointer px-6.5 py-3.5 text-[13px] font-medium transition-colors whitespace-nowrap rounded-full
@@ -179,17 +180,18 @@ export function Dashboard({
               </Link>
             </div>
           </div>
-          <div
-            className="
+         <div
+  className="
     flex items-center gap-4 p-1.5 rounded-full
     text-[#53F870]
-    dark:bg-linear-to-b
-    dark:from-[#2E9839]
-    dark:to-[#04230D]
+    dark:bg-gradient-to-b
+    dark:from-[rgba(46,152,57,0.38)]
+    dark:via-[rgba(26,69,26,1)]
+    dark:to-[rgba(4,35,13,1)]
     border border-transparent
     dark:border-[#2E9839]
   "
-          >
+>
             {userEmail && (
               <ProfileDropdown
                 userEmail={userEmail}
