@@ -137,6 +137,13 @@ export default function Home() {
     }
   }
 
+  // If user becomes authenticated (dashboard state), redirect to the dashboard route
+  useEffect(() => {
+    if (authState === "dashboard") {
+      router.replace("/dashboard")
+    }
+  }, [authState, router])
+
   const toast = useToast()
 
   const handleLogout = async () => {
@@ -178,7 +185,8 @@ export default function Home() {
   }
 
   if (authState === "dashboard") {
-    return <Dashboard onLogout={handleLogout} userEmail={userEmail} userAvatar={userAvatar} />
+    // Redirecting to /dashboard via effect above; render nothing here.
+    return null
   }
 
   if (authState === "login") {
