@@ -4,6 +4,7 @@
 import { useState, useEffect } from "react";
 import { Plus, X } from "lucide-react";
 import { RefreshCcw } from "lucide-react";
+import { Check } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -1095,10 +1096,7 @@ export function CompetitorsTab({
                         </Button>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button
-                           
-                              className="border border-l-0 rounded-l-none bg-transparent border-gray-600 rounded-r-md w-8 h-8 p-0 flex items-center justify-center hover:bg-gray-50"
-                            >
+                            <Button className="border border-l-0 rounded-l-none bg-transparent border-gray-600 rounded-r-md w-8 h-8 p-0 flex items-center justify-center hover:bg-gray-50">
                               <ChevronDown className="w-4 h-4 text-gray-300" />
                             </Button>
                           </DropdownMenuTrigger>
@@ -1324,53 +1322,77 @@ export function CompetitorsTab({
                     </p>
                   </div>
                   {/* Input Field */}
-                  <div>
-              <Input
-  type="text"
-  placeholder="www.example.com"
-  value={competitorInput}
-  onChange={(e) => setCompetitorInput(e.target.value)}
-  className="
-    h-14
-    border border-[#2E9839]
-    bg-gradient-to-b
-    from-[rgba(46,152,57,0.38)]
-    to-[rgba(4,35,13,1)]
-    text-white
-    placeholder:text-white/70
-    focus-visible:ring-0
-    focus-visible:border-[#2E9839]
-  "
-/>
+                  <div className="relative w-full">
+                    <Input
+                      type="text"
+                      placeholder="www.example.com"
+                      value={competitorInput}
+                      onChange={(e) => setCompetitorInput(e.target.value)}
+                      className="
+      h-14
+      pr-32
+      border border-[#2E9839]
+      bg-gradient-to-b
+      from-[rgba(46,152,57,0.38)]
+      to-[rgba(4,35,13,1)]
+      text-white
+      placeholder:text-white/70
+      focus-visible:ring-0
+      focus-visible:border-[#2E9839]
+    "
+                    />
+
+                    <button
+                      className="
+      absolute
+      right-2
+      top-1/2
+      -translate-y-1/2
+      h-10
+      px-4
+      rounded-[9px]
+      bg-[#5AFF78]
+      text-white
+      text-sm
+      font-medium
+      hover:bg-[#257F31]
+      transition
+    "
+                    >
+                      <Check className="text-black" />
+                    </button>
                   </div>
-                  Tags
-                  <div className="bg-gray-200 border border-gray-300 rounded-2xl w-full h-[81px]">
-                    <div className="flex gap-2 p-3 flex-wrap">
+
+                  <div className="bg-transparent border border-[#085110] rounded-2xl w-full h-[81px]">
+                    <div className="flex gap-2 p-3  flex-wrap">
                       {[
                         "www.designjoy.com",
                         "www.lander.studio",
                         "www.webflow.com",
                       ].map((tag) => (
-                        <button
-                          key={tag}
-                          onClick={() => toggleCompetitorTag(tag)}
-                          className={`px-3 py-1 text-xs rounded-full border transition-colors ${
-                            competitorTags.includes(tag)
-                              ? "bg-gray-900 border text-white border-gray-900"
-                              : "bg-gray-100 text-gray-600 border-gray-600 hover:border-gray-300"
-                          }`}
-                        >
-                          {tag}
-                        </button>
+                       <button
+  key={tag}
+  onClick={() => toggleCompetitorTag(tag)}
+  className={`
+    px-3 py-1 text-xs rounded-[5px] border transition-colors
+    ${
+      competitorTags.includes(tag)
+        ? "border border-[#53F870] text-white"
+        : "bg-gradient-to-b from-[rgba(46,152,57,0.38)] to-[#04230D] text-[#53F870] border-[#53F870] hover:border-gray-300"
+    }
+  `}
+>
+  {tag}
+</button>
                       ))}
                     </div>
                   </div>
                   {/* Done Button */}
                   <button
                     onClick={handleAddCompetitorSubmit}
-                    className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 rounded-lg transition-colors"
+                    className="w-full bg-[#5AFF78] hover:bg-green-700 text-black font-medium py-3 rounded-lg transition-colors"
                   >
-                    Done
+                    Add
                   </button>
                 </div>
               </>
