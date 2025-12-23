@@ -1141,7 +1141,7 @@ export function CompetitorsTab({
                   <div className="mt-6 flex justify-end mr-4">
                     <Button
                       onClick={handleCreatePost}
-                      className="bg-gray-400 px-6 mb-5 hover:bg-gray-500"
+                      className="bg-transparent text-gray-400 border border-gray-800 px-6 mb-5 hover:bg-gray-500"
                     >
                       Create post
                     </Button>
