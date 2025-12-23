@@ -55,7 +55,7 @@ export function ImportCSVDialog({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg w-full max-w-[500px] p-8 relative">
+      <div className="bg-[#101110] rounded-lg w-full max-w-[500px] p-8 relative">
         {/* Close Button */}
         <button
           onClick={handleClose}
@@ -65,10 +65,10 @@ export function ImportCSVDialog({
         </button>
 
         {/* Title */}
-        <h2 className="text-2xl font-semibold text-gray-900 mb-2">
+        <h2 className="text-2xl text-white mb-2">
           Import CSV
         </h2>
-        <p className="text-sm text-gray-600 mb-6">
+        <p className="text-sm text-[#ffffffb3] mb-6">
           Drag and drop, or click to import keywords CSV file
         </p>
 
@@ -77,7 +77,7 @@ export function ImportCSVDialog({
           onDragOver={handleDragOver}
           onDrop={handleDrop}
           onClick={() => fileInputRef.current?.click()}
-          className=" rounded-lg py-29 text-center cursor-pointer hover:border-gray-400 transition-colors mb-6 bg-gray-50"
+          className=" rounded-lg py-29 text-center cursor-pointer hover:border-gray-400 transition-colors mb-6 bg-[#0d0d0d]"
         >
           {selectedFile ? (
             <div className="space-y-2">
@@ -98,7 +98,7 @@ export function ImportCSVDialog({
             <div className="space-y-2">
               <div className="flex justify-center text-4xl mb-2">
                <Image
-               src="/greenplus.png"
+               src="/filefordark.png"
                alt="icon"
                height={65}
                width={65}
@@ -125,34 +125,13 @@ export function ImportCSVDialog({
           className="hidden"
         />
 
-        {/* File Name Display */}
-        {!selectedFile && (
-          
-          <div className="mb-6 text-center">
-  <div className="relative w-full max-w-sm mx-auto">
-    <Input
-      placeholder="filename.csv"
-      className=""
-    />
-
-    <Image
-      src="/delete.png"
-      alt="delete"
-      width={15}
-      height={15}
-      className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer opacity-70 hover:opacity-100"
-    />
-  </div>
-</div>
-        )}
-
         {/* Import Button */}
         <button
           onClick={handleImport}
           disabled={!selectedFile}
-          className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium py-3 rounded-lg transition-colors"
+          className="w-full bg-[#53ff70] hover:bg-[#53ff70] disabled:bg-[#53ff70] disabled:cursor-not-allowed text-black font-medium py-3 rounded-lg transition-colors"
         >
-          Import
+          Next
         </button>
       </div>
     </div>

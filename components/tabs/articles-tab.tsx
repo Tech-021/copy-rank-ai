@@ -1470,7 +1470,7 @@ export function ArticlesTab({
                       <h2 className="text-2xl  text-gray-900">Completed!</h2>
                       <div className=" flex items-center justify-center">
                         <Image
-                          src="/check.png"
+                          src="/checkfordark.png"
                           alt="icon"
                           height={81}
                           width={81}

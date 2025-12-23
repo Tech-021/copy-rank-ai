@@ -537,13 +537,13 @@ export function KeywordsTab({
   const getPostStatusColor = (status?: string) => {
     switch (status) {
       case "Live":
-        return "bg-green-50 text-green-700 border border-green-200";
+        return "bg-[#53f870] text-black border border-green-200";
       case "Draft":
-        return "bg-gray-50 text-gray-700 border border-gray-200";
+        return "bg-[#ffffff66] text-black border-none";
       case "No Post":
-        return "bg-gray-50 text-gray-700 border border-gray-200";
+        return "bg-[#ffffff66] text-black border-none";
       default:
-        return "bg-gray-50 text-gray-700 border border-gray-200";
+        return "bg-[#ffffff66] text-black border-none";
     }
   };
 
@@ -943,14 +943,7 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
         <div className="flex gap-3">
           <div className="flex ">
           <Button
-            className="gap-2 text-[#53f870] border-gray-200 bg-[#53f8701a] rounded-r-none hover:bg-[#53f8701a] cursor-pointer"
-            onClick={() => setShowAddKeywordsDialog(true)}
-          >
-            Add Keywords
-            <Plus className="w-4 h-4" />
-          </Button>
-          <Button
-            className="gap-2 cursor-pointer text-[#53f870] rounded-none hover:bg-[#53f8701a] bg-[#53f8701a] border-l border-r border-[#53f870]"
+            className="gap-2 cursor-pointer text-[#53f870] rounded-l-lg rounded-r-none hover:bg-[#53f8701a] bg-[#53f8701a] border-r border-[#53f870]"
             onClick={() => setShowImportDialog(true)}
           >
             Import CSV
@@ -964,17 +957,17 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
             {websiteData.website.url?.replace(/^https?:\/\//, "")}
           </Button>
           </div>
-          <div className="ml-3">
+          <div>
               <Select value={selectedWebsiteId || undefined} onValueChange={handleWebsiteChange}>
-                <SelectTrigger className="h-10 bg-transparent rounded-[8px] focus-visible:outline-none focus-visible:ring-0 border-[#0000001a] focus-visible:border-[#0000001a] focus:outline-none cursor-pointer outline-none active:outline-none px-3.5 py-2.5 text-[#00000080]">
+                <SelectTrigger className="h-10  bg-[rgba(83,248,112,0.1)]!  rounded-[5px] focus-visible:outline-none focus-visible:ring-0 border-[#0000001a] focus-visible:border-[#0000001a] focus:outline-none cursor-pointer outline-none active:outline-none px-3.5 py-2.5 text-[#53F870]">
                   <SelectValue placeholder="Select your website" />
                 </SelectTrigger>
-                <SelectContent className="cursor-pointer">
+                <SelectContent className="cursor-pointer bg-[rgba(83,248,112,0.1)]! ">
                   {websites.map((website, index) => (
                     <SelectItem
                       key={website.id}
                       value={website.id}
-                      className={`cursor-pointer data-[state=checked]:text-[#00000080] data-[state=checked]:opacity-40 ${index < websites.length - 1 ? 'border-b rounded-none border-[#0000001a]' : ''}`}
+                      className={`cursor-pointer data-[state=checked]:text-[#53F870] data-[state=checked]:opacity-40 ${index < websites.length - 1 ? 'border-b rounded-none border-[#0000001a]' : ''}`}
                     >
                       {website.url}
                     </SelectItem>
@@ -987,7 +980,7 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
 
       {/* Stats Cards - Pixel Perfect */}
       <div className="grid grid-cols-4 rounded-xl shadow-xl">
-        <Card className="border rounded-r-none border-[#101110] border-r-[#53f870] bg-[#101110] shadow-xl">
+        <Card className="border rounded-r-none border-[#101110] border-r-[#53f8704b] bg-[#101110] shadow-xl">
           <CardContent className="flex flex-col justify-start gap-8">
             <div className="flex justify-between">
               <p className="text-xs font-medium text-[#ffffffb3] uppercase tracking-wide ">
@@ -1001,7 +994,7 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
           </CardContent>
         </Card>
 
-        <Card className="border rounded-none border-r-[#53f870] bg-[#101110] shadow-xl">
+        <Card className="border rounded-none border-r-[#53f8704b] bg-[#101110] shadow-xl">
           <CardContent className="flex flex-col justify-start gap-8">
             <div className="flex justify-between">
               <p className="text-xs font-medium text-[#ffffffb3] uppercase tracking-wide ">
@@ -1013,7 +1006,7 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
           </CardContent>
         </Card>
 
-        <Card className="border rounded-none border-r-[#53f870] bg-[#101110] shadow-xl">
+        <Card className="border rounded-none border-r-[#53f8704b] bg-[#101110] shadow-xl">
           <CardContent className="flex flex-col justify-start gap-8">
             <div className="flex justify-between">
               <p className="text-xs font-medium text-[#ffffffb3] uppercase tracking-wide ">
@@ -1108,7 +1101,8 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
         {/* RIGHT */}
         <button 
           onClick={() => setShowCreateDialog(true)}
-          className="h-9 px-8 rounded-md bg-gray-400 hover:bg-black text-white text-sm transition-colors"
+          disabled={!selectedKeywords || selectedKeywords.size === 0}
+          className="h-9 border-2 border-[#53f870] px-8 rounded-md bg-[#171717] hover:bg-bg-[#171717] cursor-pointer text-[#53f870] text-base transition-colors disabled:cursor-not-allowed disabled:border-[#53f8701a] disabled:text-[#3a3a3a]"
         >
           Create Post
         </button>
@@ -1116,7 +1110,7 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
 
       {/* Filters and Table */}
 
-      <div className="bg-[#d0d0d0] rounded-lg border border-[#53f8701a] overflow-hidden">
+      <div className="bg-[#0d0d0d] rounded-lg border border-[#53f8701a] overflow-hidden">
         <table className="w-full border border-[#53f8701a] bg-[#101110] border-collapse">
           {/* ================= HEADER ================= */}
           <thead>
@@ -1133,25 +1127,25 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
                   className="w-4 h-4 rounded border border-gray-300 bg-transparent cursor-pointer accent-[#53f870]"
                 />
               </th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+              <th className="px-6 py-3 text-left text-sm font-normal text-[#ffffff4d]">
                 Keyword
               </th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+              <th className="px-6 py-3 text-left text-sm font-normal text-[#ffffff4d]">
                 Search Volume
               </th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+              <th className="px-6 py-3 text-left text-sm font-normal text-[#ffffff4d]">
                 Difficulty
               </th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+              <th className="px-6 py-3 text-left text-sm font-normal text-[#ffffff4d]">
                 Competition
               </th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+              <th className="px-6 py-3 text-left text-sm font-normal text-[#ffffff4d]">
                 Post Status
               </th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+              <th className="px-6 py-3 text-left text-sm font-normal text-[#ffffff4d]">
                 Traffic Potential
               </th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+              <th className="px-6 py-3 text-left text-sm font-normal text-[#ffffff4d]">
                 Action
               </th>
             </tr>
@@ -1169,36 +1163,36 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
                 return (
                   <tr
                     key={`${kw.keyword}-${index}`}
-                    className={`border-b border-[#53f8701a] hover:bg-gray-50 transition-colors`}
+                    className={`border-b border-[#53f8701a] transition-colors`}
                   >
                     <td className="px-6 py-3 w-10">
                       <input
-                        className="w-4 h-4 rounded border border-gray-300 bg-transparent cursor-pointer accent-[#53f870]"
+                        className="w-4 h-4 rounded border border-[#53f8701a] bg-transparent cursor-pointer accent-[#53f870]"
                         type="checkbox"
                         checked={selectedKeywords.has(index)}
                         onChange={() => toggleKeywordSelection(index)}
                         aria-label={`Select keyword ${kw.keyword}`}
                       />
                     </td>
-                    <td className="px-6 text-gray-900 py-3 text-sm font-medium">{kw.keyword}</td>
-                    <td className="px-6 text-gray-600 py-3 text-sm">{kw.search_volume?.toLocaleString() || "—"}</td>
-                    <td className="px-6 text-gray-600 py-3 text-sm">{difficultyText}</td>
-                    <td className="px-6 text-gray-600 py-3 text-sm">{competitionText}</td>
+                    <td className="px-6 text-[#53f870] py-3 text-sm font-medium">{kw.keyword}</td>
+                    <td className="px-6 text-[#fffffb3] py-3 text-sm">{kw.search_volume?.toLocaleString() || "—"}</td>
+                    <td className="px-6 text-[#fffffb3] py-3 text-sm">{difficultyText}</td>
+                    <td className="px-6 text-[#fffffb3] py-3 text-sm">{competitionText}</td>
                     <td className="px-6 py-3">
                       <span className={`inline-flex items-center px-2.5 py-1 text-xs font-medium border rounded ${getPostStatusColor(kw.post_status)}`}>
                         {kw.post_status || "No Post"}
                       </span>
                     </td>
-                    <td className="px-6 text-gray-600 py-3 text-sm">{trafficText}</td>
+                    <td className="px-6 text-[#fffffb3] py-3 text-sm">{trafficText}</td>
                     <td className="px-6 py-3">
-                      <div className="flex items-center justify-end gap-0">
-                        <Button className="border border-gray-300 rounded-r-none bg-white text-gray-900 hover:bg-gray-50 border-r-0 px-4 h-8 text-xs font-medium">Edit</Button>
+                      <div className="flex items-center justify-start gap-0">
+                        <Button className="border w-[114px] border-[#53f8701a] rounded-r-none bg-transparent text-[#ffffffb3] hover:bg-transparent cursor-pointer border-r-0 px-4 h-8 text-xs font-medium">Edit</Button>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button className="border border-gray-300 rounded-l-none bg-white hover:bg-gray-50 w-8 h-8 p-0 flex items-center justify-center"><ChevronDown className="w-4 h-4 text-gray-600" /></Button>
+                            <Button className="border border-[#53f8701a] rounded-l-none bg-transparent hover:bg-transparent focus-visible:outline-none cursor-pointer w-8 h-8 p-0 flex items-center justify-center"><ChevronDown className="w-4 h-4 text-[#ffffffb3]" /></Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-32">
-                            <DropdownMenuItem onClick={() => handleDeleteKeyword(index)} className="text-red-600 hover:bg-red-50 cursor-pointer">Delete</DropdownMenuItem>
+                          <DropdownMenuContent align="end" className="w-36 border bg-[#101110] border-[#53f8701a]">
+                            <DropdownMenuItem onClick={() => handleDeleteKeyword(index)} className="text-red-600 hover:!text-red-600 hover:!bg-transparent focus-visible::!bg-transparent px-10 text-center cursor-pointer">Delete</DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
@@ -1208,7 +1202,7 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
               })
             ) : (
               <tr>
-                <td colSpan={8} className="px-6 py-8 text-center text-sm text-gray-500">No keywords found for this website</td>
+                <td colSpan={8} className="px-6 py-8 text-center text-sm text-[#ffffffb3]">No keywords found for this website</td>
               </tr>
             )}
           </tbody>
@@ -1268,15 +1262,6 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
       <SyncCompetitorsDialog
         isOpen={showSyncDialog}
         onClose={() => setShowSyncDialog(false)}
-      />
-
-      {/* Add Keywords Dialog */}
-      <AddKeywordsDialog
-        isOpen={showAddKeywordsDialog}
-        onClose={() => setShowAddKeywordsDialog(false)}
-        onAdd={async (keywords) => {
-          await importKeywordsFromCSV(keywords)
-        }}
       />
 
       {/* Delete Keyword Dialog */}
