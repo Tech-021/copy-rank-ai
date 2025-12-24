@@ -920,11 +920,11 @@ export function CompetitorsTab({
           {/* Right side */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-0">
             {/* Add Competitors and Sync - Stack on mobile */}
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-0 flex-1 sm:flex-none">
+            <div className="flex flex-row sm:flex-row sm:gap-0 flex-1 sm:flex-none">
               <Button
                 onClick={handleAddCompetitor}
                 variant="outline"
-                className="gap-2 text-[#53F870] border border-gray-700! rounded-r-none sm:rounded-r-none cursor-pointer bg-[rgba(83,248,112,0.1)]! hover:bg-[rgba(83,248,112,0.2)] text-xs sm:text-sm"
+                className="gap-2 text-[#53F870] border border-[#53f870]! lg:border-gray-700! rounded-r-none sm:rounded-r-none cursor-pointer bg-[rgba(83,248,112,0.1)]! hover:bg-[rgba(83,248,112,0.2)] text-xs sm:text-sm"
               >
                 Add Competitors
                 <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -932,7 +932,7 @@ export function CompetitorsTab({
 
               <Button
                 variant="outline"
-                className="gap-2 text-[#53F870] border border-gray-700! rounded-l-none sm:rounded-l-none cursor-pointer bg-[rgba(83,248,112,0.1)]! hover:bg-[rgba(83,248,112,0.2)] text-xs sm:text-sm"
+                className="gap-2 text-[#53F870] border border-[#53f870]! lg:rounded-l-none sm:rounded-l-none cursor-pointer bg-[rgba(83,248,112,0.1)]! rounded-none rounded-r-lg hover:bg-[rgba(83,248,112,0.2)] text-xs sm:text-sm"
                 onClick={async () => {
                   const fallbackId =
                     initialWebsiteId ||
@@ -982,7 +982,7 @@ export function CompetitorsTab({
         </div>
 
         {/* Stats Cards - 4 Column Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-0 rounded-xl shadow-xl overflow-hidden">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-0 rounded-xl shadow-xl overflow-hidden">
           {/* Card 1 */}
           <Card className="border-b sm:border-b sm:border-r lg:border-r lg:border-b-0 border-l-0 border-t-0 rounded-none border-[#53f8704b] bg-black">
             <CardContent className="flex flex-col justify-start gap-4 sm:gap-8">
@@ -1014,7 +1014,7 @@ export function CompetitorsTab({
           </Card>
 
           {/* Card 3 */}
-          <Card className="border-b sm:border-b sm:border-r lg:border-r lg:border-b-0 border-l-0 border-t-0 rounded-none border-[#53f8704b] bg-black">
+          <Card className="border-b sm:border-b sm:border-r lg:border-r lg:border-b-0 border-l-0 border-t-0 rounded-none border-r-[#53f8704b] bg-black">
             <CardContent className="flex flex-col justify-start gap-4 sm:gap-8">
               <div className="flex justify-between">
                 <p className="text-xs sm:text-xs font-medium text-white tracking-wide">
