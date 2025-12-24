@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/select";
 import { useRouter } from "next/navigation";
 import { CreatePostDialogDashboard } from "../dialog2";
+import { WebsiteDialog } from "../dialog1";
 
 interface Article {
   id: string;
@@ -852,6 +853,7 @@ export function AnalyzeTab({
                 </div>
               )}
               <div 
+              onClick={() => setOpen(true)}
               className={`flex items-center justify-between border px-4 pb-4 pt-5 ${websites.length > 0 ? 'rounded-b-xl' : 'rounded-xl'} border-gray-800 w-[300px] cursor-pointer`}>
                 <div className="flex items-center gap-5 cursor-pointer">
                 <div className="bg-[rgba(50,85,45,0.13)] w-[34px] h-[34px] flex items-center justify-center rounded-[10px] cursor-pointer">
@@ -950,6 +952,7 @@ export function AnalyzeTab({
         </div>
       </div>
       <CreatePostDialogDashboard open={openPostDialog} onOpenChange={setOpenPostDialog} websiteId={selectedWebsiteId} onCreated={handlePostCreated} />
+      <WebsiteDialog open={open} onOpenChange={setOpen} />
       {/* Add Competitor Dialog */}
             {showAddCompetitorDialog && (
               <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
