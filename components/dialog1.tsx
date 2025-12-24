@@ -110,10 +110,10 @@ export function WebsiteDialog({ open, onOpenChange, onSuccess }: WebsiteDialogPr
         <div className="flex flex-col gap-10 my-2.5">
           <div className="flex flex-col gap-[30px]">
             <div>
-              <h1 className="text-[#000000B3] text-lg font-normal">
+              <h1 className="text-white text-lg font-normal">
                 Website URL
               </h1>
-              <p className="text-[15px] text-[#00000080] font-normal">
+              <p className="text-[15px] text-white font-normal">
                 Start with your domain
               </p>
             </div>

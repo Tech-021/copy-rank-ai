@@ -8,7 +8,9 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  
 } from "@/components/ui/card";
+import { Check } from 'lucide-react';
 import { supabase } from "@/lib/client";
 import { useToast } from "@/components/ui/toast";
 import {
@@ -32,7 +34,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useRouter } from "next/navigation";
-import { WebsiteDialog } from "../dialog1";
 import { CreatePostDialogDashboard } from "../dialog2";
 
 interface Article {
@@ -285,7 +286,6 @@ export function AnalyzeTab({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [open, setOpen] = useState(false)
-  const [ openWebsiteDialog, setOpenWebsiteDialog ] = useState(false)
   const [openPostDialog, setOpenPostDialog] = useState(false)
   const [editForm, setEditForm] = useState({
       title: "",
@@ -852,7 +852,6 @@ export function AnalyzeTab({
                 </div>
               )}
               <div 
-              onClick={() => setOpenWebsiteDialog(true)}
               className={`flex items-center justify-between border px-4 pb-4 pt-5 ${websites.length > 0 ? 'rounded-b-xl' : 'rounded-xl'} border-gray-800 w-[300px] cursor-pointer`}>
                 <div className="flex items-center gap-5 cursor-pointer">
                 <div className="bg-[rgba(50,85,45,0.13)] w-[34px] h-[34px] flex items-center justify-center rounded-[10px] cursor-pointer">
@@ -950,12 +949,11 @@ export function AnalyzeTab({
           </div>
         </div>
       </div>
-      <WebsiteDialog open={openWebsiteDialog} onOpenChange={setOpenWebsiteDialog} />
       <CreatePostDialogDashboard open={openPostDialog} onOpenChange={setOpenPostDialog} websiteId={selectedWebsiteId} onCreated={handlePostCreated} />
       {/* Add Competitor Dialog */}
             {showAddCompetitorDialog && (
               <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                <div className="bg-white rounded-lg w-full max-w-[550px] p-8 relative">
+                <div className="bg-black rounded-lg w-full max-w-[550px] p-8 relative">
                   {/* Close Button */}
                   <button
                     onClick={() => {
@@ -968,58 +966,91 @@ export function AnalyzeTab({
                   >
                     <X className="w-5 h-5 rotate-180" />
                   </button>
-      
+
                   {!addCompetitorCompleted ? (
                     <>
                       {/* Add New Competitor State */}
                       <div className="space-y-6">
                         <div>
-                          <h2 className="text-2xl font-semibold text-gray-900">
+                          <h2 className="text-2xl font-semibold text-white">
                             Add New Competitor
                           </h2>
-                          <p className="text-sm text-gray-600 mt-1">
+                          <p className="text-sm text-gray-500 mt-1">
                             Type in the URL of your competitor
                           </p>
                         </div>
-      
                         {/* Input Field */}
-                        <div>
+                        <div className="relative w-full">
                           <Input
                             type="text"
                             placeholder="www.example.com"
                             value={competitorInput}
                             onChange={(e) => setCompetitorInput(e.target.value)}
-                            className="h-10 border-gray-200 bg-gray-50"
+                            className="
+      h-14
+      pr-32
+      border border-[#2E9839]
+      bg-gradient-to-b
+      from-[rgba(46,152,57,0.38)]
+      to-[rgba(4,35,13,1)]
+      text-white
+      placeholder:text-white/70
+      focus-visible:ring-0
+      focus-visible:border-[#2E9839]
+    "
                           />
+
+                          <button
+                            className="
+      absolute
+      right-2
+      top-1/2
+      -translate-y-1/2
+      h-10
+      px-4
+      rounded-[9px]
+      bg-[#5AFF78]
+      text-white
+      text-sm
+      font-medium
+      hover:bg-[#257F31]
+      transition
+    "
+                          >
+                            <Check className="text-black" />
+                          </button>
                         </div>
-      
-                        {/* Tags */}
-                       <div className="bg-gray-200 border border-gray-300 rounded-2xl w-full h-[81px]">
-                        <div className="flex gap-2 p-3 flex-wrap">
-                          {["www.designjoy.com", "www.lander.studio", "www.webflow.com"].map(
-                            (tag) => (
-                              <button
-                                key={tag}
-                                onClick={() => toggleCompetitorTag(tag)}
-                                className={`px-3 py-1 text-xs rounded-full border transition-colors ${
-                                  competitorTags.includes(tag)
-                                    ? "bg-gray-900 border text-white border-gray-900"
-                                    : "bg-gray-100 text-gray-600 border-gray-600 hover:border-gray-300"
-                                }`}
-                              >
-                                {tag}
-                              </button>
-                            )
-                          )}
+
+                        <div className="bg-transparent border border-[#085110] rounded-2xl w-full h-[81px]">
+                          <div className="flex gap-2 p-3  flex-wrap">
+                            {[
+                              "www.designjoy.com",
+                              "www.lander.studio",
+                              "www.webflow.com",
+                            ].map((tag) => (
+                             <button
+  key={tag}
+  onClick={() => toggleCompetitorTag(tag)}
+  className={`
+    px-3 py-1 text-xs rounded-[5px] border transition-colors
+    ${
+      competitorTags.includes(tag)
+        ? "border border-[#53F870] text-white"
+        : "bg-gradient-to-b from-[rgba(46,152,57,0.38)] to-[#04230D] text-[#53F870] border-[#53F870] hover:border-gray-300"
+    }
+  `}
+>
+  {tag}
+</button>
+                            ))}
+                          </div>
                         </div>
-                        </div>
-      
                         {/* Done Button */}
                         <button
                           onClick={handleAddCompetitorSubmit}
-                          className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 rounded-lg transition-colors"
+                          className="w-full bg-[#5AFF78] hover:bg-green-700 text-black font-medium py-3 rounded-lg transition-colors"
                         >
-                          Done
+                          Add
                         </button>
                       </div>
                     </>
@@ -1030,7 +1061,7 @@ export function AnalyzeTab({
                         <h2 className="text-2xl font-semibold text-gray-900">
                           Competitor Added!
                         </h2>
-      
+
                         {/* Success Checkmark */}
                         <div className="flex justify-center py-8">
                           <Image
@@ -1040,7 +1071,7 @@ export function AnalyzeTab({
                             alt="Success"
                           />
                         </div>
-      
+
                         {/* View Competitors Button */}
                         <button
                           onClick={() => {
