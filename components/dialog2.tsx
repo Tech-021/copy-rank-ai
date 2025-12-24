@@ -293,7 +293,7 @@ export function CreatePostDialogDashboard({
                     value={selectedSeoKeyword ?? undefined}
                     onValueChange={setSelectedSeoKeyword}
                   >
-                    <SelectTrigger className="w-[588px]  h-[60px]! bg-gradient-to-b text-[#53F870]! from-[#002B07] to-[#1A451A]  border-[#0000001a]">
+                    <SelectTrigger className="w-[282px] lg:w-[588px]  h-[60px]! bg-gradient-to-b text-[#53F870]! from-[#002B07] to-[#1A451A]  border-[#0000001a]">
                       <SelectValue placeholder="From Your Keywords" />
                     </SelectTrigger>
                     <SelectContent>
