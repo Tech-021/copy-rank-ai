@@ -18,8 +18,8 @@ export function CreatePostDialog({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg w-full max-w-[550px] p-4 sm:p-8 relative max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-100">
+      <div className="bg-[#101110] rounded-lg w-full max-w-[550px] p-8 relative">
         {/* Close Button */}
         <button
           onClick={onClose}
@@ -28,11 +28,11 @@ export function CreatePostDialog({
           <X className="w-4 h-4 sm:w-5 sm:h-5" />
         </button>
 
-        {!isLoading ? (
+        {isLoading ? (
           <>
             {/* Creating State */}
-            <div className="text-center flex flex-col space-y-4 sm:space-y-6">
-              <h2 className="text-xl sm:text-2xl text-gray-900">
+            <div className="text-center flex flex-col  space-y-6">
+              <h2 className="text-2xl  text-white">
                 Creating Post
               </h2>
               <div className="flex justify-center animate-spin">
@@ -57,8 +57,8 @@ export function CreatePostDialog({
         ) : (
           <>
             {/* Completed State */}
-            <div className="text-center space-y-4 sm:space-y-6">
-              <h2 className="text-xl sm:text-2xl text-gray-900">
+            <div className="text-center space-y-6">
+              <h2 className="text-2xl  text-white">
                 Completed!
               </h2>
 
@@ -77,7 +77,7 @@ export function CreatePostDialog({
               {/* View Posts Button */}
               <button
                 onClick={onClose}
-                className="w-full bg-green-600 hover:bg-green-600 text-white font-medium py-2 sm:py-3 rounded-lg transition-colors text-sm sm:text-base"
+                className="w-full bg-[#53f870] hover:bg-[#53f870b3] text-[#0d0d0d] font-medium py-3 rounded-lg transition-colors"
               >
                 View Posts
               </button>
