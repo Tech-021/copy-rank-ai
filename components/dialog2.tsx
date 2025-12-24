@@ -32,12 +32,21 @@ export function CreatePostDialogDashboard({
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [dialogCompleted, setDialogCompleted] = useState(false);
   const [customKeyword, setCustomKeyword] = useState("");
-  const [selectedCompetitor, setSelectedCompetitor] = useState<string | null>(null);
+  const [selectedCompetitor, setSelectedCompetitor] = useState<string | null>(
+    null
+  );
   const [selectedSeoKeywords, setSelectedSeoKeywords] = useState<string[]>([]);
-  const [selectedSeoKeyword, setSelectedSeoKeyword] = useState<string | null>(null);
-  const [selectedCompetitorKeywords, setSelectedCompetitorKeywords] = useState<string[]>([]);
-  const [competitorKeywordSuggestions, setCompetitorKeywordSuggestions] = useState<string[]>([]);
-  const [competitorKeywordMap, setCompetitorKeywordMap] = useState<Record<string, string[]>>({});
+  const [selectedSeoKeyword, setSelectedSeoKeyword] = useState<string | null>(
+    null
+  );
+  const [selectedCompetitorKeywords, setSelectedCompetitorKeywords] = useState<
+    string[]
+  >([]);
+  const [competitorKeywordSuggestions, setCompetitorKeywordSuggestions] =
+    useState<string[]>([]);
+  const [competitorKeywordMap, setCompetitorKeywordMap] = useState<
+    Record<string, string[]>
+  >({});
   const [competitorOptions, setCompetitorOptions] = useState<string[]>([]);
   const [keywordSuggestions, setKeywordSuggestions] = useState<string[]>([]);
   const [loadingOptions, setLoadingOptions] = useState(false);
@@ -66,10 +75,15 @@ export function CreatePostDialogDashboard({
       if (!open) return;
       setLoadingOptions(true);
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
         if (!user) return;
 
-        let query = supabase.from("websites").select("keywords, id").eq("user_id", user.id);
+        let query = supabase
+          .from("websites")
+          .select("keywords, id")
+          .eq("user_id", user.id);
         if (websiteId) query = query.eq("id", websiteId);
         const { data, error } = await query;
         if (error) throw error;
@@ -80,15 +94,19 @@ export function CreatePostDialogDashboard({
 
         (data || []).forEach((site) => {
           const payload = (site as any)?.keywords || {};
-          const compArr = Array.isArray(payload?.competitors) ? payload.competitors : [];
+          const compArr = Array.isArray(payload?.competitors)
+            ? payload.competitors
+            : [];
           compArr.forEach((c: any) => {
             const domain = typeof c === "string" ? c : c?.domain;
-            if (domain && !competitors.includes(domain)) competitors.push(domain);
+            if (domain && !competitors.includes(domain))
+              competitors.push(domain);
 
             const cKeywordsRaw = Array.isArray(c?.keywords) ? c.keywords : [];
             const cKeywords: string[] = [];
             cKeywordsRaw.forEach((k: any) => {
-              const val = typeof k === "string" ? k : k?.keyword || k?.name || k;
+              const val =
+                typeof k === "string" ? k : k?.keyword || k?.name || k;
               if (val) cKeywords.push(String(val));
             });
             if (domain) {
@@ -96,7 +114,9 @@ export function CreatePostDialogDashboard({
             }
           });
 
-          const kwArr = Array.isArray(payload?.keywords) ? payload.keywords : [];
+          const kwArr = Array.isArray(payload?.keywords)
+            ? payload.keywords
+            : [];
           kwArr.forEach((k: any) => {
             const val = typeof k === "string" ? k : k?.keyword || k?.name || k;
             if (val && !keywords.includes(val)) keywords.push(val);
@@ -130,34 +150,39 @@ export function CreatePostDialogDashboard({
   return (
     <div>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="min-w-[640px] w-full max-h-[600px] overflow-x-hidden overflow-y-scroll [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <DialogContent className="min-w-[320px] lg:min-w-[640px] w-full max-h-[400px] lg:max-h-[600px] overflow-x-hidden overflow-y-scroll [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <VisuallyHidden>
             <DialogTitle></DialogTitle>
           </VisuallyHidden>
           <div className="flex flex-col gap-[30px]">
             <div className="flex flex-col gap-2.5">
-              <h2 className="text-3xl text-white font-normal">
+              <h2 className="text-lg lg:text-3xl text-white font-normal">
                 Choose what to write about
               </h2>
-              <p className="text-[15px] text-white">
+              <p className="text-[10px] lg:text-[15px] text-white">
                 Pick a keyword as the focus for this post
               </p>
             </div>
             <div className="flex flex-col gap-5">
               {/* 1) Competitor selection */}
               <div className="flex flex-col gap-2.5">
-                <Select value={selectedCompetitor ?? undefined} onValueChange={setSelectedCompetitor}>
-            <SelectTrigger
-  className="w-[588px] h-[60px]! bg-gradient-to-b text-[#53F870]! from-[#002B07] to-[#1A451A] border border-[#53F870]"
->
+                <Select
+                  value={selectedCompetitor ?? undefined}
+                  onValueChange={setSelectedCompetitor}
+                >
+                  <SelectTrigger className="w-[282px] lg:w-[588px] h-[60px]! bg-gradient-to-b text-[#53F870]! from-[#002B07] to-[#1A451A] border border-[#53F870]">
                     <SelectValue placeholder="From  Competitor" />
                   </SelectTrigger>
                   <SelectContent>
                     {competitorOptions.length === 0 ? (
-                      <SelectItem value="__none__" disabled>No competitors found</SelectItem>
+                      <SelectItem value="__none__" disabled>
+                        No competitors found
+                      </SelectItem>
                     ) : (
                       competitorOptions.map((c) => (
-                        <SelectItem key={c} value={c}>{c}</SelectItem>
+                        <SelectItem key={c} value={c}>
+                          {c}
+                        </SelectItem>
                       ))
                     )}
                   </SelectContent>
@@ -178,19 +203,27 @@ export function CreatePostDialogDashboard({
                   </SelectContent>
                 </Select> */}
                 {/* 1b) Competitor keyword chips - multi-select */}
-                <div className="flex items-start justify-start gap-1.5 flex-wrap bg-transparent border border-[#53F870]! rounded-xl p-3.5 w-full min-h-[82px]">
-                  {(competitorKeywordSuggestions.length === 0) ? (
-                    <p className="text-xs text-[#00000080]">Select a competitor to see their keywords.</p>
+                <div className="flex items-start justify-start gap-1.5 flex-wrap bg-transparent border border-[#53F870]! rounded-xl p-3.5 w-[282px] lg:w-full min-h-[82px]">
+                  {competitorKeywordSuggestions.length === 0 ? (
+                    <p className="text-xs text-[#ffffff80]">
+                      Select a competitor to see their keywords.
+                    </p>
                   ) : (
                     competitorKeywordSuggestions.slice(0, 16).map((kw) => (
                       <button
                         key={kw}
                         onClick={() => {
-                          setSelectedCompetitorKeywords((prev) => 
-                            prev.includes(kw) ? prev.filter((k) => k !== kw) : [...prev, kw]
+                          setSelectedCompetitorKeywords((prev) =>
+                            prev.includes(kw)
+                              ? prev.filter((k) => k !== kw)
+                              : [...prev, kw]
                           );
                         }}
-                        className={`border border-[#53F870] bg-[rgba(114,235,98,0.13)] rounded-[5px] px-2 py-1  text-[10px] text-[#53F870] font-normal cursor-pointer hover:border-black ${selectedCompetitorKeywords.includes(kw) ? 'border-black text-[#53F870]' : 'border-[#0000004d] text-[#53F870] '}`}
+                        className={`border border-[#53F870] bg-[rgba(114,235,98,0.13)] rounded-[5px] px-2 py-1  text-[10px] text-[#53F870] font-normal cursor-pointer hover:border-black ${
+                          selectedCompetitorKeywords.includes(kw)
+                            ? "border-black text-[#53F870]"
+                            : "border-[#0000004d] text-[#53F870] "
+                        }`}
                         type="button"
                       >
                         {kw}
@@ -199,16 +232,23 @@ export function CreatePostDialogDashboard({
                   )}
                 </div>
                 {/* 2) Current website SEO keywords select */}
-                <Select value={selectedSeoKeyword ?? undefined} onValueChange={setSelectedSeoKeyword}>
-                  <SelectTrigger className="w-[588px]  h-[60px]! bg-gradient-to-b text-[#53F870]! from-[#002B07] to-[#1A451A]  border-[#0000001a]">
+                <Select
+                  value={selectedSeoKeyword ?? undefined}
+                  onValueChange={setSelectedSeoKeyword}
+                >
+                  <SelectTrigger className="w-[282px] lg:w-[588px]  h-[60px]! bg-gradient-to-b text-[#53F870]! from-[#002B07] to-[#1A451A]  border-[#0000001a]">
                     <SelectValue placeholder="From Your Keywords" />
                   </SelectTrigger>
                   <SelectContent>
                     {keywordSuggestions.length === 0 ? (
-                      <SelectItem value="__none__" disabled>No keywords found</SelectItem>
+                      <SelectItem value="__none__" disabled>
+                        No keywords found
+                      </SelectItem>
                     ) : (
                       keywordSuggestions.slice(0, 50).map((kw) => (
-                        <SelectItem key={kw} value={kw}>{kw}</SelectItem>
+                        <SelectItem key={kw} value={kw}>
+                          {kw}
+                        </SelectItem>
                       ))
                     )}
                   </SelectContent>
@@ -216,19 +256,30 @@ export function CreatePostDialogDashboard({
                 {/* 2b) Current website SEO keyword chips - multi-select */}
                 <div className="flex items-start justify-start bg-transparent border border-[#53F870]! gap-1.5 flex-wrap bg-[rgb(247,247,247)] rounded-xl p-3.5 w-full min-h-[82px]">
                   {loadingOptions ? (
-                    <p className="text-xs text-[#00000080]">Loading keywords…</p>
+                    <p className="text-xs text-[#00000080]">
+                      Loading keywords…
+                    </p>
                   ) : (
-                    (keywordSuggestions.length > 0 ? keywordSuggestions : fallbackSuggestions)
+                    (keywordSuggestions.length > 0
+                      ? keywordSuggestions
+                      : fallbackSuggestions
+                    )
                       .slice(0, 16)
                       .map((kw) => (
                         <button
                           key={kw}
                           onClick={() => {
-                            setSelectedSeoKeywords((prev) => 
-                              prev.includes(kw) ? prev.filter((k) => k !== kw) : [...prev, kw]
+                            setSelectedSeoKeywords((prev) =>
+                              prev.includes(kw)
+                                ? prev.filter((k) => k !== kw)
+                                : [...prev, kw]
                             );
                           }}
-                          className={`border rounded-full px-2 py-1 text-[10px] font-normal cursor-pointer hover:border-black ${selectedSeoKeywords.includes(kw) ? 'border-black text-[#53F870]' : 'border-[#0000004d] text-[#53F870]'}`}
+                          className={`border rounded-full px-2 py-1 text-[10px] font-normal cursor-pointer hover:border-black ${
+                            selectedSeoKeywords.includes(kw)
+                              ? "border-black text-[#53F870]"
+                              : "border-[#0000004d] text-[#53F870]"
+                          }`}
                           type="button"
                         >
                           {kw}
@@ -236,80 +287,108 @@ export function CreatePostDialogDashboard({
                       ))
                   )}
                 </div>
-              
-              
-              <div className="flex flex-col gap-2.5">
-                  <Select value={selectedSeoKeyword ?? undefined} onValueChange={setSelectedSeoKeyword}>
-                  <SelectTrigger className="w-[588px]  h-[60px]! bg-gradient-to-b text-[#53F870]! from-[#002B07] to-[#1A451A]  border-[#0000001a]">
-                    <SelectValue placeholder="From Your Keywords" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {keywordSuggestions.length === 0 ? (
-                      <SelectItem value="__none__" disabled>No keywords found</SelectItem>
+
+                <div className="flex flex-col gap-2.5">
+                  <Select
+                    value={selectedSeoKeyword ?? undefined}
+                    onValueChange={setSelectedSeoKeyword}
+                  >
+                    <SelectTrigger className="w-[588px]  h-[60px]! bg-gradient-to-b text-[#53F870]! from-[#002B07] to-[#1A451A]  border-[#0000001a]">
+                      <SelectValue placeholder="From Your Keywords" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {keywordSuggestions.length === 0 ? (
+                        <SelectItem value="__none__" disabled>
+                          No keywords found
+                        </SelectItem>
+                      ) : (
+                        keywordSuggestions.slice(0, 50).map((kw) => (
+                          <SelectItem key={kw} value={kw}>
+                            {kw}
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                  <div className="flex items-start justify-start bg-transparent border border-[#53F870]! gap-1.5 flex-wrap bg-[rgb(247,247,247)] rounded-xl p-3.5 w-full min-h-[82px]">
+                    {loadingOptions ? (
+                      <p className="text-xs text-[#00000080]">
+                        Loading keywords…
+                      </p>
                     ) : (
-                      keywordSuggestions.slice(0, 50).map((kw) => (
-                        <SelectItem key={kw} value={kw}>{kw}</SelectItem>
-                      ))
+                      (keywordSuggestions.length > 0
+                        ? keywordSuggestions
+                        : fallbackSuggestions
+                      )
+                        .slice(0, 16)
+                        .map((kw) => (
+                          <button
+                            key={kw}
+                            onClick={() => {
+                              setSelectedSeoKeywords((prev) =>
+                                prev.includes(kw)
+                                  ? prev.filter((k) => k !== kw)
+                                  : [...prev, kw]
+                              );
+                            }}
+                            className={`border rounded-full px-2 py-1 text-[10px] font-normal cursor-pointer hover:border-black ${
+                              selectedSeoKeywords.includes(kw)
+                                ? "border-black text-[#53F870]"
+                                : "border-[#0000004d] text-[#53F870]"
+                            }`}
+                            type="button"
+                          >
+                            {kw}
+                          </button>
+                        ))
                     )}
-                  </SelectContent>
-                </Select>
-                 <div className="flex items-start justify-start bg-transparent border border-[#53F870]! gap-1.5 flex-wrap bg-[rgb(247,247,247)] rounded-xl p-3.5 w-full min-h-[82px]">
-                  {loadingOptions ? (
-                    <p className="text-xs text-[#00000080]">Loading keywords…</p>
-                  ) : (
-                    (keywordSuggestions.length > 0 ? keywordSuggestions : fallbackSuggestions)
-                      .slice(0, 16)
-                      .map((kw) => (
-                        <button
-                          key={kw}
-                          onClick={() => {
-                            setSelectedSeoKeywords((prev) => 
-                              prev.includes(kw) ? prev.filter((k) => k !== kw) : [...prev, kw]
-                            );
-                          }}
-                          className={`border rounded-full px-2 py-1 text-[10px] font-normal cursor-pointer hover:border-black ${selectedSeoKeywords.includes(kw) ? 'border-black text-[#53F870]' : 'border-[#0000004d] text-[#53F870]'}`}
-                          type="button"
-                        >
-                          {kw}
-                        </button>
-                      ))
-                  )}
+                  </div>
                 </div>
-        
-              </div>
-              
-              
               </div>
 
               {/* 4) Custom keyword */}
             </div>
 
             <div>
-              <Button 
+              <Button
                 onClick={async () => {
                   setIsSubmitting(true);
                   try {
-                    const { data: { user } } = await supabase.auth.getUser();
+                    const {
+                      data: { user },
+                    } = await supabase.auth.getUser();
                     if (!user) {
-                      toast.showToast({ title: "Not signed in", description: "Please sign in to create a post.", type: "error" });
+                      toast.showToast({
+                        title: "Not signed in",
+                        description: "Please sign in to create a post.",
+                        type: "error",
+                      });
                       setIsSubmitting(false);
                       return;
                     }
 
                     // Collect all selected keywords
                     const allKeywords = new Set<string>();
-                    selectedCompetitorKeywords.forEach(k => allKeywords.add(k));
+                    selectedCompetitorKeywords.forEach((k) =>
+                      allKeywords.add(k)
+                    );
                     if (selectedSeoKeyword) allKeywords.add(selectedSeoKeyword);
-                    selectedSeoKeywords.forEach(k => allKeywords.add(k));
-                    if (customKeyword.trim()) allKeywords.add(customKeyword.trim());
+                    selectedSeoKeywords.forEach((k) => allKeywords.add(k));
+                    if (customKeyword.trim())
+                      allKeywords.add(customKeyword.trim());
 
                     const keywords = Array.from(allKeywords);
                     console.log("🔍 Selected keywords:", keywords);
                     console.log("🔍 User ID:", user.id);
                     console.log("🔍 Website ID:", websiteId);
-                    
+
                     if (keywords.length === 0) {
-                      toast.showToast({ title: "Missing keywords", description: "Please select or enter at least one keyword.", type: "error" });
+                      toast.showToast({
+                        title: "Missing keywords",
+                        description:
+                          "Please select or enter at least one keyword.",
+                        type: "error",
+                      });
                       setIsSubmitting(false);
                       return;
                     }
@@ -334,10 +413,19 @@ export function CreatePostDialogDashboard({
 
                     if (!res.ok || result?.error) {
                       console.error("Enqueue failed:", result);
-                      toast.showToast({ title: "Failed to queue", description: result?.error || "Unknown error", type: "error" });
+                      toast.showToast({
+                        title: "Failed to queue",
+                        description: result?.error || "Unknown error",
+                        type: "error",
+                      });
                     } else {
-                      const queued = result.jobCount || result.actual || keywords.length;
-                      toast.showToast({ title: "Queued", description: `Queued ${queued} article job(s) for generation.`, type: "success" });
+                      const queued =
+                        result.jobCount || result.actual || keywords.length;
+                      toast.showToast({
+                        title: "Queued",
+                        description: `Queued ${queued} article job(s) for generation.`,
+                        type: "success",
+                      });
                       // Close dialog and refresh parent
                       setShowCreateDialog(false);
                       onOpenChange(false);
@@ -345,7 +433,12 @@ export function CreatePostDialogDashboard({
                     }
                   } catch (err) {
                     console.error("Error enqueueing jobs:", err);
-                    toast.showToast({ title: "Error", description: err instanceof Error ? err.message : "Unknown error", type: "error" });
+                    toast.showToast({
+                      title: "Error",
+                      description:
+                        err instanceof Error ? err.message : "Unknown error",
+                      type: "error",
+                    });
                   } finally {
                     setIsSubmitting(false);
                   }
