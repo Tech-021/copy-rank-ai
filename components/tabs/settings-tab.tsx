@@ -33,7 +33,9 @@ import { useToast } from "@/components/ui/toast";
 export function SettingsTab() {
   const [activeTab, setActiveTab] = useState("publishing");
   const [currentUser, setCurrentUser] = useState<any>(null);
-  const [userPackage, setUserPackage] = useState<"free" | "pro" | "premium" | null>(null);
+  const [userPackage, setUserPackage] = useState<
+    "free" | "pro" | "premium" | null
+  >(null);
   const [usage, setUsage] = useState({
     articles: 0,
     articlesLimit: 0,
@@ -45,7 +47,9 @@ export function SettingsTab() {
   const [loading, setLoading] = useState(true);
 
   const [isPlanDialogOpen, setIsPlanDialogOpen] = useState(false);
-  const [selectedPlanVariantId, setSelectedPlanVariantId] = useState<string | null>(null);
+  const [selectedPlanVariantId, setSelectedPlanVariantId] = useState<
+    string | null
+  >(null);
   const [isCreatingCheckout, setIsCreatingCheckout] = useState(false);
   const toast = useToast();
   const [isDirty, setIsDirty] = useState(false);
@@ -72,12 +76,36 @@ export function SettingsTab() {
   });
 
   // Notification option definitions
-  const notificationOptions: { key: string; title: string; description: string }[] = [
-    { key: "notifyPostPublished", title: "Post Published", description: "Get notified when a post goes live" },
-    { key: "notifyDraftGenerated", title: "Draft Generated", description: "Be notified when a new draft is ready to review" },
-    { key: "notifyCompetitorScan", title: "Competitor Scan Complete", description: "Know when competitor analysis finishes" },
-    { key: "notifyWeeklyReport", title: "Weekly Performance Summary", description: "Get a weekly overview of your content activity" },
-    { key: "notifyKeywordSynced", title: "Keyword Synced", description: "Receive updates when new keywords are added" },
+  const notificationOptions: {
+    key: string;
+    title: string;
+    description: string;
+  }[] = [
+    {
+      key: "notifyPostPublished",
+      title: "Post Published",
+      description: "Get notified when a post goes live",
+    },
+    {
+      key: "notifyDraftGenerated",
+      title: "Draft Generated",
+      description: "Be notified when a new draft is ready to review",
+    },
+    {
+      key: "notifyCompetitorScan",
+      title: "Competitor Scan Complete",
+      description: "Know when competitor analysis finishes",
+    },
+    {
+      key: "notifyWeeklyReport",
+      title: "Weekly Performance Summary",
+      description: "Get a weekly overview of your content activity",
+    },
+    {
+      key: "notifyKeywordSynced",
+      title: "Keyword Synced",
+      description: "Receive updates when new keywords are added",
+    },
   ];
 
   const [passwordData, setPasswordData] = useState({
@@ -140,7 +168,8 @@ export function SettingsTab() {
             const kw = s?.keywords;
             if (!kw) return;
             if (Array.isArray(kw)) keywordsCount += kw.length;
-            else if (kw?.keywords && Array.isArray(kw.keywords)) keywordsCount += kw.keywords.length;
+            else if (kw?.keywords && Array.isArray(kw.keywords))
+              keywordsCount += kw.keywords.length;
           });
         }
 
@@ -148,8 +177,16 @@ export function SettingsTab() {
           ? await getUserArticleLimit(currentUser.id)
           : 0;
 
-        const keywordLimits: Record<string, number> = { free: 100, pro: 1000, premium: 5000 };
-        const monthlyLimits: Record<string, number> = { free: 10, pro: 50, premium: 100 };
+        const keywordLimits: Record<string, number> = {
+          free: 100,
+          pro: 1000,
+          premium: 5000,
+        };
+        const monthlyLimits: Record<string, number> = {
+          free: 10,
+          pro: 50,
+          premium: 100,
+        };
         const pkg = userPackage || "free";
 
         setUsage({
@@ -184,7 +221,10 @@ export function SettingsTab() {
     setIsDirty(true);
   };
 
-  const loadUserSettings = async (websiteId?: string | null, userId?: string | null) => {
+  const loadUserSettings = async (
+    websiteId?: string | null,
+    userId?: string | null
+  ) => {
     try {
       const uid = userId ?? currentUser?.id ?? null;
       const params = new URLSearchParams();
@@ -206,7 +246,9 @@ export function SettingsTab() {
 
     try {
       const uid = userId ?? currentUser?.id ?? null;
-      const key = `user_settings${uid ? `_${uid}` : ""}${websiteId ? `_${websiteId}` : ""}`;
+      const key = `user_settings${uid ? `_${uid}` : ""}${
+        websiteId ? `_${websiteId}` : ""
+      }`;
       const raw = localStorage.getItem(key);
       if (raw) {
         setSettings(JSON.parse(raw));
@@ -219,14 +261,22 @@ export function SettingsTab() {
 
   const handleSaveSettings = async (websiteId?: string | null) => {
     try {
-      const body = { settings, websiteId: websiteId || null, userId: currentUser?.id ?? null };
+      const body = {
+        settings,
+        websiteId: websiteId || null,
+        userId: currentUser?.id ?? null,
+      };
       const res = await fetch("/api/user/settings", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
       if (res.ok) {
-        toast.showToast({ title: "Saved", description: "Settings saved", type: "success" });
+        toast.showToast({
+          title: "Saved",
+          description: "Settings saved",
+          type: "success",
+        });
         setIsDirty(false);
         return;
       }
@@ -235,7 +285,9 @@ export function SettingsTab() {
     } catch (err: any) {
       try {
         const uid = currentUser?.id ?? null;
-        const key = `user_settings${uid ? `_${uid}` : ""}${websiteId ? `_${websiteId}` : ""}`;
+        const key = `user_settings${uid ? `_${uid}` : ""}${
+          websiteId ? `_${websiteId}` : ""
+        }`;
         localStorage.setItem(key, JSON.stringify(settings));
         toast.showToast({
           title: "Saved locally",
@@ -255,7 +307,11 @@ export function SettingsTab() {
 
   const handleResetSettings = async (websiteId?: string | null) => {
     await loadUserSettings(websiteId);
-    toast.showToast({ title: "Restored", description: "Settings reloaded", type: "success" });
+    toast.showToast({
+      title: "Restored",
+      description: "Settings reloaded",
+      type: "success",
+    });
   };
 
   useEffect(() => {
@@ -303,32 +359,30 @@ export function SettingsTab() {
   const tabs = [
     { id: "publishing", label: "Publishing" },
     { id: "connections", label: "Connections" },
-    { id: "preferences", label: "Preferences" },
-    { id: "notifications", label: "Notifications" },
     { id: "account", label: "Account" },
     { id: "billing", label: "Billing & Plan" },
   ];
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4 sm:space-y-6 p-4 sm:p-6">
       {/* Header */}
       <div>
-        <h2 className="text-2xl text-white font-medium">Settings</h2>
-        <p className="text-sm text-gray-500 mt-1">
+        <h2 className="text-lg sm:text-2xl text-white font-medium">Settings</h2>
+        <p className="text-xs sm:text-sm text-gray-500 mt-1">
           Manage publishing, integrations, and your account
         </p>
       </div>
 
       {/* Tabs */}
-      <div className="border-b  border-gray-800">
-        <div className="flex gap-8">
+      <div className="border-b border-gray-800 overflow-x-auto">
+        <div className="flex gap-4 sm:gap-8 min-w-min">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`pb-3 text-sm font-medium transition-colors ${
+              className={`pb-3 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
                 activeTab === tab.id
-                  ? "text-green-600 bg-[rgba(83,248,112,0.1)] border w-27 py-2 rounded-2xl rounded-b-none"
+                  ? "text-green-600 bg-[rgba(83,248,112,0.1)] border w-auto px-2 sm:px-4 py-2 rounded-2xl rounded-b-none"
                   : "text-gray-600 hover:text-gray-900"
               }`}
             >
@@ -342,28 +396,28 @@ export function SettingsTab() {
       <div>
         {/* Publishing Tab */}
         {activeTab === "publishing" && (
-          <div className="border border-gray-800 rounded-lg p-6  space-y-6">
+          <div className="border border-gray-800 rounded-lg p-4 sm:p-6 space-y-4 sm:space-y-6">
             <div>
-              <h3 className="text-base  font-medium text-white mb-1">
+              <h3 className="text-sm sm:text-base font-medium text-white mb-1">
                 Publishing
               </h3>
-              <p className="text-sm text-gray-500">
+              <p className="text-xs sm:text-sm text-gray-500">
                 Control how and when your blog posts go live
               </p>
             </div>
 
             {/* Auto-publish Posts */}
-            <div className="border  border-gray-800 max-w-[654px] rounded-[10px] ">
-              <div className=" space-y-2">
-                <label className="text-sm font-medium p-3 text-white">
+            <div className="border border-gray-800 w-full sm:max-w-[654px] rounded-[10px]">
+              <div className="space-y-2">
+                <label className="text-xs sm:text-sm font-medium p-2 sm:p-3 text-white">
                   Auto-publish posts
                 </label>
-                <div className="flex justify-between p-3">
-                  <p className="text-xs text-gray-500 mb-3">
+                <div className="flex items-center justify-between gap-3 p-2 sm:p-3">
+                  <p className="text-xs text-gray-500 flex-1">
                     When turned on, new posts will be published automatically
                     after generation
                   </p>
-                  <div className="flex items-center gap-3">
+                  <div className="flex-shrink-0">
                     <Switch
                       checked={settings.autoPublish}
                       onCheckedChange={(value) =>
@@ -377,20 +431,20 @@ export function SettingsTab() {
 
               {/* Publishing Schedule */}
               <div className="space-y-2">
-                <label className="text-sm font-medium p-3 text-white">
+                <label className="text-xs sm:text-sm font-medium p-2 sm:p-3 text-white">
                   Publishing Schedule
                 </label>
-                <p className="text-xs text-gray-500 p-3 mb-3">
+                <p className="text-xs text-gray-500 p-2 sm:p-3 mb-3">
                   Posts will be published based on your selected schedule
                 </p>
-                <div className="flex px-3 ">
+                <div className="flex px-2 sm:px-3">
                   <Select
                     value={settings.publishingFrequency}
                     onValueChange={(value) =>
                       handleSettingChange("publishingFrequency", value)
                     }
                   >
-                    <SelectTrigger className="w-28 h-9 rounded-r-none border-gray-800 text-sm">
+                    <SelectTrigger className="w-28 h-9 rounded-r-none border-r-0 border-gray-800 text-xs sm:text-sm">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -406,7 +460,7 @@ export function SettingsTab() {
                       handleSettingChange("publishingTime", value)
                     }
                   >
-                    <SelectTrigger className="w-28 h-9 rounded-l-none border-gray-800 text-sm">
+                    <SelectTrigger className="w-28 h-9 rounded-l-none border-gray-800 text-xs sm:text-sm">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -419,13 +473,13 @@ export function SettingsTab() {
               </div>
 
               {/* Queue Size */}
-              <div className="py-3 space-y-2">
-                <div className="border border-gray-800 " />
+              <div className="py-2 sm:py-3 space-y-2">
+                <div className="border border-gray-800" />
 
-                <label className="text-sm font-medium p-3 text-white">
+                <label className="text-xs sm:text-sm font-medium p-2 sm:p-3 text-white">
                   Queue size
                 </label>
-                <p className="text-xs text-gray-500 p-3 mb-3">
+                <p className="text-xs text-gray-500 p-2 sm:p-3 mb-3">
                   Only this number of ready posts will be kept in the publishing
                   queue at a time
                 </p>
@@ -435,7 +489,7 @@ export function SettingsTab() {
                     handleSettingChange("queueSize", value)
                   }
                 >
-                  <SelectTrigger className="w-28 h-9   ml-4 border-gray-800 text-sm">
+                  <SelectTrigger className="w-full sm:w-28 h-9 ml-0 sm:ml-4 border-gray-800 text-xs sm:text-sm">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -447,17 +501,16 @@ export function SettingsTab() {
               </div>
             </div>
 
-            <div className="flex justify-end gap-2">
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2">
               <Button
-               
-                className="h-9 bg-transparent text-gray-100 border border-gray-600"
+                className="h-8 sm:h-9 bg-transparent text-gray-100 border border-gray-600 text-xs sm:text-sm"
                 onClick={() => handleResetSettings()}
                 disabled={!isDirty}
               >
                 Reset
               </Button>
               <Button
-                className="h-9 bg-transparent text-gray-100 border border-gray-600"
+                className="h-8 sm:h-9 bg-transparent text-gray-100 border border-gray-600 text-xs sm:text-sm"
                 onClick={() => handleSaveSettings()}
                 disabled={!isDirty}
               >
@@ -467,33 +520,33 @@ export function SettingsTab() {
           </div>
         )}
 
-  
         {/* Preferences Tab */}
-    
+
         {/* Notifications Tab */}
-    
+
         {/* Account Tab */}
-      
 
         {/* Billing Tab */}
         {activeTab === "connections" && (
-          <div className="border border-gray-800 rounded-lg p-6 space-y-6">
+          <div className="border border-gray-800 rounded-lg p-4 sm:p-6 space-y-4 sm:space-y-6">
             <div>
-              <h3 className="text-base font-medium text-white mb-1">
+              <h3 className="text-sm sm:text-base font-medium text-white mb-1">
                 Connections
               </h3>
-              <p className="text-sm text-gray-500">
+              <p className="text-xs sm:text-sm text-gray-500">
                 Choose where your posts should be published
               </p>
             </div>
 
-            <div className="border border-gray-800 max-w-[654px] p-4 rounded-[10px]">
-              <h4 className="text-sm font-medium text-white mb-3">
+            <div className="border border-gray-800 w-full sm:max-w-[654px] p-3 sm:p-4 rounded-[10px]">
+              <h4 className="text-xs sm:text-sm font-medium text-white mb-3">
                 Connected Websites
               </h4>
               <div className="space-y-2">
-                <div className="flex items-center justify-between p-3 bg-transparent rounded">
-                  <span className="text-sm text-gray-700">www.delani.pro</span>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-2 sm:p-3 bg-transparent rounded">
+                  <span className="text-xs sm:text-sm text-gray-700">
+                    www.delani.pro
+                  </span>
                   <span className="text-xs text-green-600 font-medium">
                     Active
                   </span>
@@ -518,331 +571,89 @@ export function SettingsTab() {
           </div>
         )}
 
-        {/* Preferences Tab */}
-        {activeTab === "preferences" && (
-          <div className="border border-gray-800 rounded-lg p-6">
-            <div className="mb-6">
-              <h3 className="text-base font-medium text-white mb-1">
-                Preferences
-              </h3>
-              <p className="text-sm text-gray-500">
-                Customize how your posts are generated
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 gap-6">
-              <div className="border space-y-3 rounded-[10px] border-gray-800 max-w-[654px] ">
-                <div className="space-y-2 p-4">
-                  <label className="text-sm font-medium text-white">
-                    Default Language
-                  </label>
-                  <div className="flex justify-between">
-                    <p className="text-xs py-2 text-gray-500 mb-3">
-                      Select the language your posts will be written in by
-                      default
-                    </p>
-                    <Select
-                      value={settings.defaultLanguage}
-                      onValueChange={(value) =>
-                        handleSettingChange("defaultLanguage", value)
-                      }
-                    >
-                      <SelectTrigger className="h-9 w-27 border-gray-800 text-sm">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="english">English</SelectItem>
-                        <SelectItem value="spanish">Spanish</SelectItem>
-                        <SelectItem value="french">French</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="border border-gray-800" />
-                  <label className="text-sm font-medium text-white p-3">
-                    Writing tone
-                  </label>
-                  <div className="flex justify-between p-3">
-                    <p className="text-xs text-gray-500 mb-3">
-                      Defines the overall style and personality of your content
-                    </p>
-                    <Select
-                      value={settings.writingTone}
-                      onValueChange={(value) =>
-                        handleSettingChange("writingTone", value)
-                      }
-                    >
-                      <SelectTrigger className="h-9 border-gray-800 text-sm">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="professional">
-                          Professional
-                        </SelectItem>
-                        <SelectItem value="casual">Casual</SelectItem>
-                        <SelectItem value="formal">Formal</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="space-y-2 ">
-                  <div className="border  border-gray-800" />
-                  <label className="text-sm font-medium p-3 text-white">
-                    Post length
-                  </label>
-                  <div className="flex justify-between">
-                    <p className="text-xs text-gray-500 p-3 mb-3">
-                      Controls how detailed each generated post will be
-                    </p>
-                    <div className="flex items-center p-3 gap-2">
-                      <Input
-                        type="text"
-                        value={settings.postLength}
-                        onChange={(e) =>
-                          handleSettingChange("postLength", e.target.value)
-                        }
-                        placeholder="e.g.1200"
-                        className="h-9 w-27 mr-1 border-gray-800 text-sm"
-                      />
-                    </div>
-                    {/* <span className="text-xs text-gray-600">words</span> */}
-                  </div>
-                </div>
-
-                <div className="space-y-2 ">
-                  <div className="border border-gray-800" />
-                  <label className="text-sm font-medium p-4 text-white">
-                    SEO optimization level
-                  </label>
-                  <div className="flex justify-between ">
-                    <p className="text-xs text-gray-500 p-4 mb-3">
-                      Controls how heavily keywords are used
-                    </p>
-                    <Select
-                      value={settings.seoLevel}
-                      onValueChange={(value) =>
-                        handleSettingChange("seoLevel", value)
-                      }
-                    >
-                      <SelectTrigger className="h-9 mr-4  border-gray-800 text-sm">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="balanced">Balanced</SelectItem>
-                        <SelectItem value="aggressive">Aggressive</SelectItem>
-                        <SelectItem value="conservative">
-                          Conservative
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Notifications Tab */}
-        {activeTab === "notifications" && (
-          <div className="border border-gray-800 rounded-lg p-6">
-            <div className="mb-6">
-              <h3 className="text-base font-medium text-white mb-1">
-                Notifications
-              </h3>
-              <p className="text-sm text-gray-500">
-                Choose which updates you want to receive
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-8">
-              {/* Left Column */}
-              <div className="space-y-6 border rounded-[10px] border-gray-800">
-                <div className="flex justify-between p-4 gap-4">
-                  <div>
-                    <p className="text-sm font-medium text-white">
-                      Post Published
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Get notified when a post goes live
-                    </p>
-                  </div>
-                  <Switch
-                    checked={settings.notifyPostPublished}
-                    onCheckedChange={(value) =>
-                      handleSettingChange("notifyPostPublished", value)
-                    }
-                    className="mt-0.5"
-                  />
-                </div>
-                <div className="border border-gray-800" />
-
-                <div className="flex justify-between p-4 gap-4">
-                  <div>
-                    <p className="text-sm font-medium text-white">
-                      Competitor Scan Complete
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Know when competitor analysis finishes
-                    </p>
-                  </div>
-                  <Switch
-                    checked={settings.notifyCompetitorScan}
-                    onCheckedChange={(value) =>
-                      handleSettingChange("notifyCompetitorScan", value)
-                    }
-                    className="mt-0.5"
-                  />
-                </div>
-                <div className="border border-gray-800" />
-                <div className="flex justify-between p-4 gap-4">
-                  <div>
-                    <p className="text-sm font-medium text-white">
-                      Keyword Synced
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Receive updates when new keywords are added
-                    </p>
-                  </div>
-   <Switch
-  checked={settings.notifyKeywordSynced}
-  onCheckedChange={(value) =>
-    handleSettingChange("notifyKeywordSynced", value)
-  }
-  className="
-    mt-0.5
-    h-[18px] w-[34px]
-    rounded-full
-    border border-[#53F870]
-
-    bg-[#020D05]
-    data-[state=checked]:bg-[#020D05]
-    data-[state=unchecked]:bg-[#020D05]
-
-    focus-visible:ring-0
-    focus-visible:ring-offset-0
-  "
-/>
-                </div>
-              </div>
-
-              {/* Right Column */}
-              <div className="space-y-6 ">
-                <div className="border border-gray-800 rounded-[10px] max-w-[654px] h-[220px] space-y-9">
-                  <div className="flex justify-between mt-5 px-6 py-2  gap-4">
-                    <div>
-                      <p className="text-sm font-medium text-white">
-                        Draft Generated
-                      </p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Be notified when a new draft is ready to review
-                      </p>
-                    </div>
-                    <Switch
-                      checked={settings.notifyDraftGenerated}
-                      onCheckedChange={(value) =>
-                        handleSettingChange("notifyDraftGenerated", value)
-                      }
-                      className="mt-0.5"
-                    />
-                  </div>
-                  <div className="border border-gray-800" />
-
-                  <div className="flex justify-between mt-5 px-6  gap-4">
-                    <div>
-                      <p className="text-sm font-medium text-white">
-                        Weekly Performance Summary
-                      </p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Get a weekly overview of your content activity
-                      </p>
-                    </div>
-                    <Switch
-                      checked={settings.notifyWeeklyReport}
-                      onCheckedChange={(value) =>
-                        handleSettingChange("notifyWeeklyReport", value)
-                      }
-                      className="mt-0.5"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Account Tab */}
         {activeTab === "account" && (
-          <div className="border border-gray-800 rounded-lg p-6">
-            <div className="mb-6">
-              <h3 className="text-base font-medium text-white mb-1">
-                Account
-              </h3>
-              <p className="text-sm text-gray-500">
+          <div className="border border-gray-800 rounded-lg p-4 sm:p-6">
+            <div className="mb-4 sm:mb-6">
+              <h3 className="text-sm sm:text-base font-medium text-white mb-1">Account</h3>
+              <p className="text-xs sm:text-sm text-gray-500">
                 Manage your account details and preferences
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-12">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-12">
               {/* Left Column */}
-              <div className="space-y-0 border border-gray-800 rounded-lg ">
+              <div className="space-y-0 border border-gray-800 rounded-lg">
                 {/* Profile Section */}
-                <div className="flex items-center justify-between p-2 pb-4 border-b border-gray-800">
-                  <div className="flex items-center p-2 gap-4">
+                <div className="flex items-center justify-between p-2 sm:p-3 pb-4 border-b border-gray-800">
+                  <div className="flex items-center p-1 sm:p-2 gap-3 sm:gap-4">
                     {currentUser?.user_metadata?.avatar_url ? (
                       <Image
                         src={currentUser.user_metadata.avatar_url}
-                        alt={currentUser.user_metadata?.full_name || currentUser.email || "avatar"}
+                        alt={
+                          currentUser.user_metadata?.full_name ||
+                          currentUser.email ||
+                          "avatar"
+                        }
                         width={48}
                         height={48}
                         className="rounded-full object-cover"
                       />
                     ) : (
                       <div className="w-12 h-12 rounded-full bg-gray-300 flex items-center justify-center text-sm text-white">
-                        {((currentUser?.user_metadata?.full_name || currentUser?.email || "U") as string)[0]?.toUpperCase()}
+                        {(
+                          (currentUser?.user_metadata?.full_name ||
+                            currentUser?.email ||
+                            "U") as string
+                        )[0]?.toUpperCase()}
                       </div>
                     )}
                     <div>
-                      <p className="text-sm font-medium text-white">
-                        {currentUser?.user_metadata?.full_name || currentUser?.email || "Your profile"}
+                      <p className="text-xs sm:text-sm font-medium text-white">
+                        {currentUser?.user_metadata?.full_name ||
+                          currentUser?.email ||
+                          "Your profile"}
                       </p>
-                      <p className="text-xs text-gray-500">{userPackage ? `${userPackage.charAt(0).toUpperCase() + userPackage.slice(1)} Tier` : "Free Tier"}</p>
+                      <p className="text-xs text-gray-500">
+                        {userPackage
+                          ? `${
+                              userPackage.charAt(0).toUpperCase() +
+                              userPackage.slice(1)
+                            } Tier`
+                          : "Free Tier"}
+                      </p>
                     </div>
                   </div>
-                  <button className="h-8 px-3 text-xs hover:bg-gray-800 text-white">
+                  <button className="h-7 sm:h-8 px-2 sm:px-3 text-xs hover:bg-gray-800 text-white flex-shrink-0">
                     Upgrade
                   </button>
                 </div>
 
                 {/* Email Section */}
-                <div className="flex items-center justify-between px-4 py-4 border-b border-gray-800">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0 p-2 sm:p-3 sm:px-4 py-3 sm:py-4 border-b border-gray-800">
                   <div>
-                    <p className="text-sm font-medium text-white">Email</p>
+                    <p className="text-xs sm:text-sm font-medium text-white">Email</p>
                     <p className="text-xs text-gray-500">
                       {currentUser?.email || "admin@delani.pro"}
                     </p>
                   </div>
                   <Button
                     variant="ghost"
-                    className="h-8 px-3 text-xs text-gray-500 hover:text-gray-900 hover:bg-transparent"
+                    className="h-7 sm:h-8 px-2 sm:px-3 text-xs text-gray-500 hover:text-gray-900 hover:bg-transparent flex-shrink-0"
                   >
                     Change email
                   </Button>
                 </div>
 
                 {/* Password Section */}
-                <div className="flex items-center px-4 py-5 justify-between pt-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0 p-2 sm:p-3 sm:px-4 py-3 sm:py-5 sm:pt-4">
                   <div>
-                    <p className="text-sm font-medium text-white">
-                      Password
-                    </p>
+                    <p className="text-xs sm:text-sm font-medium text-white">Password</p>
                     <p className="text-xs text-gray-600">••••••••</p>
                   </div>
                   <Button
                     variant="ghost"
-                    className="h-8 px-3 text-xs text-gray-500 hover:text-gray-900 hover:bg-transparent"
+                    className="h-7 sm:h-8 px-2 sm:px-3 text-xs text-gray-500 hover:text-gray-900 hover:bg-transparent flex-shrink-0"
                   >
                     Change password
                   </Button>
@@ -850,19 +661,19 @@ export function SettingsTab() {
               </div>
 
               {/* Right Column */}
-              <div className="space-y-6">
+              <div className="space-y-4 sm:space-y-6">
                 {/* API Access Status */}
-                <div className="space-y-3 border rounded-[10px] border-gray-800 p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="text-sm font-medium text-white">
+                <div className="space-y-3 border rounded-[10px] border-gray-800 p-3 sm:p-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex-1">
+                      <h4 className="text-xs sm:text-sm font-medium text-white">
                         API access status
                       </h4>
                       <p className="text-xs text-gray-500">
                         Know when competitor analysis finishes
                       </p>
                     </div>
-                    <Switch checked={true} className="ml-auto" />
+                    <Switch checked={true} className="flex-shrink-0" />
                   </div>
                   <div className="space-y-3">
                     <div className="relative">
@@ -910,29 +721,29 @@ export function SettingsTab() {
         )}
 
         {/* Billing Tab */}
-          {activeTab === "billing" && (
-          <div className="border border-gray-800 rounded-lg p-6 space-y-6">
+        {activeTab === "billing" && (
+          <div className="border border-gray-800 rounded-lg p-4 sm:p-6 space-y-4 sm:space-y-6">
             <div>
-              <h3 className="text-base font-medium text-white mb-1">
+              <h3 className="text-sm sm:text-base font-medium text-white mb-1">
                 Billing & Plan
               </h3>
-              <p className="text-sm text-gray-500">
+              <p className="text-xs sm:text-sm text-gray-500">
                 Manage your subscription settings and usage info
               </p>
             </div>
-            <div className="border border-gray-800 max-w-[654px] rounded-lg ">
+            <div className="border border-gray-800 w-full sm:max-w-[654px] rounded-lg">
               <div>
-                <h4 className="text-sm p-3 font-medium text-white px-4 mb-3">
+                <h4 className="text-xs sm:text-sm p-2 sm:p-3 sm:px-4 font-medium text-white mb-2 sm:mb-3">
                   Current plan
                 </h4>
-                <p className="text-sm px-4 text-gray-500">Free Tier</p>
+                <p className="text-xs sm:text-sm px-2 sm:px-4 text-gray-500">Free Tier</p>
               </div>
               <div className="border border-gray-800" />
-              <div className="space-y-3">
-                <h4 className="text-sm font-medium p-4 text-white">
+              <div className="space-y-2 sm:space-y-3">
+                <h4 className="text-xs sm:text-sm font-medium p-2 sm:p-4 text-white">
                   Usage summary
                 </h4>
-                <div className="space-y-2 text-sm p-2 px-4">
+                <div className="space-y-2 text-xs sm:text-sm p-2 sm:px-4">
                   <div className="flex justify-between ">
                     <span className="text-gray-500">Websites</span>
                     <span className="text-gray-500">5 / 10</span>
@@ -961,46 +772,69 @@ export function SettingsTab() {
                 </div>
               </div>
 
-              <div className="pt-4 p-1 border-t border-gray-800 flex justify-between">
-                <div>
-                  <p className="text-sm font-medium text-white px-3 mb-2">
+              <div className="pt-3 sm:pt-4 p-2 sm:p-1 border-t border-gray-800 flex flex-col sm:flex-row sm:justify-between gap-3 sm:gap-0">
+                <div className="flex-1">
+                  <p className="text-xs sm:text-sm font-medium text-white px-2 sm:px-3 mb-1 sm:mb-2">
                     Subscription
                   </p>
-                  <p className="text-xs text-gray-600 px-3 ">
+                  <p className="text-xs text-gray-600 px-2 sm:px-3">
                     Upgrade your plan to see more features
                   </p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2">
                   {userPackage !== "premium" ? (
                     <>
                       <Button
                         variant="outline"
-                        className="h-9 border-gray-200 bg-white"
+                        className="h-8 sm:h-9 border-gray-200 bg-white text-xs sm:text-sm"
                         onClick={() => setIsPlanDialogOpen(true)}
                       >
                         Upgrade Plan
                       </Button>
 
-                      <Dialog open={isPlanDialogOpen} onOpenChange={setIsPlanDialogOpen}>
+                      <Dialog
+                        open={isPlanDialogOpen}
+                        onOpenChange={setIsPlanDialogOpen}
+                      >
                         <DialogContent>
                           <DialogHeader>
                             <DialogTitle>Update Your Plan</DialogTitle>
                             <DialogDescription>
-                              Choose a plan to upgrade your account. After selecting, you'll be redirected to LemonSqueezy to complete the purchase.
+                              Choose a plan to upgrade your account. After
+                              selecting, you'll be redirected to LemonSqueezy to
+                              complete the purchase.
                             </DialogDescription>
                           </DialogHeader>
                           <div className="space-y-3">
                             <div>
-                              <label className="text-sm font-medium">Plan</label>
-                              <Select onValueChange={(value) => setSelectedPlanVariantId(value)}>
+                              <label className="text-sm font-medium">
+                                Plan
+                              </label>
+                              <Select
+                                onValueChange={(value) =>
+                                  setSelectedPlanVariantId(value)
+                                }
+                              >
                                 <SelectTrigger className="w-full h-10">
                                   <SelectValue placeholder="Select a plan" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value={process.env?.NEXT_PUBLIC_LEMONSQUEEZY_CHECKOUT_URL_15 || ""}>
+                                  <SelectItem
+                                    value={
+                                      process.env
+                                        ?.NEXT_PUBLIC_LEMONSQUEEZY_CHECKOUT_URL_15 ||
+                                      ""
+                                    }
+                                  >
                                     Pro — 15 articles
                                   </SelectItem>
-                                  <SelectItem value={process.env?.NEXT_PUBLIC_LEMONSQUEEZY_CHECKOUT_URL_30 || ""}>
+                                  <SelectItem
+                                    value={
+                                      process.env
+                                        ?.NEXT_PUBLIC_LEMONSQUEEZY_CHECKOUT_URL_30 ||
+                                      ""
+                                    }
+                                  >
                                     Premium — 30 articles
                                   </SelectItem>
                                 </SelectContent>
@@ -1008,14 +842,19 @@ export function SettingsTab() {
                             </div>
 
                             <div className="flex gap-2 justify-end">
-                              <Button variant="ghost" onClick={() => setIsPlanDialogOpen(false)}>
+                              <Button
+                                variant="ghost"
+                                onClick={() => setIsPlanDialogOpen(false)}
+                              >
                                 Cancel
                               </Button>
                               <Button
                                 disabled={isCreatingCheckout}
                                 onClick={async () => {
                                   if (!currentUser) {
-                                    alert("Please sign in to update your plan.");
+                                    alert(
+                                      "Please sign in to update your plan."
+                                    );
                                     return setIsPlanDialogOpen(false);
                                   }
                                   if (!selectedPlanVariantId) {
@@ -1025,13 +864,15 @@ export function SettingsTab() {
                                   try {
                                     setIsCreatingCheckout(true);
                                     if (selectedPlanVariantId) {
-                                      window.location.href = selectedPlanVariantId;
+                                      window.location.href =
+                                        selectedPlanVariantId;
                                       return;
                                     }
                                     const checkout = await createCheckout(
                                       selectedPlanVariantId!,
                                       currentUser.email,
-                                      currentUser.user_metadata?.full_name || currentUser.name,
+                                      currentUser.user_metadata?.full_name ||
+                                        currentUser.name,
                                       currentUser.id
                                     );
                                     if (checkout?.url) {
@@ -1039,29 +880,71 @@ export function SettingsTab() {
                                       setIsPlanDialogOpen(false);
                                       setTimeout(async () => {
                                         try {
-                                          const pkg = await getUserPackage(currentUser.id);
+                                          const pkg = await getUserPackage(
+                                            currentUser.id
+                                          );
                                           setUserPackage(pkg);
                                         } catch (e) {}
                                       }, 5000);
                                     } else {
-                                      alert("Failed to create checkout session. Please try again.");
+                                      alert(
+                                        "Failed to create checkout session. Please try again."
+                                      );
                                     }
                                   } catch (err: any) {
-                                    console.error("Create checkout failed", err);
-                                    const message = err?.message || err?.error || "Failed to create checkout session. You can try the public checkout URL instead.";
-                                    const proVar = process.env.NEXT_PUBLIC_LEMON_VARIANT_PRO || "1087280";
-                                    const premVar = process.env.NEXT_PUBLIC_LEMON_VARIANT_PREMIUM || "1087281";
-                                    const fallbackUrl15 = process.env.NEXT_PUBLIC_LEMONSQUEEZY_CHECKOUT_URL_15;
-                                    const fallbackUrl30 = process.env.NEXT_PUBLIC_LEMONSQUEEZY_CHECKOUT_URL_30;
+                                    console.error(
+                                      "Create checkout failed",
+                                      err
+                                    );
+                                    const message =
+                                      err?.message ||
+                                      err?.error ||
+                                      "Failed to create checkout session. You can try the public checkout URL instead.";
+                                    const proVar =
+                                      process.env
+                                        .NEXT_PUBLIC_LEMON_VARIANT_PRO ||
+                                      "1087280";
+                                    const premVar =
+                                      process.env
+                                        .NEXT_PUBLIC_LEMON_VARIANT_PREMIUM ||
+                                      "1087281";
+                                    const fallbackUrl15 =
+                                      process.env
+                                        .NEXT_PUBLIC_LEMONSQUEEZY_CHECKOUT_URL_15;
+                                    const fallbackUrl30 =
+                                      process.env
+                                        .NEXT_PUBLIC_LEMONSQUEEZY_CHECKOUT_URL_30;
                                     let fallbackUrl: string | null = null;
-                                    const selected = String(selectedPlanVariantId);
-                                    if (selected === String(proVar) && fallbackUrl15) fallbackUrl = fallbackUrl15;
-                                    if (selected === String(premVar) && fallbackUrl30) fallbackUrl = fallbackUrl30;
-                                    const silverVar = process.env.NEXT_PUBLIC_LEMON_VARIANT_SILVER_MONTHLY || "";
-                                    if (!fallbackUrl && selected === String(silverVar) && fallbackUrl15) fallbackUrl = fallbackUrl15;
+                                    const selected = String(
+                                      selectedPlanVariantId
+                                    );
+                                    if (
+                                      selected === String(proVar) &&
+                                      fallbackUrl15
+                                    )
+                                      fallbackUrl = fallbackUrl15;
+                                    if (
+                                      selected === String(premVar) &&
+                                      fallbackUrl30
+                                    )
+                                      fallbackUrl = fallbackUrl30;
+                                    const silverVar =
+                                      process.env
+                                        .NEXT_PUBLIC_LEMON_VARIANT_SILVER_MONTHLY ||
+                                      "";
+                                    if (
+                                      !fallbackUrl &&
+                                      selected === String(silverVar) &&
+                                      fallbackUrl15
+                                    )
+                                      fallbackUrl = fallbackUrl15;
 
                                     if (fallbackUrl) {
-                                      if (confirm(`${message}\n\nWould you like to open the public checkout URL?`)) {
+                                      if (
+                                        confirm(
+                                          `${message}\n\nWould you like to open the public checkout URL?`
+                                        )
+                                      ) {
                                         window.open(fallbackUrl, "_blank");
                                         setIsPlanDialogOpen(false);
                                       }
@@ -1081,11 +964,18 @@ export function SettingsTab() {
                       </Dialog>
                     </>
                   ) : (
-                    <Button variant="outline" className="h-9 border-gray-200 bg-white" disabled>
+                    <Button
+                      variant="outline"
+                      className="h-8 sm:h-9 border-gray-200 bg-white text-xs sm:text-sm"
+                      disabled
+                    >
                       Upgraded
                     </Button>
                   )}
-                  <Button variant="outline" className="h-9 border-gray-200 bg-white">
+                  <Button
+                    variant="outline"
+                    className="h-8 sm:h-9 border-gray-200 bg-white text-xs sm:text-sm"
+                  >
                     View Invoices
                   </Button>
                 </div>
