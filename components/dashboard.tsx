@@ -48,6 +48,8 @@ export function Dashboard({
     userAvatar ?? null
   );
 
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
   // Debug: Log props received
   console.log("=== DASHBOARD COMPONENT PROPS ===");
   console.log("userEmail:", userEmail);
@@ -88,14 +90,17 @@ export function Dashboard({
       {/* Header */}
       <header className="backdrop-blur-sm sticky top-0 z-50 border-b bg-background/95">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
-          <div className="flex items-center justify-center gap-16">
-            <div className="w-full h-full rounded-xl  flex items-center justify-center">
-              <Image src="/newlogo.png" alt="" width={71.4} height={71.4} />
+          {/* LEFT */}
+          <div className="flex items-center gap-16">
+            <div className="w-full h-full rounded-xl flex items-center justify-center">
+              <Image src="/newlogo.png" alt="" width={71.4} height={71.4} className="hidden lg:block" />
+              <Image src="/newlogo.png" alt="" width={34} height={34} className="block lg:hidden" />
             </div>
-           <div
-  className="
-    flex gap-4 p-1.5 rounded-full
-    
+
+            {/* DESKTOP NAV (UNCHANGED) */}
+            <div
+              className="
+    hidden lg:flex gap-4 p-1.5 rounded-full
     dark:bg-gradient-to-b
     dark:from-[rgba(46,152,57,0.38)]
     dark:via-[rgba(26,69,26,1)]
@@ -103,7 +108,7 @@ export function Dashboard({
     border border-transparent
     dark:border-[#2E9839]
   "
->
+            >
               <Link
                 href="/dashboard/analyze"
                 className={`cursor-pointer px-6.5 py-3.5 text-[13px] font-medium transition-colors whitespace-nowrap rounded-full
@@ -180,18 +185,19 @@ export function Dashboard({
               </Link>
             </div>
           </div>
-         <div
-  className="
-    flex items-center gap-4 p-1.5 rounded-full
-    text-[#53F870]
-    dark:bg-gradient-to-b
-    dark:from-[rgba(46,152,57,0.38)]
-    dark:via-[rgba(26,69,26,1)]
-    dark:to-[rgba(4,35,13,1)]
-    border border-transparent
-    dark:border-[#2E9839]
-  "
->
+
+          {/* RIGHT */}
+          <div
+            className="hidden lg:flex items-center gap-4 p-1.5 rounded-full
+      text-[#53F870]
+      dark:bg-gradient-to-b
+      dark:from-[rgba(46,152,57,0.38)]
+      dark:via-[rgba(26,69,26,1)]
+      dark:to-[rgba(4,35,13,1)]
+      border border-transparent
+      dark:border-[#2E9839]
+    "
+          >
             {userEmail && (
               <ProfileDropdown
                 userEmail={userEmail}
@@ -200,7 +206,71 @@ export function Dashboard({
               />
             )}
           </div>
+
+          {/* MOBILE HAMBURGER */}
+          <button
+            onClick={() => setMobileMenuOpen(true)}
+            className="lg:hidden text-[#53F870]"
+          >
+            <svg
+              width="28"
+              height="28"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <path d="M4 7h20M4 14h20M4 21h20" />
+            </svg>
+          </button>
         </div>
+
+        {/* MOBILE MENU OVERLAY */}
+        {mobileMenuOpen && (
+          <div className="fixed inset-0 z-50 h-[1880px] w-screen lg:hidden bg-[#0d0d0d] backdrop-blur-xl">
+            <div className="flex flex-col h-full bg-[#0d0d0d]">
+              {/* TOP */}
+              <div className="flex items-center bg-[#0d0d0d] justify-between px-4 py-4">
+                <Image src="/newlogo.png" alt="" width={36} height={36} className="flex lg:hidden" />
+
+                <button
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="text-[#53F870]"
+                >
+                  <svg
+                    width="28"
+                    height="28"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <path d="M6 6l16 16M6 22L22 6" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* NAV LINKS */}
+              <nav className="mt-8 w-full h-full px-4 py-4 flex flex-col bg-[#0d0d0d] space-y-6 text-[#53F870] text-[15px]">
+                <Link href="/dashboard/analyze">Dashboard</Link>
+                <Link href="/dashboard/keywords">Keywords</Link>
+                <Link href="/dashboard/competitors">Competitors</Link>
+                <Link href="/dashboard/articles">Articles</Link>
+                <Link href="/dashboard/index">Index</Link>
+                <Link href="/dashboard/settings">Settings</Link>
+                {/* PROFILE */}
+              <div className=" w-max flex items-center gap-4 py-1.5 rounded-full text-[#53F870] dark:bg-gradient-to-b dark:from-[rgba(46,152,57,0.38)] dark:via-[rgba(26,69,26,1)] dark:to-[rgba(4,35,13,1)] border border-transparent dark:border-[#2E9839] ">
+                {" "}
+                {userEmail && (
+                  <ProfileDropdown
+                    userEmail={userEmail}
+                    userAvatar={localAvatar ?? userAvatar}
+                    onLogout={onLogout}
+                  />
+                )}{" "}
+              </div>
+              </nav>
+            </div>
+          </div>
+        )}
       </header>
 
       {/* Main Content */}

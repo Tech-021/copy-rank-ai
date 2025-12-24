@@ -8,9 +8,8 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  
 } from "@/components/ui/card";
-import { Check } from 'lucide-react';
+import { Check } from "lucide-react";
 import { supabase } from "@/lib/client";
 import { useToast } from "@/components/ui/toast";
 import {
@@ -141,7 +140,9 @@ export function AnalyzeTab({
   const [keyword2, setKeyword2] = useState("");
   const [keyword3, setKeyword3] = useState("");
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
-  {/*------Competitor Dialog---- */}
+  {
+    /*------Competitor Dialog---- */
+  }
   const [showAddCompetitorDialog, setShowAddCompetitorDialog] = useState(false);
   const [addCompetitorCompleted, setAddCompetitorCompleted] = useState(false);
   const [competitorInput, setCompetitorInput] = useState("");
@@ -155,10 +156,15 @@ export function AnalyzeTab({
     try {
       const toAdd: string[] = [];
       if (competitorInput.trim()) {
-        toAdd.push(...competitorInput.split(/[,\n]+/).map(s => s.trim()).filter(Boolean));
+        toAdd.push(
+          ...competitorInput
+            .split(/[,\n]+/)
+            .map((s) => s.trim())
+            .filter(Boolean)
+        );
       }
       if (competitorTags.length > 0) {
-        toAdd.push(...competitorTags.map(t => t.trim()).filter(Boolean));
+        toAdd.push(...competitorTags.map((t) => t.trim()).filter(Boolean));
       }
 
       if (toAdd.length === 0) {
@@ -173,9 +179,15 @@ export function AnalyzeTab({
         return;
       }
 
-      const siteId = selectedWebsiteId || (websites && websites.length > 0 ? websites[0].id : undefined);
+      const siteId =
+        selectedWebsiteId ||
+        (websites && websites.length > 0 ? websites[0].id : undefined);
       if (!siteId) {
-        toast.showToast({ title: "No website selected", description: "Please add or select a website first.", type: "error" });
+        toast.showToast({
+          title: "No website selected",
+          description: "Please add or select a website first.",
+          type: "error",
+        });
         await loadUserWebsites();
         return;
       }
@@ -200,19 +212,30 @@ export function AnalyzeTab({
           setCompetitorTags([]);
         }, 1200);
       } else {
-        toast.showToast({ title: "Failed to add", description: "Unable to save competitors. Try again.", type: "error" });
+        toast.showToast({
+          title: "Failed to add",
+          description: "Unable to save competitors. Try again.",
+          type: "error",
+        });
         setShowAddCompetitorDialog(false);
       }
     } catch (err) {
       console.error("Error adding competitor from analyze tab:", err);
-      toast.showToast({ title: "Error", description: err instanceof Error ? err.message : "Unknown error", type: "error" });
+      toast.showToast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "Unknown error",
+        type: "error",
+      });
       setShowAddCompetitorDialog(false);
       setIsSubmitting(false);
     }
   };
 
   // Persist competitor domains into the website.keywords.competitors array
-  const persistCompetitorsToWebsite = async (siteId: string, domains: string[]) => {
+  const persistCompetitorsToWebsite = async (
+    siteId: string,
+    domains: string[]
+  ) => {
     try {
       const { data: siteData, error: siteErr } = await supabase
         .from("websites")
@@ -246,7 +269,9 @@ export function AnalyzeTab({
           domain,
           topic: existing.topic || null,
           keywords: existing.keywords || [],
-          keywords_count: existing.keywords_count || (existing.keywords ? existing.keywords.length : 0),
+          keywords_count:
+            existing.keywords_count ||
+            (existing.keywords ? existing.keywords.length : 0),
           success: existing.success !== false,
         });
       });
@@ -272,7 +297,11 @@ export function AnalyzeTab({
         return false;
       }
 
-      toast.showToast({ title: "Competitors added", description: `${domains.length} competitor(s) saved.`, type: "success" });
+      toast.showToast({
+        title: "Competitors added",
+        description: `${domains.length} competitor(s) saved.`,
+        type: "success",
+      });
       return true;
     } catch (e) {
       console.error("Error persisting competitors:", e);
@@ -283,20 +312,22 @@ export function AnalyzeTab({
     setShowAddCompetitorDialog(true);
     setAddCompetitorCompleted(false);
   };
-  {/*------Competitor Dialog Ends--- */}
+  {
+    /*------Competitor Dialog Ends--- */
+  }
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [open, setOpen] = useState(false)
-  const [openPostDialog, setOpenPostDialog] = useState(false)
+  const [open, setOpen] = useState(false);
+  const [openPostDialog, setOpenPostDialog] = useState(false);
   const [editForm, setEditForm] = useState({
-      title: "",
-      keyword: "",
-      slug: "",
-      metaTitle: "",
-      metaDescription: "",
-      preview: "",
-      content: "",
-    });
+    title: "",
+    keyword: "",
+    slug: "",
+    metaTitle: "",
+    metaDescription: "",
+    preview: "",
+    content: "",
+  });
 
   const [analytics, setAnalytics] = useState<AnalyticsData>({
     articlesGenerated: 0,
@@ -314,7 +345,9 @@ export function AnalyzeTab({
     return status === filterStatus;
   });
 
-  const [selectedWebsiteId, setSelectedWebsiteId] = useState<string | null>(null);
+  const [selectedWebsiteId, setSelectedWebsiteId] = useState<string | null>(
+    null
+  );
   // Articles state (replace old mock list with dynamic data)
   // const [articles, setArticles] = useState<Article[]>([]);
   const [loadingArticles, setLoadingArticles] = useState(true);
@@ -371,7 +404,6 @@ export function AnalyzeTab({
       });
     }
 
-
     return items;
   }, [analytics, websites, selectedWebsiteId, onViewCompetitors]);
 
@@ -391,17 +423,23 @@ export function AnalyzeTab({
       if (articlesError) throw articlesError;
 
       const articlesGenerated = articles?.length || 0;
-      const articlesLive = articles?.filter(a => a.status === "published" || a.status === "UPLOADED").length || 0;
-      const draftArticles = articles?.filter(a => a.status === "draft" || a.status === "DRAFT").length || 0;
-      
-      const estimatedTraffic = articles?.reduce((sum, article) => {
-        return sum + (article.estimated_traffic || 0);
-      }, 0) || 0;
+      const articlesLive =
+        articles?.filter(
+          (a) => a.status === "published" || a.status === "UPLOADED"
+        ).length || 0;
+      const draftArticles =
+        articles?.filter((a) => a.status === "draft" || a.status === "DRAFT")
+          .length || 0;
+
+      const estimatedTraffic =
+        articles?.reduce((sum, article) => {
+          return sum + (article.estimated_traffic || 0);
+        }, 0) || 0;
 
       const allKeywords = new Set<string>();
-      articles?.forEach(article => {
-        if (typeof article.keyword === 'string') {
-          article.keyword.split(',').forEach(k => allKeywords.add(k.trim()));
+      articles?.forEach((article) => {
+        if (typeof article.keyword === "string") {
+          article.keyword.split(",").forEach((k) => allKeywords.add(k.trim()));
         }
       });
       const keywordsTracked = allKeywords.size;
@@ -420,7 +458,7 @@ export function AnalyzeTab({
       if (websitesError) throw websitesError;
 
       let totalCompetitors = 0;
-      websitesData?.forEach(website => {
+      websitesData?.forEach((website) => {
         const competitorCount = getCompetitorsCount(website.keywords);
         totalCompetitors += competitorCount;
       });
@@ -503,8 +541,6 @@ export function AnalyzeTab({
     }
   };
 
-
-
   const handleSubmitOnboarding = async () => {
     setIsSubmitting(true);
 
@@ -580,13 +616,13 @@ export function AnalyzeTab({
     keyword2.trim() &&
     keyword3.trim();
 
-    const getReadingTime = (wordCount?: number) => {
+  const getReadingTime = (wordCount?: number) => {
     if (!wordCount) return "—";
     const minutes = Math.max(1, Math.round(wordCount / 200));
     return `${minutes} min read`;
   };
 
-    const openEditDialog = (article: Article) => {
+  const openEditDialog = (article: Article) => {
     setSelectedArticle(article);
     setEditForm({
       title: article.title || "",
@@ -604,11 +640,11 @@ export function AnalyzeTab({
 
   const handleWebsiteChange = async (websiteId: string) => {
     setSelectedWebsiteId(websiteId);
-    
+
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    
+
     if (user) {
       await fetchAnalytics(user.id, websiteId);
     }
@@ -629,14 +665,17 @@ export function AnalyzeTab({
 
       toast.showToast({
         title: "Processing Started",
-        description: "Article processing has been triggered. Check back in a moment for updates.",
+        description:
+          "Article processing has been triggered. Check back in a moment for updates.",
         type: "success",
       });
 
       // Refresh articles after a short delay
       setTimeout(async () => {
         fetchArticles();
-        const { data: { user } } = await supabase.auth.getUser();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
         if (user) {
           await fetchAnalytics(user.id, selectedWebsiteId);
         }
@@ -660,7 +699,9 @@ export function AnalyzeTab({
   const fetchArticles = async () => {
     try {
       setLoadingArticles(true);
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) return;
 
       const siteId = selectedWebsiteId || undefined;
@@ -717,7 +758,7 @@ export function AnalyzeTab({
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      
+
       if (user) {
         await fetchAnalytics(user.id, selectedWebsiteId);
       }
@@ -731,7 +772,9 @@ export function AnalyzeTab({
   const handlePostCreated = async () => {
     try {
       await fetchArticles();
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (user) await fetchAnalytics(user.id, selectedWebsiteId);
     } catch (err) {
       console.error("Error refreshing after post creation:", err);
@@ -742,13 +785,19 @@ export function AnalyzeTab({
     <div className="flex flex-col md:flex-row gap-2">
       <div className="space-y-6 md:w-3/5 w-full min-w-0">
         <div className="space-y-6">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col items-start gap-4 lg:gap-0 lg:flex-row lg:items-center justify-between">
             <div>
               <h2 className="text-3xl font-normal">Performance overview</h2>
-              <p className="text-gray-500 text-sm mt-2">Turn competitor keywords into SEO-ready long blog posts in one click.</p>
+              <p className="text-gray-500 text-sm mt-2">
+                Turn competitor keywords into SEO-ready long blog posts in one
+                click.
+              </p>
             </div>
             <div>
-              <Select value={selectedWebsiteId || undefined} onValueChange={handleWebsiteChange}>
+              <Select
+                value={selectedWebsiteId || undefined}
+                onValueChange={handleWebsiteChange}
+              >
                 <SelectTrigger className="h-10  bg-[rgba(83,248,112,0.1)]!  rounded-[5px] focus-visible:outline-none focus-visible:ring-0 border-[#0000001a] focus-visible:border-[#0000001a] focus:outline-none cursor-pointer outline-none active:outline-none px-3.5 py-2.5 text-[#53F870]">
                   <SelectValue placeholder="Select your website" />
                 </SelectTrigger>
@@ -757,7 +806,11 @@ export function AnalyzeTab({
                     <SelectItem
                       key={website.id}
                       value={website.id}
-                      className={`cursor-pointer data-[state=checked]:text-[#53F870] data-[state=checked]:opacity-40 ${index < websites.length - 1 ? 'border-b rounded-none border-[#0000001a]' : ''}`}
+                      className={`cursor-pointer data-[state=checked]:text-[#53F870] data-[state=checked]:opacity-40 ${
+                        index < websites.length - 1
+                          ? "border-b rounded-none border-[#0000001a]"
+                          : ""
+                      }`}
                     >
                       {website.url}
                     </SelectItem>
@@ -766,230 +819,347 @@ export function AnalyzeTab({
               </Select>
             </div>
           </div>
-          <div className="border-r pr-3 flex flex-col gap-5">
-          <div className="flex items-center">
-            <Card className="border-border/40 bg-black rounded-none rounded-l-xl backdrop-blur-sm w-[222px] h-[184px]">
-              <CardHeader className="flex items-center justify-between">
-                <CardTitle className="text-sm font-normal text-gray-500">Articles Generated</CardTitle>
-                <Image src="/dark1.png" alt="" width={20} height={20} />
-              </CardHeader>
-              <CardContent>
-                <div className="text-[#53F870] text-4xl font-bold mt-12">
-                  {showSkeletons ? <Skeleton className="h-10 w-16" /> : analytics.articlesGenerated}
-                </div>
-              </CardContent>
-            </Card>
+          <div className="lg:border-r lg:pr-3 flex flex-col gap-5">
+            <div className="flex items-center flex-wrap lg:flex-nowrap">
+              <Card className="border-[#53f8701a] bg-[#101110] lg:rounded-none lg:rounded-l-xl backdrop-blur-sm w-[180px] lg:w-[222px] h-[184px] rounded-none rounded-tl-xl">
+                <CardHeader className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-normal text-gray-500">
+                    Articles Generated
+                  </CardTitle>
+                  <Image src="/dark1.png" alt="" width={20} height={20} />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-[#53F870] text-4xl font-bold mt-12">
+                    {showSkeletons ? (
+                      <Skeleton className="h-10 w-16" />
+                    ) : (
+                      analytics.articlesGenerated
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
 
-            <Card className="border-border/40  bg-black rounded-none backdrop-blur-sm w-[222px] h-[184px]">
-              <CardHeader className="flex items-center justify-between">
-                <CardTitle className="text-sm font-normal text-gray-500">Articles <br />Live</CardTitle>
-                <Image src="/dark2.png" alt="" width={20} height={20} />
-              </CardHeader>
-              <CardContent>
-                <div className="text-[#53F870] text-4xl font-bold mt-12">
-                  {showSkeletons ? <Skeleton className="h-10 w-16" /> : analytics.articlesLive}
-                </div>
-              </CardContent>
-            </Card>
+              <Card className="border-[#53f8701a]  bg-[#101110] lg:rounded-none rounded-none rounded-tr-xl backdrop-blur-sm w-[180px] lg:w-[222px] h-[184px]">
+                <CardHeader className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-normal text-gray-500">
+                    Articles <br className="hidden lg:block" />
+                    Live
+                  </CardTitle>
+                  <Image src="/dark2.png" alt="" width={20} height={20} />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-[#53F870] text-4xl font-bold mt-12">
+                    {showSkeletons ? (
+                      <Skeleton className="h-10 w-16" />
+                    ) : (
+                      analytics.articlesLive
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
 
-            <Card className="border-border/40 bg-black rounded-none backdrop-blur-sm w-[222px] h-[184px]">
-              <CardHeader className="flex items-center justify-between">
-                <CardTitle className="text-sm font-normal text-gray-500">Est. Traffic Potential</CardTitle>
-                <Image src="/dark3.png" alt="" width={20} height={20} />
-              </CardHeader>
-              <CardContent>
-                <div className="text-[#53F870] text-4xl font-bold mt-12">
-                  {showSkeletons ? <Skeleton className="h-10 w-24" /> : analytics.estimatedTraffic.toLocaleString()}
-                </div>
-              </CardContent>
-            </Card>
+              <Card className="border-[#53f8701a] bg-[#101110] lg:rounded-none rounded-none rounded-bl-xl backdrop-blur-sm w-[180px] lg:w-[222px] h-[184px]">
+                <CardHeader className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-normal text-gray-500">
+                    Est. Traffic Potential
+                  </CardTitle>
+                  <Image src="/dark3.png" alt="" width={20} height={20} />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-[#53F870] text-4xl font-bold mt-12">
+                    {showSkeletons ? (
+                      <Skeleton className="h-10 w-24" />
+                    ) : (
+                      analytics.estimatedTraffic.toLocaleString()
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
 
-            <Card className="border-border/40 bg-black rounded-none rounded-r-xl backdrop-blur-sm w-[222px] h-[184px]">
-              <CardHeader className="flex items-center justify-between">
-                <CardTitle className="text-sm font-normal text-gray-500">Keyword Tracked</CardTitle>
-                <Image src="/dark4.png" alt="" width={20} height={20} />
-              </CardHeader>
-              <CardContent>
-                <div className="text-[#53F870] text-4xl font-bold mt-12">
-                  {showSkeletons ? <Skeleton className="h-10 w-16" /> : analytics.keywordsTracked}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+              <Card className="border-[#53f8701a] bg-[#101110] lg:rounded-none lg:rounded-r-xl backdrop-blur-sm w-[180px] lg:w-[222px] h-[184px] rounded-none rounded-br-xl">
+                <CardHeader className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-normal text-gray-500">
+                    Keyword Tracked
+                  </CardTitle>
+                  <Image src="/dark4.png" alt="" width={20} height={20} />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-[#53F870] text-4xl font-bold mt-12">
+                    {showSkeletons ? (
+                      <Skeleton className="h-10 w-16" />
+                    ) : (
+                      analytics.keywordsTracked
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
 
-          <div>
-            <Card className="bg-transparent p-5 mt-5">
-              <CardTitle>Create a Ranking Post</CardTitle>
-              <CardDescription>Turn competitor keywords into SEO ready blog posts in one click.</CardDescription>
-              <CardContent className="px-0">
-                <Button 
-                  onClick={() => setOpenPostDialog(true)}
-                  className="text-base font-normal text-[#53F870] bg-transparent px-[60px] py-1 w-[170px] h-[50px] border border-[#53F870] rounded-[10px] hover:bg-transparent hover:text-white cursor-pointer"
-                >
-                  Create Post
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
+            <div>
+              <Card className="bg-transparent p-5 mt-5">
+                <CardTitle>Create a Ranking Post</CardTitle>
+                <CardDescription>
+                  Turn competitor keywords into SEO ready blog posts in one
+                  click.
+                </CardDescription>
+                <CardContent className="px-0">
+                  <Button
+                    onClick={() => setOpenPostDialog(true)}
+                    className="text-base font-normal text-[#53F870] bg-transparent px-[60px] py-1 w-[170px] h-[50px] border border-[#53F870] rounded-[10px] hover:bg-transparent hover:text-white cursor-pointer"
+                  >
+                    Create Post
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
 
-          <div className="flex items-center gap-2.5 max-w-[700px]">
-          <Card className="bg-transparent px-4 py-5 w-[350px]">
-            <CardTitle className="text-lg font-normal text-white ml-4">Your Websites</CardTitle>
-            <CardContent>
-              {websites.length > 0 && (
-                <div className="flex items-center justify-between border px-4 pb-4 pt-5 rounded-t-xl border-gray-800 w-[300px]">
-                  <div className="flex items-center gap-5">
-                  <div className="bg-[rgba(50,85,45,0.13)] w-[34px] h-[34px] flex items-center justify-center rounded-[10px]">
-                    <Image src="/dark10.png" alt="" width={34} height={34} />
-                  </div>
-                  <div>
-                    <p className="text-sm text-white font-normal">{websites.length} website{websites.length > 1 ? 's' : ''}</p>
-                    <p className="text-xs text-gray-500 font-normal">{websites[0]?.url}{websites.length > 1 ? ` and ${websites.length - 1} other${websites.length > 2 ? 's' : ''}` : ''}</p>
-                  </div>
-                  </div>
-                  <div className="w-[34px] h-[34px] bg-[#00000000] rounded-xl flex items-center justify-center cursor-pointer">
-                    <Image src="/menudots.png" alt="" width={3} height={17} />
-                  </div>
-                </div>
-              )}
-              <div 
-              onClick={() => setOpen(true)}
-              className={`flex items-center justify-between border px-4 pb-4 pt-5 ${websites.length > 0 ? 'rounded-b-xl' : 'rounded-xl'} border-gray-800 w-[300px] cursor-pointer`}>
-                <div className="flex items-center gap-5 cursor-pointer">
-                <div className="bg-[rgba(50,85,45,0.13)] w-[34px] h-[34px] flex items-center justify-center rounded-[10px] cursor-pointer">
-                 <Image src="/dark13.png" alt="" width={34} height={34} />
-                </div>
-                <div>
-                  <p className="text-sm text-white font-normal">Add Website</p>
-                </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="bg-transparent px-4 py-5 w-[350px]">
-            <CardTitle className="text-lg font-normal text-white ml-4">SEO Competitors</CardTitle>
-            <CardContent>
-                <div  className="cursor-pointer flex items-center justify-between border px-4 pb-4 pt-5 rounded-t-xl border-gray-800 w-[300px]">
-                  <div className="flex items-center gap-5">
-                  <div className="bg-[rgba(50,85,45,0.13)] w-[34px] h-[34px] flex items-center justify-center rounded-[10px]">
-                    <Image src="/dark11.png" alt="" width={34} height={34} />
-                  </div>
-                  <div>
-                    <p className="text-sm text-white font-normal">{analytics.totalCompetitors} Competitor{analytics.totalCompetitors > 1 ? 's' : ''}</p>
-                    <p className="text-xs text-gray-500 font-normal">Tracked across your websites</p>
-                  </div>
-                  </div>
-                  <div className="w-[34px] h-[34px] bg-transparent rounded-xl flex items-center justify-center cursor-pointer">
-                    <Image src="/3dotsblack.png" alt="" width={31} height={17} />
-                  </div>
-                </div>
-              <div 
-              onClick={handleAddCompetitor}
-              className={`cursor-pointer flex items-center justify-between border px-4 pb-4 pt-5 ${analytics.totalCompetitors > 0 ? 'rounded-b-xl' : 'rounded-xl'} border-gray-800 w-[300px]`}>
-                <div className="flex items-center gap-5">
-                <div className="bg-[rgba(50,85,45,0.13)] w-[34px] h-[34px] flex items-center justify-center rounded-[10px]">
-                  <Image src="/dark13.png" alt="" width={34} height={34} />
-                </div>
-                <div>
-                  <p className="text-sm text-white font-normal">Add Competitor</p>
-                </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-          <Card className="bg-transparent px-4 py-5">
-<h4>Action Required</h4>
-            <CardTitle className="text-lg font-normal text-white ml-4"></CardTitle>
-            <CardContent>
-              {showSkeletons ? (
-                <div className="space-y-2">
-                  <Skeleton className="h-16 w-full" />
-                  <Skeleton className="h-16 w-full" />
-                </div>
-              ) : actionsRequired.length === 0 ? (
-                <div className="flex items-center justify-between border px-4 pb-4 pt-5 rounded-xl border-[#0000001a]">
-                  <div className="flex items-center gap-5">
-                    <div className="bg-[rgb(247,247,247)] w-[30px] h-[30px] flex items-center justify-center rounded-[10px]">
-                      <Image src="/dark15.png" alt="" width={24} height={24} />
-                    </div>
-                    <div>
-                      <p className="text-sm text-white font-normal">You’re all set</p>
-                      <p className="text-xs text-[#00000080] font-normal">No outstanding tasks right now.</p>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                actionsRequired.map((action, index) => {
-                  const isFirst = index === 0;
-                  const isLast = index === actionsRequired.length - 1;
-                  return (
-                    <div
-                      key={action.id}
-                      className={`flex items-center justify-between border px-4 pb-4 pt-5 border-gray-800 ${isFirst ? 'rounded-t-xl' : ''} ${isLast ? 'rounded-b-xl' : 'border-b-0'}`}
-                    >
+            <div className="flex flex-col lg:flex-row items-center gap-2.5 max-w-[700px]">
+              <Card className="bg-transparent px-4 py-5 w-[362px] lg:w-[350px]">
+                <CardTitle className="text-lg font-normal text-white ml-4">
+                  Your Websites
+                </CardTitle>
+                <CardContent>
+                  {websites.length > 0 && (
+                    <div className="flex items-center justify-between border px-4 pb-4 pt-5 rounded-t-xl border-gray-800 w-[300px]">
                       <div className="flex items-center gap-5">
-                        <div className="bg-transparent w-[30px] h-[30px] flex items-center justify-center rounded-[10px]">
-                          <Image src={action.icon} alt="" width={24} height={24} />
+                        <div className="bg-[rgba(50,85,45,0.13)] w-[34px] h-[34px] flex items-center justify-center rounded-[10px]">
+                          <Image
+                            src="/dark10.png"
+                            alt=""
+                            width={34}
+                            height={34}
+                          />
                         </div>
                         <div>
-                          <p className="text-sm text-white font-normal">{action.title}</p>
-                          <p className="text-xs text-gray-500 font-normal">{action.description}</p>
+                          <p className="text-sm text-white font-normal">
+                            {websites.length} website
+                            {websites.length > 1 ? "s" : ""}
+                          </p>
+                          <p className="text-xs text-gray-500 font-normal">
+                            {websites[0]?.url}
+                            {websites.length > 1
+                              ? ` and ${websites.length - 1} other${
+                                  websites.length > 2 ? "s" : ""
+                                }`
+                              : ""}
+                          </p>
                         </div>
                       </div>
-                      {action.actionLabel && (
-                        <Button onClick={action.onClick} className="border bg-[rgba(121,195,111,0.13)] hover:bg-transparent text-[#53F870] border-[#0000001a] cursor-pointer">
-                          {action.actionLabel}
-                        </Button>
-                      )}
+                      <div className="w-[34px] h-[34px] bg-[#00000000] rounded-xl flex items-center justify-center cursor-pointer">
+                        <Image
+                          src="/menudots.png"
+                          alt=""
+                          width={3}
+                          height={17}
+                        />
+                      </div>
                     </div>
-                  );
-                })
-              )}
-            </CardContent>
-          </Card>
+                  )}
+                  <div
+                    onClick={() => setOpen(true)}
+                    className={`flex items-center justify-between border px-4 pb-4 pt-5 ${
+                      websites.length > 0 ? "rounded-b-xl" : "rounded-xl"
+                    } border-gray-800 w-[300px] cursor-pointer`}
+                  >
+                    <div className="flex items-center gap-5 cursor-pointer">
+                      <div className="bg-[rgba(50,85,45,0.13)] w-[34px] h-[34px] flex items-center justify-center rounded-[10px] cursor-pointer">
+                        <Image
+                          src="/dark13.png"
+                          alt=""
+                          width={34}
+                          height={34}
+                        />
+                      </div>
+                      <div>
+                        <p className="text-sm text-white font-normal">
+                          Add Website
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="bg-transparent px-4 py-5 w-[362px] lg:w-[350px]">
+                <CardTitle className="text-lg font-normal text-white ml-4">
+                  SEO Competitors
+                </CardTitle>
+                <CardContent>
+                  <div className="cursor-pointer flex items-center justify-between border px-4 pb-4 pt-5 rounded-t-xl border-gray-800 w-[300px]">
+                    <div className="flex items-center gap-5">
+                      <div className="bg-[rgba(50,85,45,0.13)] w-[34px] h-[34px] flex items-center justify-center rounded-[10px]">
+                        <Image
+                          src="/dark11.png"
+                          alt=""
+                          width={34}
+                          height={34}
+                        />
+                      </div>
+                      <div>
+                        <p className="text-sm text-white font-normal">
+                          {analytics.totalCompetitors} Competitor
+                          {analytics.totalCompetitors > 1 ? "s" : ""}
+                        </p>
+                        <p className="text-xs text-gray-500 font-normal">
+                          Tracked across your websites
+                        </p>
+                      </div>
+                    </div>
+                    <div className="w-[34px] h-[34px] bg-transparent rounded-xl flex items-center justify-center cursor-pointer">
+                      <Image
+                        src="/3dotsblack.png"
+                        alt=""
+                        width={31}
+                        height={17}
+                      />
+                    </div>
+                  </div>
+                  <div
+                    onClick={handleAddCompetitor}
+                    className={`cursor-pointer flex items-center justify-between border px-4 pb-4 pt-5 ${
+                      analytics.totalCompetitors > 0
+                        ? "rounded-b-xl"
+                        : "rounded-xl"
+                    } border-gray-800 w-[300px]`}
+                  >
+                    <div className="flex items-center gap-5">
+                      <div className="bg-[rgba(50,85,45,0.13)] w-[34px] h-[34px] flex items-center justify-center rounded-[10px]">
+                        <Image
+                          src="/dark13.png"
+                          alt=""
+                          width={34}
+                          height={34}
+                        />
+                      </div>
+                      <div>
+                        <p className="text-sm text-white font-normal">
+                          Add Competitor
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+            <Card className="bg-transparent px-4 py-5">
+              <h4>Action Required</h4>
+              <CardTitle className="text-lg font-normal text-white ml-4"></CardTitle>
+              <CardContent>
+                {showSkeletons ? (
+                  <div className="space-y-2">
+                    <Skeleton className="h-16 w-full" />
+                    <Skeleton className="h-16 w-full" />
+                  </div>
+                ) : actionsRequired.length === 0 ? (
+                  <div className="flex items-center justify-between border px-4 pb-4 pt-5 rounded-xl border-[#0000001a]">
+                    <div className="flex items-center gap-5">
+                      <div className="bg-[rgb(247,247,247)] w-[30px] h-[30px] flex items-center justify-center rounded-[10px]">
+                        <Image
+                          src="/dark15.png"
+                          alt=""
+                          width={24}
+                          height={24}
+                        />
+                      </div>
+                      <div>
+                        <p className="text-sm text-white font-normal">
+                          You’re all set
+                        </p>
+                        <p className="text-xs text-[#00000080] font-normal">
+                          No outstanding tasks right now.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  actionsRequired.map((action, index) => {
+                    const isFirst = index === 0;
+                    const isLast = index === actionsRequired.length - 1;
+                    return (
+                      <div
+                        key={action.id}
+                        className={`flex items-center justify-between border px-4 pb-4 pt-5 border-gray-800 ${
+                          isFirst ? "rounded-t-xl" : ""
+                        } ${isLast ? "rounded-b-xl" : "border-b-0"}`}
+                      >
+                        <div className="flex items-center gap-5">
+                          <div className="bg-transparent w-[30px] h-[30px] flex items-center justify-center rounded-[10px]">
+                            <Image
+                              src={action.icon}
+                              alt=""
+                              width={24}
+                              height={24}
+                            />
+                          </div>
+                          <div>
+                            <p className="text-sm text-white font-normal">
+                              {action.title}
+                            </p>
+                            <p className="text-xs text-gray-500 font-normal">
+                              {action.description}
+                            </p>
+                          </div>
+                        </div>
+                        {action.actionLabel && (
+                          <Button
+                            onClick={action.onClick}
+                            className="border bg-[rgba(121,195,111,0.13)] hover:bg-transparent text-[#53F870] border-[#0000001a] cursor-pointer"
+                          >
+                            {action.actionLabel}
+                          </Button>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>
-      <CreatePostDialogDashboard open={openPostDialog} onOpenChange={setOpenPostDialog} websiteId={selectedWebsiteId} onCreated={handlePostCreated} />
+      <CreatePostDialogDashboard
+        open={openPostDialog}
+        onOpenChange={setOpenPostDialog}
+        websiteId={selectedWebsiteId}
+        onCreated={handlePostCreated}
+      />
       <WebsiteDialog open={open} onOpenChange={setOpen} />
       {/* Add Competitor Dialog */}
-            {showAddCompetitorDialog && (
-              <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                <div className="bg-black rounded-lg w-full max-w-[550px] p-8 relative">
-                  {/* Close Button */}
-                  <button
-                    onClick={() => {
-                      setShowAddCompetitorDialog(false);
-                      setAddCompetitorCompleted(false);
-                      setCompetitorInput("");
-                      setCompetitorTags([]);
-                    }}
-                    className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
-                  >
-                    <X className="w-5 h-5 rotate-180" />
-                  </button>
+      {showAddCompetitorDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-black rounded-lg w-full max-w-[550px] p-8 relative">
+            {/* Close Button */}
+            <button
+              onClick={() => {
+                setShowAddCompetitorDialog(false);
+                setAddCompetitorCompleted(false);
+                setCompetitorInput("");
+                setCompetitorTags([]);
+              }}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <X className="w-5 h-5 rotate-180" />
+            </button>
 
-                  {!addCompetitorCompleted ? (
-                    <>
-                      {/* Add New Competitor State */}
-                      <div className="space-y-6">
-                        <div>
-                          <h2 className="text-2xl font-semibold text-white">
-                            Add New Competitor
-                          </h2>
-                          <p className="text-sm text-gray-500 mt-1">
-                            Type in the URL of your competitor
-                          </p>
-                        </div>
-                        {/* Input Field */}
-                        <div className="relative w-full">
-                          <Input
-                            type="text"
-                            placeholder="www.example.com"
-                            value={competitorInput}
-                            onChange={(e) => setCompetitorInput(e.target.value)}
-                            className="
+            {!addCompetitorCompleted ? (
+              <>
+                {/* Add New Competitor State */}
+                <div className="space-y-6">
+                  <div>
+                    <h2 className="text-2xl font-semibold text-white">
+                      Add New Competitor
+                    </h2>
+                    <p className="text-sm text-gray-500 mt-1">
+                      Type in the URL of your competitor
+                    </p>
+                  </div>
+                  {/* Input Field */}
+                  <div className="relative w-full">
+                    <Input
+                      type="text"
+                      placeholder="www.example.com"
+                      value={competitorInput}
+                      onChange={(e) => setCompetitorInput(e.target.value)}
+                      className="
       h-14
       pr-32
       border border-[#2E9839]
@@ -1001,10 +1171,10 @@ export function AnalyzeTab({
       focus-visible:ring-0
       focus-visible:border-[#2E9839]
     "
-                          />
+                    />
 
-                          <button
-                            className="
+                    <button
+                      className="
       absolute
       right-2
       top-1/2
@@ -1019,78 +1189,78 @@ export function AnalyzeTab({
       hover:bg-[#257F31]
       transition
     "
-                          >
-                            <Check className="text-black" />
-                          </button>
-                        </div>
+                    >
+                      <Check className="text-black" />
+                    </button>
+                  </div>
 
-                        <div className="bg-transparent border border-[#085110] rounded-2xl w-full h-[81px]">
-                          <div className="flex gap-2 p-3  flex-wrap">
-                            {[
-                              "www.designjoy.com",
-                              "www.lander.studio",
-                              "www.webflow.com",
-                            ].map((tag) => (
-                             <button
-  key={tag}
-  onClick={() => toggleCompetitorTag(tag)}
-  className={`
+                  <div className="bg-transparent border border-[#085110] rounded-2xl w-full h-[81px]">
+                    <div className="flex gap-2 p-3  flex-wrap">
+                      {[
+                        "www.designjoy.com",
+                        "www.lander.studio",
+                        "www.webflow.com",
+                      ].map((tag) => (
+                        <button
+                          key={tag}
+                          onClick={() => toggleCompetitorTag(tag)}
+                          className={`
     px-3 py-1 text-xs rounded-[5px] border transition-colors
     ${
       competitorTags.includes(tag)
         ? "border border-[#53F870] text-white"
-        : "bg-gradient-to-b from-[rgba(46,152,57,0.38)] to-[#04230D] text-[#53F870] border-[#53F870] hover:border-gray-300"
+        : "bg-gradient-to-b from-[rgba(46,152,57,0.38)] to-[#04230D] text-[#53F870] border-[#53F870] hover:border-[#53f8701a]"
     }
   `}
->
-  {tag}
-</button>
-                            ))}
-                          </div>
-                        </div>
-                        {/* Done Button */}
-                        <button
-                          onClick={handleAddCompetitorSubmit}
-                          className="w-full bg-[#5AFF78] hover:bg-green-700 text-black font-medium py-3 rounded-lg transition-colors"
                         >
-                          Add
+                          {tag}
                         </button>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      {/* Completed State */}
-                      <div className="text-center space-y-6">
-                        <h2 className="text-2xl font-semibold text-gray-900">
-                          Competitor Added!
-                        </h2>
-
-                        {/* Success Checkmark */}
-                        <div className="flex justify-center py-8">
-                          <Image
-                            src="/checkfordark.png"
-                            height={81}
-                            width={81}
-                            alt="Success"
-                          />
-                        </div>
-
-                        {/* View Competitors Button */}
-                        <button
-                          onClick={() => {
-                            setShowAddCompetitorDialog(false);
-                            setAddCompetitorCompleted(false);
-                          }}
-                          className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 rounded-lg transition-colors"
-                        >
-                          View Competitors
-                        </button>
-                      </div>
-                    </>
-                  )}
+                      ))}
+                    </div>
+                  </div>
+                  {/* Done Button */}
+                  <button
+                    onClick={handleAddCompetitorSubmit}
+                    className="w-full bg-[#5AFF78] hover:bg-green-700 text-black font-medium py-3 rounded-lg transition-colors"
+                  >
+                    Add
+                  </button>
                 </div>
-              </div>
+              </>
+            ) : (
+              <>
+                {/* Completed State */}
+                <div className="text-center space-y-6">
+                  <h2 className="text-2xl font-semibold text-gray-900">
+                    Competitor Added!
+                  </h2>
+
+                  {/* Success Checkmark */}
+                  <div className="flex justify-center py-8">
+                    <Image
+                      src="/checkfordark.png"
+                      height={81}
+                      width={81}
+                      alt="Success"
+                    />
+                  </div>
+
+                  {/* View Competitors Button */}
+                  <button
+                    onClick={() => {
+                      setShowAddCompetitorDialog(false);
+                      setAddCompetitorCompleted(false);
+                    }}
+                    className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 rounded-lg transition-colors"
+                  >
+                    View Competitors
+                  </button>
+                </div>
+              </>
             )}
+          </div>
+        </div>
+      )}
 
       <div className="space-y-3 md:w-2/5 w-full border px-2 py-2 rounded-xl overflow-y-auto min-w-0">
         {loadingArticles ? (
@@ -1106,29 +1276,55 @@ export function AnalyzeTab({
             <div
               key={article.id}
               onClick={() => setSelectedArticle(article)}
-              className={`relative flex gap-3 p-3 bg-transparent border border-[#000000] rounded-lg cursor-pointer transition-all ${selectedArticle?.id === article.id ? 'border-gray-200 bg-transparent' : 'border-gray-700'}`}
+              className={`relative flex gap-3 p-3 bg-transparent border border-[#53f8701a] rounded-lg cursor-pointer transition-all ${
+                selectedArticle?.id === article.id
+                  ? "border-[#53f8701a] bg-transparent"
+                  : "border-[#53f8701a]"
+              }`}
             >
-              <img src={article.generatedImages?.[0] || '/article-image.jpg'} alt={article.title} className="w-20 h-20 rounded object-cover shrink-0" />
+              <img
+                src={article.generatedImages?.[0] || "/article-image.jpg"}
+                alt={article.title}
+                className="w-20 h-20 rounded object-cover shrink-0"
+              />
 
               <div className="flex flex-col min-w-0 flex-1">
                 <div className="flex justify-between gap-2">
                   <div className="min-w-0">
-                    <h4 className="font-medium text-white text-sm line-clamp-2">{article.title}</h4>
+                    <h4 className="font-medium text-white text-sm line-clamp-2">
+                      {article.title}
+                    </h4>
                     <div className="flex items-center gap-1 mt-1">
-                      <Image src="/clock.png" height={13} width={13} alt="icon" />
-                      <p className="text-xs text-gray-500">{article.readingTime || '—'}</p>
+                      <Image
+                        src="/clock.png"
+                        height={13}
+                        width={13}
+                        alt="icon"
+                      />
+                      <p className="text-xs text-gray-500">
+                        {article.readingTime || "—"}
+                      </p>
                     </div>
                     <div className="mt-2 text-xs">
-                      <span className="bg-transparent text-green-700 border border-green-600 px-2 py-0.5 rounded-2xl">{article.status}</span>
+                      <span className="bg-transparent text-green-700 border border-green-600 px-2 py-0.5 rounded-2xl">
+                        {article.status}
+                      </span>
                     </div>
                   </div>
                 </div>
 
-                <p className="text-xs text-gray-500 line-clamp-2 mt-2">{article.preview}</p>
+                <p className="text-xs text-gray-500 line-clamp-2 mt-2">
+                  {article.preview}
+                </p>
 
                 <div className="flex gap-1 flex-wrap mt-2">
                   {article.tags?.slice(0, 5).map((tag) => (
-                    <span key={tag} className="text-xs bg-[rgba(103,159,95,0.13)]  text-[#53F870] px-2 py-0.5 rounded-2xl border border-[#0000001a]">{tag}</span>
+                    <span
+                      key={tag}
+                      className="text-xs bg-[rgba(103,159,95,0.13)]  text-[#53F870] px-2 py-0.5 rounded-2xl border border-[#0000001a]"
+                    >
+                      {tag}
+                    </span>
                   ))}
                 </div>
               </div>
