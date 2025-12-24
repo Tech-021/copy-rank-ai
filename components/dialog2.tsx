@@ -146,7 +146,7 @@ export function CreatePostDialogDashboard({
   return (
     <div>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="min-w-[90vw] lg:min-w-[640px] w-full max-h-[85vh] lg:max-h-[600px] overflow-x-hidden overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <DialogContent className="w-[90vw] sm:w-full lg:w-[640px] max-w-[90vw] max-h-[90vh] sm:max-h-[85vh] lg:max-h-[600px] overflow-x-hidden overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <VisuallyHidden>
             <DialogTitle></DialogTitle>
           </VisuallyHidden>
@@ -235,7 +235,7 @@ export function CreatePostDialogDashboard({
                   </SelectContent>
                 </Select>
                 {/* 2b) Current website SEO keyword chips - multi-select */}
-                <div className="flex items-start justify-start bg-transparent border border-[#53F870]! gap-1.5 flex-wrap bg-[rgb(247,247,247)] rounded-xl p-3.5 lg:w-full w-[282px] min-h-[82px]">
+                <div className="flex items-start justify-start bg-transparent border border-[#53F870]! gap-1.5 flex-wrap bg-[rgb(247,247,247)] rounded-xl p-3.5 w-full min-h-[82px]">
                   {loadingOptions ? (
                     <p className="text-xs text-[#00000080]">
                       Loading keywords…
@@ -274,7 +274,7 @@ export function CreatePostDialogDashboard({
                     value={selectedSeoKeyword ?? undefined}
                     onValueChange={setSelectedSeoKeyword}
                   >
-                    <SelectTrigger className="w-[588px]  h-[60px]! bg-gradient-to-b text-[#53F870]! from-[#002B07] to-[#1A451A]  border-[#0000001a]">
+                    <SelectTrigger className="w-full h-14 sm:h-[60px]! bg-gradient-to-b text-[#53F870]! from-[#002B07] to-[#1A451A]  border-[#0000001a] text-xs sm:text-sm">
                       <SelectValue placeholder="From Your Keywords" />
                     </SelectTrigger>
                     <SelectContent>

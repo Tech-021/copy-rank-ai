@@ -936,14 +936,14 @@ export function ArticlesTab({
   return (
     <div className="space-y-6 ">
       <div>
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4 sm:mb-6">
           <div>
-            <p className="text-3xl text-white font-medium">Blogs</p>
-            <p className="text-[#ffffffb3] mt-3 text-sm">
+            <p className="text-2xl sm:text-3xl text-white font-medium">Blogs</p>
+            <p className="text-[#ffffffb3] mt-2 sm:mt-3 text-xs sm:text-sm">
               Create, review, and publish your AI-generated posts.
             </p>
           </div>
-          <div>
+          <div className="w-full sm:w-auto">
               <Select value={selectedWebsiteId || undefined} onValueChange={handleWebsiteChange}>
                 <SelectTrigger className="h-10  bg-[rgba(83,248,112,0.1)]!  rounded-[5px] focus-visible:outline-none focus-visible:ring-0 border-[#0000001a] focus-visible:border-[#0000001a] focus:outline-none cursor-pointer outline-none active:outline-none px-3.5 py-2.5 text-[#53F870]">
                   <SelectValue placeholder="Select your website" />
@@ -990,7 +990,7 @@ export function ArticlesTab({
         />
 
         {/* Stats Grid */}
-        <div className="flex mt-5 mb-2.5 gap-2 text-sm">
+        <div className="flex flex-wrap mt-4 sm:mt-5 mb-2.5 gap-2 text-xs sm:text-sm">
           <Select value={filterStatus} onValueChange={setFilterStatus}>
             <SelectTrigger className="border-none !bg-transparent  ring-0 text-[#ffffff80] focus:ring-0 focus:ring-offset-0">
               <SelectValue placeholder="All" />
@@ -1034,9 +1034,9 @@ export function ArticlesTab({
         </div>
 
         {/* Main Layout - Articles + Preview */}
-        <div className="flex gap-6 h-auto overflow-hidden">
+        <div className="flex flex-col lg:flex-row gap-6 h-auto lg:overflow-hidden">
           {/* Left Side - Articles List */}
-          <div className="space-y-3 pr-2">
+          <div className="space-y-3 lg:pr-2 w-full lg:w-auto">
             {filteredArticles.length === 0 ? (
               <div className="text-center py-12 text-gray-400">
                 <p className="text-sm">No articles found</p>
@@ -1049,7 +1049,7 @@ export function ArticlesTab({
                     setSelectedArticle(article);
                     setIsContentExpanded(false);
                   }}
-                  className={`relative flex gap-3 px-3 py-5  bg-[#101110] border border-[#53f8701a] rounded-lg cursor-pointer  hover:shadow-sm transition-all ${
+                  className={`relative flex flex-col sm:flex-row gap-3 px-3 sm:px-3 py-3 sm:py-5 bg-[#101110] border border-[#53f8701a] rounded-lg cursor-pointer hover:shadow-sm transition-all ${
                     selectedArticle?.id === article.id
                       ? "border-[#53f8701a] bg-[#101110]"
                       : "border-[#53f8701a]"
@@ -1059,15 +1059,15 @@ export function ArticlesTab({
                   <img
                     src={article.generatedImages?.[0] || "/article-image.jpg"}
                     alt={article.title}
-                    className="w-20 h-20 rounded object-cover flex-shrink-0"
+                    className="w-full sm:w-20 h-48 sm:h-20 rounded object-cover flex-shrink-0"
                   />
 
                   {/* Main Content Column */}
                   <div className="flex flex-col min-w-0 flex-1">
                     {/* Title + Meta */}
-                    <div className="flex justify-between gap-2">
-                      <div className="min-w-0">
-                        <h4 className="font-medium text-white text-sm line-clamp-2">
+                    <div className="flex flex-col sm:flex-row sm:justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <h4 className="font-medium text-white text-sm sm:text-sm line-clamp-2">
                           {article.title}
                         </h4>
 
@@ -1099,7 +1099,7 @@ export function ArticlesTab({
                         <Button
                           size="sm"
                           variant="ghost"
-                          className="text-[#53f870] hover:text-[#53f870] bg-[#53f8701a] hover:!bg-[#53f8701a] cursor-pointer h-8 w-8 px-[18px] py-1.5 border-[#53f8701a] flex-shrink-0"
+                          className="text-[#53f870] hover:text-[#53f870] bg-[#53f8701a] hover:!bg-[#53f8701a] cursor-pointer h-8 w-full sm:w-8 px-[18px] sm:px-2 py-1.5 border-[#53f8701a] flex-shrink-0"
                           onClick={(e) => {
                             e.stopPropagation();
                             openEditDialog(article);
@@ -1134,10 +1134,10 @@ export function ArticlesTab({
 
           {/* Right Side - Edit/Preview Panel */}
           {selectedArticle && (
-            <div className=" max-w-[640px] bg-[#0d0d0d] rounded-[16px] border-l border-[#53f8701a] overflow-hidden flex flex-col">
+            <div className="fixed lg:static inset-0 lg:inset-auto z-50 lg:z-auto max-w-full lg:max-w-[640px] bg-[#0d0d0d] rounded-[16px] lg:border-l border-[#53f8701a] overflow-hidden flex flex-col">
               {/* Header */}
-              <div className="flex items-center justify-between p-4 border-b border-[#53f8701a] flex-shrink-0">
-                <span className="text-sm  text-[#ffffffb3]">EDIT POST</span>
+              <div className="flex items-center justify-between p-3 sm:p-4 border-b border-[#53f8701a] flex-shrink-0">
+                <span className="text-xs sm:text-sm text-[#ffffffb3]">EDIT POST</span>
                 <button
                   onClick={() => setSelectedArticle(null)}
                   className="text-gray-400 hover:text-gray-600 text-xl leading-none font-bold"
@@ -1147,23 +1147,23 @@ export function ArticlesTab({
               </div>
 
               {/* Scrollable Content */}
-              <div className="flex-1  overflow-y-auto">
-                <div className=" space-y-4 p-4">
+              <div className="flex-1 overflow-y-auto">
+                <div className="space-y-3 sm:space-y-4 p-3 sm:p-4">
                   {/* Title */}
-                  <div className="flex items-center gap-3">
-                    <label className="block text-[10px] mt-1 text-[#ffffff80] ">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                    <label className="block text-[10px] text-[#ffffff80]">
                       Title:
                     </label>
-                    <h4 className="text-lg text-white font-normal">{selectedArticle.title || ""}</h4>
+                    <h4 className="text-base sm:text-lg text-white font-normal break-words">{selectedArticle.title || ""}</h4>
                   </div>
 
                   {/* Keywords */}
-                  <div className="flex gap-1">
-                    <label className="block text-[10px] mt-1 text-[#ffffff80]">
+                  <div className="flex flex-col sm:flex-row gap-1 sm:gap-2">
+                    <label className="block text-[10px] text-[#ffffff80] flex-shrink-0">
                       Keywords:
                     </label>
 
-                    <div className="flex text-[8px] font-normal flex-wrap gap-2">
+                    <div className="flex text-[8px] sm:text-xs font-normal flex-wrap gap-2">
                       {(() => {
                         const keywords = Array.isArray(selectedArticle.keyword)
                           ? selectedArticle.keyword
@@ -1301,12 +1301,12 @@ export function ArticlesTab({
 
                   {/* Tags */}
                 </div>
-                <div className="border-b border-[#53f8701a] " />
-                <div className="p-4">
+                <div className="border-b border-[#53f8701a]" />
+                <div className="p-3 sm:p-4">
                   {/* <h4 className="text-2xl mb-4">{selectedArticle.title}</h4> */}
                   <div
-                    className={`text-[14px] text-[#ffffffb3] leading-relaxed relative ${
-                      isContentExpanded ? "" : "max-h-[400px] overflow-hidden"
+                    className={`text-xs sm:text-sm text-[#ffffffb3] leading-relaxed relative ${
+                      isContentExpanded ? "" : "max-h-[300px] sm:max-h-[400px] overflow-hidden"
                     }`}
                   >
                     {renderContentWithImages(
@@ -1331,9 +1331,9 @@ export function ArticlesTab({
               </div>
 
               {/* Footer Actions */}
-              <div className="border-t border-[#53f8701a] p-4 bg-[#0d0d0d] flex gap-2 flex-shrink-0">
+              <div className="border-t border-[#53f8701a] p-3 sm:p-4 bg-[#0d0d0d] flex  sm:flex-row gap-2 flex-shrink-0">
                 <Button
-                  className="flex-1 bg-[#53f870] text-black font-medium hover:bg-[#53f870] cursor-pointer h-10 text-sm rounded disabled:opacity-60"
+                  className="flex-1 bg-[#53f870] text-black font-medium hover:bg-[#53f870] cursor-pointer h-9 sm:h-10 text-xs sm:text-sm rounded disabled:opacity-60"
                   onClick={handlePublish}
                   disabled={isPublishing}
                 >
@@ -1366,7 +1366,7 @@ export function ArticlesTab({
                 {selectedArticle.status === "published" &&
                   selectedArticle.slug && (
                     <Button
-                      className="h-10 px-4 flex bg-[#101110] hover:bg-[#101110] text-[#ffffffd3] hover:!text-[#ffffffd3] items-center gap-2"
+                      className="flex-1 sm:flex-none h-9 sm:h-10 px-2 sm:px-4 flex bg-[#101110] hover:bg-[#101110] text-[#ffffffd3] hover:!text-[#ffffffd3] items-center justify-center sm:justify-start gap-1 sm:gap-2 text-xs sm:text-sm"
                       onClick={() =>
                         handleIndexNow(
                           selectedArticle.id,
@@ -1385,16 +1385,16 @@ export function ArticlesTab({
                           />
                         </div>
                       ) : (
-                        <Globe className="w-4 h-4" />
+                        <Globe className="w-3 sm:w-4 h-3 sm:h-4" />
                       )}
-                      Index Now
+                      <span className="hidden sm:inline">Index Now</span>
                     </Button>
                   )}
                 <Button
-                  className="h-9 w-14 p-0 rounded-sm text-red-500 bg-[#ff383c] hover:bg-[#ff383c] hover:text-red-700 cursor-pointer"
+                  className="h-9 sm:h-10 w-10 sm:w-14 p-0 rounded-sm text-red-500 bg-[#ff383c] hover:bg-[#ff383c] hover:text-red-700 cursor-pointer flex items-center justify-center"
                   onClick={() => setIsDeleteDialogOpen(true)}
                 >
-                  <Image src="/delete.png" height={20} width={18} alt="icon" />
+                  <Image src="/delete.png" height={18} width={16} alt="icon" />
                 </Button>
 
                 <Dialog
