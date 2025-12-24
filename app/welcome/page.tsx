@@ -172,9 +172,15 @@ export default function WelcomePage() {
              />
             </div>
           </div>
-          <p className="text-green-400/70 text-sm tracking-wider mb-6">
-            Getting your dashboard ready
-          </p>
+         <p className="relative flex items-center justify-center text-green-400/70 text-sm tracking-wider mb-6">
+  <span className="absolute left-0 w-1/4 h-px bg-gradient-to-r from-transparent to-green-500/60"></span>
+
+  <span className="px-4 text-[16px] text-[#53F870]">
+    Getting your dashboard ready
+  </span>
+
+  <span className="absolute right-0 w-1/4 h-px bg-gradient-to-l from-transparent to-green-500/60"></span>
+</p>
           <h4 className="text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-green-300 mb-6">
             CopyRank
           </h4>
@@ -322,7 +328,7 @@ export default function WelcomePage() {
           {/* Tab 2 - Loader */}
           {tab === "tab2" && isLoading && (
             <div className="space-y-6 flex flex-col items-center justify-center py-16">
-              <p className="text-green-400/70 text-sm tracking-wider">
+              <p className="text-[#53F870] text-sm tracking-wider">
                 Getting your dashboard ready
               </p>
               <h2 className="text-6xl font-bold text-white mb-8">
