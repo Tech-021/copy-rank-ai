@@ -150,28 +150,28 @@ export function CreatePostDialogDashboard({
   return (
     <div>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="min-w-[320px] lg:min-w-[640px] w-full max-h-[400px] lg:max-h-[600px] overflow-x-hidden overflow-y-scroll [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <DialogContent className="min-w-[90vw] lg:min-w-[640px] w-full max-h-[85vh] lg:max-h-[600px] overflow-x-hidden overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <VisuallyHidden>
             <DialogTitle></DialogTitle>
           </VisuallyHidden>
-          <div className="flex flex-col gap-[30px]">
-            <div className="flex flex-col gap-2.5">
-              <h2 className="text-lg lg:text-3xl text-white font-normal">
+          <div className="flex flex-col gap-4 sm:gap-[30px]">
+            <div className="flex flex-col gap-1.5 sm:gap-2.5">
+              <h2 className="text-base sm:text-lg lg:text-3xl text-white font-normal">
                 Choose what to write about
               </h2>
-              <p className="text-[10px] lg:text-[15px] text-white">
+              <p className="text-xs sm:text-[15px] text-white">
                 Pick a keyword as the focus for this post
               </p>
             </div>
-            <div className="flex flex-col gap-5">
+            <div className="flex flex-col gap-3 sm:gap-5">
               {/* 1) Competitor selection */}
-              <div className="flex flex-col gap-2.5">
+              <div className="flex flex-col gap-2 sm:gap-2.5">
                 <Select
                   value={selectedCompetitor ?? undefined}
                   onValueChange={setSelectedCompetitor}
                 >
-                  <SelectTrigger className="w-[282px] lg:w-[588px] h-[60px]! bg-gradient-to-b text-[#53F870]! from-[#002B07] to-[#1A451A] border border-[#53F870]">
-                    <SelectValue placeholder="From  Competitor" />
+                  <SelectTrigger className="w-full h-14 sm:h-[60px]! bg-gradient-to-b text-[#53F870]! from-[#002B07] to-[#1A451A] border border-[#53F870] text-xs sm:text-sm">
+                    <SelectValue placeholder="From Competitor" />
                   </SelectTrigger>
                   <SelectContent>
                     {competitorOptions.length === 0 ? (
@@ -187,23 +187,8 @@ export function CreatePostDialogDashboard({
                     )}
                   </SelectContent>
                 </Select>
-                {/* 1a) Competitor's keywords select */}
-                {/* <Select value={selectedCompetitorKeyword ?? undefined} onValueChange={setSelectedCompetitorKeyword}>
-                  <SelectTrigger className="w-[588px] h-[50px]! border-[#0000001a]">
-                    <SelectValue placeholder="From Competitor's Keywords" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(competitorKeywordSuggestions.length === 0) ? (
-                      <SelectItem value="__none__" disabled>No competitor keywords found</SelectItem>
-                    ) : (
-                      competitorKeywordSuggestions.slice(0, 50).map((kw) => (
-                        <SelectItem key={kw} value={kw}>{kw}</SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select> */}
                 {/* 1b) Competitor keyword chips - multi-select */}
-                <div className="flex items-start justify-start gap-1.5 flex-wrap bg-transparent border border-[#53F870]! rounded-xl p-3.5 w-[282px] lg:w-full min-h-[82px]">
+                <div className="flex items-start justify-start gap-1.5 flex-wrap bg-transparent border border-[#53F870]! rounded-xl p-2 sm:p-3.5 w-full min-h-20 sm:min-h-[82px]">
                   {competitorKeywordSuggestions.length === 0 ? (
                     <p className="text-xs text-[#ffffff80]">
                       Select a competitor to see their keywords.
@@ -219,10 +204,10 @@ export function CreatePostDialogDashboard({
                               : [...prev, kw]
                           );
                         }}
-                        className={`border border-[#53F870] bg-[rgba(114,235,98,0.13)] rounded-[5px] px-2 py-1  text-[10px] text-[#53F870] font-normal cursor-pointer hover:border-black ${
+                        className={`border border-[#53F870] bg-[rgba(114,235,98,0.13)] rounded-[5px] px-2 py-1 text-[9px] sm:text-[10px] text-[#53F870] font-normal cursor-pointer hover:border-black ${
                           selectedCompetitorKeywords.includes(kw)
                             ? "border-black text-[#53F870]"
-                            : "border-[#0000004d] text-[#53F870] "
+                            : "border-[#0000004d] text-[#53F870]"
                         }`}
                         type="button"
                       >
@@ -236,7 +221,7 @@ export function CreatePostDialogDashboard({
                   value={selectedSeoKeyword ?? undefined}
                   onValueChange={setSelectedSeoKeyword}
                 >
-                  <SelectTrigger className="w-[282px] lg:w-[588px]  h-[60px]! bg-gradient-to-b text-[#53F870]! from-[#002B07] to-[#1A451A]  border-[#0000001a]">
+                  <SelectTrigger className="w-full h-14 sm:h-[60px]! bg-gradient-to-b text-[#53F870]! from-[#002B07] to-[#1A451A] border-[#0000001a] text-xs sm:text-sm">
                     <SelectValue placeholder="From Your Keywords" />
                   </SelectTrigger>
                   <SelectContent>
@@ -254,7 +239,7 @@ export function CreatePostDialogDashboard({
                   </SelectContent>
                 </Select>
                 {/* 2b) Current website SEO keyword chips - multi-select */}
-                <div className="flex items-start justify-start bg-transparent border border-[#53F870]! gap-1.5 flex-wrap bg-[rgb(247,247,247)] rounded-xl p-3.5 w-full min-h-[82px]">
+                <div className="flex items-start justify-start bg-transparent border border-[#53F870]! gap-1.5 flex-wrap rounded-xl p-2 sm:p-3.5 w-full min-h-20 sm:min-h-[82px]">
                   {loadingOptions ? (
                     <p className="text-xs text-[#00000080]">
                       Loading keywords…
@@ -275,7 +260,7 @@ export function CreatePostDialogDashboard({
                                 : [...prev, kw]
                             );
                           }}
-                          className={`border rounded-full px-2 py-1 text-[10px] font-normal cursor-pointer hover:border-black ${
+                          className={`border rounded-full px-2 py-1 text-[9px] sm:text-[10px] font-normal cursor-pointer hover:border-black ${
                             selectedSeoKeywords.includes(kw)
                               ? "border-black text-[#53F870]"
                               : "border-[#0000004d] text-[#53F870]"
@@ -288,12 +273,12 @@ export function CreatePostDialogDashboard({
                   )}
                 </div>
 
-                <div className="flex flex-col gap-2.5">
+                <div className="flex flex-col gap-2 sm:gap-2.5">
                   <Select
                     value={selectedSeoKeyword ?? undefined}
                     onValueChange={setSelectedSeoKeyword}
                   >
-                    <SelectTrigger className="w-[588px]  h-[60px]! bg-gradient-to-b text-[#53F870]! from-[#002B07] to-[#1A451A]  border-[#0000001a]">
+                    <SelectTrigger className="w-full h-14 sm:h-[60px]! bg-gradient-to-b text-[#53F870]! from-[#002B07] to-[#1A451A] border-[#0000001a] text-xs sm:text-sm">
                       <SelectValue placeholder="From Your Keywords" />
                     </SelectTrigger>
                     <SelectContent>
@@ -310,7 +295,7 @@ export function CreatePostDialogDashboard({
                       )}
                     </SelectContent>
                   </Select>
-                  <div className="flex items-start justify-start bg-transparent border border-[#53F870]! gap-1.5 flex-wrap bg-[rgb(247,247,247)] rounded-xl p-3.5 w-full min-h-[82px]">
+                  <div className="flex items-start justify-start bg-transparent border border-[#53F870]! gap-1.5 flex-wrap rounded-xl p-2 sm:p-3.5 w-full min-h-20 sm:min-h-[82px]">
                     {loadingOptions ? (
                       <p className="text-xs text-[#00000080]">
                         Loading keywords…
@@ -331,7 +316,7 @@ export function CreatePostDialogDashboard({
                                   : [...prev, kw]
                               );
                             }}
-                            className={`border rounded-full px-2 py-1 text-[10px] font-normal cursor-pointer hover:border-black ${
+                            className={`border rounded-full px-2 py-1 text-[9px] sm:text-[10px] font-normal cursor-pointer hover:border-black ${
                               selectedSeoKeywords.includes(kw)
                                 ? "border-black text-[#53F870]"
                                 : "border-[#0000004d] text-[#53F870]"
@@ -444,7 +429,7 @@ export function CreatePostDialogDashboard({
                   }
                 }}
                 disabled={isSubmitting}
-                className="w-full h-[50px] text-white text-base font-normal bg-[rgb(91,175,87)] hover:bg-[rgb(91,175,87)] cursor-pointer"
+                className="w-full h-12 sm:h-[50px] text-white text-sm sm:text-base font-normal bg-[rgb(91,175,87)] hover:bg-[rgb(91,175,87)] cursor-pointer"
               >
                 Next
               </Button>

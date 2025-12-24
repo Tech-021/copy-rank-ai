@@ -904,57 +904,61 @@ export function CompetitorsTab({
   // navigation with an early return.
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4 sm:space-y-6 p-4 sm:p-6">
       {/* Main Competitors Section */}
       <div className="space-y-4">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-0">
           {/* Left side */}
           <div>
-            <h2 className="text-2xl text-white font-medium">Competitors</h2>
-            <p className="text-sm text-gray-500 mt-1">
+            <h2 className="text-lg sm:text-2xl text-white font-medium">Competitors</h2>
+            <p className="text-xs sm:text-sm text-gray-500 mt-1">
               Track and compare your competitors
             </p>
           </div>
 
           {/* Right side */}
-          <div className="flex items-center ">
-            {/* Add Competitors */}
-            <Button
-              onClick={handleAddCompetitor}
-              variant="outline"
-              className="gap-2 text-[#53F870] border border-gray-700! rounded-r-none cursor-pointer bg-[rgba(83,248,112,0.1)]! hover:bg-[rgba(83,248,112,0.2)]"
-            >
-              Add Competitors
-              <Plus />
-            </Button>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-0">
+            {/* Add Competitors and Sync - Stack on mobile */}
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-0 flex-1 sm:flex-none">
+              <Button
+                onClick={handleAddCompetitor}
+                variant="outline"
+                className="gap-2 text-[#53F870] border border-gray-700! rounded-r-none sm:rounded-r-none cursor-pointer bg-[rgba(83,248,112,0.1)]! hover:bg-[rgba(83,248,112,0.2)] text-xs sm:text-sm"
+              >
+                Add Competitors
+                <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
+              </Button>
 
-            {/* Sync */}
-            <Button
-              variant="outline"
-              className="gap-2 text-[#53F870] border border-gray-700! rounded-l-none cursor-pointer bg-[rgba(83,248,112,0.1)]! hover:bg-[rgba(83,248,112,0.2)]"
-              onClick={async () => {
-                const fallbackId =
-                  initialWebsiteId ||
-                  selectedWebsiteId ||
-                  (websites && websites.length > 0
-                    ? websites[0].id
-                    : undefined);
-                if (!fallbackId) {
-                  await loadUserWebsites();
-                  return;
-                }
-                await fetchCompetitors(fallbackId);
-              }}
-            >
-              Sync Keywords
-              <RefreshCcw />
-            </Button>
+              <Button
+                variant="outline"
+                className="gap-2 text-[#53F870] border border-gray-700! rounded-l-none sm:rounded-l-none cursor-pointer bg-[rgba(83,248,112,0.1)]! hover:bg-[rgba(83,248,112,0.2)] text-xs sm:text-sm"
+                onClick={async () => {
+                  const fallbackId =
+                    initialWebsiteId ||
+                    selectedWebsiteId ||
+                    (websites && websites.length > 0
+                      ? websites[0].id
+                      : undefined);
+                  if (!fallbackId) {
+                    await loadUserWebsites();
+                    return;
+                  }
+                  await fetchCompetitors(fallbackId);
+                }}
+              >
+                Sync Keywords
+                <RefreshCcw className="w-3 h-3 sm:w-4 sm:h-4" />
+              </Button>
+            </div>
 
             {/* Website Select */}
-            <div className="ml-2">
-              <Select value={selectedWebsiteId || undefined} onValueChange={handleWebsiteChange}>
-                <SelectTrigger className="h-10  bg-[rgba(83,248,112,0.1)]!  rounded-[5px] focus-visible:outline-none focus-visible:ring-0 border-[#0000001a] focus-visible:border-[#0000001a] focus:outline-none cursor-pointer outline-none active:outline-none px-3.5 py-2.5 text-[#53F870]">
+            <div className="flex-1 sm:flex-none sm:ml-2">
+              <Select
+                value={selectedWebsiteId || undefined}
+                onValueChange={handleWebsiteChange}
+              >
+                <SelectTrigger className="h-9 sm:h-10 bg-[rgba(83,248,112,0.1)]! rounded-[5px] focus-visible:outline-none focus-visible:ring-0 border-[#0000001a] focus-visible:border-[#0000001a] focus:outline-none cursor-pointer outline-none active:outline-none px-2.5 sm:px-3.5 py-2 sm:py-2.5 text-[#53F870] text-xs sm:text-sm">
                   <SelectValue placeholder="Select your website" />
                 </SelectTrigger>
                 <SelectContent className="cursor-pointer bg-[#142517]! ">
@@ -962,7 +966,11 @@ export function CompetitorsTab({
                     <SelectItem
                       key={website.id}
                       value={website.id}
-                      className={`cursor-pointer data-[state=checked]:text-[#53F870] data-[state=checked]:opacity-40 ${index < websites.length - 1 ? 'border-b rounded-none border-[#0000001a]' : ''}`}
+                      className={`cursor-pointer data-[state=checked]:text-[#53F870] data-[state=checked]:opacity-40 ${
+                        index < websites.length - 1
+                          ? "border-b rounded-none border-[#0000001a]"
+                          : ""
+                      }`}
                     >
                       {website.url}
                     </SelectItem>
@@ -974,83 +982,83 @@ export function CompetitorsTab({
         </div>
 
         {/* Stats Cards - 4 Column Grid */}
-        <div className="grid grid-cols-4 rounded-xl shadow-xl">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-0 rounded-xl shadow-xl overflow-hidden">
           {/* Card 1 */}
-          <Card className="border-r border-l-0 border-t-0 border-b-0 rounded-r-none border-[#53f8704b] bg-black shadow-xl">
-            <CardContent className="flex flex-col justify-start gap-8">
+          <Card className="border-b sm:border-b sm:border-r lg:border-r lg:border-b-0 border-l-0 border-t-0 rounded-none border-[#53f8704b] bg-black">
+            <CardContent className="flex flex-col justify-start gap-4 sm:gap-8">
               <div className="flex justify-between">
-                <p className="text-xs font-medium text-white tracking-wide">
+                <p className="text-xs sm:text-xs font-medium text-white tracking-wide">
                   Total Competitors
                 </p>
                 <Image src="/compdark1.png" alt="icon" height={24} width={24} />
               </div>
-              <p className="text-4xl font-bold text-[#53F870]">
+              <p className="text-2xl sm:text-4xl font-bold text-[#53F870]">
                 {stats.totalCompetitors}
               </p>
             </CardContent>
           </Card>
 
           {/* Card 2 */}
-          <Card className="border border-t-0 border-b-0 rounded-none border-[#53f8704b] bg-black shadow-xl">
-            <CardContent className="flex flex-col justify-start gap-8">
+          <Card className="border-b sm:border-b lg:border-b-0 border-l-0 border-t-0 border-r-0 sm:border-r-0 lg:border-r rounded-none border-[#53f8704b] bg-black">
+            <CardContent className="flex flex-col justify-start gap-4 sm:gap-8">
               <div className="flex justify-between">
-                <p className="text-xs font-medium text-white tracking-wide">
+                <p className="text-xs sm:text-xs font-medium text-white tracking-wide">
                   Shared Keywords
                 </p>
                 <Image src="/compdark2.png" alt="icon" height={24} width={24} />
               </div>
-              <p className="text-4xl font-bold text-[#53F870]">
+              <p className="text-2xl sm:text-4xl font-bold text-[#53F870]">
                 {formatNumber(stats.avgOverlap)}
               </p>
             </CardContent>
           </Card>
 
           {/* Card 3 */}
-          <Card className="border border-t-0 border-b-0 rounded-none border-[#53f8704b] bg-black shadow-xl">
-            <CardContent className="flex flex-col justify-start gap-8">
+          <Card className="border-b sm:border-b sm:border-r lg:border-r lg:border-b-0 border-l-0 border-t-0 rounded-none border-[#53f8704b] bg-black">
+            <CardContent className="flex flex-col justify-start gap-4 sm:gap-8">
               <div className="flex justify-between">
-                <p className="text-xs font-medium text-white tracking-wide">
+                <p className="text-xs sm:text-xs font-medium text-white tracking-wide">
                   Keyword Gaps
                 </p>
                 <Image src="/compdark3.png" alt="icon" height={24} width={24} />
               </div>
-              <p className="text-4xl font-bold text-[#53F870]">9</p>
+              <p className="text-2xl sm:text-4xl font-bold text-[#53F870]">9</p>
             </CardContent>
           </Card>
 
           {/* Card 4 */}
-          <Card className="border border-t-0 border-b-0 border-r-0 rounded-l-none border-[#53f8704b] bg-black shadow-xl">
-            <CardContent className="flex flex-col justify-start gap-8">
+          <Card className="border-b-0 sm:border-b lg:border-b-0 border-l-0 border-t-0 border-r-0 lg:border-r-0 rounded-none border-[#53f8704b] bg-black">
+            <CardContent className="flex flex-col justify-start gap-4 sm:gap-8">
               <div className="flex justify-between">
-                <p className="text-xs font-medium text-white tracking-wide">
+                <p className="text-xs sm:text-xs font-medium text-white tracking-wide">
                   High Value Gaps
                 </p>
                 <Image src="/compdark4.png" alt="icon" height={30} width={30} />
               </div>
-              <p className="text-4xl font-bold text-[#53F870]">4</p>
+              <p className="text-2xl sm:text-4xl font-bold text-[#53F870]">4</p>
             </CardContent>
           </Card>
         </div>
         {/* Best Keyword Opportunities Table */}
-        <div className="bg-black rounded-xl border border-gray-700 overflow-hidden">
-          <h4 className="text-white p-4">Best Keyword Opportunities</h4>
-          <table className="w-full border-collapse">
+        <div className="bg-black rounded-xl border border-gray-700 overflow-x-auto">
+          <h4 className="text-xs sm:text-sm text-white p-3 sm:p-4">Best Keyword Opportunities</h4>
+          <table className="w-full border-collapse min-w-full">
             {/* ================= HEADER ================= */}
             <thead>
               <tr className="border-b border-gray-800 bg-black">
-                <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
+                <th className="px-2 sm:px-4 py-2 sm:py-4 text-left text-xs font-medium text-gray-500 whitespace-nowrap">
                   Keyword
                 </th>
-                <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
+                <th className="px-2 sm:px-4 py-2 sm:py-4 text-left text-xs font-medium text-gray-500 whitespace-nowrap hidden sm:table-cell">
                   Search Volume
                 </th>
-                <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
+                <th className="px-2 sm:px-4 py-2 sm:py-4 text-left text-xs font-medium text-gray-500 whitespace-nowrap hidden sm:table-cell">
                   Difficulty
                 </th>
-                <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
+                <th className="px-2 sm:px-4 py-2 sm:py-4 text-left text-xs font-medium text-gray-500 whitespace-nowrap hidden lg:table-cell">
                   Competing Sites
                 </th>
-                <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
+                <th className="px-2 sm:px-4 py-2 sm:py-4 text-left text-xs font-medium text-gray-500">
                   Action
                 </th>
               </tr>
@@ -1068,28 +1076,28 @@ export function CompetitorsTab({
                         : ""
                     } hover:bg-gray-900`}
                   >
-                    <td className="px-4 py-3 text-sm text-[#53F870]">
+                    <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-[#53F870]">
                       {row.keyword}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-500">
+                    <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-500 hidden sm:table-cell">
                       {row.volume ? row.volume.toLocaleString() : "-"}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-500">
+                    <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-500 hidden sm:table-cell">
                       <span className="px-2 py-0.5 text-xs">
                         {row.difficulty}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-500">
+                    <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs text-gray-500 hidden lg:table-cell">
                       <span className="px-2 py-0.5 text-xs">{row.sites}</span>
                     </td>
-                    <td className="px-4 py-3">
-                      <div className="flex justify-start">
-                        <Button className="border rounded-r-none bg-transparent hover:bg-transparent text-gray-300 cursor-pointer  border-gray-700 rounded-l-md px-6 h-8 text-xs">
+                    <td className="px-2 sm:px-4 py-2 sm:py-3">
+                      <div className="flex justify-start gap-1">
+                        <Button className="border rounded-r-none bg-transparent hover:bg-transparent text-gray-300 cursor-pointer border-gray-700 rounded-l-md px-3 sm:px-6 h-7 sm:h-8 text-xs">
                           View
                         </Button>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button className="border border-l-0 rounded-l-none bg-transparent border-gray-600 rounded-r-md w-8 h-8 p-0 flex items-center justify-center hover:bg-gray-50">
+                            <Button className="border border-l-0 rounded-l-none bg-transparent border-gray-600 rounded-r-md w-7 sm:w-8 h-7 sm:h-8 p-0 flex items-center justify-center hover:bg-gray-50">
                               <ChevronDown className="w-4 h-4 text-gray-300" />
                             </Button>
                           </DropdownMenuTrigger>
@@ -1129,10 +1137,10 @@ export function CompetitorsTab({
               )}
               <tr>
                 <td colSpan={5} className="">
-                  <div className="mt-6 flex justify-end mr-4">
+                  <div className="mt-4 sm:mt-6 flex justify-end mr-2 sm:mr-4">
                     <Button
                       onClick={handleCreatePost}
-                      className="bg-transparent text-gray-400 border border-gray-800 px-6 mb-5 hover:bg-gray-500"
+                      className="bg-transparent text-gray-400 border border-gray-800 px-4 sm:px-6 mb-4 sm:mb-5 h-8 sm:h-9 text-xs sm:text-sm hover:bg-gray-500"
                     >
                       Create post
                     </Button>
@@ -1144,31 +1152,31 @@ export function CompetitorsTab({
         </div>
 
         {/* Competitor Overview Table */}
-        <div className="bg-black rounded-xl border border-gray-800 overflow-hidden">
-          <h4 className="text-white p-4">Competitor Overview</h4>
-          <table className="w-full border-collapse">
+        <div className="bg-black rounded-xl border border-gray-800 overflow-x-auto">
+          <h4 className="text-xs sm:text-sm text-white p-3 sm:p-4">Competitor Overview</h4>
+          <table className="w-full border-collapse min-w-full">
             {/* ================= HEADER ================= */}
             <thead>
               <tr className="border-b border-gray-700 bg-black">
-                <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
+                <th className="px-2 sm:px-4 py-2 sm:py-4 text-left text-xs font-medium text-gray-500 whitespace-nowrap">
                   Competitor
                 </th>
-                <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
+                <th className="px-2 sm:px-4 py-2 sm:py-4 text-left text-xs font-medium text-gray-500 whitespace-nowrap hidden sm:table-cell">
                   Primary Topic
                 </th>
-                <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
-                  Shared Keywords
+                <th className="px-2 sm:px-4 py-2 sm:py-4 text-left text-xs font-medium text-gray-500 whitespace-nowrap">
+                  Shared
                 </th>
-                <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
+                <th className="px-2 sm:px-4 py-2 sm:py-4 text-left text-xs font-medium text-gray-500 whitespace-nowrap hidden lg:table-cell">
                   Unique Keywords
                 </th>
-                <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
-                  High Value Keywords
+                <th className="px-2 sm:px-4 py-2 sm:py-4 text-left text-xs font-medium text-gray-500 whitespace-nowrap hidden lg:table-cell">
+                  High Value
                 </th>
-                <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
+                <th className="px-2 sm:px-4 py-2 sm:py-4 text-left text-xs font-medium text-gray-500 whitespace-nowrap hidden sm:table-cell">
                   Last Seen
                 </th>
-                <th className="px-4 py-4 text-left text-xs font-medium text-gray-500">
+                <th className="px-2 sm:px-4 py-2 sm:py-4 text-left text-xs font-medium text-gray-500">
                   Action
                 </th>
               </tr>
@@ -1363,10 +1371,10 @@ export function CompetitorsTab({
                         "www.lander.studio",
                         "www.webflow.com",
                       ].map((tag) => (
-                       <button
-  key={tag}
-  onClick={() => toggleCompetitorTag(tag)}
-  className={`
+                        <button
+                          key={tag}
+                          onClick={() => toggleCompetitorTag(tag)}
+                          className={`
     px-3 py-1 text-xs rounded-[5px] border transition-colors
     ${
       competitorTags.includes(tag)
@@ -1374,9 +1382,9 @@ export function CompetitorsTab({
         : "bg-gradient-to-b from-[rgba(46,152,57,0.38)] to-[#04230D] text-[#53F870] border-[#53F870] hover:border-gray-300"
     }
   `}
->
-  {tag}
-</button>
+                        >
+                          {tag}
+                        </button>
                       ))}
                     </div>
                   </div>
