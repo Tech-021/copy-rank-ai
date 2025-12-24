@@ -1018,7 +1018,7 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
           </CardContent>
         </Card>
 
-        <Card className="border w-[180px] lg:w-[335px] rounded-none rounded-br-xl lg:rounded-l-none border-[#70e6854b] lg:border-[#101110] bg-[#101110] shadow-xl">
+        <Card className="border w-[180px] lg:w-[335px] rounded-none rounded-br-xl lg:rounded-l-none lg:rounded-r-xl border-[#70e6854b] lg:border-[#101110] bg-[#101110] shadow-xl">
           <CardContent className="flex flex-col justify-start gap-8">
             <div className="flex items-center justify-between">
               <p className="text-xs font-medium text-[#ffffffb3] uppercase tracking-wide ">
