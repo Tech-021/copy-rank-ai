@@ -15,11 +15,15 @@ export default function WelcomePage() {
   const [competitor1, setCompetitor1] = useState("");
   const [competitor2, setCompetitor2] = useState("");
   const [competitor3, setCompetitor3] = useState("");
+  const [currentCompetitorInput, setCurrentCompetitorInput] = useState("");
   const [keyword1, setKeyword1] = useState("");
   const [keyword2, setKeyword2] = useState("");
   const [keyword3, setKeyword3] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  
+  const competitorsCount = [competitor1, competitor2, competitor3].filter(c => c.trim()).length;
+  const allCompetitorsAdded = competitor1.trim() && competitor2.trim() && competitor3.trim();
   const validateTab1 = () => {
     if (!websiteName.trim()) {
       toast.showToast({
@@ -79,11 +83,7 @@ export default function WelcomePage() {
           competitor2.trim(),
           competitor3.trim()
         ],
-        targetKeywords: [
-          keyword1.trim(),
-          keyword2.trim(),
-          keyword3.trim()
-        ],
+        targetKeywords: ["", "", ""],
         userId: user.id
       };
   
@@ -216,34 +216,57 @@ export default function WelcomePage() {
           )}
 
           {/* Tab 2 - Competitors */}
-          {tab === "tab2" && (
+          {tab === "tab2" && !isLoading && (
             <div className="space-y-6">
-              <div className="space-y-3">
-                <Input
-                  type="text"
-                  placeholder="www.competitor1.com"
-                  value={competitor1}
-                  onChange={(e) => setCompetitor1(e.target.value)}
-                  className="w-full h-12 bg-green-500/10 border border-green-500/30 rounded-lg text-white placeholder-gray-500 focus:border-green-500/60 focus:ring-green-500/20"
-                />
-                <Input
-                  type="text"
-                  placeholder="www.competitor2.com"
-                  value={competitor2}
-                  onChange={(e) => setCompetitor2(e.target.value)}
-                  className="w-full h-12 bg-green-500/10 border border-green-500/30 rounded-lg text-white placeholder-gray-500 focus:border-green-500/60 focus:ring-green-500/20"
-                />
-                <Input
-                  type="text"
-                  placeholder="www.competitor3.com"
-                  value={competitor3}
-                  onChange={(e) => setCompetitor3(e.target.value)}
-                  className="w-full h-12 bg-green-500/10 border border-green-500/30 rounded-lg text-white placeholder-gray-500 focus:border-green-500/60 focus:ring-green-500/20"
-                />
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm text-gray-400">
+                    {allCompetitorsAdded ? "All Competitors Added" : `Add Competitor ${competitorsCount + 1} of 3`}
+                  </label>
+                  {!allCompetitorsAdded && (
+                    <Input
+                      type="text"
+                      placeholder="www.competitor.com"
+                      value={currentCompetitorInput}
+                      onChange={(e) => setCurrentCompetitorInput(e.target.value)}
+                      className="w-full h-12 bg-green-500/10 border border-green-500/30 rounded-lg text-white placeholder-gray-500 focus:border-green-500/60 focus:ring-green-500/20"
+                    />
+                  )}
+                </div>
+                <Button
+                  onClick={() => {
+                    if (allCompetitorsAdded) {
+                      if (validateTab2()) {
+                        handleNext();
+                      }
+                    } else {
+                      if (!currentCompetitorInput.trim()) {
+                        toast.showToast({
+                          title: "Empty Input",
+                          description: "Please enter a competitor URL",
+                          type: "error",
+                        });
+                        return;
+                      }
+                      if (!competitor1) {
+                        setCompetitor1(currentCompetitorInput.trim());
+                      } else if (!competitor2) {
+                        setCompetitor2(currentCompetitorInput.trim());
+                      } else if (!competitor3) {
+                        setCompetitor3(currentCompetitorInput.trim());
+                      }
+                      setCurrentCompetitorInput("");
+                    }
+                  }}
+                  disabled={isLoading}
+                  className="w-full h-12 bg-green-500 hover:bg-green-600 text-black font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {allCompetitorsAdded ? "Next" : "Add"}
+                </Button>
               </div>
 
               {/* Competitor Tags Display */}
-              {(competitor1 || competitor2 || competitor3) && (
+              {competitorsCount > 0 && (
                 <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
                   <div className="flex flex-wrap gap-2">
                     {competitor1 && (
@@ -282,17 +305,7 @@ export default function WelcomePage() {
                   </div>
                 </div>
               )}
-
-              <Button
-                onClick={() => {
-                  if (validateTab2()) {
-                    setTab("tab3");
-                  }
-                }}
-                className="w-full h-12 bg-green-500 hover:bg-green-600 text-black font-semibold rounded-lg transition-colors"
-              >
-                Next
-              </Button>
+              
               <div className="flex items-center justify-between">
                 <button
                   onClick={() => setTab("tab1")}
@@ -306,101 +319,20 @@ export default function WelcomePage() {
             </div>
           )}
 
-          {/* Tab 3 - Keywords */}
-          {tab === "tab3" && (
-            <div className="space-y-6">
-              <div className="space-y-3">
-                <Input
-                  type="text"
-                  placeholder="Keyword 1"
-                  value={keyword1}
-                  onChange={(e) => setKeyword1(e.target.value)}
-                  className="w-full h-12 bg-green-500/10 border border-green-500/30 rounded-lg text-white placeholder-gray-500 focus:border-green-500/60 focus:ring-green-500/20"
-                />
-                <Input
-                  type="text"
-                  placeholder="Keyword 2"
-                  value={keyword2}
-                  onChange={(e) => setKeyword2(e.target.value)}
-                  className="w-full h-12 bg-green-500/10 border border-green-500/30 rounded-lg text-white placeholder-gray-500 focus:border-green-500/60 focus:ring-green-500/20"
-                />
-                <Input
-                  type="text"
-                  placeholder="Keyword 3"
-                  value={keyword3}
-                  onChange={(e) => setKeyword3(e.target.value)}
-                  className="w-full h-12 bg-green-500/10 border border-green-500/30 rounded-lg text-white placeholder-gray-500 focus:border-green-500/60 focus:ring-green-500/20"
-                />
-              </div>
-
-              {/* Keyword Tags Display */}
-              {(keyword1 || keyword2 || keyword3) && (
-                <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
-                  <div className="flex flex-wrap gap-2">
-                    {keyword1 && (
-                      <div className="flex items-center gap-2 bg-green-500/20 border border-green-500/30 rounded-full px-3 py-1">
-                        <span className="text-sm text-green-300">{keyword1}</span>
-                        <button
-                          onClick={() => setKeyword1("")}
-                          className="text-green-400 hover:text-green-300"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                    )}
-                    {keyword2 && (
-                      <div className="flex items-center gap-2 bg-green-500/20 border border-green-500/30 rounded-full px-3 py-1">
-                        <span className="text-sm text-green-300">{keyword2}</span>
-                        <button
-                          onClick={() => setKeyword2("")}
-                          className="text-green-400 hover:text-green-300"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                    )}
-                    {keyword3 && (
-                      <div className="flex items-center gap-2 bg-green-500/20 border border-green-500/30 rounded-full px-3 py-1">
-                        <span className="text-sm text-green-300">{keyword3}</span>
-                        <button
-                          onClick={() => setKeyword3("")}
-                          className="text-green-400 hover:text-green-300"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              <Button
-                onClick={() => {
-                  if (validateTab3()) {
-                    handleNext();
-                  }
-                }}
-                disabled={isLoading}
-                className="w-full h-12 bg-green-500 hover:bg-green-600 text-black font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isLoading ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <span className="animate-spin rounded-full h-4 w-4 border-2 border-black border-t-transparent"></span>
-                    Submitting...
-                  </span>
-                ) : (
-                  "Submit"
-                )}
-              </Button>
-              <div className="flex items-center justify-between">
-                <button
-                  onClick={() => setTab("tab2")}
-                  className="flex items-center text-green-400 hover:text-green-300 transition-colors"
-                >
-                  <ChevronLeft className="w-5 h-5" />
-                  Back
-                </button>
-                <p className="text-gray-500 text-sm">{getStepNumber()}</p>
+          {/* Tab 2 - Loader */}
+          {tab === "tab2" && isLoading && (
+            <div className="space-y-6 flex flex-col items-center justify-center py-16">
+              <p className="text-green-400/70 text-sm tracking-wider">
+                Getting your dashboard ready
+              </p>
+              <h2 className="text-6xl font-bold text-white mb-8">
+                CopyRank
+              </h2>
+              <p className="text-gray-400 text-sm mb-12">
+                Creating your first articles
+              </p>
+              <div className="animate-spin">
+                <Image src="/loader.png" alt="Loading" width={92} height={92} />
               </div>
             </div>
           )}
