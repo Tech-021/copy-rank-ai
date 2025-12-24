@@ -51,6 +51,7 @@ export function CreatePostDialogDashboard({
   const [keywordSuggestions, setKeywordSuggestions] = useState<string[]>([]);
   const [loadingOptions, setLoadingOptions] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [loadingStart, setLoadingStart] = useState<number | null>(null);
   const toast = useToast();
 
   const fallbackSuggestions = [
@@ -61,14 +62,9 @@ export function CreatePostDialogDashboard({
     "web development guide",
   ];
 
-  useEffect(() => {
-    if (showCreateDialog) {
-      const timer = setTimeout(() => {
-        setDialogCompleted(true);
-      }, 2000);
-      return () => clearTimeout(timer);
-    }
-  }, [showCreateDialog]);
+  // Loading/Completion dialog is now driven by actual enqueue status
+  // instead of a timer. We open the loading dialog when submitting,
+  // and set completion based on the API response.
 
   useEffect(() => {
     const loadOptions = async () => {
@@ -352,6 +348,10 @@ export function CreatePostDialogDashboard({
             <div>
               <Button
                 onClick={async () => {
+                  // Show loading dialog immediately
+                  setShowCreateDialog(true);
+                  setDialogCompleted(false);
+                  setLoadingStart(Date.now());
                   setIsSubmitting(true);
                   try {
                     const {
@@ -363,6 +363,7 @@ export function CreatePostDialogDashboard({
                         description: "Please sign in to create a post.",
                         type: "error",
                       });
+                      setShowCreateDialog(false);
                       setIsSubmitting(false);
                       return;
                     }
@@ -389,6 +390,7 @@ export function CreatePostDialogDashboard({
                           "Please select or enter at least one keyword.",
                         type: "error",
                       });
+                      setShowCreateDialog(false);
                       setIsSubmitting(false);
                       return;
                     }
@@ -418,6 +420,9 @@ export function CreatePostDialogDashboard({
                         description: result?.error || "Unknown error",
                         type: "error",
                       });
+                      // Hide loading dialog on failure
+                      setShowCreateDialog(false);
+                      setDialogCompleted(false);
                     } else {
                       const queued =
                         result.jobCount || result.actual || keywords.length;
@@ -426,10 +431,18 @@ export function CreatePostDialogDashboard({
                         description: `Queued ${queued} article job(s) for generation.`,
                         type: "success",
                       });
-                      // Close dialog and refresh parent
-                      setShowCreateDialog(false);
-                      onOpenChange(false);
-                      onCreated && onCreated();
+                      // Ensure the Creating state is visible for a minimum time
+                      const MIN_LOADING_MS = 1500;
+                      const elapsed = loadingStart ? Date.now() - loadingStart : MIN_LOADING_MS;
+                      const waitMs = Math.max(0, MIN_LOADING_MS - elapsed);
+                      setTimeout(() => {
+                        // Mark as completed and close the selection dialog.
+                        // Keep the loading dialog open in "Completed" state
+                        // so the user can click "View Posts".
+                        setDialogCompleted(true);
+                        onOpenChange(false);
+                        onCreated && onCreated();
+                      }, waitMs);
                     }
                   } catch (err) {
                     console.error("Error enqueueing jobs:", err);
@@ -439,6 +452,8 @@ export function CreatePostDialogDashboard({
                         err instanceof Error ? err.message : "Unknown error",
                       type: "error",
                     });
+                    setShowCreateDialog(false);
+                    setDialogCompleted(false);
                   } finally {
                     setIsSubmitting(false);
                   }
@@ -454,7 +469,7 @@ export function CreatePostDialogDashboard({
       </Dialog>
       <CreatePostDialog
         isOpen={showCreateDialog}
-        isLoading={dialogCompleted}
+        isLoading={!dialogCompleted}
         onClose={() => {
           setShowCreateDialog(false);
           setDialogCompleted(false);

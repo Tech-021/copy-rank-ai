@@ -979,8 +979,8 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
       </div>
 
       {/* Stats Cards - Pixel Perfect */}
-      <div className="flex flex-wrap rounded-xl shadow-xl">
-        <Card className="border w-[180px] lg:w-[335px] rounded-none rounded-tl-xl lg:rounded-r-none  lg:border-[#101110] border-[#70e6854b] lg:border-r-[#53f8704b] bg-[#101110] shadow-xl">
+      <div className="flex flex-wrap lg:flex-nowrap rounded-xl shadow-xl">
+        <Card className="border w-[180px] lg:w-[335px] rounded-none rounded-tl-xl lg:rounded-xl lg:rounded-r-none  lg:border-[#101110] border-[#70e6854b] lg:border-r-[#53f8704b] bg-[#101110] shadow-xl">
           <CardContent className="flex flex-col justify-start gap-8">
             <div className="flex items-center justify-between">
               <p className="text-xs font-medium text-[#ffffffb3] uppercase tracking-wide ">
@@ -994,7 +994,7 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
           </CardContent>
         </Card>
 
-        <Card className="border w-[180px] lg:w-[335px] rounded-none rounded-tr-xl lg:rounded-none border-[#70e6854b] lg:border-r-[#53f8704b] bg-[#101110] shadow-xl">
+        <Card className="border w-[180px] lg:w-[335px] rounded-none rounded-tr-xl lg:rounded-none border-[#70e6854b] lg:border-[#101110] lg:border-r-[#53f8704b]  bg-[#101110] shadow-xl">
           <CardContent className="flex flex-col justify-start gap-8">
             <div className="flex items-center justify-between">
               <p className="text-xs font-medium text-[#ffffffb3] uppercase tracking-wide ">
@@ -1006,7 +1006,7 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
           </CardContent>
         </Card>
 
-        <Card className="border w-[180px] lg:w-[335px] rounded-none rounded-bl-xl lg:rounded-none border-[#70e6854b] lg:border-r-[#70e6854b] bg-[#101110] shadow-xl">
+        <Card className="border w-[180px] lg:w-[335px] rounded-none rounded-bl-xl lg:rounded-none border-[#70e6854b] lg:border-[#101110] lg:border-r-[#70e6854b] bg-[#101110] shadow-xl">
           <CardContent className="flex flex-col justify-start gap-8">
             <div className="flex items-center justify-between">
               <p className="text-xs font-medium text-[#ffffffb3] uppercase tracking-wide ">
@@ -1030,7 +1030,7 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
           </CardContent>
         </Card>
       </div>
-      <div className="flex flex-col lg:gap-0 gap-4 lg:flex-nowrap flex-wrap lg:flex-row items-start lg:items-center justify-between w-full">
+      <div className="flex flex-col lg:gap-0 gap-4 flex-wrap lg:flex-row lg:flex-wrap items-start lg:items-center justify-between w-full">
         {/* LEFT */}
         <div className="flex items-center gap-6 flex-wrap lg:flex-nowrap lg:gap-6 text-sm text-[#ffffffb3]">
           {/* Filters Dropdown */}
@@ -1091,13 +1091,13 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
         <button 
           onClick={() => setShowCreateDialog(true)}
           disabled={!selectedKeywords || selectedKeywords.size === 0}
-          className="h-9 border-2 border-[#53f870] px-8 rounded-md bg-[#171717] hover:bg-bg-[#171717] cursor-pointer text-[#53f870] order-2 text-base transition-colors disabled:cursor-not-allowed disabled:border-[#53f8701a] disabled:text-[#3a3a3a]"
+          className="h-9 border-2 border-[#53f870] px-8 rounded-md bg-[#171717] hover:bg-bg-[#171717] cursor-pointer text-[#53f870] order-2 lg:order-none text-base transition-colors disabled:cursor-not-allowed disabled:border-[#53f8701a] disabled:text-[#3a3a3a]"
         >
           Create Post
         </button>
         {/* Filters and Table */}
 
-      <div className="bg-[#0d0d0d] w-[362px] lg:w-auto rounded-lg border border-[#53f8701a] overflow-x-auto lg:overflow-hidden">
+      <div className="bg-[#0d0d0d] w-[362px] lg:w-full rounded-lg border border-[#53f8701a] lg:mt-2.5 overflow-x-auto lg:overflow-hidden">
         <table className="w-full border border-[#53f8701a] bg-[#101110] border-collapse">
           {/* ================= HEADER ================= */}
           <thead>
@@ -1209,7 +1209,7 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
           <div className="flex gap-2">
             <Button
               size="sm"
-              className="h-14 lg:h-9 border-2 border-[#53f870] px-8 rounded-md bg-[#171717] hover:bg-[#171717] cursor-pointer text-[#53f870] w-[100px] text-base transition-colors disabled:cursor-not-allowed disabled:border-[#53f8701a] disabled:text-[#3a3a3a]"
+              className="h-14 lg:h-9 border-2 border-[#53f870] px-8 rounded-md bg-[#171717] hover:bg-[#171717] cursor-pointer text-[#53f870] w-[100px] lg:w-max text-base transition-colors disabled:cursor-not-allowed disabled:border-[#53f8701a] disabled:text-[#3a3a3a]"
               onClick={addSelectedKeywordsToWebsite}
             >
               Add <br className="block lg:hidden" />Keywords
