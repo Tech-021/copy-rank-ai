@@ -254,7 +254,7 @@ export function CreatePostDialogDashboard({
                   </SelectContent>
                 </Select>
                 {/* 2b) Current website SEO keyword chips - multi-select */}
-                <div className="flex items-start justify-start bg-transparent border border-[#53F870]! gap-1.5 flex-wrap bg-[rgb(247,247,247)] rounded-xl p-3.5 w-full min-h-[82px]">
+                <div className="flex items-start justify-start bg-transparent border border-[#53F870]! gap-1.5 flex-wrap bg-[rgb(247,247,247)] rounded-xl p-3.5 lg:w-full w-[282px] min-h-[82px]">
                   {loadingOptions ? (
                     <p className="text-xs text-[#00000080]">
                       Loading keywords…
@@ -310,7 +310,7 @@ export function CreatePostDialogDashboard({
                       )}
                     </SelectContent>
                   </Select>
-                  <div className="flex items-start justify-start bg-transparent border border-[#53F870]! gap-1.5 flex-wrap bg-[rgb(247,247,247)] rounded-xl p-3.5 w-full min-h-[82px]">
+                  <div className="flex items-start justify-start bg-transparent border border-[#53F870]! gap-1.5 flex-wrap bg-[rgb(247,247,247)] rounded-xl p-3.5 lg:w-full w-[282px] min-h-[82px]">
                     {loadingOptions ? (
                       <p className="text-xs text-[#00000080]">
                         Loading keywords…

@@ -933,14 +933,14 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
   return (
     <div className="space-y-6 pb-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex lg:flex-row flex-col items-start gap-4 lg:gap-0 lg:items-center justify-between">
         <div>
           <h2 className="text-2xl text-white font-medium">Keywords</h2>
           <p className="text-sm text-[#ffffff3b] mt-1">
             Track the keywords driving your traffic
           </p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex lg:flex-row flex-col gap-3">
           <div className="flex ">
           <Button
             className="gap-2 cursor-pointer text-[#53f870] rounded-l-lg rounded-r-none hover:bg-[#53f8701a] bg-[#53f8701a] border-r border-[#53f870]"
@@ -979,12 +979,12 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
       </div>
 
       {/* Stats Cards - Pixel Perfect */}
-      <div className="grid grid-cols-4 rounded-xl shadow-xl">
-        <Card className="border rounded-r-none border-[#101110] border-r-[#53f8704b] bg-[#101110] shadow-xl">
+      <div className="flex flex-wrap rounded-xl shadow-xl">
+        <Card className="border w-[180px] lg:w-[335px] rounded-none rounded-tl-xl lg:rounded-r-none  lg:border-[#101110] border-[#70e6854b] lg:border-r-[#53f8704b] bg-[#101110] shadow-xl">
           <CardContent className="flex flex-col justify-start gap-8">
-            <div className="flex justify-between">
+            <div className="flex items-center justify-between">
               <p className="text-xs font-medium text-[#ffffffb3] uppercase tracking-wide ">
-                Total Keywords
+                Total <br className="hidden lg:block" />Keywords
               </p>
               <Image src="/keywordcardimg1.png" alt="icon" height={15} width={19.5} />
             </div>
@@ -994,9 +994,9 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
           </CardContent>
         </Card>
 
-        <Card className="border rounded-none border-r-[#53f8704b] bg-[#101110] shadow-xl">
+        <Card className="border w-[180px] lg:w-[335px] rounded-none rounded-tr-xl lg:rounded-none border-[#70e6854b] lg:border-r-[#53f8704b] bg-[#101110] shadow-xl">
           <CardContent className="flex flex-col justify-start gap-8">
-            <div className="flex justify-between">
+            <div className="flex items-center justify-between">
               <p className="text-xs font-medium text-[#ffffffb3] uppercase tracking-wide ">
                 High Potential Keywords
               </p>
@@ -1006,11 +1006,11 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
           </CardContent>
         </Card>
 
-        <Card className="border rounded-none border-r-[#53f8704b] bg-[#101110] shadow-xl">
+        <Card className="border w-[180px] lg:w-[335px] rounded-none rounded-bl-xl lg:rounded-none border-[#70e6854b] lg:border-r-[#70e6854b] bg-[#101110] shadow-xl">
           <CardContent className="flex flex-col justify-start gap-8">
-            <div className="flex justify-between">
+            <div className="flex items-center justify-between">
               <p className="text-xs font-medium text-[#ffffffb3] uppercase tracking-wide ">
-                With Content
+                With <br className="hidden lg:block" />Content
               </p>
               <Image src="/keywordcardimg3.png" alt="icon" height={15} width={19.5} />
             </div>
@@ -1018,9 +1018,9 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
           </CardContent>
         </Card>
 
-        <Card className="border rounded-l-none border-[#101110] bg-[#101110] shadow-xl">
+        <Card className="border w-[180px] lg:w-[335px] rounded-none rounded-br-xl lg:rounded-l-none border-[#70e6854b] lg:border-[#101110] bg-[#101110] shadow-xl">
           <CardContent className="flex flex-col justify-start gap-8">
-            <div className="flex justify-between">
+            <div className="flex items-center justify-between">
               <p className="text-xs font-medium text-[#ffffffb3] uppercase tracking-wide ">
                 Without Content
               </p>
@@ -1030,13 +1030,13 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
           </CardContent>
         </Card>
       </div>
-      <div className="flex items-center justify-between w-full">
+      <div className="flex flex-col lg:gap-0 gap-4 lg:flex-nowrap flex-wrap lg:flex-row items-start lg:items-center justify-between w-full">
         {/* LEFT */}
-        <div className="flex items-center gap-6 text-sm text-[#ffffffb3]">
+        <div className="flex items-center gap-6 flex-wrap lg:flex-nowrap lg:gap-6 text-sm text-[#ffffffb3]">
           {/* Filters Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="flex items-center gap-1">
+              <button className="flex items-center focus-visible:!outline-none gap-1">
                 Filters
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
                   <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" />
@@ -1054,7 +1054,7 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
           {/* Sort By Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="flex items-center gap-1 hover:text-gray-700">
+              <button className="flex items-center gap-1 hover:text-gray-700 lg:w-auto w-[250px] focus-visible:!outline-none">
                 Sort By
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
                   <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" />
@@ -1087,30 +1087,17 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
           </div>
         </div>
 
-        {/* CENTER */}
-        <div className=" ">
-          {/* <div className="relative">
-      <input
-        type="text"
-        placeholder="Search Keywords"
-        className="w-full h-9 rounded-md border border-gray-200 bg-gray-50 pl-9 pr-3 text-sm placeholder-gray-400"
-      />
-    </div> */}
-        </div>
-
         {/* RIGHT */}
         <button 
           onClick={() => setShowCreateDialog(true)}
           disabled={!selectedKeywords || selectedKeywords.size === 0}
-          className="h-9 border-2 border-[#53f870] px-8 rounded-md bg-[#171717] hover:bg-bg-[#171717] cursor-pointer text-[#53f870] text-base transition-colors disabled:cursor-not-allowed disabled:border-[#53f8701a] disabled:text-[#3a3a3a]"
+          className="h-9 border-2 border-[#53f870] px-8 rounded-md bg-[#171717] hover:bg-bg-[#171717] cursor-pointer text-[#53f870] order-2 text-base transition-colors disabled:cursor-not-allowed disabled:border-[#53f8701a] disabled:text-[#3a3a3a]"
         >
           Create Post
         </button>
-      </div>
+        {/* Filters and Table */}
 
-      {/* Filters and Table */}
-
-      <div className="bg-[#0d0d0d] rounded-lg border border-[#53f8701a] overflow-hidden">
+      <div className="bg-[#0d0d0d] w-[362px] lg:w-auto rounded-lg border border-[#53f8701a] overflow-x-auto lg:overflow-hidden">
         <table className="w-full border border-[#53f8701a] bg-[#101110] border-collapse">
           {/* ================= HEADER ================= */}
           <thead>
@@ -1208,30 +1195,32 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
           </tbody>
         </table>
       </div>
+      </div>
+
+      
 
       {/* Selection Bar */}
       {selectedKeywords && selectedKeywords.size > 0 && (
-        <div className="mt-4 flex items-center justify-between p-4 bg-blue-50 rounded-lg border border-blue-200">
-          <p className="text-sm font-medium text-gray-900">
+        <div className="mt-4 flex items-center justify-between p-4 bg-[#101110] rounded-lg border border-blue-200">
+          <p className="text-sm font-medium text-[#53f870]">
             {selectedKeywords.size} keyword
             {selectedKeywords.size !== 1 ? "s" : ""} selected
           </p>
           <div className="flex gap-2">
             <Button
               size="sm"
-              variant="outline"
-              className="h-9 px-4 border-gray-200 bg-white hover:bg-gray-50 text-sm font-normal"
+              className="h-14 lg:h-9 border-2 border-[#53f870] px-8 rounded-md bg-[#171717] hover:bg-[#171717] cursor-pointer text-[#53f870] w-[100px] text-base transition-colors disabled:cursor-not-allowed disabled:border-[#53f8701a] disabled:text-[#3a3a3a]"
               onClick={addSelectedKeywordsToWebsite}
             >
-              Add Keywords
+              Add <br className="block lg:hidden" />Keywords
             </Button>
             <Button
               size="sm"
-              className="h-9 px-4 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium"
+              className="h-14 lg:h-9 px-4 bg-[#53f8701a] hover:bg-[#53f8701a] text-[#53f870] cursor-pointer text-sm font-medium"
               onClick={() => setShowCreateDialog(true)}
               disabled={generatingContent}
             >
-              Create Post
+              Create <br className="block lg:hidden" />Post
             </Button>
           </div>
         </div>
