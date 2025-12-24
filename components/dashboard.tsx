@@ -250,12 +250,12 @@ export function Dashboard({
 
               {/* NAV LINKS */}
               <nav className="mt-8 w-full h-full px-4 py-4 flex flex-col bg-[#0d0d0d] space-y-6 text-[#53F870] text-[15px]">
-                <Link href="/dashboard/analyze">Dashboard</Link>
-                <Link href="/dashboard/keywords">Keywords</Link>
-                <Link href="/dashboard/competitors">Competitors</Link>
-                <Link href="/dashboard/articles">Articles</Link>
-                <Link href="/dashboard/index">Index</Link>
-                <Link href="/dashboard/settings">Settings</Link>
+                <Link onClick={() => setMobileMenuOpen(false)} href="/dashboard/analyze">Dashboard</Link>
+                <Link onClick={() => setMobileMenuOpen(false)} href="/dashboard/keywords">Keywords</Link>
+                <Link onClick={() => setMobileMenuOpen(false)} href="/dashboard/competitors">Competitors</Link>
+                <Link onClick={() => setMobileMenuOpen(false)} href="/dashboard/articles">Articles</Link>
+                <Link onClick={() => setMobileMenuOpen(false)} href="/dashboard/index">Index</Link>
+                <Link onClick={() => setMobileMenuOpen(false)} href="/dashboard/settings">Settings</Link>
                 {/* PROFILE */}
               <div className=" w-max flex items-center gap-4 py-1.5 rounded-full text-[#53F870] dark:bg-gradient-to-b dark:from-[rgba(46,152,57,0.38)] dark:via-[rgba(26,69,26,1)] dark:to-[rgba(4,35,13,1)] border border-transparent dark:border-[#2E9839] ">
                 {" "}
