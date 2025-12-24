@@ -38,8 +38,8 @@ export function ProfileDropdown({ userEmail, userAvatar, onLogout }: ProfileDrop
             <Image
               src={avatarToShow}
               alt="Profile"
-              width={50}
-              height={50}
+              width={33}
+              height={33}
               className="rounded-full object-cover"
             />
           )}
