@@ -1208,7 +1208,7 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
           </p>
           <div className="flex gap-2">
             <Button
-              size="sm"
+              size="sm" 
               className="h-14 lg:h-9 border-2 border-[#53f870] px-8 rounded-md bg-[#171717] hover:bg-[#171717] cursor-pointer text-[#53f870] w-[100px] lg:w-max text-base transition-colors disabled:cursor-not-allowed disabled:border-[#53f8701a] disabled:text-[#3a3a3a]"
               onClick={addSelectedKeywordsToWebsite}
             >
