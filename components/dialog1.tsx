@@ -7,6 +7,7 @@ import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { useToast } from "./ui/toast";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/client";
+import { Button } from "./ui/button";
 
 interface WebsiteDialogProps {
   open: boolean;
@@ -102,20 +103,21 @@ export function WebsiteDialog({ open, onOpenChange, onSuccess }: WebsiteDialogPr
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="bg-[#101110]">
         <VisuallyHidden>
           <DialogTitle></DialogTitle>
         </VisuallyHidden>
-        <div className="flex flex-col justify-center gap-20 my-10">
+        <div className="flex flex-col gap-10 my-2.5">
           <div className="flex flex-col gap-[30px]">
-            <div>
-              <h1 className="text-[#000000B3] text-lg font-normal">
+            <div className="flex flex-col items-center justify-center">
+              <h2 className="text-white text-xl font-normal">
                 Website URL
-              </h1>
-              <p className="text-[15px] text-[#00000080] font-normal">
+              </h2>
+              <p className="text-[15px] text-[#ffffff4d] font-normal">
                 Start with your domain
               </p>
             </div>
+            <div className="flex flex-col gap-5">
             <div className="space-y-5">
               {/* Website Name */}
               <div>
@@ -125,15 +127,15 @@ export function WebsiteDialog({ open, onOpenChange, onSuccess }: WebsiteDialogPr
                   value={websiteName}
                   onChange={(e) => setWebsiteName(e.target.value)}
                   disabled={isLoading}
-                  className="w-[450px] h-[50px] border border-solid border-[#0000001a] focus-visible:border focus-visible:border-[#0000001a] focus-visible:ring-0 placeholder:text-[#0000004d] disabled:opacity-50"
+                  className="w-full h-[50px] border border-solid border-[#0000001a] focus-visible:border focus-visible:border-[#5aff78] !bg-[#5aff781a] text-white focus-visible:ring-0 placeholder:text-[#ffffff4d] disabled:opacity-50"
                 />
               </div>
             </div>
             <div>
-              <button 
+              <Button 
                 onClick={handleAddWebsite}
                 disabled={isLoading}
-                className="bg-[#5baf57] border border-[#0000001a] text-white px-[60px] py-1 w-[170px] h-[50px] rounded-[10px] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                className="bg-[#5baf57] hover:bg-[#5baf57] border border-[#0000001a] text-white px-[60px] py-1 w-full h-[50px] rounded-[10px] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isLoading ? (
                   <span className="flex items-center justify-center">
@@ -143,7 +145,8 @@ export function WebsiteDialog({ open, onOpenChange, onSuccess }: WebsiteDialogPr
                 ) : (
                   "Submit"
                 )}
-              </button>
+              </Button>
+            </div>
             </div>
           </div>
           <div>

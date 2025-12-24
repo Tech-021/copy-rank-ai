@@ -149,7 +149,7 @@ export function AddKeywordsDialog({
               {/* Success Checkmark */}
               <div className="flex justify-center py-8">
                 <Image
-                  src="/check.png"
+                  src="/checkfordark.png"
                   alt="icon"
                   height={81}
                   width={81}
