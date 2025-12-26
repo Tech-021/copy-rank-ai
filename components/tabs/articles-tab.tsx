@@ -1141,7 +1141,7 @@ export function ArticlesTab({
             <div className="fixed lg:static inset-0 lg:inset-auto z-50 lg:z-auto max-w-full lg:max-w-[640px] bg-[#0d0d0d] rounded-[16px] lg:border-l border-[#53f8701a] overflow-hidden flex flex-col">
               {/* Header */}
               <div className="flex items-center justify-between p-3 sm:p-4 border-b border-[#53f8701a] flex-shrink-0">
-                <span className="text-xs sm:text-sm text-[#ffffffb3]">EDIT POST</span>
+                <span className="text-xs sm:text-sm text-[#ffffffb3]">VIEW POST</span>
                 <button
                   onClick={() => setSelectedArticle(null)}
                   className="text-gray-400 hover:text-gray-600 text-xl leading-none font-bold"
