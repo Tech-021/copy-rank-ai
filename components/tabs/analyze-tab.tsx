@@ -1122,7 +1122,7 @@ export function AnalyzeTab({
         websiteId={selectedWebsiteId}
         onCreated={handlePostCreated}
       />
-      <WebsiteDialog open={open} onOpenChange={setOpen} />
+      <WebsiteDialog open={open} onOpenChange={setOpen} onSuccess={loadUserWebsites} />
       {/* Add Competitor Dialog */}
       {showAddCompetitorDialog && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
