@@ -1045,7 +1045,11 @@ export function ArticlesTab({
               filteredArticles.map((article) => (
                 <div
                   key={article.id}
-                  className={`relative flex flex-col sm:flex-row gap-3 px-3 sm:px-3 py-3 sm:py-5 bg-[#101110] border border-[#53f8701a] rounded-lg hover:shadow-sm transition-all ${
+                  onClick={() => {
+                    setSelectedArticle(article);
+                    setIsContentExpanded(false);
+                  }}
+                  className={`relative flex flex-col sm:flex-row gap-3 px-3 sm:px-3 py-3 sm:py-5 bg-[#101110] border border-[#53f8701a] rounded-lg cursor-pointer hover:shadow-sm transition-all ${
                     selectedArticle?.id === article.id
                       ? "border-[#53f8701a] bg-[#101110]"
                       : "border-[#53f8701a]"
@@ -1098,11 +1102,10 @@ export function ArticlesTab({
                           className="text-[#53f870] hover:text-[#53f870] bg-[#53f8701a] hover:!bg-[#53f8701a] cursor-pointer h-8 w-full sm:w-8 px-[18px] sm:px-2 py-1.5 border-[#53f8701a] flex-shrink-0"
                           onClick={(e) => {
                             e.stopPropagation();
-                            setSelectedArticle(article);
-                            setIsContentExpanded(false);
+                            openEditDialog(article);
                           }}
                         >
-                          edit
+                          Edit
                         </Button>
                       )}
                     </div>
