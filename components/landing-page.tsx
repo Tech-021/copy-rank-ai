@@ -34,7 +34,7 @@ export function LandingPage({ onSignIn, onSignUp }: LandingPageProps) {
           <div className="flex items-center gap-3">
             <Button
               onClick={onSignIn}
-              className="cursor-pointer bg-white border border-[#dbdadd] hover:bg-white hover:text-[#838383] text-foreground text-sm rounded-full shadow-[inset_0_0_4px_2px_rgba(255,255,255,0.3),0_0_10px_2px_rgba(0,0,0,0.1)] transition"
+              className="cursor-pointer bg-[#5AFF78] border border-[#dbdadd] hover:bg-white hover:text-[#838383] text-black text-sm rounded-full shadow-[inset_0_0_4px_2px_rgba(255,255,255,0.3),0_0_10px_2px_rgba(0,0,0,0.1)] transition"
             >
               Sign In
             </Button>
