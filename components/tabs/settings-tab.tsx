@@ -135,6 +135,62 @@ export function SettingsTab() {
     getCurrentUser();
   }, []);
 
+  //For dynamic domains in the connection tab
+   const [connectedWebsites, setConnectedWebsites] = useState<
+    Array<{ id: string; domain: string; status: "Active" | "Inactive" }>
+  >([]);
+  const [connectedWebsitesLoading, setConnectedWebsitesLoading] = useState(false);
+
+  const loadConnectedWebsites = async (userId: string) => {
+    setConnectedWebsitesLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("websites")
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      // Debug once to see the real column name holding the domain:
+      // console.log("websites row sample:", data?.[0]);
+
+      const mapped =
+        (data ?? [])
+          .map((w: any) => {
+            const domain = String(
+              w?.clientDomain ?? w?.domain ?? w?.website ?? w?.url ?? ""
+            ).trim();
+
+            if (!domain) return null;
+
+            const isInactive =
+              w?.is_active === false ||
+              String(w?.status ?? "").toLowerCase() === "inactive" ||
+              String(w?.status ?? "").toLowerCase() === "disabled";
+
+            return {
+              id: String(w.id),
+              domain,
+              status: isInactive ? "Inactive" : "Active",
+            };
+          })
+          .filter(Boolean) as Array<{ id: string; domain: string; status: "Active" | "Inactive" }>;
+
+      setConnectedWebsites(mapped);
+    } catch (e) {
+      console.warn("Failed to load connected websites", e);
+      setConnectedWebsites([]);
+    } finally {
+      setConnectedWebsitesLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!currentUser?.id) return;
+    loadConnectedWebsites(currentUser.id);
+  }, [currentUser?.id]);
+
   // Fetch usage metrics
   useEffect(() => {
     const fetchUsage = async () => {
@@ -547,30 +603,38 @@ export function SettingsTab() {
                 Connected Websites
               </h4>
               <div className="space-y-2">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-2 sm:p-3 bg-transparent rounded">
-                  <span className="text-xs sm:text-sm text-gray-700">
-                    
-                  </span>
-                  <span className="text-xs text-green-600 font-medium">
-                    Active
-                  </span>
+              {connectedWebsitesLoading ? (
+                <div className="px-3 py-2 text-xs text-gray-500">Loading…</div>
+              ) : connectedWebsites.length === 0 ? (
+                <div className="px-3 py-2 text-xs text-gray-500">
+                  No websites connected yet.
                 </div>
-                <div className="flex items-center justify-between px-3 bg-transparent rounded">
-                  <span className="text-sm text-gray-700">
-                    www.lander.studio
-                  </span>
-                  <span className="text-xs text-green-600 font-medium">
-                    Active
-                  </span>
-                </div>
-              </div>
+              ) : (
+                connectedWebsites.map((site) => (
+                  <div
+                    key={site.id}
+                    className="flex items-center justify-between gap-2 p-2 sm:p-3 bg-transparent rounded"
+                  >
+                    <span className="text-xs sm:text-sm text-gray-700">
+                      {site.domain}
+                    </span>
+                    <span
+                      className={`text-xs font-medium ${
+                        site.status === "Active" ? "text-green-600" : "text-gray-500"
+                      }`}
+                    >
+                      {site.status}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
               <Button
-                variant="outline"
-                className="mt-4 h-9 text-green-500 border-gray-200  hover:bg-gray-50"
+                className="mt-4 h-9 text-[#5baf57] border-[#d0d0d0] bg-[#53f8701a] hover:bg-[#53f8701a]"
               >
                 <Plus />
               </Button>
-              <span className="ml-3">Add website</span>
+              <span className="ml-3 text-[#ffffffb3]">Connect Website</span>
             </div>
           </div>
         )}
