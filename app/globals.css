@@ -184,41 +184,79 @@ p {
   font-family: 'Manrope'!important;
 }
 
-.mask-loader {
-  --progress: 0%;
-  mask-image: linear-gradient(
-    90deg,
-    transparent 0%,
-    black var(--progress),
-    black calc(100% - var(--progress)),
-    transparent 100%
-  );
-  -webkit-mask-image: linear-gradient(
-    90deg,
-    transparent 0%,
-    black var(--progress),
-    black calc(100% - var(--progress)),
-    transparent 100%
-  );
-
-  animation: revealClose 1.6s ease-in-out infinite;
+/* 3D Circle Loader Animation */
+.loader-circle-11 {
+  position: relative;
+  width: 100px;
+  height: 100px;
+  transform-style: preserve-3d;
+  perspective: 400px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-@keyframes revealClose {
-  0% {
-    --progress: 0%;
-    opacity: 0.4;
+.loader-circle-11 img {
+  animation: loaderRotate 1.15s linear infinite;
+  transform-style: preserve-3d;
+}
+
+.loader-circle-11 .arc {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+}
+
+.loader-circle-11 .arc-1 {
+  animation: rotate1 1.15s linear infinite;
+  animation-delay: -0.8s;
+}
+
+.loader-circle-11 .arc-2 {
+  animation: rotate2 1.15s linear infinite;
+  animation-delay: -0.4s;
+}
+
+.loader-circle-11 .arc-3 {
+  animation: rotate3 1.15s linear infinite;
+  animation-delay: 0s;
+}
+
+@keyframes loaderRotate {
+  from {
+    transform: rotateZ(0deg);
   }
-  40% {
-    --progress: 30%;
-    opacity: 1;
+  to {
+    transform: rotateZ(360deg);
   }
-  60% {
-    --progress: 30%;
-    opacity: 1;
+}
+
+@keyframes rotate1 {
+  from {
+    transform: rotateX(32deg) rotateY(-39deg) rotateZ(0);
   }
-  100% {
-    --progress: 0%;
-    opacity: 0.4;
+  to {
+    transform: rotateX(35deg) rotateY(-36deg) rotateZ(1turn);
+  }
+}
+
+@keyframes rotate2 {
+  from {
+    transform: rotateX(50deg) rotateY(10deg) rotateZ(0);
+  }
+  to {
+    transform: rotateX(50deg) rotateY(10deg) rotateZ(1turn);
+  }
+}
+
+@keyframes rotate3 {
+  from {
+    transform: rotateX(35deg) rotateY(55deg) rotateZ(0);
+  }
+  to {
+    transform: rotateX(35deg) rotateY(55deg) rotateZ(1turn);
   }
 }

@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from "react";
 import { Plus, X } from "lucide-react";
+import { LoaderChevron } from "@/components/ui/LoaderChevron";
 import { RefreshCcw } from "lucide-react";
 import { Check } from "lucide-react";
 import {
@@ -850,15 +851,7 @@ export function CompetitorsTab({
   if (loadingWebsites) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="relative w-20 h-20">
-    <img
-      src="/loader.png"
-      alt="loader"
-      className="w-full h-full mask-loader"
-    />
-  </div>
-        </div>
+        <LoaderChevron />
       </div>
     );
   }
@@ -880,15 +873,7 @@ export function CompetitorsTab({
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="relative w-20 h-20">
-    <img
-      src="/loader.png"
-      alt="loader"
-      className="w-full h-full mask-loader"
-    />
-  </div>
-        </div>
+        <LoaderChevron />
       </div>
     );
   }

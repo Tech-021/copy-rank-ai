@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { RefreshCw } from "lucide-react";
 import { Plus } from "lucide-react";
+import { LoaderChevron } from "@/components/ui/LoaderChevron";
 import { CreatePostDialog } from "@/components/ui/CreatePostDialog";
 import { CreatePostDialogDashboard } from "../dialog2";
 import { ImportCSVDialog } from "@/components/ui/ImportCSVDialog";
@@ -884,13 +885,7 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
   if (loadingWebsites) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-       <div className="relative w-20 h-20">
-    <img
-      src="/loader.png"
-      alt="loader"
-      className="w-full h-full mask-loader"
-    />
-  </div>
+        <LoaderChevron />
       </div>
     );
   }
@@ -912,15 +907,7 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="relative w-20 h-20">
-    <img
-      src="/loader.png"
-      alt="loader"
-      className="w-full h-full mask-loader"
-    />
-  </div>
-        </div>
+        <LoaderChevron />
       </div>
     );
   }

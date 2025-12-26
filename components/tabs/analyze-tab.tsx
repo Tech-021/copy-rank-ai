@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { LoaderChevron } from "@/components/ui/LoaderChevron";
 import {
   Card,
   CardContent,
@@ -1264,8 +1265,8 @@ export function AnalyzeTab({
 
       <div className="space-y-3 md:w-2/5 w-full border px-2 py-2 rounded-xl overflow-y-auto min-w-0">
         {loadingArticles ? (
-          <div className="text-center py-12 text-gray-400">
-            <p className="text-sm">Loading articles...</p>
+          <div className="text-center py-12">
+            <LoaderChevron />
           </div>
         ) : articles.length === 0 ? (
           <div className="text-center py-12 text-gray-400">
@@ -1528,9 +1529,7 @@ export function AnalyzeTab({
               >
                 {isSubmitting ? (
                   <span className="flex items-center gap-2">
-                    <div className="animate-spin">
-                      <Image src="/loader.png" alt="" width={92} height={92} />
-                    </div>
+                    <Loader2 className="w-4 h-4 animate-spin" />
                     Saving...
                   </span>
                 ) : (

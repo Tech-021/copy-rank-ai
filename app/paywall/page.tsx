@@ -7,6 +7,7 @@ import PaywallScreen from '@/components/PaywallScreen';
 import { getUser } from '@/lib/auth';
 import { supabase } from '@/lib/client';
 import Image from 'next/image';
+import { LoaderChevron } from '@/components/ui/LoaderChevron';
 
 export default function PaywallPage() {
   const router = useRouter();
@@ -67,8 +68,8 @@ export default function PaywallPage() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="min-h-screen flex items-center justify-center">
-                  <div className="animate-spin"><Image src="/loader.png" alt="" width={92} height={92} /></div>
-                </div>
+            <LoaderChevron />
+          </div>
           <p className="text-gray-600">Loading...</p>
         </div>
       </div>

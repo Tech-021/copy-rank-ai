@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { LoaderChevron } from "@/components/ui/LoaderChevron";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Plus } from "lucide-react";
@@ -349,13 +350,7 @@ export function SettingsTab() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="relative w-20 h-20">
-    <img
-      src="/loader.png"
-      alt="loader"
-      className="w-full h-full mask-loader"
-    />
-  </div>
+        <LoaderChevron />
       </div>
     );
   }

@@ -7,6 +7,7 @@ import { ChevronLeft, Zap, X } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/client";
+import { LoaderChevron } from "@/components/ui/LoaderChevron";
 
 export default function WelcomePage() {
   const [tab, setTab] = useState("tab1");
@@ -511,13 +512,7 @@ export default function WelcomePage() {
               <p className="text-[#53F870] text-xs sm:text-sm mb-8 sm:mb-12">
                 Creating your first articles
               </p>
-              <div className="relative w-20 h-20">
-    <img
-      src="/loader.png"
-      alt="loader"
-      className="w-full h-full mask-loader"
-    />
-  </div>
+              <LoaderChevron />
             </div>
           )}
         </div>
