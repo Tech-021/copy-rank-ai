@@ -41,6 +41,11 @@ export function KeywordsSyncedDialog({
               width={81}
             />
           </div>
+          <div
+          onClick={onClose}
+          className="w-full h-[50px] bg-[#5af870] hover:bg-[#5af870] cursor-pointer py-2.5 text-[#000000b3]">
+            Done
+          </div>
         </div>
       </div>
     </div>
