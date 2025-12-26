@@ -1266,7 +1266,7 @@ export function AnalyzeTab({
       <div className="space-y-3 md:w-2/5 w-full border px-2 py-2 rounded-xl overflow-y-auto min-w-0">
         {loadingArticles ? (
           <div className="text-center py-12">
-            <LoaderChevron />
+            {/* <LoaderChevron /> */}
           </div>
         ) : articles.length === 0 ? (
           <div className="text-center py-12 text-gray-400">
