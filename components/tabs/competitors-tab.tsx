@@ -917,7 +917,7 @@ export function CompetitorsTab({
               <Button
                 onClick={handleAddCompetitor}
                 variant="outline"
-                className="gap-2 text-[#53F870] border border-[#53f870]! rounded-r-none sm:rounded-r-none cursor-pointer bg-[rgba(83,248,112,0.1)]! hover:bg-[rgba(83,248,112,0.2)] text-xs sm:text-sm"
+                className="gap-2 text-[#53F870] border border-gray-800!  rounded-r-none sm:rounded-r-none cursor-pointer bg-[rgba(83,248,112,0.1)]! hover:bg-[rgba(83,248,112,0.2)] text-xs sm:text-sm"
               >
                 Add Competitors
                 <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -925,7 +925,7 @@ export function CompetitorsTab({
 
               <Button
                 variant="outline"
-                className="gap-2 text-[#53F870] border border-[#53f870]! lg:rounded-l-none sm:rounded-l-none cursor-pointer bg-[rgba(83,248,112,0.1)]! rounded-none rounded-r-lg hover:bg-[rgba(83,248,112,0.2)] text-xs sm:text-sm"
+                className="gap-2 text-[#53F870] border border-gray-800! lg:rounded-l-none sm:rounded-l-none cursor-pointer bg-[rgba(83,248,112,0.1)]! rounded-none rounded-r-lg hover:bg-[rgba(83,248,112,0.2)] text-xs sm:text-sm"
                 onClick={async () => {
                   const fallbackId =
                     initialWebsiteId ||
