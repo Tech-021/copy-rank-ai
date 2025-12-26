@@ -35,15 +35,13 @@ export function CreatePostDialog({
               <h2 className="text-2xl  text-white">
                 Creating Post
               </h2>
-              <div className="flex justify-center animate-spin">
-                <Image
-                  src="/loader.png"
-                  alt="icon"
-                  height={92}
-                  width={92}
-                  
-                />
-              </div>
+              <div className="relative w-20 h-20">
+    <img
+      src="/loader.png"
+      alt="loader"
+      className="w-full h-full mask-loader"
+    />
+  </div>
               {/* Loading Button */}
               <button
                 disabled

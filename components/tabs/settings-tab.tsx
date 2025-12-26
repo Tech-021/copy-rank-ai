@@ -349,9 +349,13 @@ export function SettingsTab() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin">
-          <Image src="/loader.png" alt="" width={92} height={92} />
-        </div>
+        <div className="relative w-20 h-20">
+    <img
+      src="/loader.png"
+      alt="loader"
+      className="w-full h-full mask-loader"
+    />
+  </div>
       </div>
     );
   }
@@ -545,7 +549,7 @@ export function SettingsTab() {
               <div className="space-y-2">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-2 sm:p-3 bg-transparent rounded">
                   <span className="text-xs sm:text-sm text-gray-700">
-                    www.delani.pro
+                    
                   </span>
                   <span className="text-xs text-green-600 font-medium">
                     Active

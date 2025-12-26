@@ -179,7 +179,13 @@ export default function Home() {
   if (isCheckingSubscription) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin"><Image src="/loader.png" alt="" width={92} height={92} /></div>
+        <div className="relative w-20 h-20">
+    <img
+      src="/loader.png"
+      alt="loader"
+      className="w-full h-full mask-loader"
+    />
+  </div>
       </div>
     )
   }

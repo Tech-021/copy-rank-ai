@@ -511,9 +511,13 @@ export default function WelcomePage() {
               <p className="text-[#53F870] text-xs sm:text-sm mb-8 sm:mb-12">
                 Creating your first articles
               </p>
-              <div className="animate-spin">
-                <Image src="/loader.png" alt="Loading" width={80} height={80} className="sm:w-[92px] sm:h-[92px]" />
-              </div>
+              <div className="relative w-20 h-20">
+    <img
+      src="/loader.png"
+      alt="loader"
+      className="w-full h-full mask-loader"
+    />
+  </div>
             </div>
           )}
         </div>

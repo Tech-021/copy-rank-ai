@@ -925,9 +925,13 @@ export function ArticlesTab({
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
-          <div className="animate-spin">
-            <Image src="/loader.png" alt="" width={92} height={92} />
-          </div>
+          <div className="relative w-20 h-20">
+    <img
+      src="/loader.png"
+      alt="loader"
+      className="w-full h-full mask-loader"
+    />
+  </div>
         </div>
       </div>
     );
@@ -1376,14 +1380,13 @@ export function ArticlesTab({
                       disabled={indexingArticle === selectedArticle.id}
                     >
                       {indexingArticle === selectedArticle.id ? (
-                        <div className="animate-spin">
-                          <Image
-                            src="/loader.png"
-                            alt=""
-                            width={92}
-                            height={92}
-                          />
-                        </div>
+                        <div className="relative w-20 h-20">
+    <img
+      src="/loader.png"
+      alt="loader"
+      className="w-full h-full mask-loader"
+    />
+  </div>
                       ) : (
                         <Globe className="w-3 sm:w-4 h-3 sm:h-4" />
                       )}
@@ -1768,9 +1771,13 @@ export function ArticlesTab({
               <Button onClick={handleSaveEditedArticle} disabled={isSavingEdit}>
                 {isSavingEdit ? (
                   <span className="flex items-center gap-2">
-                    <div className="animate-spin">
-                      <Image src="/loader.png" alt="" width={92} height={92} />
-                    </div>{" "}
+                    <div className="relative w-20 h-20">
+    <img
+      src="/loader.png"
+      alt="loader"
+      className="w-full h-full mask-loader"
+    />
+  </div>{" "}
                     Saving...
                   </span>
                 ) : (

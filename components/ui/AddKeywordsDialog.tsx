@@ -117,14 +117,13 @@ export function AddKeywordsDialog({
                   </h2>
 
                   {/* Loading Animation */}
-                  <div className="flex justify-center animate-spin py-8">
-                    <Image
-                      src="/loader.png"
-                      height={92}
-                      width={92}
-                      alt="icon"
-                    />
-                  </div>
+                  <div className="relative w-20 h-20">
+    <img
+      src="/loader.png"
+      alt="loader"
+      className="w-full h-full mask-loader"
+    />
+  </div>
 
                   {/* Loading Button */}
                   <button

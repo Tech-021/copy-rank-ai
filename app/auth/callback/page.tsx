@@ -98,7 +98,13 @@ export default function AuthCallbackPage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
       <div className="text-center">
         <div className="min-h-screen flex items-center justify-center">
-                <div className="animate-spin"><Image src="/loader.png" alt="" width={92} height={92} /></div>
+                <div className="relative w-20 h-20">
+    <img
+      src="/loader.png"
+      alt="loader"
+      className="w-full h-full mask-loader"
+    />
+  </div>
               </div>
         <h2 className="text-xl font-semibold text-white mb-2">Completing Authentication</h2>
         <p className="text-slate-400">Please wait while we sign you in...</p>

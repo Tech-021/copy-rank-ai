@@ -183,3 +183,42 @@ p {
 .dialog {
   font-family: 'Manrope'!important;
 }
+
+.mask-loader {
+  --progress: 0%;
+  mask-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    black var(--progress),
+    black calc(100% - var(--progress)),
+    transparent 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    black var(--progress),
+    black calc(100% - var(--progress)),
+    transparent 100%
+  );
+
+  animation: revealClose 1.6s ease-in-out infinite;
+}
+
+@keyframes revealClose {
+  0% {
+    --progress: 0%;
+    opacity: 0.4;
+  }
+  40% {
+    --progress: 30%;
+    opacity: 1;
+  }
+  60% {
+    --progress: 30%;
+    opacity: 1;
+  }
+  100% {
+    --progress: 0%;
+    opacity: 0.4;
+  }
+}
