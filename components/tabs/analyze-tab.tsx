@@ -1291,9 +1291,12 @@ export function AnalyzeTab({
               <div className="flex flex-col min-w-0 flex-1">
                 <div className="flex justify-between gap-2">
                   <div className="min-w-0">
+                    <div className="flex gap-2">
                     <h4 className="font-medium text-white text-sm line-clamp-2">
                       {article.title}
                     </h4>
+                    <Button className="text-[#53f870] hover:text-[#53f870] bg-[#53f8701a] hover:!bg-[#53f8701a] cursor-pointer h-8 w-full sm:w-8 px-[18px] sm:px-2 py-1.5 border-[#53f8701a] flex-shrink-0">Edit</Button>
+                    </div>
                     <div className="flex items-center gap-1 mt-1">
                       <Image
                         src="/clock.png"
