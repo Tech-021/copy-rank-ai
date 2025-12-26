@@ -3,9 +3,12 @@
 import { useState, useMemo, useEffect } from "react";
 import { RefreshCw } from "lucide-react";
 import { Plus } from "lucide-react";
+import { LoaderChevron } from "@/components/ui/LoaderChevron";
 import { CreatePostDialog } from "@/components/ui/CreatePostDialog";
 import { CreatePostDialogDashboard } from "../dialog2";
 import { ImportCSVDialog } from "@/components/ui/ImportCSVDialog";
+import { ImportingKeywordsDialog } from "@/components/ui/ImportingKeywordsDialog";
+import { KeywordsSyncedDialog } from "@/components/ui/KeywordsSyncedDialog";
 import { SyncCompetitorsDialog } from "@/components/ui/SyncCompetitorsDialog";
 import { AddKeywordsDialog } from "@/components/ui/AddKeywordsDialog";
 import { DeleteKeywordDialog } from "@/components/ui/DeleteKeywordDialog";
@@ -145,6 +148,8 @@ export function KeywordsTab({
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [dialogCompleted, setDialogCompleted] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
+  const [showImportingDialog, setShowImportingDialog] = useState(false);
+  const [showKeywordsSyncedDialog, setShowKeywordsSyncedDialog] = useState(false);
   const [showSyncDialog, setShowSyncDialog] = useState(false);
   const [showAddKeywordsDialog, setShowAddKeywordsDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -608,12 +613,27 @@ export function KeywordsTab({
 
       if (importedKeywords.length > 0) {
         console.log("Importing keywords:", importedKeywords);
+        // Show importing dialog
+        setShowImportingDialog(true);
+        
         // Persist to Supabase
         const success = await importKeywordsFromCSV(importedKeywords);
         
         if (success) {
           console.log(`✅ Successfully imported ${importedKeywords.length} keyword(s)`);
+          // Close importing dialog and show success dialog after 2 seconds
+          setTimeout(() => {
+            setShowImportingDialog(false);
+            setShowKeywordsSyncedDialog(true);
+            setShowImportDialog(false);
+          }, 2000);
+          // Close success dialog after another 2 seconds
+          setTimeout(() => {
+            setShowKeywordsSyncedDialog(false);
+          }, 4000);
           // toast?.success(`Successfully imported ${importedKeywords.length} keywords`);
+        } else {
+          setShowImportingDialog(false);
         }
       }
       
@@ -884,13 +904,7 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
   if (loadingWebsites) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-       <div className="relative w-20 h-20">
-    <img
-      src="/loader.png"
-      alt="loader"
-      className="w-full h-full mask-loader"
-    />
-  </div>
+        <LoaderChevron />
       </div>
     );
   }
@@ -912,15 +926,7 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="relative w-20 h-20">
-    <img
-      src="/loader.png"
-      alt="loader"
-      className="w-full h-full mask-loader"
-    />
-  </div>
-        </div>
+        <LoaderChevron />
       </div>
     );
   }
@@ -1253,6 +1259,18 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
         isOpen={showImportDialog}
         onClose={() => setShowImportDialog(false)}
         onImport={handleImportCSV}
+      />
+
+      {/* Importing Keywords Dialog */}
+      <ImportingKeywordsDialog
+        isOpen={showImportingDialog}
+        onClose={() => setShowImportingDialog(false)}
+      />
+
+      {/* Keywords Synced Dialog */}
+      <KeywordsSyncedDialog
+        isOpen={showKeywordsSyncedDialog}
+        onClose={() => setShowKeywordsSyncedDialog(false)}
       />
 
       {/* Sync Competitors Dialog */}

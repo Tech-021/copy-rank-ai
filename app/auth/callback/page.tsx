@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/client"
 import { useToast } from "@/components/ui/toast"
 import Image from "next/image"
+import { LoaderChevron } from "@/components/ui/LoaderChevron"
 
 export default function AuthCallbackPage() {
   const router = useRouter()
@@ -98,14 +99,8 @@ export default function AuthCallbackPage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
       <div className="text-center">
         <div className="min-h-screen flex items-center justify-center">
-                <div className="relative w-20 h-20">
-    <img
-      src="/loader.png"
-      alt="loader"
-      className="w-full h-full mask-loader"
-    />
-  </div>
-              </div>
+          <LoaderChevron />
+        </div>
         <h2 className="text-xl font-semibold text-white mb-2">Completing Authentication</h2>
         <p className="text-slate-400">Please wait while we sign you in...</p>
       </div>

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { LoaderChevron } from "@/components/ui/LoaderChevron";
 import { Stepper } from "@/components/ui/stepper";
 
 import {
@@ -925,13 +926,7 @@ export function ArticlesTab({
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
-          <div className="relative w-20 h-20">
-    <img
-      src="/loader.png"
-      alt="loader"
-      className="w-full h-full mask-loader"
-    />
-  </div>
+          <LoaderChevron />
         </div>
       </div>
     );
@@ -1380,13 +1375,7 @@ export function ArticlesTab({
                       disabled={indexingArticle === selectedArticle.id}
                     >
                       {indexingArticle === selectedArticle.id ? (
-                        <div className="relative w-20 h-20">
-    <img
-      src="/loader.png"
-      alt="loader"
-      className="w-full h-full mask-loader"
-    />
-  </div>
+                        <Loader2 className="w-4 h-4 animate-spin" />
                       ) : (
                         <Globe className="w-3 sm:w-4 h-3 sm:h-4" />
                       )}
@@ -1771,13 +1760,7 @@ export function ArticlesTab({
               <Button onClick={handleSaveEditedArticle} disabled={isSavingEdit}>
                 {isSavingEdit ? (
                   <span className="flex items-center gap-2">
-                    <div className="relative w-20 h-20">
-    <img
-      src="/loader.png"
-      alt="loader"
-      className="w-full h-full mask-loader"
-    />
-  </div>{" "}
+                    <Loader2 className="w-4 h-4 animate-spin" />
                     Saving...
                   </span>
                 ) : (
