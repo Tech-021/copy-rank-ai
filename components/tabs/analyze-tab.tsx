@@ -1275,8 +1275,7 @@ export function AnalyzeTab({
           articles.map((article) => (
             <div
               key={article.id}
-              onClick={() => setSelectedArticle(article)}
-              className={`relative flex gap-3 p-3 bg-transparent border border-[#53f8701a] rounded-lg cursor-pointer transition-all ${
+              className={`relative flex gap-3 p-3 bg-transparent border border-[#53f8701a] rounded-lg transition-all ${
                 selectedArticle?.id === article.id
                   ? "border-[#53f8701a] bg-transparent"
                   : "border-[#53f8701a]"
@@ -1291,9 +1290,20 @@ export function AnalyzeTab({
               <div className="flex flex-col min-w-0 flex-1">
                 <div className="flex justify-between gap-2">
                   <div className="min-w-0">
+                    <div className="flex gap-2">
                     <h4 className="font-medium text-white text-sm line-clamp-2">
                       {article.title}
                     </h4>
+                    <Button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openEditDialog(article);
+                      }}
+                      className="text-[#53f870] hover:text-[#53f870] bg-[#53f8701a] hover:!bg-[#53f8701a] cursor-pointer h-8 w-full sm:w-8 px-[18px] sm:px-2 py-1.5 border-[#53f8701a] flex-shrink-0"
+                    >
+                      Edit
+                    </Button>
+                    </div>
                     <div className="flex items-center gap-1 mt-1">
                       <Image
                         src="/clock.png"
@@ -1332,6 +1342,205 @@ export function AnalyzeTab({
           ))
         )}
       </div>
+
+      {/* Edit Dialog */}
+      <Dialog
+        open={isEditDialogOpen}
+        onOpenChange={(open) => {
+          setIsEditDialogOpen(open);
+          if (!open) {
+            setSelectedArticle(null);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-[720px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Article</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-foreground">Title</p>
+                <Input
+                  value={editForm.title}
+                  onChange={(e) =>
+                    setEditForm((prev) => ({ ...prev, title: e.target.value }))
+                  }
+                  placeholder="Article title"
+                />
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-foreground">Keyword</p>
+                <Input
+                  value={editForm.keyword}
+                  onChange={(e) =>
+                    setEditForm((prev) => ({
+                      ...prev,
+                      keyword: e.target.value,
+                    }))
+                  }
+                  placeholder="Focus keyword"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-foreground">Slug</p>
+                <Input
+                  value={editForm.slug}
+                  onChange={(e) =>
+                    setEditForm((prev) => ({ ...prev, slug: e.target.value }))
+                  }
+                  placeholder="my-article-slug"
+                />
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-foreground">Preview</p>
+                <textarea
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  rows={3}
+                  value={editForm.preview}
+                  onChange={(e) =>
+                    setEditForm((prev) => ({
+                      ...prev,
+                      preview: e.target.value,
+                    }))
+                  }
+                  placeholder="Short preview shown in listings"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-foreground">Meta Title</p>
+              <Input
+                value={editForm.metaTitle}
+                onChange={(e) =>
+                  setEditForm((prev) => ({
+                    ...prev,
+                    metaTitle: e.target.value,
+                  }))
+                }
+                placeholder="SEO meta title"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-foreground">
+                Meta Description
+              </p>
+              <textarea
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                rows={3}
+                value={editForm.metaDescription}
+                onChange={(e) =>
+                  setEditForm((prev) => ({
+                    ...prev,
+                    metaDescription: e.target.value,
+                  }))
+                }
+                placeholder="SEO meta description"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-foreground">
+                Content (HTML)
+              </p>
+              <textarea
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                rows={10}
+                value={editForm.content}
+                onChange={(e) =>
+                  setEditForm((prev) => ({ ...prev, content: e.target.value }))
+                }
+                placeholder="Article content in HTML"
+              />
+              <p className="text-xs text-muted-foreground">
+                Rich text is stored as HTML. Make sure headings, lists, and
+                paragraphs are valid markup.
+              </p>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsEditDialogOpen(false);
+                  setSelectedArticle(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={async () => {
+                  if (!selectedArticle) return;
+                  setIsSubmitting(true);
+                  try {
+                    const {
+                      data: { user },
+                    } = await supabase.auth.getUser();
+
+                    if (!user) {
+                      throw new Error("User not authenticated");
+                    }
+
+                    const response = await fetch(`/api/articles?id=${selectedArticle.id}`, {
+                      method: "PATCH",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        userId: user.id,
+                        title: editForm.title,
+                        keyword: editForm.keyword,
+                        slug: editForm.slug,
+                        autoSlugFromTitle: !editForm.slug,
+                        metaTitle: editForm.metaTitle,
+                        metaDescription: editForm.metaDescription,
+                        preview: editForm.preview,
+                        content: editForm.content,
+                      }),
+                    });
+                    const data = await response.json();
+                    if (response.ok) {
+                      setIsEditDialogOpen(false);
+                      setSelectedArticle(null);
+                      await fetchArticles();
+                      toast.showToast({
+                        title: "Success",
+                        description: "Article updated successfully",
+                        type: "success",
+                      });
+                    } else {
+                      throw new Error(data.error || "Failed to update article");
+                    }
+                  } catch (error) {
+                    toast.showToast({
+                      title: "Error",
+                      description: error instanceof Error ? error.message : "Unknown error",
+                      type: "error",
+                    });
+                  } finally {
+                    setIsSubmitting(false);
+                  }
+                }}
+              >
+                {isSubmitting ? (
+                  <span className="flex items-center gap-2">
+                    <div className="animate-spin">
+                      <Image src="/loader.png" alt="" width={92} height={92} />
+                    </div>
+                    Saving...
+                  </span>
+                ) : (
+                  "Save Changes"
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
