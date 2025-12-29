@@ -413,7 +413,7 @@ export default function DashboardIndexPage() {
                     <td className="py-3 sm:py-4 px-2 sm:px-6 whitespace-nowrap">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center ">
                             <Button 
                               disabled={updatingPostId === post.id}
                               className="bg-transparent px-2 sm:px-8 rounded-r-none hover:bg-gray-900 border border-gray-600 text-xs font-normal text-gray-500 h-auto py-1 sm:py-2 min-w-fit"
