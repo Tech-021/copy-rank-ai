@@ -975,9 +975,9 @@ export function CompetitorsTab({
         </div>
 
         {/* Stats Cards - 4 Column Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-0 rounded-xl shadow-xl overflow-hidden">
+        <div className=" grid grid-cols-2  sm:grid-cols-2 lg:grid-cols-4 gap-0 rounded-xl shadow-xl overflow-hidden">
           {/* Card 1 */}
-          <Card className="border-b sm:border-b sm:border-r lg:border-r lg:border-b-0 border-l-0 border-t-0 rounded-none border-[#53f8704b] bg-black">
+          <Card className="border-b sm:border-b sm:border-r lg:border-r lg:border-b-0 border-l-0 border-t-0 rounded-none border-[#53f8704b] bg-[#101110]">
             <CardContent className="flex flex-col justify-start gap-4 sm:gap-8">
               <div className="flex justify-between">
                 <p className="text-xs sm:text-xs font-medium text-white tracking-wide">
@@ -992,7 +992,7 @@ export function CompetitorsTab({
           </Card>
 
           {/* Card 2 */}
-          <Card className="border-b sm:border-b lg:border-b-0 border-l-0 border-t-0 border-r-0 sm:border-r-0 lg:border-r rounded-none border-[#53f8704b] bg-black">
+          <Card className="border-b sm:border-b lg:border-b-0 border-l-0 border-t-0 border-r-0 sm:border-r-0 lg:border-r rounded-none border-[#53f8704b] bg-[#101110]">
             <CardContent className="flex flex-col justify-start gap-4 sm:gap-8">
               <div className="flex justify-between">
                 <p className="text-xs sm:text-xs font-medium text-white tracking-wide">
@@ -1007,7 +1007,7 @@ export function CompetitorsTab({
           </Card>
 
           {/* Card 3 */}
-          <Card className="border-b sm:border-b sm:border-r lg:border-r lg:border-b-0 border-l-0 border-t-0 rounded-none border-r-[#53f8704b] bg-black">
+          <Card className="border-b-0 sm:border-b sm:border-r lg:border-r lg:border-b-0 border-l-0 border-t-0 rounded-none border-r-[#53f8704b] bg-[#101110]">
             <CardContent className="flex flex-col justify-start gap-4 sm:gap-8">
               <div className="flex justify-between">
                 <p className="text-xs sm:text-xs font-medium text-white tracking-wide">
@@ -1020,7 +1020,7 @@ export function CompetitorsTab({
           </Card>
 
           {/* Card 4 */}
-          <Card className="border-b-0 sm:border-b lg:border-b-0 border-l-0 border-t-0 border-r-0 lg:border-r-0 rounded-none border-[#53f8704b] bg-black">
+          <Card className="border-b-0 sm:border-b lg:border-b-0 border-l-0 border-t-0 border-r-0 lg:border-r-0 rounded-none border-[#53f8704b] bg-[#101110]">
             <CardContent className="flex flex-col justify-start gap-4 sm:gap-8">
               <div className="flex justify-between">
                 <p className="text-xs sm:text-xs font-medium text-white tracking-wide">
