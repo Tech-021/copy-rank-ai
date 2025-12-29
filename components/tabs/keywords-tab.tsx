@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { RefreshCw } from "lucide-react";
 import { Plus } from "lucide-react";
 import { LoaderChevron } from "@/components/ui/LoaderChevron";
@@ -122,12 +122,11 @@ interface AnalyticsData {
 // Removed mock data: now pulling real keywords via /api/keyword and websites via Supabase
 
 export function KeywordsTab({
-  websiteId: initialWebsiteId,
-  onArticlesGenerated,
   websiteId,
+  onArticlesGenerated,
 }: KeywordsTabProps) {
   const [selectedWebsiteId, setSelectedWebsiteId] = useState<string | null>(
-    initialWebsiteId || null
+    websiteId ?? null
   );
   const [websites, setWebsites] = useState<Website[]>([]);
   const [websiteData, setWebsiteData] = useState<WebsiteData | null>(null);
@@ -199,13 +198,10 @@ export function KeywordsTab({
     fetchCurrentUser();
   }, []);
 
-  const loadUserWebsites = async () => {
+ const loadUserWebsites = useCallback(async () => {
     try {
       setLoadingWebsites(true);
-      // Don't error if user isn't loaded yet—just return and wait
-      if (!currentUser || !currentUser.id) {
-        return;
-      }
+      if (!currentUser?.id) return;
 
       const { data, error: dbError } = await supabase
         .from("websites")
@@ -223,33 +219,187 @@ export function KeywordsTab({
         id: w.id,
         url: w.url,
         topic: w.topic || "General",
-        // carry stored keywords payload for later merge
-        keywords: w.keywords,
+        created_at: w.created_at,
       }));
 
       setWebsites(userWebsites);
       setError(null);
+
       if (!selectedWebsiteId && userWebsites.length > 0) {
         setSelectedWebsiteId(userWebsites[0].id);
       }
-    } catch (error) {
-      console.error("Error loading websites:", error);
+    } catch (e) {
+      console.error("Error loading websites:", e);
       setError("Failed to load websites");
     } finally {
       setLoadingWebsites(false);
     }
-  };
+  }, [currentUser?.id, selectedWebsiteId])
 
   useEffect(() => {
-    if (initialWebsiteId) {
-      setSelectedWebsiteId(initialWebsiteId);
-    } else if (websiteId) {
+    if (websiteId) {
       setSelectedWebsiteId(websiteId);
-    } else if (!loadingUser && currentUser?.id) {
-      // Only load websites after user auth is confirmed
+      return;
+    }
+    if (!loadingUser && currentUser?.id) {
       loadUserWebsites();
     }
-  }, [initialWebsiteId, websiteId, loadingUser, currentUser?.id]);
+  }, [websiteId, loadingUser, currentUser?.id, loadUserWebsites])
+
+  const fetchKeywords = useCallback(
+    async (options?: { forceRefresh?: boolean }) => {
+      if (!selectedWebsiteId) return;
+
+      const forceRefresh = !!options?.forceRefresh;
+
+      const normalizeKeyword = (kw: any): Keyword | null => {
+        if (!kw) return null;
+        const text = typeof kw === "string" ? kw : kw.keyword;
+        if (!text) return null;
+
+        return {
+          id: kw.id || undefined,
+          keyword: String(text),
+          search_volume: Number(kw.search_volume ?? 0),
+          difficulty: Number(kw.difficulty ?? 0),
+          cpc: Number(kw.cpc ?? 0),
+          competition: Number(kw.competition ?? 0),
+          is_target_keyword: !!kw.is_target_keyword,
+          post_status: kw.post_status || "No Plan",
+          traffic_potential:
+            kw.traffic_potential ||
+            (kw.search_volume
+              ? `${Math.round(Number(kw.search_volume) * 0.1)}+/mo`
+              : "—"),
+        };
+      };
+
+      try {
+        setLoading(true);
+        setError(null);
+
+        // 1) Load from DB first (fast)
+        const { data: singleSite, error: siteErr } = await supabase
+          .from("websites")
+          .select("id, url, topic, keywords")
+          .eq("id", selectedWebsiteId)
+          .single();
+
+        if (siteErr) throw siteErr;
+        if (!singleSite) throw new Error("Website not found");
+
+        const siteKeywords = (singleSite as any).keywords;
+        const storedArray: any[] = Array.isArray(siteKeywords)
+          ? siteKeywords
+          : Array.isArray(siteKeywords?.keywords)
+            ? siteKeywords.keywords
+            : [];
+
+        const storedKeywords: Keyword[] = storedArray
+          .map(normalizeKeyword)
+          .filter(Boolean) as Keyword[];
+
+        // If we already have stored keywords and we're not forcing refresh, stop here.
+        if (storedKeywords.length > 0 && !forceRefresh) {
+          setWebsiteData({
+            website: {
+              id: singleSite.id,
+              url: singleSite.url,
+              topic: singleSite.topic || "General",
+            },
+            keywords: storedKeywords,
+          });
+          setKeywords(storedKeywords);
+          setSelectedKeywords(new Set());
+          return;
+        }
+
+        // 2) DB is empty (or forced): call slow API once, then persist into DB
+        const response = await fetch(`/api/keyword`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            topic: singleSite.topic || "General",
+            websiteUrl: singleSite.url || "",
+            includeCompetitors: true,
+            maxVolume: 10000,
+            minVolume: 50,
+            maxDifficulty: 100,
+            limit: 100,
+          }),
+        });
+
+        const apiData = await response.json();
+        if (!response.ok || !apiData.success) {
+          throw new Error(apiData.error || "Failed to fetch keywords from DataForSEO");
+        }
+
+        const primaryKeywords: Keyword[] = Array.isArray(apiData.keywords)
+          ? (apiData.keywords.map(normalizeKeyword).filter(Boolean) as Keyword[])
+          : [];
+
+        const competitorKeywords: Keyword[] = Array.isArray(apiData.competitors)
+          ? (apiData.competitors
+              .flatMap((comp: any) => comp?.keywords || [])
+              .map(normalizeKeyword)
+              .filter(Boolean) as Keyword[])
+          : [];
+
+        // Keep any stored target keywords (if present)
+        const storedTargets = storedKeywords.filter((k) => k.is_target_keyword);
+
+        const mergedMap = new Map<string, Keyword>();
+        [...primaryKeywords, ...competitorKeywords, ...storedTargets].forEach((kw) => {
+          const key = String(kw.keyword).toLowerCase();
+          if (!mergedMap.has(key)) mergedMap.set(key, kw);
+        });
+
+        const merged = Array.from(mergedMap.values());
+
+        const existingPayload =
+          siteKeywords && typeof siteKeywords === "object" && !Array.isArray(siteKeywords)
+            ? siteKeywords
+            : {};
+
+        const newPayload = {
+          ...existingPayload,
+          keywords: merged,
+          competitors: apiData.competitors || existingPayload.competitors || [],
+          analysis_metadata: {
+            ...(existingPayload.analysis_metadata || {}),
+            analyzed_at: new Date().toISOString(),
+            total_keywords: merged.length,
+          },
+        };
+
+        const { error: updateErr } = await supabase
+          .from("websites")
+          .update({ keywords: newPayload })
+          .eq("id", selectedWebsiteId);
+
+        if (updateErr) {
+          console.error("Failed to persist refreshed keywords:", updateErr);
+        }
+
+        setWebsiteData({
+          website: {
+            id: singleSite.id,
+            url: singleSite.url,
+            topic: singleSite.topic || "General",
+          },
+          keywords: merged,
+        });
+        setKeywords(merged);
+        setSelectedKeywords(new Set());
+      } catch (err) {
+        console.error("Error fetching keywords:", err);
+        setError(err instanceof Error ? err.message : "Failed to load keywords");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [selectedWebsiteId]
+  );
 
   useEffect(() => {
     console.log("🔍 KeywordsTab - selectedWebsiteId:", selectedWebsiteId);
@@ -259,120 +409,7 @@ export function KeywordsTab({
     } else if (!loadingWebsites) {
       setLoading(false);
     }
-  }, [selectedWebsiteId]);
-
-  const fetchKeywords = async () => {
-    if (!selectedWebsiteId) return;
-
-    try {
-      setLoading(true);
-      setError(null);
-      console.log(`🔍 Fetching REAL keywords for website: ${selectedWebsiteId}`);
-
-      // Always fetch fresh website data from Supabase to get latest keywords
-      const { data: singleSite } = await supabase
-        .from("websites")
-        .select("id, url, topic, keywords")
-        .eq("id", selectedWebsiteId)
-        .single();
-      
-      let website: (Website & { keywords?: any }) | null = null;
-      if (singleSite) {
-        website = {
-          id: singleSite.id,
-          url: singleSite.url,
-          topic: singleSite.topic || "General",
-          keywords: (singleSite as any).keywords,
-        };
-      }
-
-      if (!website) {
-        throw new Error("Website not found");
-      }
-
-      // Call real keyword API with tuned filters to avoid over-restrictive defaults
-      const response = await fetch(`/api/keyword`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          topic: website.topic || "General",
-          websiteUrl: website.url || "",
-          includeCompetitors: true,
-          maxVolume: 10000, // allow medium/high volume keywords
-          minVolume: 50, // allow smaller niches
-          maxDifficulty: 100, // don't drop harder keywords in the UI
-          limit: 100,
-        }),
-      });
-
-      const apiData = await response.json();
-      if (!response.ok || !apiData.success) {
-        throw new Error(
-          apiData.error || "Failed to fetch keywords from DataForSEO"
-        );
-      }
-
-      const competitorKeywords: Keyword[] = Array.isArray(apiData.competitors)
-        ? apiData.competitors.flatMap((comp: any) => comp.keywords || [])
-        : [];
-
-      const primaryKeywords = (apiData.keywords || []) as Keyword[];
-
-      const targetKeywordsFromSite: Keyword[] = (() => {
-        const kw = (website as any)?.keywords;
-        const arr = kw?.keywords;
-        if (Array.isArray(arr)) {
-          return arr.filter((k: any) => k && k.keyword);
-        }
-        return [];
-      })();
-
-      // Merge primary + competitor + stored target keywords, dedupe by keyword text (case-insensitive)
-      const mergedKeywordsMap = new Map<string, any>();
-
-      [...primaryKeywords, ...competitorKeywords, ...targetKeywordsFromSite].forEach((kw: any) => {
-        if (!kw?.keyword) return;
-        const key = String(kw.keyword).toLowerCase();
-        if (!mergedKeywordsMap.has(key)) {
-          mergedKeywordsMap.set(key, kw);
-        }
-      });
-
-      const realKeywords = Array.from(mergedKeywordsMap.values());
-
-      setWebsiteData({
-        website: {
-          id: website.id,
-          url: website.url,
-          topic: website.topic,
-        },
-        keywords: realKeywords,
-      });
-
-      setKeywords(
-        realKeywords.map((kw: any) => ({
-          id: kw.id || undefined,
-          keyword: kw.keyword,
-          search_volume: kw.search_volume,
-          difficulty: kw.difficulty,
-          cpc: kw.cpc,
-          competition: kw.competition,
-          // Default UI-only fields
-          post_status: kw.post_status || "No Plan",
-          traffic_potential:
-            kw.traffic_potential ||
-            (kw.search_volume ? `${Math.round(kw.search_volume * 0.1)}+/mo` : "—"),
-        }))
-      );
-      setSelectedKeywords(new Set());
-      console.log(`✅ Total REAL keywords loaded: ${realKeywords.length}`);
-    } catch (err) {
-      console.error("Error fetching keywords:", err);
-      setError(err instanceof Error ? err.message : "Failed to load keywords");
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [selectedWebsiteId, loadingWebsites, fetchKeywords]);
 
   const filteredAndSortedKeywords = useMemo(() => {
     const filtered = keywords.filter((kw) => {
@@ -992,55 +1029,59 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
         </div>
       </div>
 
-      {/* Stats Cards - Pixel Perfect */}
-      <div className="flex flex-wrap lg:flex-nowrap rounded-xl shadow-xl">
-        <Card className="border w-[180px] lg:w-[335px] rounded-none rounded-tl-xl lg:rounded-xl lg:rounded-r-none  lg:border-[#101110] border-[#70e6854b] lg:border-r-[#53f8704b] bg-[#101110] shadow-xl">
-          <CardContent className="flex flex-col justify-start gap-8">
+      {/* Stats Cards - Responsive Grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-0 rounded-xl shadow-xl overflow-hidden">
+        {/* Card 1 */}
+        <Card className="border-b sm:border-b sm:border-r lg:border-r lg:border-b-0 border-l-0 border-t-0 rounded-none border-[#53f8704b] bg-[#101110]">
+          <CardContent className="flex flex-col justify-start gap-4 sm:gap-8">
             <div className="flex items-center justify-between">
-              <p className="text-xs font-medium text-[#ffffffb3] uppercase tracking-wide ">
-                Total <br className="hidden lg:block" />Keywords
+              <p className="text-xs sm:text-xs font-medium text-[#ffffffb3] uppercase tracking-wide">
+                Total Keywords
               </p>
               <Image src="/keywordcardimg1.png" alt="icon" height={15} width={19.5} />
             </div>
-            <p className="text-4xl flex items-end font-bold  text-[#53f870]">
+            <p className="text-2xl sm:text-4xl font-bold text-[#53f870]">
               {stats.totalKeywords}
             </p>
           </CardContent>
         </Card>
 
-        <Card className="border w-[180px] lg:w-[335px] rounded-none rounded-tr-xl lg:rounded-none border-[#70e6854b] lg:border-[#101110] lg:border-r-[#53f8704b]  bg-[#101110] shadow-xl">
-          <CardContent className="flex flex-col justify-start gap-8">
+        {/* Card 2 */}
+        <Card className="border-b sm:border-b lg:border-b-0 border-l-0 border-t-0 border-r-0 sm:border-r-0 lg:border-r rounded-none border-[#53f8704b] bg-[#101110]">
+          <CardContent className="flex flex-col justify-start gap-4 sm:gap-8">
             <div className="flex items-center justify-between">
-              <p className="text-xs font-medium text-[#ffffffb3] uppercase tracking-wide ">
-                High Potential Keywords
+              <p className="text-xs sm:text-xs font-medium text-[#ffffffb3] uppercase tracking-wide">
+                High Potential
               </p>
               <Image src="/keywordcardimg2.png" alt="icon" height={15} width={19.5} />
             </div>
-            <p className="text-4xl font-bold text-[#53f870]">{stats.highPotential}</p>
+            <p className="text-2xl sm:text-4xl font-bold text-[#53f870]">{stats.highPotential}</p>
           </CardContent>
         </Card>
 
-        <Card className="border w-[180px] lg:w-[335px] rounded-none rounded-bl-xl lg:rounded-none border-[#70e6854b] lg:border-[#101110] lg:border-r-[#70e6854b] bg-[#101110] shadow-xl">
-          <CardContent className="flex flex-col justify-start gap-8">
+        {/* Card 3 */}
+        <Card className="border-b-0 sm:border-b sm:border-r lg:border-r lg:border-b-0 border-l-0 border-t-0 rounded-none border-[#53f8704b] bg-[#101110]">
+          <CardContent className="flex flex-col justify-start gap-4 sm:gap-8">
             <div className="flex items-center justify-between">
-              <p className="text-xs font-medium text-[#ffffffb3] uppercase tracking-wide ">
-                With <br className="hidden lg:block" />Content
+              <p className="text-xs sm:text-xs font-medium text-[#ffffffb3] uppercase tracking-wide">
+                With Content
               </p>
               <Image src="/keywordcardimg3.png" alt="icon" height={15} width={19.5} />
             </div>
-            <p className="text-4xl font-bold text-[#53f870]">{stats.withContent}</p>
+            <p className="text-2xl sm:text-4xl font-bold text-[#53f870]">{stats.withContent}</p>
           </CardContent>
         </Card>
 
-        <Card className="border w-[180px] lg:w-[335px] rounded-none rounded-br-xl lg:rounded-l-none lg:rounded-r-xl border-[#70e6854b] lg:border-[#101110] bg-[#101110] shadow-xl">
-          <CardContent className="flex flex-col justify-start gap-8">
+        {/* Card 4 */}
+        <Card className="border-b-0 sm:border-b lg:border-b-0 border-l-0 border-t-0 border-r-0 lg:border-r-0 rounded-none border-[#53f8704b] bg-[#101110]">
+          <CardContent className="flex flex-col justify-start gap-4 sm:gap-8">
             <div className="flex items-center justify-between">
-              <p className="text-xs font-medium text-[#ffffffb3] uppercase tracking-wide ">
+              <p className="text-xs sm:text-xs font-medium text-[#ffffffb3] uppercase tracking-wide">
                 Without Content
               </p>
-              <Image src="/keywordcardimg4.png" alt="icon" height={15} width={19.5} />{" "}
+              <Image src="/keywordcardimg4.png" alt="icon" height={15} width={19.5} />
             </div>
-            <p className="text-4xl font-bold text-[#53f870]">{stats.withoutContent}</p>
+            <p className="text-2xl sm:text-4xl font-bold text-[#53f870]">{stats.withoutContent}</p>
           </CardContent>
         </Card>
       </div>
@@ -1050,7 +1091,7 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
           {/* Filters Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="flex items-center focus-visible:!outline-none gap-1">
+              <button className="flex items-center focus-visible:outline-none! gap-1">
                 Filters
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
                   <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" />
@@ -1068,7 +1109,7 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
           {/* Sort By Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="flex items-center gap-1 hover:text-gray-700 lg:w-auto w-[250px] focus-visible:!outline-none">
+              <button className="flex items-center gap-1 hover:text-gray-700 lg:w-auto w-[250px] focus-visible:outline-none!">
                 Sort By
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
                   <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" />
@@ -1105,7 +1146,7 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
         <button 
           onClick={() => setShowCreateDialog(true)}
           disabled={!selectedKeywords || selectedKeywords.size === 0}
-          className="h-9 border-2 border-[#53f870] px-8 rounded-md bg-[#171717] hover:bg-bg-[#171717] cursor-pointer text-[#53f870] order-2 lg:order-none text-base transition-colors disabled:cursor-not-allowed disabled:border-[#53f8701a] disabled:text-[#3a3a3a]"
+          className="h-9 border-2 border-[#53f870] px-8 rounded-md bg-[#171717] hover:bg-bg-[#171717] cursor-pointer text-[#53f870] order-2 lg:order-0 text-base transition-colors disabled:cursor-not-allowed disabled:border-[#53f8701a] disabled:text-[#3a3a3a]"
         >
           Create Post
         </button>
@@ -1193,7 +1234,7 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
                             <Button className="border border-[#53f8701a] rounded-l-none bg-transparent hover:bg-transparent focus-visible:outline-none cursor-pointer w-8 h-8 p-0 flex items-center justify-center"><ChevronDown className="w-4 h-4 text-[#ffffffb3]" /></Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-36 border bg-[#101110] border-[#53f8701a]">
-                            <DropdownMenuItem onClick={() => handleDeleteKeyword(index)} className="text-red-600 hover:!text-red-600 hover:!bg-transparent focus-visible::!bg-transparent px-10 text-center cursor-pointer">Delete</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleDeleteKeyword(index)} className="text-red-600 hover:text-red-600! hover:bg-transparent! focus-visible:bg-transparent! px-10 text-center cursor-pointer">Delete</DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
