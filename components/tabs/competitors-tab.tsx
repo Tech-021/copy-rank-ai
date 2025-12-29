@@ -125,6 +125,7 @@ export function CompetitorsTab({
   const [addCompetitorCompleted, setAddCompetitorCompleted] = useState(false);
   const [competitorInput, setCompetitorInput] = useState("");
   const [competitorTags, setCompetitorTags] = useState<string[]>([]);
+  const [selectedKeywords, setSelectedKeywords] = useState<Set<number>>(new Set());
 
   // Load user websites if no websiteId is provided
   const loadUserWebsites = async () => {
@@ -529,6 +530,9 @@ export function CompetitorsTab({
   };
 
   const handleCreatePost = () => {
+    if (!selectedKeywords || selectedKeywords.size === 0) {
+      return;
+    }
     setShowCreatePostDialog(true);
     setCreatePostCompleted(false);
     // Simulate post creation
@@ -540,6 +544,26 @@ export function CompetitorsTab({
   const handleAddCompetitor = () => {
     setShowAddCompetitorDialog(true);
     setAddCompetitorCompleted(false);
+  };
+
+  const toggleKeywordSelection = (index: number) => {
+    const newSelected = new Set(selectedKeywords);
+    if (newSelected.has(index)) {
+      newSelected.delete(index);
+    } else {
+      newSelected.add(index);
+    }
+    setSelectedKeywords(newSelected);
+  };
+
+  const toggleSelectAllKeywords = () => {
+    if (siteKeywords && siteKeywords.length > 0) {
+      if (selectedKeywords.size === siteKeywords.length) {
+        setSelectedKeywords(new Set());
+      } else {
+        setSelectedKeywords(new Set(siteKeywords.map((_, index) => index)));
+      }
+    }
   };
 
   const handleAddCompetitorSubmit = () => {
@@ -975,9 +999,9 @@ export function CompetitorsTab({
         </div>
 
         {/* Stats Cards - 4 Column Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-0 rounded-xl shadow-xl overflow-hidden">
+        <div className=" grid grid-cols-2  sm:grid-cols-2 lg:grid-cols-4 gap-0 rounded-xl shadow-xl overflow-hidden">
           {/* Card 1 */}
-          <Card className="border-b sm:border-b sm:border-r lg:border-r lg:border-b-0 border-l-0 border-t-0 rounded-none border-[#53f8704b] bg-black">
+          <Card className="border-b sm:border-b sm:border-r lg:border-r lg:border-b-0 border-l-0 border-t-0 rounded-none border-[#53f8704b] bg-[#101110]">
             <CardContent className="flex flex-col justify-start gap-4 sm:gap-8">
               <div className="flex justify-between">
                 <p className="text-xs sm:text-xs font-medium text-white tracking-wide">
@@ -992,7 +1016,7 @@ export function CompetitorsTab({
           </Card>
 
           {/* Card 2 */}
-          <Card className="border-b sm:border-b lg:border-b-0 border-l-0 border-t-0 border-r-0 sm:border-r-0 lg:border-r rounded-none border-[#53f8704b] bg-black">
+          <Card className="border-b sm:border-b lg:border-b-0 border-l-0 border-t-0 border-r-0 sm:border-r-0 lg:border-r rounded-none border-[#53f8704b] bg-[#101110]">
             <CardContent className="flex flex-col justify-start gap-4 sm:gap-8">
               <div className="flex justify-between">
                 <p className="text-xs sm:text-xs font-medium text-white tracking-wide">
@@ -1007,7 +1031,7 @@ export function CompetitorsTab({
           </Card>
 
           {/* Card 3 */}
-          <Card className="border-b sm:border-b sm:border-r lg:border-r lg:border-b-0 border-l-0 border-t-0 rounded-none border-r-[#53f8704b] bg-black">
+          <Card className="border-b-0 sm:border-b sm:border-r lg:border-r lg:border-b-0 border-l-0 border-t-0 rounded-none border-r-[#53f8704b] bg-[#101110]">
             <CardContent className="flex flex-col justify-start gap-4 sm:gap-8">
               <div className="flex justify-between">
                 <p className="text-xs sm:text-xs font-medium text-white tracking-wide">
@@ -1020,7 +1044,7 @@ export function CompetitorsTab({
           </Card>
 
           {/* Card 4 */}
-          <Card className="border-b-0 sm:border-b lg:border-b-0 border-l-0 border-t-0 border-r-0 lg:border-r-0 rounded-none border-[#53f8704b] bg-black">
+          <Card className="border-b-0 sm:border-b lg:border-b-0 border-l-0 border-t-0 border-r-0 lg:border-r-0 rounded-none border-[#53f8704b] bg-[#101110]">
             <CardContent className="flex flex-col justify-start gap-4 sm:gap-8">
               <div className="flex justify-between">
                 <p className="text-xs sm:text-xs font-medium text-white tracking-wide">
@@ -1039,6 +1063,18 @@ export function CompetitorsTab({
             {/* ================= HEADER ================= */}
             <thead>
               <tr className="border-b border-gray-800 bg-black">
+                <th className="px-2 sm:px-4 py-2 sm:py-4 text-left w-10">
+                  <input
+                    type="checkbox"
+                    checked={
+                      siteKeywords && siteKeywords.length > 0 &&
+                      selectedKeywords.size === siteKeywords.length
+                    }
+                    onChange={toggleSelectAllKeywords}
+                    aria-label="Select all keywords"
+                    className="w-4 h-4 rounded border border-gray-600 bg-transparent cursor-pointer accent-[#53F870]"
+                  />
+                </th>
                 <th className="px-2 sm:px-4 py-2 sm:py-4 text-left text-xs font-medium text-gray-500 whitespace-nowrap">
                   Keyword
                 </th>
@@ -1069,6 +1105,15 @@ export function CompetitorsTab({
                         : ""
                     } hover:bg-gray-900`}
                   >
+                    <td className="px-2 sm:px-4 py-2 sm:py-3 w-10">
+                      <input
+                        type="checkbox"
+                        checked={selectedKeywords.has(index)}
+                        onChange={() => toggleKeywordSelection(index)}
+                        aria-label={`Select keyword ${row.keyword}`}
+                        className="w-4 h-4 rounded border border-gray-600 bg-transparent cursor-pointer accent-[#53F870]"
+                      />
+                    </td>
                     <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-[#53F870]">
                       {row.keyword}
                     </td>
@@ -1121,28 +1166,56 @@ export function CompetitorsTab({
               ) : (
                 <tr>
                   <td
-                    colSpan={5}
+                    colSpan={6}
                     className="px-4 py-6 text-center text-sm text-muted-foreground"
                   >
                     No keyword opportunities found for this website
                   </td>
                 </tr>
               )}
-              <tr>
-                <td colSpan={5} className="">
-                  <div className="mt-4 sm:mt-6 flex justify-end mr-2 sm:mr-4">
-                    <Button
-                      onClick={handleCreatePost}
-                      className="bg-transparent text-gray-400 border border-gray-800 px-4 sm:px-6 mb-4 sm:mb-5 h-8 sm:h-9 text-xs sm:text-sm hover:bg-gray-500"
-                    >
-                      Create post
-                    </Button>
-                  </div>
-                </td>
-              </tr>
+              {selectedKeywords && selectedKeywords.size === 0 && (
+                <tr>
+                  <td colSpan={6} className="">
+                    <div className="mt-4 sm:mt-6 flex justify-end mr-2 sm:mr-4">
+                      <Button
+                        onClick={handleCreatePost}
+                        className="bg-transparent text-gray-400 border border-gray-800 px-4 sm:px-6 mb-4 sm:mb-5 h-8 sm:h-9 text-xs sm:text-sm hover:bg-gray-500"
+                      >
+                        Create post
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
+
+        {/* Selection Bar - Shows when keywords are selected */}
+        {selectedKeywords && selectedKeywords.size > 0 && (
+          <div className="mt-4 flex items-center justify-between p-4 bg-black rounded-lg border border-gray-700">
+            <p className="text-sm font-medium text-[#53F870]">
+              {selectedKeywords.size} keyword
+              {selectedKeywords.size !== 1 ? "s" : ""} selected
+            </p>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                className="h-9 border-2 border-[#53F870] px-8 rounded-md bg-black hover:bg-gray-900 cursor-pointer text-[#53F870] text-xs sm:text-sm transition-colors"
+                onClick={() => setSelectedKeywords(new Set())}
+              >
+                Clear
+              </Button>
+              <Button
+                size="sm"
+                className="h-9 px-4 bg-[#53f8701a] hover:bg-[#53f8701a] text-[#53f870] cursor-pointer text-xs sm:text-sm font-medium"
+                onClick={handleCreatePost}
+              >
+                Create Post
+              </Button>
+            </div>
+          </div>
+        )}
 
         {/* Competitor Overview Table */}
         <div className="bg-black rounded-xl border border-gray-800 overflow-x-auto">
