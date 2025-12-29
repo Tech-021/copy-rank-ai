@@ -1,6 +1,6 @@
 "use client"
 
-import { X } from "lucide-react"
+import { X, Loader2 } from "lucide-react"
 import Image from "next/image";
 
 interface CreatePostDialogProps {
@@ -35,14 +35,8 @@ export function CreatePostDialog({
               <h2 className="text-2xl  text-white">
                 Creating Post
               </h2>
-              <div className="flex justify-center animate-spin">
-                <Image
-                  src="/loader.png"
-                  alt="icon"
-                  height={92}
-                  width={92}
-                  
-                />
+              <div className="flex justify-center">
+                <Loader2 className="w-8 h-8 animate-spin" />
               </div>
               {/* Loading Button */}
               <button

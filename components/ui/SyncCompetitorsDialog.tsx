@@ -1,6 +1,6 @@
 "use client";
 
-import { X } from "lucide-react";
+import { X, Loader2 } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 
@@ -58,8 +58,8 @@ export function SyncCompetitorsDialog({
               <h2 className="text-2xl  text-white">Syncing Keywords</h2>
 
               {/* Loading Checkmark Animation */}
-              <div className="flex justify-center animate-spin py-8">
-                <Image src="/loader.png" height={92} width={92} alt="icon" />
+              <div className="flex justify-center">
+                <Loader2 className="w-8 h-8 animate-spin" />
               </div>
 
               {/* Loading Button */}

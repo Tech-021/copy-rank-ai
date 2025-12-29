@@ -1,6 +1,6 @@
 "use client"
 
-import { X } from "lucide-react"
+import { X, Loader2 } from "lucide-react"
 import Image from "next/image"
 import { useEffect, useState } from "react"
 
@@ -117,13 +117,8 @@ export function AddKeywordsDialog({
                   </h2>
 
                   {/* Loading Animation */}
-                  <div className="flex justify-center animate-spin py-8">
-                    <Image
-                      src="/loader.png"
-                      height={92}
-                      width={92}
-                      alt="icon"
-                    />
+                  <div className="flex justify-center">
+                    <Loader2 className="w-8 h-8 animate-spin" />
                   </div>
 
                   {/* Loading Button */}
