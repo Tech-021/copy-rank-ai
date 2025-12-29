@@ -313,7 +313,7 @@ export default function DashboardIndexPage() {
       {/* Stats Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-0 rounded-xl shadow-xl">
         {/* Card 1 - Indexed Posts */}
-        <Card className="border-r sm:border-r lg:border-r border-l-0 border-t-0 border-b-0 sm:rounded-r-none lg:rounded-r-none rounded-tl-xl rounded-bl-xl lg:border-r border-gray-800 bg-black shadow-xl">
+        <Card className="border-r sm:border-r lg:border-r border-l-0 border-t-0 border-b-0 sm:rounded-r-none lg:rounded-r-none rounded-tl-xl rounded-bl-xl lg:border-r border-gray-800 bg-[#101110] shadow-xl">
           <CardContent className="flex flex-col justify-start gap-6 sm:gap-8 p-3 sm:p-6">
             <div className="flex justify-between items-start">
               <p className="text-xs sm:text-xs font-medium text-white tracking-wide">
@@ -326,7 +326,7 @@ export default function DashboardIndexPage() {
         </Card>
 
         {/* Card 2 - Requested Index */}
-        <Card className="border border-t-0 border-b-0 rounded-none border-[#53f8704b] bg-black shadow-xl">
+        <Card className="border border-t-0 border-b-0 rounded-none border-[#53f8704b] bg-[#101110] shadow-xl">
           <CardContent className="flex flex-col justify-start gap-6 sm:gap-8 p-3 sm:p-6">
             <div className="flex justify-between items-start">
               <p className="text-xs sm:text-xs font-medium text-white tracking-wide">
@@ -339,7 +339,7 @@ export default function DashboardIndexPage() {
         </Card>
 
         {/* Card 3 - Pending Index */}
-        <Card className="border border-t-0 border-b-0 rounded-none border-[#53f8704b] bg-black shadow-xl">
+        <Card className="border border-t-0 border-b-0 rounded-none border-[#53f8704b] bg-[#101110] shadow-xl">
           <CardContent className="flex flex-col justify-start gap-6 sm:gap-8 p-3 sm:p-6">
             <div className="flex justify-between items-start">
               <p className="text-xs sm:text-xs font-medium text-white tracking-wide">
@@ -352,7 +352,7 @@ export default function DashboardIndexPage() {
         </Card>
 
         {/* Card 4 - Un-Indexed Posts */}
-        <Card className="border border-t-0 border-b-0 border-r-0 rounded-tr-xl rounded-br-xl lg:rounded-tr-none lg:rounded-br-none lg:border-r-0 border-[#53f8704b] bg-black shadow-xl">
+        <Card className="border border-t-0 rounded-none! border-b-0 border-r-0 rounded-tr-xl rounded-br-xl lg:rounded-tr-none lg:rounded-br-none lg:border-r-0 border-[#53f8704b] bg-[#101110] shadow-xl">
           <CardContent className="flex flex-col justify-start gap-6 sm:gap-8 p-3 sm:p-6">
             <div className="flex justify-between items-start">
               <p className="text-xs sm:text-xs font-medium text-white tracking-wide">

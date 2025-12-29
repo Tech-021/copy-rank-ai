@@ -1029,55 +1029,59 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
         </div>
       </div>
 
-      {/* Stats Cards - Pixel Perfect */}
-      <div className="flex flex-wrap lg:flex-nowrap rounded-xl shadow-xl">
-        <Card className="border w-[180px] lg:w-[335px] rounded-none rounded-tl-xl lg:rounded-xl lg:rounded-r-none  lg:border-[#101110] border-[#70e6854b] lg:border-r-[#53f8704b] bg-[#101110] shadow-xl">
-          <CardContent className="flex flex-col justify-start gap-8">
+      {/* Stats Cards - Responsive Grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-0 rounded-xl shadow-xl overflow-hidden">
+        {/* Card 1 */}
+        <Card className="border-b sm:border-b sm:border-r lg:border-r lg:border-b-0 border-l-0 border-t-0 rounded-none border-[#53f8704b] bg-[#101110]">
+          <CardContent className="flex flex-col justify-start gap-4 sm:gap-8">
             <div className="flex items-center justify-between">
-              <p className="text-xs font-medium text-[#ffffffb3] uppercase tracking-wide ">
-                Total <br className="hidden lg:block" />Keywords
+              <p className="text-xs sm:text-xs font-medium text-[#ffffffb3] uppercase tracking-wide">
+                Total Keywords
               </p>
               <Image src="/keywordcardimg1.png" alt="icon" height={15} width={19.5} />
             </div>
-            <p className="text-4xl flex items-end font-bold  text-[#53f870]">
+            <p className="text-2xl sm:text-4xl font-bold text-[#53f870]">
               {stats.totalKeywords}
             </p>
           </CardContent>
         </Card>
 
-        <Card className="border w-[180px] lg:w-[335px] rounded-none rounded-tr-xl lg:rounded-none border-[#70e6854b] lg:border-[#101110] lg:border-r-[#53f8704b]  bg-[#101110] shadow-xl">
-          <CardContent className="flex flex-col justify-start gap-8">
+        {/* Card 2 */}
+        <Card className="border-b sm:border-b lg:border-b-0 border-l-0 border-t-0 border-r-0 sm:border-r-0 lg:border-r rounded-none border-[#53f8704b] bg-[#101110]">
+          <CardContent className="flex flex-col justify-start gap-4 sm:gap-8">
             <div className="flex items-center justify-between">
-              <p className="text-xs font-medium text-[#ffffffb3] uppercase tracking-wide ">
-                High Potential Keywords
+              <p className="text-xs sm:text-xs font-medium text-[#ffffffb3] uppercase tracking-wide">
+                High Potential
               </p>
               <Image src="/keywordcardimg2.png" alt="icon" height={15} width={19.5} />
             </div>
-            <p className="text-4xl font-bold text-[#53f870]">{stats.highPotential}</p>
+            <p className="text-2xl sm:text-4xl font-bold text-[#53f870]">{stats.highPotential}</p>
           </CardContent>
         </Card>
 
-        <Card className="border w-[180px] lg:w-[335px] rounded-none rounded-bl-xl lg:rounded-none border-[#70e6854b] lg:border-[#101110] lg:border-r-[#70e6854b] bg-[#101110] shadow-xl">
-          <CardContent className="flex flex-col justify-start gap-8">
+        {/* Card 3 */}
+        <Card className="border-b-0 sm:border-b sm:border-r lg:border-r lg:border-b-0 border-l-0 border-t-0 rounded-none border-[#53f8704b] bg-[#101110]">
+          <CardContent className="flex flex-col justify-start gap-4 sm:gap-8">
             <div className="flex items-center justify-between">
-              <p className="text-xs font-medium text-[#ffffffb3] uppercase tracking-wide ">
-                With <br className="hidden lg:block" />Content
+              <p className="text-xs sm:text-xs font-medium text-[#ffffffb3] uppercase tracking-wide">
+                With Content
               </p>
               <Image src="/keywordcardimg3.png" alt="icon" height={15} width={19.5} />
             </div>
-            <p className="text-4xl font-bold text-[#53f870]">{stats.withContent}</p>
+            <p className="text-2xl sm:text-4xl font-bold text-[#53f870]">{stats.withContent}</p>
           </CardContent>
         </Card>
 
-        <Card className="border w-[180px] lg:w-[335px] rounded-none rounded-br-xl lg:rounded-l-none lg:rounded-r-xl border-[#70e6854b] lg:border-[#101110] bg-[#101110] shadow-xl">
-          <CardContent className="flex flex-col justify-start gap-8">
+        {/* Card 4 */}
+        <Card className="border-b-0 sm:border-b lg:border-b-0 border-l-0 border-t-0 border-r-0 lg:border-r-0 rounded-none border-[#53f8704b] bg-[#101110]">
+          <CardContent className="flex flex-col justify-start gap-4 sm:gap-8">
             <div className="flex items-center justify-between">
-              <p className="text-xs font-medium text-[#ffffffb3] uppercase tracking-wide ">
+              <p className="text-xs sm:text-xs font-medium text-[#ffffffb3] uppercase tracking-wide">
                 Without Content
               </p>
-              <Image src="/keywordcardimg4.png" alt="icon" height={15} width={19.5} />{" "}
+              <Image src="/keywordcardimg4.png" alt="icon" height={15} width={19.5} />
             </div>
-            <p className="text-4xl font-bold text-[#53f870]">{stats.withoutContent}</p>
+            <p className="text-2xl sm:text-4xl font-bold text-[#53f870]">{stats.withoutContent}</p>
           </CardContent>
         </Card>
       </div>
