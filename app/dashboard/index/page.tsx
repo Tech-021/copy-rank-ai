@@ -61,6 +61,24 @@ const getCompetitorsCount = (keywordsData: any): number => {
   return 0;
 };
 
+const selectedWebsiteStorageKey = "selected-website-id";
+
+const readSelectedWebsiteId = () => {
+  try {
+    return sessionStorage.getItem(selectedWebsiteStorageKey);
+  } catch {
+    return null;
+  }
+};
+
+const writeSelectedWebsiteId = (websiteId: string) => {
+  try {
+    sessionStorage.setItem(selectedWebsiteStorageKey, websiteId);
+  } catch {
+    // ignore storage failures
+  }
+};
+
 export default function DashboardIndexPage() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [selectedWebsiteId, setSelectedWebsiteId] = useState<string | null>(null);
@@ -121,7 +139,13 @@ export default function DashboardIndexPage() {
 
         // Set first website as selected
         if (userWebsites.length > 0 && !selectedWebsiteId) {
-          setSelectedWebsiteId(userWebsites[0].id);
+          const stored = readSelectedWebsiteId();
+          const nextId =
+            stored && userWebsites.some((w) => w.id === stored)
+              ? stored
+              : userWebsites[0].id;
+          setSelectedWebsiteId(nextId);
+          writeSelectedWebsiteId(nextId);
         }
       } catch (error) {
         console.error("Error loading websites:", error);
@@ -200,6 +224,7 @@ export default function DashboardIndexPage() {
 
   const handleWebsiteChange = (websiteId: string) => {
     setSelectedWebsiteId(websiteId);
+    writeSelectedWebsiteId(websiteId);
   };
 
   const getStatusColor = (status: string) => {
@@ -313,7 +338,7 @@ export default function DashboardIndexPage() {
       {/* Stats Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-0 rounded-xl shadow-xl">
         {/* Card 1 - Indexed Posts */}
-        <Card className="border-r sm:border-r lg:border-r border-l-0 border-t-0 border-b-0 sm:rounded-r-none lg:rounded-r-none rounded-tl-xl rounded-bl-xl lg:border-r border-gray-800 bg-[#101110] shadow-xl">
+        <Card className="border-r sm:border-r lg:border-r border-l-0 border-t-0 border-b-0 sm:rounded-r-none lg:rounded-r-none rounded-tl-xl rounded-bl-xl border-gray-800 bg-[#101110] shadow-xl">
           <CardContent className="flex flex-col justify-start gap-6 sm:gap-8 p-3 sm:p-6">
             <div className="flex justify-between items-start">
               <p className="text-xs sm:text-xs font-medium text-white tracking-wide">
@@ -395,7 +420,7 @@ export default function DashboardIndexPage() {
                 {posts.map((post, index) => (
                   <tr key={post.id} className={`${index !== posts.length - 1 ? "border-b border-gray-800" : ""}`}>
                     <td className="py-3 sm:py-4 px-2 sm:px-6 min-w-[200px] sm:min-w-auto">
-                      <span className="text-xs sm:text-sm text-[#53F870] font-normal break-words">{post.title}</span>
+                      <span className="text-xs sm:text-sm text-[#53F870] font-normal wrap-break-word">{post.title}</span>
                     </td>
                     <td className="py-3 sm:py-4 px-2 sm:px-6 hidden sm:table-cell whitespace-nowrap">
                       <span className={`text-xs font-normal capitalize ${getStatusColor(post.status)}`}>

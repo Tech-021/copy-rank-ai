@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { RefreshCw } from "lucide-react";
 import { Plus } from "lucide-react";
 import { LoaderChevron } from "@/components/ui/LoaderChevron";
@@ -119,6 +119,81 @@ interface AnalyticsData {
   totalCompetitors: number;
 }
 
+type KeywordsCache = {
+  website: WebsiteData["website"];
+  keywords: Keyword[];
+  keywordsUpdatedAt: string | null;
+};
+
+const selectedWebsiteStorageKey = "selected-website-id";
+const websitesStorageKey = (userId: string) => `websites-cache:${userId}`;
+
+const readSelectedWebsiteId = () => {
+  try {
+    return localStorage.getItem(selectedWebsiteStorageKey);
+  } catch {
+    return null;
+  }
+};
+
+const writeSelectedWebsiteId = (websiteId: string) => {
+  try {
+    localStorage.setItem(selectedWebsiteStorageKey, websiteId);
+  } catch {
+    // ignore storage failures
+  }
+};
+
+type WebsitesCache = {
+  websites: Website[];
+  cachedAt: string;
+};
+
+const readWebsitesCache = (userId: string): WebsitesCache | null => {
+  try {
+    const raw = localStorage.getItem(websitesStorageKey(userId));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as WebsitesCache;
+    if (!parsed?.websites || !Array.isArray(parsed.websites)) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+};
+
+const writeWebsitesCache = (userId: string, websites: Website[]) => {
+  try {
+    localStorage.setItem(
+      websitesStorageKey(userId),
+      JSON.stringify({ websites, cachedAt: new Date().toISOString() } as WebsitesCache)
+    );
+  } catch {
+    // ignore storage failures
+  }
+};
+
+const keywordsCacheKey = (websiteId: string) => `keywords-cache:${websiteId}`;
+
+const readKeywordsCache = (websiteId: string): KeywordsCache | null => {
+  try {
+    const raw = localStorage.getItem(keywordsCacheKey(websiteId));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as KeywordsCache;
+    if (!parsed?.website || !Array.isArray(parsed.keywords)) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+};
+
+const writeKeywordsCache = (websiteId: string, value: KeywordsCache) => {
+  try {
+    localStorage.setItem(keywordsCacheKey(websiteId), JSON.stringify(value));
+  } catch {
+    // ignore storage failures
+  }
+};
+
 // Removed mock data: now pulling real keywords via /api/keyword and websites via Supabase
 
 export function KeywordsTab({
@@ -154,6 +229,20 @@ export function KeywordsTab({
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [keywordToDelete, setKeywordToDelete] = useState<{ index: number; keyword: string } | null>(null);
   const toast = useToast();
+
+  // Keep latest values available inside async callbacks (prevents stale requests overwriting UI)
+  const selectedWebsiteIdRef = useRef<string | null>(selectedWebsiteId);
+  const websitesRef = useRef<Website[]>(websites);
+  const fetchKeywordsSeqRef = useRef(0);
+  const loadWebsitesSeqRef = useRef(0);
+
+  useEffect(() => {
+    selectedWebsiteIdRef.current = selectedWebsiteId;
+  }, [selectedWebsiteId]);
+
+  useEffect(() => {
+    websitesRef.current = websites;
+  }, [websites]);
 
   // Handle dialog completion timing
   useEffect(() => {
@@ -199,9 +288,31 @@ export function KeywordsTab({
   }, []);
 
  const loadUserWebsites = useCallback(async () => {
+    const seq = ++loadWebsitesSeqRef.current;
+    const isCurrent = () => loadWebsitesSeqRef.current === seq;
+
     try {
-      setLoadingWebsites(true);
       if (!currentUser?.id) return;
+
+      // Session-first: hydrate the dropdown immediately.
+      const cached = readWebsitesCache(currentUser.id);
+      if (cached && websitesRef.current.length === 0) {
+        if (isCurrent()) setWebsites(cached.websites);
+        if (!selectedWebsiteIdRef.current && cached.websites.length > 0) {
+          const stored = readSelectedWebsiteId();
+          const nextId =
+            stored && cached.websites.some((w) => w.id === stored)
+              ? stored
+              : cached.websites[0].id;
+          if (isCurrent()) setSelectedWebsiteId(nextId);
+          writeSelectedWebsiteId(nextId);
+        }
+      }
+
+      // Only show dropdown loading state if we have nothing cached to render.
+      if ((!cached || websitesRef.current.length === 0) && isCurrent()) {
+        setLoadingWebsites(true);
+      }
 
       const { data, error: dbError } = await supabase
         .from("websites")
@@ -222,23 +333,35 @@ export function KeywordsTab({
         created_at: w.created_at,
       }));
 
+      if (!isCurrent()) return;
+
       setWebsites(userWebsites);
       setError(null);
 
-      if (!selectedWebsiteId && userWebsites.length > 0) {
-        setSelectedWebsiteId(userWebsites[0].id);
+      writeWebsitesCache(currentUser.id, userWebsites);
+
+      if (!selectedWebsiteIdRef.current && userWebsites.length > 0) {
+        const stored = readSelectedWebsiteId();
+        const nextId =
+          stored && userWebsites.some((w) => w.id === stored)
+            ? stored
+            : userWebsites[0].id;
+        setSelectedWebsiteId(nextId);
+        writeSelectedWebsiteId(nextId);
       }
     } catch (e) {
       console.error("Error loading websites:", e);
       setError("Failed to load websites");
     } finally {
-      setLoadingWebsites(false);
+      // Only end loading for the latest in-flight websites request.
+      if (isCurrent()) setLoadingWebsites(false);
     }
-  }, [currentUser?.id, selectedWebsiteId])
+  }, [currentUser?.id])
 
   useEffect(() => {
     if (websiteId) {
       setSelectedWebsiteId(websiteId);
+      writeSelectedWebsiteId(websiteId);
       return;
     }
     if (!loadingUser && currentUser?.id) {
@@ -249,6 +372,12 @@ export function KeywordsTab({
   const fetchKeywords = useCallback(
     async (options?: { forceRefresh?: boolean }) => {
       if (!selectedWebsiteId) return;
+
+      const requestWebsiteId = selectedWebsiteId;
+      const requestSeq = ++fetchKeywordsSeqRef.current;
+      const isCurrent = () =>
+        fetchKeywordsSeqRef.current === requestSeq &&
+        selectedWebsiteIdRef.current === requestWebsiteId;
 
       const forceRefresh = !!options?.forceRefresh;
 
@@ -274,19 +403,100 @@ export function KeywordsTab({
         };
       };
 
+      const getErrorMessage = (err: unknown) => {
+        if (err instanceof Error) return err.message;
+        if (typeof err === "string") return err;
+        if (err && typeof err === "object") {
+          const maybeMessage = (err as any).message;
+          const maybeDetails = (err as any).details;
+          if (typeof maybeMessage === "string" && maybeMessage.trim()) {
+            return typeof maybeDetails === "string" && maybeDetails.trim()
+              ? `${maybeMessage} (${maybeDetails})`
+              : maybeMessage;
+          }
+        }
+        return "Failed to load keywords";
+      };
+
       try {
-        setLoading(true);
-        setError(null);
+        if (isCurrent()) setError(null);
+
+        // 0) Render instantly from session cache (no spinner)
+        const cached = !forceRefresh ? readKeywordsCache(requestWebsiteId) : null;
+        if (cached) {
+          if (isCurrent()) {
+            setWebsiteData({ website: cached.website, keywords: cached.keywords });
+            setKeywords(cached.keywords);
+            setSelectedKeywords(new Set());
+            setLoading(false);
+          }
+        } else {
+          // No cache => keep existing behavior (spinner while first loading)
+          if (isCurrent()) {
+            // Avoid showing stale keywords from the previous website while loading the new one.
+            setWebsiteData(null);
+            setKeywords([]);
+            setSelectedKeywords(new Set());
+            setLoading(true);
+          }
+        }
+
+        // 0.5) Cheap DB version check: if unchanged, don't re-render / don't show spinner
+        if (!forceRefresh) {
+          const { data: versionRow, error: versionErr } = await supabase
+            .from("websites")
+            .select("keywords_updated_at")
+            .eq("id", requestWebsiteId)
+            .single();
+
+          if (!versionErr) {
+            const dbUpdatedAt: string | null = (versionRow as any)?.keywords_updated_at ?? null;
+            const cachedUpdatedAt: string | null = cached?.keywordsUpdatedAt ?? null;
+            if (cached && dbUpdatedAt && cachedUpdatedAt && dbUpdatedAt === cachedUpdatedAt) {
+              return;
+            }
+
+            // DB changed and we had cache => show spinner for refresh
+            if (cached) {
+              if (isCurrent()) setLoading(true);
+            }
+          }
+        }
+
+        if (isCurrent()) setError(null);
 
         // 1) Load from DB first (fast)
-        const { data: singleSite, error: siteErr } = await supabase
-          .from("websites")
-          .select("id, url, topic, keywords")
-          .eq("id", selectedWebsiteId)
-          .single();
+        // Backward-compatible select: keywords_updated_at may not exist until migration runs
+        let singleSite: any = null;
+        {
+          const { data, error: siteErr } = await supabase
+            .from("websites")
+            .select("id, url, topic, keywords, keywords_updated_at")
+            .eq("id", requestWebsiteId)
+            .single();
 
-        if (siteErr) throw siteErr;
+          if (siteErr) {
+            const msg = siteErr.message || "Failed to load website";
+            // If the column doesn't exist yet, retry without it.
+            if (/keywords_updated_at/i.test(msg) && /column/i.test(msg)) {
+              const { data: retryData, error: retryErr } = await supabase
+                .from("websites")
+                .select("id, url, topic, keywords")
+                .eq("id", requestWebsiteId)
+                .single();
+              if (retryErr) throw new Error(retryErr.message || "Failed to load website");
+              singleSite = retryData;
+            } else {
+              throw new Error(msg);
+            }
+          } else {
+            singleSite = data;
+          }
+        }
         if (!singleSite) throw new Error("Website not found");
+
+        // If the user switched websites while we were waiting, drop this result.
+        if (!isCurrent()) return;
 
         const siteKeywords = (singleSite as any).keywords;
         const storedArray: any[] = Array.isArray(siteKeywords)
@@ -301,16 +511,24 @@ export function KeywordsTab({
 
         // If we already have stored keywords and we're not forcing refresh, stop here.
         if (storedKeywords.length > 0 && !forceRefresh) {
-          setWebsiteData({
-            website: {
-              id: singleSite.id,
-              url: singleSite.url,
-              topic: singleSite.topic || "General",
-            },
+          const nextWebsite = {
+            id: singleSite.id,
+            url: singleSite.url,
+            topic: singleSite.topic || "General",
+          };
+
+          if (isCurrent()) {
+            setWebsiteData({ website: nextWebsite, keywords: storedKeywords });
+            setKeywords(storedKeywords);
+            setSelectedKeywords(new Set());
+          }
+
+          // Cache the DB result so next visit is instant
+          writeKeywordsCache(requestWebsiteId, {
+            website: nextWebsite,
             keywords: storedKeywords,
+            keywordsUpdatedAt: (singleSite as any).keywords_updated_at ?? null,
           });
-          setKeywords(storedKeywords);
-          setSelectedKeywords(new Set());
           return;
         }
 
@@ -375,31 +593,94 @@ export function KeywordsTab({
         const { error: updateErr } = await supabase
           .from("websites")
           .update({ keywords: newPayload })
-          .eq("id", selectedWebsiteId);
+          .eq("id", requestWebsiteId);
 
         if (updateErr) {
           console.error("Failed to persist refreshed keywords:", updateErr);
         }
 
-        setWebsiteData({
-          website: {
-            id: singleSite.id,
-            url: singleSite.url,
-            topic: singleSite.topic || "General",
-          },
+        const nextWebsite = {
+          id: singleSite.id,
+          url: singleSite.url,
+          topic: singleSite.topic || "General",
+        };
+
+        if (isCurrent()) {
+          setWebsiteData({ website: nextWebsite, keywords: merged });
+          setKeywords(merged);
+          setSelectedKeywords(new Set());
+        }
+
+        // Re-read keywords_updated_at so cache has the correct DB version after update
+        let afterUpdatedAt: string | null = null;
+        {
+          const { data: afterVersionRow, error: afterVersionErr } = await supabase
+            .from("websites")
+            .select("keywords_updated_at")
+            .eq("id", requestWebsiteId)
+            .single();
+
+          if (!afterVersionErr) {
+            afterUpdatedAt = (afterVersionRow as any)?.keywords_updated_at ?? null;
+          }
+        }
+
+        writeKeywordsCache(requestWebsiteId, {
+          website: nextWebsite,
           keywords: merged,
+          keywordsUpdatedAt: afterUpdatedAt,
         });
-        setKeywords(merged);
-        setSelectedKeywords(new Set());
       } catch (err) {
-        console.error("Error fetching keywords:", err);
-        setError(err instanceof Error ? err.message : "Failed to load keywords");
+        const message = getErrorMessage(err);
+        // Next.js dev overlay sometimes serializes objects as `{}`; log message separately.
+        console.error("Error fetching keywords:", message);
+        console.error(err);
+        if (isCurrent()) setError(message);
       } finally {
-        setLoading(false);
+        // Only the latest request may change the loading state.
+        if (fetchKeywordsSeqRef.current === requestSeq) {
+          setLoading(false);
+        }
       }
     },
     [selectedWebsiteId]
   );
+
+  // Auto-refresh caches when the websites table changes (new website added, keywords updated elsewhere, etc.)
+  useEffect(() => {
+    if (!currentUser?.id) return;
+
+    const channel = supabase
+      .channel(`websites-changes:${currentUser.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "websites",
+          filter: `user_id=eq.${currentUser.id}`,
+        },
+        (payload) => {
+          // 1) Refresh websites list (updates state + localStorage) without showing loader if cached.
+          loadUserWebsites();
+
+          // 2) If the currently selected website changed, refresh keywords cache.
+          const changedId = (payload as any)?.new?.id ?? (payload as any)?.old?.id;
+          if (changedId && selectedWebsiteIdRef.current === changedId) {
+            fetchKeywords();
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      try {
+        supabase.removeChannel(channel);
+      } catch {
+        // ignore cleanup failures
+      }
+    };
+  }, [currentUser?.id, loadUserWebsites, fetchKeywords]);
 
   useEffect(() => {
     console.log("🔍 KeywordsTab - selectedWebsiteId:", selectedWebsiteId);
@@ -928,6 +1209,7 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
 
   const handleWebsiteChange = async (websiteId: string) => {
       setSelectedWebsiteId(websiteId);
+      writeSelectedWebsiteId(websiteId);
       
       const {
         data: { user },
@@ -938,7 +1220,7 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
       }
     };
 
-  if (loadingWebsites) {
+  if (loadingWebsites && websites.length === 0) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <LoaderChevron />
@@ -971,12 +1253,23 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
   if (!websiteData) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        {/* <div className="text-center">
-          <p className="text-gray-600 mb-2">No website data found</p>
-          <p className="text-sm text-gray-500">
-            Please select a website from the list above.
-          </p>
-        </div> */}
+        <div className="text-center">
+          {error ? (
+            <>
+              <p className="text-red-600 mb-4">{error}</p>
+              <Button onClick={() => fetchKeywords()} variant="outline">
+                Retry
+              </Button>
+            </>
+          ) : (
+            <>
+              <p className="text-gray-600 mb-2">No website data found</p>
+              <p className="text-sm text-gray-500">
+                Please select a website from the list above.
+              </p>
+            </>
+          )}
+        </div>
       </div>
     );
   }

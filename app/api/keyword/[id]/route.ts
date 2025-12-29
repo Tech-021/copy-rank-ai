@@ -83,6 +83,11 @@ export async function GET(
         url: website.url,
         topic: website.topic
       },
+      // Additive: version timestamps for cheap client cache checks
+      versions: {
+        keywords_updated_at: (website as any).keywords_updated_at ?? null,
+        competitors_updated_at: (website as any).competitors_updated_at ?? null,
+      },
       keywords: keywordsArray, // Always return array for backward compatibility
       fullData: fullData, // Include full data with competitors for CompetitorsTab
       metadata: website.keywords && typeof website.keywords === 'object' ? {
