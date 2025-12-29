@@ -8,6 +8,7 @@ import { useToast } from "@/components/ui/toast"
 import { LandingPage } from "@/components/landing-page"
 import { Dashboard } from "@/components/dashboard"
 import { LoginPage } from "@/components/login-page"
+import { LoaderChevron } from "@/components/ui/LoaderChevron"
 import { SignUpPage } from "@/components/signup-page"
 import Image from "next/image"
 
@@ -137,6 +138,13 @@ export default function Home() {
     }
   }
 
+  // If user becomes authenticated (dashboard state), redirect to the dashboard route
+  useEffect(() => {
+    if (authState === "dashboard") {
+      router.replace("/dashboard")
+    }
+  }, [authState, router])
+
   const toast = useToast()
 
   const handleLogout = async () => {
@@ -172,13 +180,14 @@ export default function Home() {
   if (isCheckingSubscription) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin"><Image src="/loader.png" alt="" width={92} height={92} /></div>
+        <LoaderChevron />
       </div>
     )
   }
 
   if (authState === "dashboard") {
-    return <Dashboard onLogout={handleLogout} userEmail={userEmail} userAvatar={userAvatar} />
+    // Redirecting to /dashboard via effect above; render nothing here.
+    return null
   }
 
   if (authState === "login") {

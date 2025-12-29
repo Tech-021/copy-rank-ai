@@ -1,48 +1,48 @@
-"use client"
+"use client";
 
-import { X } from "lucide-react"
-import Image from "next/image"
-import { useEffect, useState } from "react"
+import { X, Loader2 } from "lucide-react";
+import Image from "next/image";
+import { useEffect, useState } from "react";
 
 interface SyncCompetitorsDialogProps {
-  isOpen: boolean
-  onClose: () => void
+  isOpen: boolean;
+  onClose: () => void;
 }
 
 export function SyncCompetitorsDialog({
   isOpen,
   onClose,
 }: SyncCompetitorsDialogProps) {
-  const [synced, setSynced] = useState(false)
+  const [synced, setSynced] = useState(false);
 
   useEffect(() => {
     if (isOpen && !synced) {
       const timer = setTimeout(() => {
-        setSynced(true)
-      }, 2000)
-      return () => clearTimeout(timer)
+        setSynced(true);
+      }, 2000);
+      return () => clearTimeout(timer);
     }
-  }, [isOpen, synced])
+  }, [isOpen, synced]);
 
   const handleClose = () => {
-    setSynced(false)
-    onClose()
-  }
+    setSynced(false);
+    onClose();
+  };
 
   useEffect(() => {
     if (synced) {
       const timer = setTimeout(() => {
-        handleClose()
-      }, 2000)
-      return () => clearTimeout(timer)
+        handleClose();
+      }, 2000);
+      return () => clearTimeout(timer);
     }
-  }, [synced])
+  }, [synced]);
 
-  if (!isOpen) return null
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg w-full max-w-[500px] p-8 relative">
+      <div className="bg-[#101110] rounded-lg w-full max-w-[500px] p-8 relative">
         {/* Close Button */}
         <button
           onClick={handleClose}
@@ -55,27 +55,24 @@ export function SyncCompetitorsDialog({
           <>
             {/* Importing State */}
             <div className="text-center space-y-8">
-              <h2 className="text-2xl  text-gray-900">
-                Syncing Keywords
-              </h2>
+              <h2 className="text-2xl  text-white">Syncing Keywords</h2>
 
               {/* Loading Checkmark Animation */}
-              <div className="flex justify-center animate-spin py-8">
-                <Image
-                src="/loader.png"
-                height={92}
-                width={92}
-                alt="icon"
-                
-                />
+              <div className="flex justify-center">
+                <Loader2 className="w-8 h-8 animate-spin" />
               </div>
 
               {/* Loading Button */}
               <button
                 disabled
-                className="w-full bg-green-600 hover:bg-green-500 text-white font-medium py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
+                className="w-full bg-[#53ff70] hover:bg-[#53ff70] text-white font-medium py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
               >
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                <div
+                  className="w-8 h-8 rounded-full animate-spin
+         bg-[conic-gradient(#00000000_0%,#000000FF_100%)]
+         [mask:radial-gradient(farthest-side,transparent_calc(100%-2px),black_0)]
+         [-webkit-mask:radial-gradient(farthest-side,transparent_calc(100%-2px),black_0)]"
+                ></div>
                 <span></span>
               </button>
             </div>
@@ -84,32 +81,24 @@ export function SyncCompetitorsDialog({
           <>
             {/* Success State */}
             <div className="text-center space-y-8">
-              <h2 className="text-2xl  text-gray-900">
-                Keywords Synced!
-              </h2>
+              <h2 className="text-2xl  text-white">Keywords Synced!</h2>
 
               {/* Success Checkmark */}
               <div className="flex justify-center py-8">
-              <Image
-              src="/check.png"
-              alt="icon"
-              height={81}
-              width={81}
-              
-              />
+                <Image src="/checkfordark.png" alt="icon" height={81} width={81} />
               </div>
 
               {/* View Keywords Button */}
               <button
                 onClick={handleClose}
-                className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 rounded-lg transition-colors"
+                className="w-full bg-[#53ff70] hover:bg-[#53ff70] text-black font-medium py-3 rounded-lg transition-colors"
               >
-                View Keywords
+                Done
               </button>
             </div>
           </>
         )}
       </div>
     </div>
-  )
+  );
 }

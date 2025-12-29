@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { LoaderChevron } from "@/components/ui/LoaderChevron";
 import { Stepper } from "@/components/ui/stepper";
 
 import {
@@ -29,7 +30,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select3";
+} from "@/components/ui/select";
 import {
   Loader2,
   Plus,
@@ -52,6 +53,7 @@ import { createCheckout } from "@/lib/lemonSqueezy";
 import { supabase } from "@/lib/client";
 import { useToast } from "@/components/ui/toast";
 import Image from "next/image";
+import { CreatePostDialogDashboard } from "@/components/dialog2";
 
 interface Article {
   id: string;
@@ -74,6 +76,15 @@ interface Article {
   generatedAt?: string;
   estimatedTraffic?: number;
   generatedImages?: string[];
+}
+
+interface AnalyticsData {
+  articlesGenerated: number;
+  articlesLive: number;
+  estimatedTraffic: number;
+  keywordsTracked: number;
+  draftArticles: number;
+  totalCompetitors: number;
 }
 
 interface ArticlesTabProps {
@@ -138,6 +149,15 @@ export function ArticlesTab({
   const [selectedWebsiteId, setSelectedWebsiteId] = useState<string | null>(
     websiteId || null
   );
+  const [openPostDialog, setOpenPostDialog] = useState(false);
+  const [analytics, setAnalytics] = useState<AnalyticsData>({
+    articlesGenerated: 0,
+    articlesLive: 0,
+    estimatedTraffic: 0,
+    keywordsTracked: 0,
+    draftArticles: 0,
+    totalCompetitors: 0,
+  });
 
   const loadUserWebsites = async () => {
     try {
@@ -221,7 +241,9 @@ export function ArticlesTab({
               }
             }
           })
-          .catch((err) => console.error("Error fetching updated article:", err));
+          .catch((err) =>
+            console.error("Error fetching updated article:", err)
+          );
       }, 1200);
     } catch (error) {
       toast.showToast({
@@ -682,6 +704,95 @@ export function ArticlesTab({
     }
   };
 
+  const getCompetitorsCount = (keywordsData: any): number => {
+    if (!keywordsData) return 0;
+    if (keywordsData.competitors && Array.isArray(keywordsData.competitors)) {
+      return keywordsData.competitors.length;
+    }
+    return 0;
+  };
+
+  const fetchAnalytics = async (userId: string, websiteId?: string | null) => {
+    try {
+      let articlesQuery = supabase
+        .from("articles")
+        .select("status, estimated_traffic, keyword, word_count")
+        .eq("user_id", userId);
+
+      if (websiteId) {
+        articlesQuery = articlesQuery.eq("website_id", websiteId);
+      }
+
+      const { data: articles, error: articlesError } = await articlesQuery;
+
+      if (articlesError) throw articlesError;
+
+      const articlesGenerated = articles?.length || 0;
+      const articlesLive =
+        articles?.filter(
+          (a) => a.status === "published" || a.status === "UPLOADED"
+        ).length || 0;
+      const draftArticles =
+        articles?.filter((a) => a.status === "draft" || a.status === "DRAFT")
+          .length || 0;
+
+      const estimatedTraffic =
+        articles?.reduce((sum, article) => {
+          return sum + (article.estimated_traffic || 0);
+        }, 0) || 0;
+
+      const allKeywords = new Set<string>();
+      articles?.forEach((article) => {
+        if (typeof article.keyword === "string") {
+          article.keyword.split(",").forEach((k) => allKeywords.add(k.trim()));
+        }
+      });
+      const keywordsTracked = allKeywords.size;
+
+      let websitesQuery = supabase
+        .from("websites")
+        .select("keywords")
+        .eq("user_id", userId);
+
+      if (websiteId) {
+        websitesQuery = websitesQuery.eq("id", websiteId);
+      }
+
+      const { data: websitesData, error: websitesError } = await websitesQuery;
+
+      if (websitesError) throw websitesError;
+
+      let totalCompetitors = 0;
+      websitesData?.forEach((website) => {
+        const competitorCount = getCompetitorsCount(website.keywords);
+        totalCompetitors += competitorCount;
+      });
+
+      setAnalytics({
+        articlesGenerated,
+        articlesLive,
+        estimatedTraffic,
+        keywordsTracked,
+        draftArticles,
+        totalCompetitors,
+      });
+    } catch (error) {
+      console.error("Error fetching analytics:", error);
+    }
+  };
+
+  const handleWebsiteChange = async (websiteId: string) => {
+    setSelectedWebsiteId(websiteId);
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (user) {
+      await fetchAnalytics(user.id, websiteId);
+    }
+  };
+
   const handleIndexNow = async (articleId: string, slug: string) => {
     if (!slug) {
       toast.showToast({
@@ -815,9 +926,7 @@ export function ArticlesTab({
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
-          <div className="animate-spin">
-            <Image src="/loader.png" alt="" width={92} height={92} />
-          </div>
+          <LoaderChevron />
         </div>
       </div>
     );
@@ -826,63 +935,63 @@ export function ArticlesTab({
   return (
     <div className="space-y-6 ">
       <div>
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4 sm:mb-6">
           <div>
-            <h2 className="text-2xl text-gray-700 font-medium">Blogs</h2>
-            <p className="text-gray-500 mt-3 text-sm">
+            <p className="text-2xl sm:text-3xl text-white font-medium">Blogs</p>
+            <p className="text-[#ffffffb3] mt-2 sm:mt-3 text-xs sm:text-sm">
               Create, review, and publish your AI-generated posts.
             </p>
           </div>
-          <Select
-            value={selectedWebsiteId ?? undefined}
-            onValueChange={(val) => setSelectedWebsiteId(val)}
-          >
-            <SelectTrigger className="w-38 h-9 border-gray-200">
-              <SelectValue
-                placeholder={
-                  (selectedWebsiteId
-                    ? websites.find((w) => w.id === selectedWebsiteId)?.url
-                    : websites[0]?.url) || websiteId || "Select website"
-                }
-              />
-            </SelectTrigger>
-            <SelectContent>
-              {websites.length > 0 ? (
-                websites.map((w) => (
-                  <SelectItem key={w.id} value={w.id}>
-                    {w.url}
-                  </SelectItem>
-                ))
-              ) : websiteId ? (
-                <SelectItem value={websiteId}>{websiteId}</SelectItem>
-              ) : (
-                <SelectItem value="no-websites" disabled>{loadingWebsites ? "Loading..." : "No websites found"}</SelectItem>
-              )}
-            </SelectContent>
-          </Select>
+          <div className="w-full sm:w-auto">
+              <Select value={selectedWebsiteId || undefined} onValueChange={handleWebsiteChange}>
+                <SelectTrigger className="h-10  bg-[rgba(83,248,112,0.1)]!  rounded-[5px] focus-visible:outline-none focus-visible:ring-0 border-[#0000001a] focus-visible:border-[#0000001a] focus:outline-none cursor-pointer outline-none active:outline-none px-3.5 py-2.5 text-[#53F870]">
+                  <SelectValue placeholder="Select your website" />
+                </SelectTrigger>
+                <SelectContent className="cursor-pointer bg-[#142517]! ">
+                  {websites.map((website, index) => (
+                    <SelectItem
+                      key={website.id}
+                      value={website.id}
+                      className={`cursor-pointer data-[state=checked]:text-[#53F870] data-[state=checked]:opacity-40 ${index < websites.length - 1 ? 'border-b rounded-none border-[#0000001a]' : ''}`}
+                    >
+                      {website.url}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
         </div>
 
         {/* Create a Ranking Post Section */}
-        <Card className="border-gray-200 shadow-none bg-transparent">
+        <Card className="border-[#53f8701a] shadow-none bg-transparent">
           <CardContent className="">
             <div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
+              <h3 className="text-lg font-medium text-white mb-2">
                 Create a Ranking Post
               </h3>
-              <p className="text-sm text-gray-500 mb-4">
+              <p className="text-sm text-[#ffffffb3] mb-4">
                 Turn competitor keywords into SEO-ready blog posts in one click.
               </p>
-              <Button className="bg-black cursor-pointer py-5 px-8 text-white hover:bg-gray-900">
+              <Button
+                onClick={() => setOpenPostDialog(true)}
+                className="bg-black cursor-pointer py-5 px-8 text-[#53f870] border border-[#53f870] hover:bg-black"
+              >
                 Create Post
               </Button>
             </div>
           </CardContent>
         </Card>
+        <CreatePostDialogDashboard
+          open={openPostDialog}
+          onOpenChange={setOpenPostDialog}
+          websiteId={selectedWebsiteId ?? undefined}
+          onCreated={() => fetchArticles()}
+        />
 
         {/* Stats Grid */}
-        <div className="flex mt-5  text-sm">
+        <div className="flex flex-wrap mt-4 sm:mt-5 mb-2.5 gap-2 text-xs sm:text-sm">
           <Select value={filterStatus} onValueChange={setFilterStatus}>
-            <SelectTrigger className="w-auto border-0 bg-transparent px-0 py-0 text-gray-600 hover:text-gray-900 focus:ring-0 focus:ring-offset-0">
+            <SelectTrigger className="border-none !bg-transparent  ring-0 text-[#ffffff80] focus:ring-0 focus:ring-offset-0">
               <SelectValue placeholder="All" />
             </SelectTrigger>
             <SelectContent>
@@ -897,7 +1006,7 @@ export function ArticlesTab({
           <span className="text-gray-300"></span>
 
           <Select defaultValue="27-jan-2025">
-            <SelectTrigger className="w-auto border-0 bg-transparent px-0 py-0 text-gray-600 hover:text-gray-900 focus:ring-0 focus:ring-offset-0">
+            <SelectTrigger className="border-none !bg-transparent  ring-0 text-[#ffffff80] focus:ring-0 focus:ring-offset-0">
               <SelectValue placeholder="27-Jan, 2025" />
             </SelectTrigger>
             <SelectContent>
@@ -911,7 +1020,7 @@ export function ArticlesTab({
           <span className="text-gray-300"></span>
 
           <Select defaultValue="4-mar-2025">
-            <SelectTrigger className="w-auto border-0 bg-transparent px-0 py-0 text-gray-600 hover:text-gray-900 focus:ring-0 focus:ring-offset-0">
+            <SelectTrigger className="border-none !bg-transparent  ring-0 text-[#ffffff80] focus:ring-0 focus:ring-offset-0">
               <SelectValue placeholder="4 Mar, 2025" />
             </SelectTrigger>
             <SelectContent>
@@ -924,112 +1033,110 @@ export function ArticlesTab({
         </div>
 
         {/* Main Layout - Articles + Preview */}
-        <div className="flex gap-6 h-auto overflow-hidden">
+        <div className="flex flex-col lg:flex-row gap-6 h-auto lg:overflow-hidden">
           {/* Left Side - Articles List */}
-       <div className="space-y-3 pr-2">
-  {filteredArticles.length === 0 ? (
-    <div className="text-center py-12 text-gray-400">
-      <p className="text-sm">No articles found</p>
-    </div>
-  ) : (
-    filteredArticles.map((article) => (
-      <div
-        key={article.id}
-        onClick={() => {
-          setSelectedArticle(article);
-          setIsContentExpanded(false);
-        }}
-        className={`relative flex gap-3 p-3 bg-gray-100 border rounded-lg cursor-pointer hover:border-gray-300 hover:shadow-sm transition-all ${
-          selectedArticle?.id === article.id
-            ? "border-gray-200 bg-[#F7F7F7]"
-            : "border-gray-100"
-        }`}
-      >
-        {/* Thumbnail */}
-        <img
-          src={article.generatedImages?.[0] || "/article-image.jpg"}
-          alt={article.title}
-          className="w-20 h-20 rounded object-cover flex-shrink-0"
-        />
-
-        {/* Main Content Column */}
-        <div className="flex flex-col min-w-0 flex-1">
-          {/* Title + Meta */}
-          <div className="flex justify-between gap-2">
-            <div className="min-w-0">
-              <h4 className="font-medium text-gray-900 text-sm line-clamp-2">
-                {article.title}
-              </h4>
-
-              <div className="flex items-center gap-1 mt-1">
-                <Image
-                  src="/clock.png"
-                  height={13}
-                  width={13}
-                  alt="icon"
-                />
-                <p className="text-xs text-gray-500">
-                  {getReadingTime(article.wordCount)}
-                </p>
+          <div className="space-y-3 lg:pr-2 w-full lg:w-auto">
+            {filteredArticles.length === 0 ? (
+              <div className="text-center py-12 text-gray-400">
+                <p className="text-sm">No articles found</p>
               </div>
+            ) : (
+              filteredArticles.map((article) => (
+                <div
+                  key={article.id}
+                  onClick={() => {
+                    setSelectedArticle(article);
+                    setIsContentExpanded(false);
+                  }}
+                  className={`relative flex flex-col sm:flex-row gap-3 px-3 sm:px-3 py-3 sm:py-5 bg-[#101110] border border-[#53f8701a] rounded-lg cursor-pointer hover:shadow-sm transition-all ${
+                    selectedArticle?.id === article.id
+                      ? "border-[#53f8701a] bg-[#101110]"
+                      : "border-[#53f8701a]"
+                  }`}
+                >
+                  {/* Thumbnail */}
+                  <img
+                    src={article.generatedImages?.[0] || "/article-image.jpg"}
+                    alt={article.title}
+                    className="w-full sm:w-20 h-48 sm:h-20 rounded object-cover flex-shrink-0"
+                  />
 
-              <Badge
-                className={`mt-2 text-xs font-medium w-fit ${
-                  (article.status || "").toLowerCase() === "uploaded"
-                    ? "bg-transparent text-green-700 border border-green-600"
-                    : "bg-gray-100 text-gray-600 border border-gray-800"
-                }`}
-              >
-                {article.status}
-              </Badge>
-            </div>
+                  {/* Main Content Column */}
+                  <div className="flex flex-col min-w-0 flex-1">
+                    {/* Title + Meta */}
+                    <div className="flex flex-col sm:flex-row sm:justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <h4 className="font-medium text-white text-sm sm:text-sm line-clamp-2">
+                          {article.title}
+                        </h4>
 
-            {/* Edit Button */}
-            {selectedArticle?.id !== article.id && (
-              <Button
-                size="sm"
-                variant="ghost"
-                className="text-gray-400 hover:text-gray-700 h-8 w-8 p-0 flex-shrink-0"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  openEditDialog(article);
-                }}
-              >
-                Edit
-              </Button>
+                        <div className="flex items-center gap-1 mt-1">
+                          <Image
+                            src="/clock1.png"
+                            height={13}
+                            width={13}
+                            alt="icon"
+                          />
+                          <p className="text-xs text-[#ffffff80]">
+                            {getReadingTime(article.wordCount)}
+                          </p>
+                        </div>
+
+                        <Badge
+                          className={`mt-2 text-xs font-medium rounded-full w-fit ${
+                            (article.status || "").toLowerCase() === "uploaded"
+                              ? "bg-transparent text-green-700 border border-green-600"
+                              : "bg-[#0d0d0d] text-[#58a955] border border-[#58a955]"
+                          }`}
+                        >
+                          {article.status}
+                        </Badge>
+                      </div>
+
+                      {/* Edit Button */}
+                      {selectedArticle?.id !== article.id && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-[#53f870] hover:text-[#53f870] bg-[#53f8701a] hover:!bg-[#53f8701a] cursor-pointer h-8 w-full sm:w-8 px-[18px] sm:px-2 py-1.5 border-[#53f8701a] flex-shrink-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEditDialog(article);
+                          }}
+                        >
+                          Edit
+                        </Button>
+                      )}
+                    </div>
+
+                    {/* Preview (FULL WIDTH, NOT under image) */}
+                    <p className="text-xs text-gray-500 line-clamp-2 mt-2">
+                      {article.preview}
+                    </p>
+
+                    {/* Tags */}
+                    <div className="flex gap-1 flex-wrap mt-2">
+                      {article.tags?.slice(0, 5).map((tag) => (
+                        <span
+                          key={tag}
+                          className="text-xs bg-[#0d0d0d]  text-[#58a955] px-2 py-0.5 rounded-2xl border border-[#53f8701a]"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ))
             )}
           </div>
 
-          {/* Preview (FULL WIDTH, NOT under image) */}
-          <p className="text-xs text-gray-500 line-clamp-2 mt-2">
-            {article.preview}
-          </p>
-
-          {/* Tags */}
-          <div className="flex gap-1 flex-wrap mt-2">
-            {article.tags?.slice(0, 5).map((tag) => (
-              <span
-                key={tag}
-                className="text-xs bg-gray-200  text-gray-600 px-2 py-0.5 rounded-2xl border border-gray-200"
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
-        </div>
-      </div>
-    ))
-  )}
-</div>
-
           {/* Right Side - Edit/Preview Panel */}
           {selectedArticle && (
-            <div className=" max-w-[640px]  bg-white rounded-[9px] border-l border-gray-200 overflow-hidden flex flex-col">
+            <div className="fixed lg:static inset-0 lg:inset-auto z-50 lg:z-auto max-w-full lg:max-w-[640px] bg-[#0d0d0d] rounded-[16px] lg:border-l border-[#53f8701a] overflow-hidden flex flex-col">
               {/* Header */}
-              <div className="flex items-center justify-between p-4 border-b border-gray-200 flex-shrink-0">
-                <span className="text-sm  text-gray-500">
-                  EDIT POST
-                </span>
+              <div className="flex items-center justify-between p-3 sm:p-4 border  border-[#53f8701a] flex-shrink-0">
+                <span className="text-xs sm:text-sm text-[#ffffffb3]">VIEW POST</span>
                 <button
                   onClick={() => setSelectedArticle(null)}
                   className="text-gray-400 hover:text-gray-600 text-xl leading-none font-bold"
@@ -1040,39 +1147,39 @@ export function ArticlesTab({
 
               {/* Scrollable Content */}
               <div className="flex-1 overflow-y-auto">
-                <div className=" space-y-4 p-4">
+                <div className="space-y-3 sm:space-y-4 p-3 sm:p-4">
                   {/* Title */}
-                  <div className="flex gap-3">
-                    <label className="block text-xs mt-1 text-gray-600 ">
-                      Title
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                    <label className="block text-[10px] text-[#ffffff80]">
+                      Title:
                     </label>
-                    <h4>{selectedArticle.title || ""}</h4>
+                    <h4 className="text-base sm:text-lg text-white font-normal break-words">{selectedArticle.title || ""}</h4>
                   </div>
 
                   {/* Keywords */}
-                  <div className="flex gap-1">
-                    <label className="block mt-1 text-xs text-gray-600">
+                  <div className="flex flex-col sm:flex-row gap-1 sm:gap-2">
+                    <label className="block text-[10px] text-[#ffffff80] flex-shrink-0">
                       Keywords:
                     </label>
 
-                    <div className="flex  gap-2">
+                    <div className="flex text-[8px] sm:text-xs font-normal flex-wrap gap-2">
                       {(() => {
                         const keywords = Array.isArray(selectedArticle.keyword)
                           ? selectedArticle.keyword
                           : selectedArticle.keyword
                           ? String(selectedArticle.keyword)
-                              .split(',')
+                              .split(",")
                               .map((k) => k.trim())
                               .filter(Boolean)
                           : [];
                         return keywords.length > 0 ? (
                           keywords.map((keyword, index) => (
-                          <span
-                            key={index}
-                            className="px-1 py-1  rounded-full text-xs font-medium bg-gray-100 text-gray-600 border border-gray-300 inline-block"
-                          >
-                            {keyword}
-                          </span>
+                            <span
+                              key={index}
+                              className="px-1 py-1  rounded-full text-xs font-medium bg-[#53f8701a] text-[#53f870] border border-[#53f8701a] inline-block"
+                            >
+                              {keyword}
+                            </span>
                           ))
                         ) : (
                           <span className="text-xs text-gray-500">
@@ -1086,13 +1193,13 @@ export function ArticlesTab({
                   <div className="flex gap-3">
                     <div className="flex items-center gap-1">
                       <Image
-                        src="/smallclock.png"
+                        src="/clock2.png"
                         alt="reading time icon"
                         height={16}
                         width={16}
                         priority
                       />
-                      <p className="text-green-500 text-xs">
+                      <p className="text-[#53f870] text-[10px]">
                         {getReadingTime(selectedArticle.wordCount)}
                       </p>
                     </div>
@@ -1104,8 +1211,9 @@ export function ArticlesTab({
                         width={16}
                         priority
                       />
-                      <p className="text-green-500 text-xs">
-                        {selectedArticle.wordCount?.toLocaleString() || "—"} words
+                      <p className="text-[#53f870] text-[10px]">
+                        {selectedArticle.wordCount?.toLocaleString() || "—"}{" "}
+                        words
                       </p>
                     </div>
                     {selectedArticle.contentScore && (
@@ -1117,7 +1225,7 @@ export function ArticlesTab({
                           width={16}
                           priority
                         />
-                        <p className="text-green-500 text-xs">
+                        <p className="text-[#53f870] text-[10px]">
                           {selectedArticle.contentScore}% content score
                         </p>
                       </div>
@@ -1135,67 +1243,69 @@ export function ArticlesTab({
 
                   {/* SEO Preview */}
                   <div>
-                    <div className="bg-white border border-gray-200 p-9 rounded-lg shadow-sm">
-                      <label className="block text-[15px]  text-gray-700 mb-2">
+                    <div className="bg-[#101110] border border-[#53f8701a] p-9 rounded-lg shadow-xl">
+                      <label className="block text-[15px]  text-white mb-2">
                         SEO Preview
                       </label>
                       <p className="text-blue-600 font-medium text-sm mb-2 line-clamp-2">
                         {selectedArticle.metaTitle || selectedArticle.title}
                       </p>
-                      <p className="text-gray-600 text-xs leading-relaxed line-clamp-3">
-                        {selectedArticle.metaDescription || selectedArticle.preview}
+                      <p className="text-white text-xs leading-relaxed line-clamp-3">
+                        {selectedArticle.metaDescription ||
+                          selectedArticle.preview}
                       </p>
                     </div>
                   </div>
 
                   {/* Live URL for published articles */}
-                  {selectedArticle.status === "published" && selectedArticle.slug && (
-                    <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                      <div className="flex items-start gap-2">
-                        <Globe className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                        <div className="flex-1 min-w-0">
-                          <h4 className="text-sm font-semibold text-green-900 mb-1">
-                            Live Article URL
-                          </h4>
-                          <div className="flex items-center gap-2">
-                            <a
-                              href={getArticleUrl(selectedArticle.slug)}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-xs text-blue-600 hover:text-blue-800 hover:underline break-all flex-1"
-                            >
-                              {getArticleUrl(selectedArticle.slug)}
-                            </a>
-                            <button
-                              onClick={() => {
-                                navigator.clipboard.writeText(
-                                  getArticleUrl(selectedArticle.slug!)
-                                );
-                                toast.showToast({
-                                  title: "Copied!",
-                                  description: "URL copied to clipboard",
-                                  type: "success",
-                                });
-                              }}
-                              className="text-green-600 hover:text-green-800 flex-shrink-0"
-                              title="Copy URL"
-                            >
-                              <Copy className="w-3 h-3" />
-                            </button>
+                  {selectedArticle.status === "published" &&
+                    selectedArticle.slug && (
+                      <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <div className="flex items-start gap-2">
+                          <Globe className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-sm font-semibold text-green-900 mb-1">
+                              Live Article URL
+                            </h4>
+                            <div className="flex items-center gap-2">
+                              <a
+                                href={getArticleUrl(selectedArticle.slug)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs text-blue-600 hover:text-blue-800 hover:underline break-all flex-1"
+                              >
+                                {getArticleUrl(selectedArticle.slug)}
+                              </a>
+                              <button
+                                onClick={() => {
+                                  navigator.clipboard.writeText(
+                                    getArticleUrl(selectedArticle.slug!)
+                                  );
+                                  toast.showToast({
+                                    title: "Copied!",
+                                    description: "URL copied to clipboard",
+                                    type: "success",
+                                  });
+                                }}
+                                className="text-green-600 hover:text-green-800 flex-shrink-0"
+                                title="Copy URL"
+                              >
+                                <Copy className="w-3 h-3" />
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  )}
+                    )}
 
                   {/* Tags */}
                 </div>
-                <div className="border-b border-gray-200 " />
-                <div className="p-4">
-                  <h4 className="text-2xl mb-4">{selectedArticle.title}</h4>
+                <div className="border-b border-[#53f8701a]" />
+                <div className="p-3 sm:p-4">
+                  {/* <h4 className="text-2xl mb-4">{selectedArticle.title}</h4> */}
                   <div
-                    className={`text-[14px] text-gray-700 leading-relaxed relative ${
-                      isContentExpanded ? "" : "max-h-[400px] overflow-hidden"
+                    className={`text-xs sm:text-sm text-[#ffffffb3] leading-relaxed relative ${
+                      isContentExpanded ? "" : "max-h-[300px] sm:max-h-[400px] overflow-hidden"
                     }`}
                   >
                     {renderContentWithImages(
@@ -1203,15 +1313,14 @@ export function ArticlesTab({
                       selectedArticle.generatedImages || [],
                       3
                     )}
-                    {!isContentExpanded && (
+                    {/* {!isContentExpanded && (
                       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-white to-transparent" />
-                    )}
+                    )} */}
                   </div>
                   <div className="mt-4 flex justify-center">
                     <Button
-                      variant="outline"
                       size="sm"
-                      className="cursor-pointer"
+                      className="bg-[#53f8701a] text-[#53f870] hover:bg-[#53f8701a] rounded-full cursor-pointer"
                       onClick={() => setIsContentExpanded((prev) => !prev)}
                     >
                       {isContentExpanded ? "Show less" : "Read more"}
@@ -1221,9 +1330,9 @@ export function ArticlesTab({
               </div>
 
               {/* Footer Actions */}
-              <div className="border-t border-gray-200 p-4 bg-white flex gap-2 flex-shrink-0">
+              <div className="border-t border-[#53f8701a] p-3 sm:p-4 bg-[#0d0d0d] flex  sm:flex-row gap-2 flex-shrink-0">
                 <Button
-                  className="flex-1 bg-black text-white font-medium hover:bg-gray-900 h-10 text-sm rounded disabled:opacity-60"
+                  className="flex-1 bg-[#53f870] text-black font-medium hover:bg-[#53f870] cursor-pointer h-9 sm:h-10 text-xs sm:text-sm rounded disabled:opacity-60"
                   onClick={handlePublish}
                   disabled={isPublishing}
                 >
@@ -1253,47 +1362,49 @@ export function ArticlesTab({
                     "Publish"
                   )}
                 </Button>
-                {selectedArticle.status === "published" && selectedArticle.slug && (
-                  <Button
-                    variant="outline"
-                    className="h-10 px-4 flex items-center gap-2"
-                    onClick={() => handleIndexNow(selectedArticle.id, selectedArticle.slug!)}
-                    disabled={indexingArticle === selectedArticle.id}
-                  >
-                    {indexingArticle === selectedArticle.id ? (
-                      <div className="animate-spin">
-                        <Image src="/loader.png" alt="" width={92} height={92} />
-                      </div>
-                    ) : (
-                      <Globe className="w-4 h-4" />
-                    )}
-                    Index Now
-                  </Button>
-                )}
+                {selectedArticle.status === "published" &&
+                  selectedArticle.slug && (
+                    <Button
+                      className="flex-1 sm:flex-none h-9 sm:h-10 px-2 sm:px-4 flex bg-[#101110] hover:bg-[#101110] text-[#ffffffd3] hover:!text-[#ffffffd3] items-center justify-center sm:justify-start gap-1 sm:gap-2 text-xs sm:text-sm"
+                      onClick={() =>
+                        handleIndexNow(
+                          selectedArticle.id,
+                          selectedArticle.slug!
+                        )
+                      }
+                      disabled={indexingArticle === selectedArticle.id}
+                    >
+                      {indexingArticle === selectedArticle.id ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Globe className="w-3 sm:w-4 h-3 sm:h-4" />
+                      )}
+                      <span className="hidden sm:inline">Index Now</span>
+                    </Button>
+                  )}
                 <Button
-                  variant="ghost"
-                  className="h-9 w-14 p-0 rounded-sm text-red-500 bg-red-500 hover:text-red-700 hover:bg-red-50"
+                  className="h-9 sm:h-10 w-10 sm:w-14 p-0 rounded-sm text-red-500 bg-[#ff383c] hover:bg-[#ff383c] hover:text-red-700 cursor-pointer flex items-center justify-center"
                   onClick={() => setIsDeleteDialogOpen(true)}
                 >
-                  <Image src="/bin.png" height={11} width={11} alt="icon" />
+                  <Image src="/delete.png" height={18} width={16} alt="icon" />
                 </Button>
 
                 <Dialog
                   open={isDeleteDialogOpen}
                   onOpenChange={setIsDeleteDialogOpen}
                 >
-                  <DialogContent className="sm:max-w-[550px] text-center p-0 border-0">
+                  <DialogContent className="sm:max-w-[550px] bg-[#101110] text-center p-0 border-0">
                     <VisuallyHidden>
                       <DialogTitle>Confirm delete</DialogTitle>
                     </VisuallyHidden>
 
                     <div className="flex flex-col items-center gap-4 py-8 px-6">
-                      <h2 className="text-2xl  text-gray-900">
+                      <h2 className="text-2xl  text-white">
                         Confirm delete
                       </h2>
                       <div className=" flex items-center justify-center">
                         <Image
-                          src="/deletedocument.png"
+                          src={isDeleteCompletedDialogOpen ? "/checkfordark.png" : "/deletedocumentfordark.png"}
                           height={60}
                           width={60}
                           alt="delete"
@@ -1305,67 +1416,23 @@ export function ArticlesTab({
 
                     <div className="flex gap-3 px-6 pb-6">
                       <Button
-                        className="flex-1 h-11  bg-red-500 hover:bg-red-600 text-white font-medium"
+                        className="flex-1 h-11  bg-red-500 cursor-pointer hover:bg-red-600 text-white font-medium"
                         onClick={async () => {
                           if (selectedArticle) {
                             setIsDeleteDialogOpen(false);
                             await handleDeleteArticle(selectedArticle.id);
                             setSelectedArticle(null);
-                            setTimeout(() => {
                               setIsDeleteCompletedDialogOpen(true);
-                            }, 300);
                           }
                         }}
                       >
                         Delete
                       </Button>
                       <Button
-                        variant="outline"
-                        className="flex-1 h-11 text-gray-700 bg-gray-200 border-gray-200 hover:bg-gray-50"
+                        className="flex-1 h-11 text-[#5aff78] cursor-pointer bg-transparent hover:text-[#5aff78] border border-[#5aff78] hover:bg-transparent"
                         onClick={() => setIsDeleteDialogOpen(false)}
                       >
                         Cancel
-                      </Button>
-                    </div>
-                  </DialogContent>
-                </Dialog>
-
-                <Dialog
-                  open={isDeleteCompletedDialogOpen}
-                  onOpenChange={setIsDeleteCompletedDialogOpen}
-                >
-                  <DialogContent className="sm:max-w-[550px] text-center p-0 border-0">
-                    <VisuallyHidden>
-                      <DialogTitle>Delete completed</DialogTitle>
-                    </VisuallyHidden>
-
-                    <div className="flex flex-col items-center  gap-4 py-8 px-6">
-                      <h2 className="text-2xl  text-gray-900">Completed!</h2>
-                      <div className=" flex items-center justify-center">
-                        <Image
-                          src="/check.png"
-                          alt="icon"
-                          height={81}
-                          width={81}
-                          className="mt-9"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="px-6 pb-6">
-                      <Button
-                        className="w-full h-11 bg-green-600 hover:bg-green-600 text-white font-medium rounded-lg"
-                        onClick={() => {
-                          setIsDeleteCompletedDialogOpen(false);
-                          toast.showToast({
-                            title: "Article deleted",
-                            description:
-                              "The article has been permanently deleted.",
-                            type: "success",
-                          });
-                        }}
-                      >
-                        Done
                       </Button>
                     </div>
                   </DialogContent>
@@ -1401,7 +1468,6 @@ export function ArticlesTab({
         </Card>
       )} */}
 
-     
       <div className="flex gap-4">
         {/* Update Plan Button - only show if user is not premium */}
         {userPackage !== "premium" && (
@@ -1557,7 +1623,6 @@ export function ArticlesTab({
         )}
       </div>
 
-     
       <Dialog
         open={isEditDialogOpen}
         onOpenChange={(open) => {
@@ -1695,9 +1760,7 @@ export function ArticlesTab({
               <Button onClick={handleSaveEditedArticle} disabled={isSavingEdit}>
                 {isSavingEdit ? (
                   <span className="flex items-center gap-2">
-                    <div className="animate-spin">
-                      <Image src="/loader.png" alt="" width={92} height={92} />
-                    </div>{" "}
+                    <Loader2 className="w-4 h-4 animate-spin" />
                     Saving...
                   </span>
                 ) : (

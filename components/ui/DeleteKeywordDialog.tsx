@@ -20,7 +20,7 @@ export function DeleteKeywordDialog({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg w-full max-w-[450px] p-8 relative">
+      <div className="bg-[#101110] rounded-lg w-full max-w-[450px] p-8 relative">
         {/* Close Button */}
         <button
           onClick={onClose}
@@ -32,10 +32,10 @@ export function DeleteKeywordDialog({
         {/* Content */}
         <div className="space-y-6">
           <div>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-2">
+            <h2 className="text-2xl font-semibold text-white mb-2">
               Delete Keyword?
             </h2>
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-[#ffffffb3]">
               Are you sure you want to delete "{keyword}"? This action cannot be undone.
             </p>
           </div>
@@ -44,13 +44,13 @@ export function DeleteKeywordDialog({
           <div className="flex gap-3">
             <button
               onClick={onClose}
-              className="flex-1 h-10 px-4 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 font-medium transition-colors"
+              className="flex-1 h-10 px-4 rounded-lg border border-[#ffffff80] bg-[#d0d0d0] hover:bg-[#d0d0d0] cursor-pointer text-black font-medium transition-colors"
             >
               Cancel
             </button>
             <button
               onClick={onConfirm}
-              className="flex-1 h-10 px-4 rounded-lg bg-red-600 hover:bg-red-700 text-white font-medium transition-colors"
+              className="flex-1 h-10 px-4 rounded-lg bg-red-600 hover:bg-red-700 text-white font-medium transition-colors cursor-pointer"
             >
               Delete
             </button>
