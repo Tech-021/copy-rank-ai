@@ -1084,7 +1084,7 @@ export function CompetitorsTab({
                       <span className="px-2 py-0.5 text-xs">{row.sites}</span>
                     </td>
                     <td className="px-2 sm:px-4 py-2 sm:py-3">
-                      <div className="flex justify-start gap-1">
+                      <div className="flex justify-start ">
                         <Button className="border rounded-r-none bg-transparent hover:bg-transparent text-gray-300 cursor-pointer border-gray-700 rounded-l-md px-3 sm:px-6 h-7 sm:h-8 text-xs">
                           View
                         </Button>
