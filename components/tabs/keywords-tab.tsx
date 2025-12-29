@@ -1263,10 +1263,7 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
             </>
           ) : (
             <>
-              <p className="text-gray-600 mb-2">No website data found</p>
-              <p className="text-sm text-gray-500">
-                Please select a website from the list above.
-              </p>
+              <LoaderChevron />
             </>
           )}
         </div>
