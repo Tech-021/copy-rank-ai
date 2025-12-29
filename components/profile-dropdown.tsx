@@ -33,6 +33,7 @@ export function ProfileDropdown({ userEmail, userAvatar, onLogout }: ProfileDrop
               width={33}
               height={33}
               className="rounded-full object-cover"
+              loading="lazy"
             />
           ) : (
             <Image
@@ -41,6 +42,8 @@ export function ProfileDropdown({ userEmail, userAvatar, onLogout }: ProfileDrop
               width={33}
               height={33}
               className="rounded-full object-cover"
+              priority
+              unoptimized
             />
           )}
         </button>
@@ -55,6 +58,7 @@ export function ProfileDropdown({ userEmail, userAvatar, onLogout }: ProfileDrop
                 width={30}
                 height={30}
                 className="rounded-full object-cover"
+                loading="lazy"
               />
             ) : (
               <Image
@@ -63,6 +67,8 @@ export function ProfileDropdown({ userEmail, userAvatar, onLogout }: ProfileDrop
                 width={30}
                 height={30}
                 className="rounded-full object-cover"
+                priority
+                unoptimized
               />
             )}
           </div>

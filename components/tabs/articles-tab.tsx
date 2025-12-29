@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { LoaderChevron } from "@/components/ui/LoaderChevron";
 import { Stepper } from "@/components/ui/stepper";
 
 import {
@@ -925,9 +926,7 @@ export function ArticlesTab({
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
-          <div className="animate-spin">
-            <Image src="/loader.png" alt="" width={92} height={92} />
-          </div>
+          <LoaderChevron />
         </div>
       </div>
     );
@@ -1136,8 +1135,8 @@ export function ArticlesTab({
           {selectedArticle && (
             <div className="fixed lg:static inset-0 lg:inset-auto z-50 lg:z-auto max-w-full lg:max-w-[640px] bg-[#0d0d0d] rounded-[16px] lg:border-l border-[#53f8701a] overflow-hidden flex flex-col">
               {/* Header */}
-              <div className="flex items-center justify-between p-3 sm:p-4 border-b border-[#53f8701a] flex-shrink-0">
-                <span className="text-xs sm:text-sm text-[#ffffffb3]">EDIT POST</span>
+              <div className="flex items-center justify-between p-3 sm:p-4 border  border-[#53f8701a] flex-shrink-0">
+                <span className="text-xs sm:text-sm text-[#ffffffb3]">VIEW POST</span>
                 <button
                   onClick={() => setSelectedArticle(null)}
                   className="text-gray-400 hover:text-gray-600 text-xl leading-none font-bold"
@@ -1376,14 +1375,7 @@ export function ArticlesTab({
                       disabled={indexingArticle === selectedArticle.id}
                     >
                       {indexingArticle === selectedArticle.id ? (
-                        <div className="animate-spin">
-                          <Image
-                            src="/loader.png"
-                            alt=""
-                            width={92}
-                            height={92}
-                          />
-                        </div>
+                        <Loader2 className="w-4 h-4 animate-spin" />
                       ) : (
                         <Globe className="w-3 sm:w-4 h-3 sm:h-4" />
                       )}
@@ -1768,9 +1760,7 @@ export function ArticlesTab({
               <Button onClick={handleSaveEditedArticle} disabled={isSavingEdit}>
                 {isSavingEdit ? (
                   <span className="flex items-center gap-2">
-                    <div className="animate-spin">
-                      <Image src="/loader.png" alt="" width={92} height={92} />
-                    </div>{" "}
+                    <Loader2 className="w-4 h-4 animate-spin" />
                     Saving...
                   </span>
                 ) : (

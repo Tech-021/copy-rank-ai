@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from "react";
 import { Plus, X } from "lucide-react";
+import { LoaderChevron } from "@/components/ui/LoaderChevron";
 import { RefreshCcw } from "lucide-react";
 import { Check } from "lucide-react";
 import {
@@ -850,11 +851,7 @@ export function CompetitorsTab({
   if (loadingWebsites) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="animate-spin">
-            <Image src="/loader.png" alt="" width={92} height={92} />
-          </div>
-        </div>
+        <LoaderChevron />
       </div>
     );
   }
@@ -876,11 +873,7 @@ export function CompetitorsTab({
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="animate-spin">
-            <Image src="/loader.png" alt="" width={92} height={92} />
-          </div>
-        </div>
+        <LoaderChevron />
       </div>
     );
   }
@@ -924,7 +917,7 @@ export function CompetitorsTab({
               <Button
                 onClick={handleAddCompetitor}
                 variant="outline"
-                className="gap-2 text-[#53F870] border border-[#53f870]! lg:border-gray-700! rounded-r-none sm:rounded-r-none cursor-pointer bg-[rgba(83,248,112,0.1)]! hover:bg-[rgba(83,248,112,0.2)] text-xs sm:text-sm"
+                className="gap-2 text-[#53F870] border border-gray-800!  rounded-r-none sm:rounded-r-none cursor-pointer bg-[rgba(83,248,112,0.1)]! hover:bg-[rgba(83,248,112,0.2)] text-xs sm:text-sm"
               >
                 Add Competitors
                 <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -932,7 +925,7 @@ export function CompetitorsTab({
 
               <Button
                 variant="outline"
-                className="gap-2 text-[#53F870] border border-[#53f870]! lg:rounded-l-none sm:rounded-l-none cursor-pointer bg-[rgba(83,248,112,0.1)]! rounded-none rounded-r-lg hover:bg-[rgba(83,248,112,0.2)] text-xs sm:text-sm"
+                className="gap-2 text-[#53F870] border border-gray-800! lg:rounded-l-none sm:rounded-l-none cursor-pointer bg-[rgba(83,248,112,0.1)]! rounded-none rounded-r-lg hover:bg-[rgba(83,248,112,0.2)] text-xs sm:text-sm"
                 onClick={async () => {
                   const fallbackId =
                     initialWebsiteId ||
@@ -1091,7 +1084,7 @@ export function CompetitorsTab({
                       <span className="px-2 py-0.5 text-xs">{row.sites}</span>
                     </td>
                     <td className="px-2 sm:px-4 py-2 sm:py-3">
-                      <div className="flex justify-start gap-1">
+                      <div className="flex justify-start ">
                         <Button className="border rounded-r-none bg-transparent hover:bg-transparent text-gray-300 cursor-pointer border-gray-700 rounded-l-md px-3 sm:px-6 h-7 sm:h-8 text-xs">
                           View
                         </Button>

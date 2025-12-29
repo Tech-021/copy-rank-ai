@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChevronDown } from "lucide-react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/client";
+import { getUser } from "@/lib/auth";
+import { LoaderChevron } from "@/components/ui/LoaderChevron";
 import {
   Card,
   CardContent,
@@ -13,6 +15,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface IndexPost {
   id: string;
@@ -20,6 +28,7 @@ interface IndexPost {
   status: "indexed" | "requested" | "pending" | "un-indexed";
   keyword: string;
   visibility: "high" | "medium" | "low";
+  dbStatus?: string;
 }
 
 interface AnalyticsData {
@@ -53,134 +62,149 @@ const getCompetitorsCount = (keywordsData: any): number => {
 };
 
 export default function DashboardIndexPage() {
-  const [selectedWebsite, setSelectedWebsite] = useState("www.delani.pro");
-  const stats = {
-    totalCompetitors: 3,
-    avgOverlap: 12,
-  };
-
-  const [analytics, setAnalytics] = useState<AnalyticsData>({
-      articlesGenerated: 0,
-      articlesLive: 0,
-      estimatedTraffic: 0,
-      keywordsTracked: 0,
-      draftArticles: 0,
-      totalCompetitors: 0,
-    });
-
-  const fetchAnalytics = async (userId: string, websiteId?: string | null) => {
-      try {
-        let articlesQuery = supabase
-          .from("articles")
-          .select("status, estimated_traffic, keyword, word_count")
-          .eq("user_id", userId);
-  
-        if (websiteId) {
-          articlesQuery = articlesQuery.eq("website_id", websiteId);
-        }
-  
-        const { data: articles, error: articlesError } = await articlesQuery;
-  
-        if (articlesError) throw articlesError;
-  
-        const articlesGenerated = articles?.length || 0;
-        const articlesLive = articles?.filter(a => a.status === "published" || a.status === "UPLOADED").length || 0;
-        const draftArticles = articles?.filter(a => a.status === "draft" || a.status === "DRAFT").length || 0;
-        
-        const estimatedTraffic = articles?.reduce((sum, article) => {
-          return sum + (article.estimated_traffic || 0);
-        }, 0) || 0;
-  
-        const allKeywords = new Set<string>();
-        articles?.forEach(article => {
-          if (typeof article.keyword === 'string') {
-            article.keyword.split(',').forEach(k => allKeywords.add(k.trim()));
-          }
-        });
-        const keywordsTracked = allKeywords.size;
-  
-        let websitesQuery = supabase
-          .from("websites")
-          .select("keywords")
-          .eq("user_id", userId);
-  
-        if (websiteId) {
-          websitesQuery = websitesQuery.eq("id", websiteId);
-        }
-  
-        const { data: websitesData, error: websitesError } = await websitesQuery;
-  
-        if (websitesError) throw websitesError;
-  
-        let totalCompetitors = 0;
-        websitesData?.forEach(website => {
-          const competitorCount = getCompetitorsCount(website.keywords);
-          totalCompetitors += competitorCount;
-        });
-  
-        setAnalytics({
-          articlesGenerated,
-          articlesLive,
-          estimatedTraffic,
-          keywordsTracked,
-          draftArticles,
-          totalCompetitors,
-        });
-      } catch (error) {
-        console.error("Error fetching analytics:", error);
-      }
-    };
-  
-  const formatNumber = (num: number) => num.toString();
-  const [websites, setWebsites] = useState<Website[]>([]);
-
-  const handleWebsiteChange = async (websiteId: string) => {
-      setSelectedWebsiteId(websiteId);
-      
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      
-      if (user) {
-        await fetchAnalytics(user.id, websiteId);
-      }
-    };
-  
-  const [posts] = useState<IndexPost[]>([
-    {
-      id: "1",
-      title: "Why Framer is Changing...",
-      status: "indexed",
-      keyword: "web design",
-      visibility: "high",
-    },
-    {
-      id: "2",
-      title: "Web Design vs Web Dev...",
-      status: "requested",
-      keyword: "web-development",
-      visibility: "medium",
-    },
-    {
-      id: "3",
-      title: "Best Framer Templates...",
-      status: "requested",
-      keyword: "framer",
-      visibility: "high",
-    },
-    {
-      id: "4",
-      title: "How to Choose a Web...",
-      status: "requested",
-      keyword: "3d design",
-      visibility: "low",
-    },
-  ]);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [selectedWebsiteId, setSelectedWebsiteId] = useState<string | null>(null);
+  const [websites, setWebsites] = useState<Website[]>([]);
+  const [posts, setPosts] = useState<IndexPost[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [updatingPostId, setUpdatingPostId] = useState<string | null>(null);
+  const [indexStats, setIndexStats] = useState({
+    indexed: 0,
+    requested: 0,
+    pending: 0,
+    unIndexed: 0,
+  });
+
+  // Fetch current user
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      try {
+        const { data: user, error } = await getUser();
+        if (error || !user) {
+          console.error("Error fetching user:", error);
+          return;
+        }
+        setCurrentUser(user);
+      } catch (err) {
+        console.error("Failed to get current user:", err);
+      }
+    };
+
+    fetchCurrentUser();
+  }, []);
+
+  // Fetch websites for the user
+  useEffect(() => {
+    if (!currentUser?.id) return;
+
+    const loadUserWebsites = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("websites")
+          .select("id, url, topic")
+          .eq("user_id", currentUser.id)
+          .order("created_at", { ascending: false });
+
+        if (error) {
+          console.error("Error loading websites:", error);
+          return;
+        }
+
+        const userWebsites: Website[] = (data || []).map((w: any) => ({
+          id: w.id,
+          url: w.url,
+          topic: w.topic || "General",
+          keywords: {},
+        }));
+
+        setWebsites(userWebsites);
+
+        // Set first website as selected
+        if (userWebsites.length > 0 && !selectedWebsiteId) {
+          setSelectedWebsiteId(userWebsites[0].id);
+        }
+      } catch (error) {
+        console.error("Error loading websites:", error);
+      }
+    };
+
+    loadUserWebsites();
+  }, [currentUser?.id, selectedWebsiteId]);
+
+  // Fetch articles for the selected website
+  useEffect(() => {
+    if (!selectedWebsiteId || !currentUser?.id) return;
+
+    const fetchArticles = async () => {
+      try {
+        setLoading(true);
+
+        const { data: articles, error } = await supabase
+          .from("articles")
+          .select("id, title, status, keyword, estimated_traffic")
+          .eq("website_id", selectedWebsiteId)
+          .eq("user_id", currentUser.id);
+
+        if (error) {
+          console.error("Error fetching articles:", error);
+          return;
+        }
+
+        // Transform articles to index posts
+        const indexPosts: IndexPost[] = (articles || []).map((article: any) => {
+          // Determine status
+          let status: "indexed" | "requested" | "pending" | "un-indexed" = "un-indexed";
+          if (article.status === "published" || article.status === "UPLOADED") {
+            status = "indexed";
+          } else if (article.status === "draft") {
+            status = "requested";
+          }
+
+          // Determine visibility based on estimated traffic
+          let visibility: "high" | "medium" | "low" = "low";
+          if (article.estimated_traffic > 500) {
+            visibility = "high";
+          } else if (article.estimated_traffic > 100) {
+            visibility = "medium";
+          }
+
+          return {
+            id: article.id,
+            title: article.title || "Untitled",
+            status,
+            keyword: article.keyword || "—",
+            visibility,
+          };
+        });
+
+        setPosts(indexPosts);
+
+        // Calculate stats
+        const stats = {
+          indexed: indexPosts.filter((p) => p.status === "indexed").length,
+          requested: indexPosts.filter((p) => p.status === "requested").length,
+          pending: indexPosts.filter((p) => p.status === "pending").length,
+          unIndexed: indexPosts.filter((p) => p.status === "un-indexed").length,
+        };
+
+        setIndexStats(stats);
+      } catch (error) {
+        console.error("Error fetching articles:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchArticles();
+  }, [selectedWebsiteId, currentUser?.id]);
+
+  const handleWebsiteChange = (websiteId: string) => {
+    setSelectedWebsiteId(websiteId);
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "":
+      case "indexed":
         return "text-green-600";
       case "requested":
         return "text-gray-400";
@@ -195,16 +219,72 @@ export default function DashboardIndexPage() {
 
   const getVisibilityColor = (visibility: string) => {
     switch (visibility) {
-      case "":
+      case "high":
         return "text-green-600";
       case "medium":
-        return "text-gray-400";
+        return "text-yellow-600";
       case "low":
         return "text-gray-400";
       default:
         return "text-gray-400";
     }
   };
+
+  const updateArticleStatus = async (postId: string, newStatus: string) => {
+    try {
+      setUpdatingPostId(postId);
+
+      // Map UI status to database status
+      let dbStatus = "draft";
+      if (newStatus === "indexed") {
+        dbStatus = "published";
+      } else if (newStatus === "requested") {
+        dbStatus = "draft";
+      }
+
+      const { error } = await supabase
+        .from("articles")
+        .update({ status: dbStatus })
+        .eq("id", postId)
+        .eq("user_id", currentUser.id);
+
+      if (error) {
+        console.error("Error updating article status:", error);
+        return;
+      }
+
+      // Update local state
+      setPosts((prevPosts) =>
+        prevPosts.map((post) =>
+          post.id === postId
+            ? { ...post, status: newStatus as IndexPost["status"] }
+            : post
+        )
+      );
+
+      // Recalculate stats
+      const updatedPosts = posts.map((post) =>
+        post.id === postId
+          ? { ...post, status: newStatus as IndexPost["status"] }
+          : post
+      );
+
+      const stats = {
+        indexed: updatedPosts.filter((p) => p.status === "indexed").length,
+        requested: updatedPosts.filter((p) => p.status === "requested").length,
+        pending: updatedPosts.filter((p) => p.status === "pending").length,
+        unIndexed: updatedPosts.filter((p) => p.status === "un-indexed").length,
+      };
+
+      setIndexStats(stats);
+    } catch (error) {
+      console.error("Error updating article:", error);
+    } finally {
+      setUpdatingPostId(null);
+    }
+  };
+
+  const selectedWebsite = websites.find((w) => w.id === selectedWebsiteId);
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -215,131 +295,166 @@ export default function DashboardIndexPage() {
           <p className="text-xs sm:text-sm text-gray-500 mt-2">Publish posts to be detected and indexed by search engines.</p>
         </div>
         <div className="w-full sm:w-48">
-          <Select value={selectedWebsite} onValueChange={setSelectedWebsite}>
+          <Select value={selectedWebsiteId || ""} onValueChange={handleWebsiteChange}>
             <SelectTrigger className="h-10 bg-transparent border border-green-700 rounded-lg focus-visible:outline-none focus-visible:ring-0 px-3 py-2 text-green-600 font-medium text-xs sm:text-sm">
               <SelectValue placeholder="Select website" />
             </SelectTrigger>
             <SelectContent className="bg-black border border-green-700 rounded-lg">
-              <SelectItem value="www.delani.pro" className="cursor-pointer text-green-600">
-                www.delani.pro
-              </SelectItem>
-              <SelectItem value="www.delium.com" className="cursor-pointer text-green-600">
-                www.delium.com
-              </SelectItem>
+              {websites.map((website) => (
+                <SelectItem key={website.id} value={website.id} className="cursor-pointer text-green-600">
+                  {website.url}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
       </div>
 
       {/* Stats Cards */}
-       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-0 rounded-xl shadow-xl">
-          {/* Card 1 */}
-          <Card className="border-r sm:border-r lg:border-r border-l-0 border-t-0 border-b-0 sm:rounded-r-none lg:rounded-r-none rounded-tl-xl rounded-bl-xl lg:border-r border-gray-800 bg-black shadow-xl">
-            <CardContent className="flex flex-col justify-start gap-6 sm:gap-8 p-3 sm:p-6">
-              <div className="flex justify-between items-start">
-                <p className="text-xs sm:text-xs font-medium text-white tracking-wide">
-               Indexed Posts
-                </p>
-                <Image src="/index1.png" alt="icon" height={20} width={20} className="sm:h-6 sm:w-6" />
-              </div>
-              <p className="text-3xl sm:text-4xl font-bold text-[#53F870]">
-                {stats.totalCompetitors}
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-0 rounded-xl shadow-xl">
+        {/* Card 1 - Indexed Posts */}
+        <Card className="border-r sm:border-r lg:border-r border-l-0 border-t-0 border-b-0 sm:rounded-r-none lg:rounded-r-none rounded-tl-xl rounded-bl-xl lg:border-r border-gray-800 bg-black shadow-xl">
+          <CardContent className="flex flex-col justify-start gap-6 sm:gap-8 p-3 sm:p-6">
+            <div className="flex justify-between items-start">
+              <p className="text-xs sm:text-xs font-medium text-white tracking-wide">
+                Indexed Posts
               </p>
-            </CardContent>
-          </Card>
+              <Image src="/index1.png" alt="icon" height={20} width={20} className="sm:h-6 sm:w-6" />
+            </div>
+            <p className="text-3xl sm:text-4xl font-bold text-[#53F870]">{indexStats.indexed}</p>
+          </CardContent>
+        </Card>
 
-          {/* Card 2 */}
-          <Card className="border border-t-0 border-b-0 rounded-none border-[#53f8704b] bg-black shadow-xl">
-            <CardContent className="flex flex-col justify-start gap-6 sm:gap-8 p-3 sm:p-6">
-              <div className="flex justify-between items-start">
-                <p className="text-xs sm:text-xs font-medium text-white tracking-wide">
-                  Requested Index
-                </p>
-                <Image src="/index2.png" alt="icon" height={20} width={20} className="sm:h-6 sm:w-6" />
-              </div>
-              <p className="text-3xl sm:text-4xl font-bold text-[#53F870]">
-                {formatNumber(stats.avgOverlap)}
+        {/* Card 2 - Requested Index */}
+        <Card className="border border-t-0 border-b-0 rounded-none border-[#53f8704b] bg-black shadow-xl">
+          <CardContent className="flex flex-col justify-start gap-6 sm:gap-8 p-3 sm:p-6">
+            <div className="flex justify-between items-start">
+              <p className="text-xs sm:text-xs font-medium text-white tracking-wide">
+                Requested Index
               </p>
-            </CardContent>
-          </Card>
+              <Image src="/index2.png" alt="icon" height={20} width={20} className="sm:h-6 sm:w-6" />
+            </div>
+            <p className="text-3xl sm:text-4xl font-bold text-[#53F870]">{indexStats.requested}</p>
+          </CardContent>
+        </Card>
 
-          {/* Card 3 */}
-          <Card className="border border-t-0 border-b-0 rounded-none border-[#53f8704b]  bg-black shadow-xl">
-            <CardContent className="flex flex-col justify-start gap-6 sm:gap-8 p-3 sm:p-6">
-              <div className="flex justify-between items-start">
-                <p className="text-xs sm:text-xs font-medium text-white tracking-wide">
-                  Pending Index
-                </p>
-                <Image src="/index3.png" alt="icon" height={20} width={20} className="sm:h-6 sm:w-6" />
-              </div>
-              <p className="text-3xl sm:text-4xl font-bold text-[#53F870]">9</p>
-            </CardContent>
-          </Card>
+        {/* Card 3 - Pending Index */}
+        <Card className="border border-t-0 border-b-0 rounded-none border-[#53f8704b] bg-black shadow-xl">
+          <CardContent className="flex flex-col justify-start gap-6 sm:gap-8 p-3 sm:p-6">
+            <div className="flex justify-between items-start">
+              <p className="text-xs sm:text-xs font-medium text-white tracking-wide">
+                Pending Index
+              </p>
+              <Image src="/index3.png" alt="icon" height={20} width={20} className="sm:h-6 sm:w-6" />
+            </div>
+            <p className="text-3xl sm:text-4xl font-bold text-[#53F870]">{indexStats.pending}</p>
+          </CardContent>
+        </Card>
 
-          {/* Card 4 */}
-          <Card className="border border-t-0 border-b-0 border-r-0 rounded-tr-xl rounded-br-xl lg:rounded-tr-none lg:rounded-br-none lg:border-r-0 border-[#53f8704b] bg-black shadow-xl">
-            <CardContent className="flex flex-col justify-start gap-6 sm:gap-8 p-3 sm:p-6">
-              <div className="flex justify-between items-start">
-                <p className="text-xs sm:text-xs font-medium text-white tracking-wide">
-                  Un-Indexed Posts 
-                </p>
-                <Image src="/index4.png" alt="icon" height={24} width={24} className="sm:h-8 sm:w-8" />
-              </div>
-              <p className="text-3xl sm:text-4xl font-bold text-[#53F870]">4</p>
-            </CardContent>
-          </Card>
-        </div>
+        {/* Card 4 - Un-Indexed Posts */}
+        <Card className="border border-t-0 border-b-0 border-r-0 rounded-tr-xl rounded-br-xl lg:rounded-tr-none lg:rounded-br-none lg:border-r-0 border-[#53f8704b] bg-black shadow-xl">
+          <CardContent className="flex flex-col justify-start gap-6 sm:gap-8 p-3 sm:p-6">
+            <div className="flex justify-between items-start">
+              <p className="text-xs sm:text-xs font-medium text-white tracking-wide">
+                Un-Indexed Posts
+              </p>
+              <Image src="/index4.png" alt="icon" height={24} width={24} className="sm:h-8 sm:w-8" />
+            </div>
+            <p className="text-3xl sm:text-4xl font-bold text-[#53F870]">{indexStats.unIndexed}</p>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Table Section */}
-      <div className="bg-black border min-h-[420px] sm:h-[420px] border-gray-600 rounded-lg overflow-hidden">
+      <div className="bg-black border border-gray-600 rounded-lg overflow-hidden">
         <div className="p-3 sm:p-4 border-b border-gray-700">
           <h3 className="text-base sm:text-lg font-normal text-white">Index Your Posts</h3>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="border border-gray-700 w-full">
-            <thead className="">
-              <tr className="border-b border-gray-800">
-                <th className="text-left py-3 sm:py-4 px-3 sm:px-6 text-xs font-normal text-gray-500">Post</th>
-                <th className="text-left py-3 sm:py-4 px-3 sm:px-6 text-xs font-normal text-gray-500 hidden sm:table-cell">Status</th>
-                <th className="text-left py-3 sm:py-4 px-3 sm:px-6 text-xs font-normal text-gray-500 hidden sm:table-cell">Keyword</th>
-                <th className="text-left py-3 sm:py-4 px-3 sm:px-6 text-xs font-normal text-gray-500 hidden lg:table-cell">Visibility</th>
-                <th className="text-left py-3 sm:py-4 px-3 sm:px-6 text-xs font-normal text-gray-500">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {posts.map((post, index) => (
-                <tr key={post.id} className={`${index !== posts.length - 1 ? "border-b border-gray-800" : ""}`}>
-                  <td className="py-3 sm:py-4 px-3 sm:px-6">
-                    <span className={`text-xs sm:text-sm text-[#53F870]! font-normal ${getStatusColor(post.status)}`}>{post.title}</span>
-                  </td>
-                  <td className="py-3 sm:py-4 px-3 sm:px-6 hidden sm:table-cell">
-                    <span className={`text-xs font-normal capitalize ${getStatusColor(post.status)}`}>
-                      {post.status}
-                    </span>
-                  </td>
-                  <td className="py-3 sm:py-4 px-3 sm:px-6 hidden sm:table-cell">
-                    <span className="text-xs font-normal text-gray-500">{post.keyword}</span>
-                  </td>
-                  <td className="py-3 sm:py-4 px-3 sm:px-6 hidden lg:table-cell">
-                    <span className={`text-xs font-normal capitalize ${getVisibilityColor(post.visibility)}`}>
-                      {post.visibility}
-                    </span>
-                  </td>
-                  <td className="py-3 sm:py-4 px-3 sm:px-6">
-                    <div className="flex items-center gap-1">
-                      <Button className="bg-transparent px-3 sm:px-8 rounded-r-none hover:bg-gray-400 border border-gray-600 text-xs font-normal text-gray-500">
-                        {post.status === "indexed" ? "Request" : "Requested"}
-                      </Button>
-                      <Button className="bg-transparent hover:bg-gray-400 rounded-l-none border border-gray-600 px-2 sm:px-3">
-                        <ChevronDown className="w-3 h-3 sm:w-4 sm:h-4 text-gray-600" />
-                      </Button>
-                    </div>
-                  </td>
+        <div className="w-full overflow-x-auto">
+          {loading ? (
+            <div className="flex items-center justify-center h-64">
+              <LoaderChevron />
+            </div>
+          ) : posts.length === 0 ? (
+            <div className="flex items-center justify-center h-64 text-gray-400">
+              <p>No posts found for this website</p>
+            </div>
+          ) : (
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="border-b border-gray-800">
+                  <th className="text-left py-3 sm:py-4 px-2 sm:px-6 text-xs font-normal text-gray-500 min-w-[200px] sm:min-w-auto">Post</th>
+                  <th className="text-left py-3 sm:py-4 px-2 sm:px-6 text-xs font-normal text-gray-500 hidden sm:table-cell whitespace-nowrap">Status</th>
+                  <th className="text-left py-3 sm:py-4 px-2 sm:px-6 text-xs font-normal text-gray-500 hidden sm:table-cell whitespace-nowrap">Keyword</th>
+                  <th className="text-left py-3 sm:py-4 px-2 sm:px-6 text-xs font-normal text-gray-500 hidden lg:table-cell whitespace-nowrap">Visibility</th>
+                  <th className="text-left py-3 sm:py-4 px-2 sm:px-6 text-xs font-normal text-gray-500 whitespace-nowrap">Action</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {posts.map((post, index) => (
+                  <tr key={post.id} className={`${index !== posts.length - 1 ? "border-b border-gray-800" : ""}`}>
+                    <td className="py-3 sm:py-4 px-2 sm:px-6 min-w-[200px] sm:min-w-auto">
+                      <span className="text-xs sm:text-sm text-[#53F870] font-normal break-words">{post.title}</span>
+                    </td>
+                    <td className="py-3 sm:py-4 px-2 sm:px-6 hidden sm:table-cell whitespace-nowrap">
+                      <span className={`text-xs font-normal capitalize ${getStatusColor(post.status)}`}>
+                        {post.status}
+                      </span>
+                    </td>
+                    <td className="py-3 sm:py-4 px-2 sm:px-6 hidden sm:table-cell whitespace-nowrap">
+                      <span className="text-xs font-normal text-gray-500 truncate max-w-[150px]">{post.keyword}</span>
+                    </td>
+                    <td className="py-3 sm:py-4 px-2 sm:px-6 hidden lg:table-cell whitespace-nowrap">
+                      <span className={`text-xs font-normal capitalize ${getVisibilityColor(post.visibility)}`}>
+                        {post.visibility}
+                      </span>
+                    </td>
+                    <td className="py-3 sm:py-4 px-2 sm:px-6 whitespace-nowrap">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <div className="flex items-center ">
+                            <Button 
+                              disabled={updatingPostId === post.id}
+                              className="bg-transparent px-2 sm:px-8 rounded-r-none hover:bg-gray-900 border border-gray-600 text-xs font-normal text-gray-500 h-auto py-1 sm:py-2 min-w-fit"
+                            >
+                              {post.status === "indexed" ? "Request Index" : "Requested"}
+                            </Button>
+                            <Button 
+                              disabled={updatingPostId === post.id}
+                              className="bg-transparent hover:bg-gray-900 rounded-l-none border border-gray-600 px-2 sm:px-3 h-auto py-1 sm:py-2"
+                            >
+                              <ChevronDown className="w-3 h-3 sm:w-4 sm:h-4 text-gray-600" />
+                            </Button>
+                          </div>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="bg-black border border-gray-700">
+                          <DropdownMenuItem
+                            onClick={() => updateArticleStatus(post.id, "requested")}
+                            className="text-xs text-gray-400 hover:text-white cursor-pointer"
+                          >
+                            Request Index
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => updateArticleStatus(post.id, "indexed")}
+                            className="text-xs text-gray-400 hover:text-white cursor-pointer"
+                          >
+                            Mark as Indexed
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => updateArticleStatus(post.id, "un-indexed")}
+                            className="text-xs text-gray-400 hover:text-white cursor-pointer"
+                          >
+                            Un-Index
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
     </div>

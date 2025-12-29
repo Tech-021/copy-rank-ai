@@ -431,13 +431,13 @@ export function LoginPage({
   };
 
   return (
-    <div className="h-screen w-screen flex overflow-hidden bg-white">
+    <div className="h-screen w-screen flex overflow-hidden bg-black">
       {/* Left Side - Login Form */}
       <div className="w-full lg:w-1/2 flex flex-col">
         {/* Back Button */}
         <div className="pt-2.5 pl-5">
           <Link href="/">
-            <Button className="bg-white hover:bg-white text-black border border-[#dbdadd] rounded-full hover:text-[#838383] cursor-pointer">
+            <Button className="bg-[#5AFF78] hover:bg-white text-black border border-[#dbdadd] rounded-full hover:text-[#838383] cursor-pointer">
               <ArrowLeft /> Go to Home
             </Button>
           </Link>
@@ -458,13 +458,13 @@ export function LoginPage({
 
             {/* Header */}
             <div className="mb-8">
-              <h2 className="text-[32px] font-bold text-gray-900 mb-3">
+              <h2 className="text-[32px] font-bold text-white mb-3">
                 Welcome back
               </h2>
-              <p className="text-gray-600 text-[14px] leading-relaxed">
+              <p className="text-gray-400 text-[14px] leading-relaxed">
                 Sign in to access your dashboard, analyze competitors, and take your SEO to the next level.
               </p>
-              <p className="text-gray-900 text-[16px] mt-3">
+              <p className="text-gray-400 text-[16px] mt-3">
                 Don't have an account?{" "}
                 <button
                   type="button"
@@ -488,7 +488,7 @@ export function LoginPage({
               <button
                 onClick={handleGoogleSignIn}
                 disabled={googleLoading}
-                className="cursor-pointer bg-white border border-gray-300 rounded-lg py-3.5 px-6 w-full flex items-center justify-center gap-3 hover:bg-gray-50 transition-all shadow-sm hover:shadow disabled:opacity-50 disabled:cursor-not-allowed"
+                className="cursor-pointer bg-[#5AFF78] border border-gray-300 rounded-lg py-3.5 px-6 w-full flex items-center justify-center gap-3 hover:bg-gray-50 transition-all shadow-sm hover:shadow disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Image src="/google.png" width={24} height={24} alt="Google" />
                 <span className="text-gray-700 font-medium text-[15px]">
@@ -496,7 +496,7 @@ export function LoginPage({
                 </span>
               </button>
 
-              <p className="text-gray-500 text-[13px] text-center leading-relaxed px-4">
+              <p className="text-gray-400 text-[13px] text-center leading-relaxed px-4">
                 By continuing, you agree to our Terms of Service and Privacy Policy
               </p>
             </div>
