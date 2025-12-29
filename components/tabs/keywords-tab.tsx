@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { RefreshCw } from "lucide-react";
 import { Plus } from "lucide-react";
 import { LoaderChevron } from "@/components/ui/LoaderChevron";
@@ -127,7 +127,7 @@ export function KeywordsTab({
   websiteId,
 }: KeywordsTabProps) {
   const [selectedWebsiteId, setSelectedWebsiteId] = useState<string | null>(
-    initialWebsiteId || null
+    websiteId ?? null
   );
   const [websites, setWebsites] = useState<Website[]>([]);
   const [websiteData, setWebsiteData] = useState<WebsiteData | null>(null);
@@ -199,13 +199,10 @@ export function KeywordsTab({
     fetchCurrentUser();
   }, []);
 
-  const loadUserWebsites = async () => {
+ const loadUserWebsites = useCallback(async () => {
     try {
       setLoadingWebsites(true);
-      // Don't error if user isn't loaded yet—just return and wait
-      if (!currentUser || !currentUser.id) {
-        return;
-      }
+      if (!currentUser?.id) return;
 
       const { data, error: dbError } = await supabase
         .from("websites")
@@ -223,22 +220,32 @@ export function KeywordsTab({
         id: w.id,
         url: w.url,
         topic: w.topic || "General",
-        // carry stored keywords payload for later merge
-        keywords: w.keywords,
+        created_at: w.created_at,
       }));
 
       setWebsites(userWebsites);
       setError(null);
+
       if (!selectedWebsiteId && userWebsites.length > 0) {
         setSelectedWebsiteId(userWebsites[0].id);
       }
-    } catch (error) {
-      console.error("Error loading websites:", error);
+    } catch (e) {
+      console.error("Error loading websites:", e);
       setError("Failed to load websites");
     } finally {
       setLoadingWebsites(false);
     }
-  };
+  }, [currentUser?.id, selectedWebsiteId])
+
+  useEffect(() => {
+    if (websiteId) {
+      setSelectedWebsiteId(websiteId);
+      return;
+    }
+    if (!loadingUser && currentUser?.id) {
+      loadUserWebsites();
+    }
+  }, [websiteId, loadingUser, currentUser?.id, loadUserWebsites])
 
   useEffect(() => {
     if (initialWebsiteId) {
