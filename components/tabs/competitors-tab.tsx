@@ -114,7 +114,7 @@ const websitesStorageKey = (userId: string) => `websites-cache:${userId}`;
 
 const readSelectedWebsiteId = () => {
   try {
-    return localStorage.getItem(selectedWebsiteStorageKey);
+    return sessionStorage.getItem(selectedWebsiteStorageKey);
   } catch {
     return null;
   }
@@ -122,7 +122,7 @@ const readSelectedWebsiteId = () => {
 
 const writeSelectedWebsiteId = (websiteId: string) => {
   try {
-    localStorage.setItem(selectedWebsiteStorageKey, websiteId);
+    sessionStorage.setItem(selectedWebsiteStorageKey, websiteId);
   } catch {
     // ignore storage failures
   }
@@ -135,7 +135,7 @@ type WebsitesCache = {
 
 const readWebsitesCache = (userId: string): WebsitesCache | null => {
   try {
-    const raw = localStorage.getItem(websitesStorageKey(userId));
+    const raw = sessionStorage.getItem(websitesStorageKey(userId));
     if (!raw) return null;
     const parsed = JSON.parse(raw) as WebsitesCache;
     if (!parsed?.websites || !Array.isArray(parsed.websites)) return null;
@@ -147,7 +147,7 @@ const readWebsitesCache = (userId: string): WebsitesCache | null => {
 
 const writeWebsitesCache = (userId: string, websites: Website[]) => {
   try {
-    localStorage.setItem(
+    sessionStorage.setItem(
       websitesStorageKey(userId),
       JSON.stringify({ websites, cachedAt: new Date().toISOString() } as WebsitesCache)
     );
@@ -161,7 +161,7 @@ const competitorsCacheKey = (websiteId: string) =>
 
 const readCompetitorsCache = (websiteId: string): CompetitorsCache | null => {
   try {
-    const raw = localStorage.getItem(competitorsCacheKey(websiteId));
+    const raw = sessionStorage.getItem(competitorsCacheKey(websiteId));
     if (!raw) return null;
     const parsed = JSON.parse(raw) as CompetitorsCache;
     if (!parsed?.website || !Array.isArray(parsed.competitors)) return null;
@@ -173,11 +173,7 @@ const readCompetitorsCache = (websiteId: string): CompetitorsCache | null => {
 
 const writeCompetitorsCache = (websiteId: string, value: CompetitorsCache) => {
   try {
-    sessionStorage.setItem(
-      competitorsCacheKey(websiteId),
-      JSON.stringify(value)
-    );
-    localStorage.setItem(competitorsCacheKey(websiteId), JSON.stringify(value));
+    sessionStorage.setItem(competitorsCacheKey(websiteId), JSON.stringify(value));
   } catch {
     // ignore storage failures
   }
@@ -357,7 +353,6 @@ export function CompetitorsTab({
         }
       }
 
-      const response = await fetch(`/api/keyword/${siteId}`);
       // 1.5) Cheap DB version check (no loader, no API fetch if unchanged)
       if (cached) {
         const cachedUpdatedAt: string | null = cached?.competitorsUpdatedAt ?? null;
@@ -1406,12 +1401,12 @@ export function CompetitorsTab({
                     </td>
                     <td className="px-2 sm:px-4 py-2 sm:py-3">
                       <div className="flex justify-start ">
-                        <Button className="border rounded-r-none bg-transparent hover:text-[#53f870] hover:!bg-[#53f8701a] text-gray-300 cursor-pointer border-gray-700 rounded-l-md px-3 sm:px-6 h-7 sm:h-8 text-xs">
+                        <Button className="border rounded-r-none bg-transparent hover:text-[#53f870] hover:bg-[#53f8701a]! text-gray-300 cursor-pointer border-gray-700 rounded-l-md px-3 sm:px-6 h-7 sm:h-8 text-xs">
                           View
                         </Button>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button className="group border border-l-0 hover:!bg-[#53f8701a] rounded-l-none bg-transparent border-gray-600 rounded-r-md w-7 sm:w-8 h-7 sm:h-8 p-0 flex items-center justify-center">
+                            <Button className="group border border-l-0 hover:bg-[#53f8701a]! rounded-l-none bg-transparent border-gray-600 rounded-r-md w-7 sm:w-8 h-7 sm:h-8 p-0 flex items-center justify-center">
                               <ChevronDown className="w-4 h-4 text-gray-300 group-hover:text-[#53f870]" />
                             </Button>
                           </DropdownMenuTrigger>
@@ -1455,7 +1450,7 @@ export function CompetitorsTab({
                     <div className="mt-4 sm:mt-6 flex justify-end mr-2 sm:mr-4">
                       <Button
                         onClick={handleCreatePost}
-                        className="bg-transparent text-gray-400 border border-gray-800 px-4 sm:px-6 mb-4 sm:mb-5 h-8 sm:h-9 text-xs sm:text-sm hover:text-[#53f870] hover:!bg-[#53f8701a]"
+                        className="bg-transparent text-gray-400 border border-gray-800 px-4 sm:px-6 mb-4 sm:mb-5 h-8 sm:h-9 text-xs sm:text-sm hover:text-[#53f870] hover:bg-[#53f8701a]!"
                       >
                         Create post
                       </Button>
@@ -1576,12 +1571,12 @@ export function CompetitorsTab({
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex justify-start">
-                        <Button className="border hover:text-[#53f870] hover:!bg-[#53f8701a] text-gray-300 rounded-r-none bg-transparent hover:bg-transparent text-gray-300cursor-pointer border-gray-700 rounded-l-md px-6 h-8 text-xs">
+                        <Button className="border hover:text-[#53f870] hover:bg-[#53f8701a]! text-gray-300 rounded-r-none bg-transparent cursor-pointer border-gray-700 rounded-l-md px-6 h-8 text-xs">
                           Visit
                         </Button>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button className="group border border-l-0 rounded-l-none bg-transparent border-gray-700 rounded-r-md w-8 h-8 p-0 flex items-center justify-center hover:!bg-[#53f8701a]">
+                            <Button className="group border border-l-0 rounded-l-none bg-transparent border-gray-700 rounded-r-md w-8 h-8 p-0 flex items-center justify-center hover:bg-[#53f8701a]!">
                               <ChevronDown className="w-4 h-4 text-gray-600 group-hover:text-[#53f870] transition-colors duration-200" />
                             </Button>
                           </DropdownMenuTrigger>
