@@ -1041,8 +1041,8 @@ export function AnalyzeTab({
                     onClick={handleAddCompetitor}
                     className={`cursor-pointer flex items-center justify-between border px-4 pb-4 pt-5 ${
                       analytics.totalCompetitors > 0
-                        ? "rounded-b-xl"
-                        : "rounded-xl"
+                        ? "rounded-none rounded-b-xl"
+                        : "rounded-none rounded-b-xl"
                     } border-gray-800 w-[300px]`}
                   >
                     <div className="flex items-center gap-5">

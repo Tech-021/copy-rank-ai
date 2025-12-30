@@ -610,7 +610,7 @@ export function SettingsTab() {
                     key={site.id}
                     className="flex items-center justify-between gap-2 p-2 sm:p-3 bg-transparent rounded"
                   >
-                    <span className="text-xs sm:text-sm text-gray-700">
+                    <span className="text-xs sm:text-sm text-gray-500">
                       {site.domain}
                     </span>
                     <span
