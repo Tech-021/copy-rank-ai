@@ -1191,7 +1191,7 @@ export function CompetitorsTab({
                       index !== siteKeywords.length - 1
                         ? "border-b border-gray-700"
                         : ""
-                    } hover:bg-gray-900`}
+                    } hover:bg-transparent`}
                   >
                     <td className="px-2 sm:px-4 py-2 sm:py-3 w-10">
                       <input
@@ -1218,14 +1218,14 @@ export function CompetitorsTab({
                     </td>
                     <td className="px-2 sm:px-4 py-2 sm:py-3">
                       <div className="flex justify-start ">
-                        <Button className="border rounded-r-none bg-transparent hover:bg-transparent text-gray-300 cursor-pointer border-gray-700 rounded-l-md px-3 sm:px-6 h-7 sm:h-8 text-xs">
+                        <Button className="border rounded-r-none bg-transparent hover:text-[#53f870] hover:!bg-[#53f8701a] text-gray-300 cursor-pointer border-gray-700 rounded-l-md px-3 sm:px-6 h-7 sm:h-8 text-xs">
                           View
                         </Button>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button className="border border-l-0 rounded-l-none bg-transparent border-gray-600 rounded-r-md w-7 sm:w-8 h-7 sm:h-8 p-0 flex items-center justify-center hover:bg-gray-50">
-                              <ChevronDown className="w-4 h-4 text-gray-300" />
-                            </Button>
+                            <Button className="group border border-l-0 hover:!bg-[#53f8701a] rounded-l-none bg-transparent border-gray-600 rounded-r-md w-7 sm:w-8 h-7 sm:h-8 p-0 flex items-center justify-center">
+  <ChevronDown className="w-4 h-4 text-gray-300 group-hover:text-[#53f870]" />
+</Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-32">
                             <DropdownMenuItem
