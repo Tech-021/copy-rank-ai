@@ -165,7 +165,10 @@ const writeWebsitesCache = (userId: string, websites: Website[]) => {
   try {
     localStorage.setItem(
       websitesStorageKey(userId),
-      JSON.stringify({ websites, cachedAt: new Date().toISOString() } as WebsitesCache)
+      JSON.stringify({
+        websites,
+        cachedAt: new Date().toISOString(),
+      } as WebsitesCache)
     );
   } catch {
     // ignore storage failures
@@ -223,11 +226,15 @@ export function KeywordsTab({
   const [dialogCompleted, setDialogCompleted] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [showImportingDialog, setShowImportingDialog] = useState(false);
-  const [showKeywordsSyncedDialog, setShowKeywordsSyncedDialog] = useState(false);
+  const [showKeywordsSyncedDialog, setShowKeywordsSyncedDialog] =
+    useState(false);
   const [showSyncDialog, setShowSyncDialog] = useState(false);
   const [showAddKeywordsDialog, setShowAddKeywordsDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [keywordToDelete, setKeywordToDelete] = useState<{ index: number; keyword: string } | null>(null);
+  const [keywordToDelete, setKeywordToDelete] = useState<{
+    index: number;
+    keyword: string;
+  } | null>(null);
   const toast = useToast();
 
   // Keep latest values available inside async callbacks (prevents stale requests overwriting UI)
@@ -287,7 +294,7 @@ export function KeywordsTab({
     fetchCurrentUser();
   }, []);
 
- const loadUserWebsites = useCallback(async () => {
+  const loadUserWebsites = useCallback(async () => {
     const seq = ++loadWebsitesSeqRef.current;
     const isCurrent = () => loadWebsitesSeqRef.current === seq;
 
@@ -356,7 +363,7 @@ export function KeywordsTab({
       // Only end loading for the latest in-flight websites request.
       if (isCurrent()) setLoadingWebsites(false);
     }
-  }, [currentUser?.id])
+  }, [currentUser?.id]);
 
   useEffect(() => {
     if (websiteId) {
@@ -367,7 +374,7 @@ export function KeywordsTab({
     if (!loadingUser && currentUser?.id) {
       loadUserWebsites();
     }
-  }, [websiteId, loadingUser, currentUser?.id, loadUserWebsites])
+  }, [websiteId, loadingUser, currentUser?.id, loadUserWebsites]);
 
   const fetchKeywords = useCallback(
     async (options?: { forceRefresh?: boolean }) => {
@@ -422,10 +429,15 @@ export function KeywordsTab({
         if (isCurrent()) setError(null);
 
         // 0) Render instantly from session cache (no spinner)
-        const cached = !forceRefresh ? readKeywordsCache(requestWebsiteId) : null;
+        const cached = !forceRefresh
+          ? readKeywordsCache(requestWebsiteId)
+          : null;
         if (cached) {
           if (isCurrent()) {
-            setWebsiteData({ website: cached.website, keywords: cached.keywords });
+            setWebsiteData({
+              website: cached.website,
+              keywords: cached.keywords,
+            });
             setKeywords(cached.keywords);
             setSelectedKeywords(new Set());
             setLoading(false);
@@ -450,9 +462,16 @@ export function KeywordsTab({
             .single();
 
           if (!versionErr) {
-            const dbUpdatedAt: string | null = (versionRow as any)?.keywords_updated_at ?? null;
-            const cachedUpdatedAt: string | null = cached?.keywordsUpdatedAt ?? null;
-            if (cached && dbUpdatedAt && cachedUpdatedAt && dbUpdatedAt === cachedUpdatedAt) {
+            const dbUpdatedAt: string | null =
+              (versionRow as any)?.keywords_updated_at ?? null;
+            const cachedUpdatedAt: string | null =
+              cached?.keywordsUpdatedAt ?? null;
+            if (
+              cached &&
+              dbUpdatedAt &&
+              cachedUpdatedAt &&
+              dbUpdatedAt === cachedUpdatedAt
+            ) {
               return;
             }
 
@@ -484,7 +503,8 @@ export function KeywordsTab({
                 .select("id, url, topic, keywords")
                 .eq("id", requestWebsiteId)
                 .single();
-              if (retryErr) throw new Error(retryErr.message || "Failed to load website");
+              if (retryErr)
+                throw new Error(retryErr.message || "Failed to load website");
               singleSite = retryData;
             } else {
               throw new Error(msg);
@@ -502,8 +522,8 @@ export function KeywordsTab({
         const storedArray: any[] = Array.isArray(siteKeywords)
           ? siteKeywords
           : Array.isArray(siteKeywords?.keywords)
-            ? siteKeywords.keywords
-            : [];
+          ? siteKeywords.keywords
+          : [];
 
         const storedKeywords: Keyword[] = storedArray
           .map(normalizeKeyword)
@@ -549,11 +569,15 @@ export function KeywordsTab({
 
         const apiData = await response.json();
         if (!response.ok || !apiData.success) {
-          throw new Error(apiData.error || "Failed to fetch keywords from DataForSEO");
+          throw new Error(
+            apiData.error || "Failed to fetch keywords from DataForSEO"
+          );
         }
 
         const primaryKeywords: Keyword[] = Array.isArray(apiData.keywords)
-          ? (apiData.keywords.map(normalizeKeyword).filter(Boolean) as Keyword[])
+          ? (apiData.keywords
+              .map(normalizeKeyword)
+              .filter(Boolean) as Keyword[])
           : [];
 
         const competitorKeywords: Keyword[] = Array.isArray(apiData.competitors)
@@ -567,15 +591,19 @@ export function KeywordsTab({
         const storedTargets = storedKeywords.filter((k) => k.is_target_keyword);
 
         const mergedMap = new Map<string, Keyword>();
-        [...primaryKeywords, ...competitorKeywords, ...storedTargets].forEach((kw) => {
-          const key = String(kw.keyword).toLowerCase();
-          if (!mergedMap.has(key)) mergedMap.set(key, kw);
-        });
+        [...primaryKeywords, ...competitorKeywords, ...storedTargets].forEach(
+          (kw) => {
+            const key = String(kw.keyword).toLowerCase();
+            if (!mergedMap.has(key)) mergedMap.set(key, kw);
+          }
+        );
 
         const merged = Array.from(mergedMap.values());
 
         const existingPayload =
-          siteKeywords && typeof siteKeywords === "object" && !Array.isArray(siteKeywords)
+          siteKeywords &&
+          typeof siteKeywords === "object" &&
+          !Array.isArray(siteKeywords)
             ? siteKeywords
             : {};
 
@@ -614,14 +642,16 @@ export function KeywordsTab({
         // Re-read keywords_updated_at so cache has the correct DB version after update
         let afterUpdatedAt: string | null = null;
         {
-          const { data: afterVersionRow, error: afterVersionErr } = await supabase
-            .from("websites")
-            .select("keywords_updated_at")
-            .eq("id", requestWebsiteId)
-            .single();
+          const { data: afterVersionRow, error: afterVersionErr } =
+            await supabase
+              .from("websites")
+              .select("keywords_updated_at")
+              .eq("id", requestWebsiteId)
+              .single();
 
           if (!afterVersionErr) {
-            afterUpdatedAt = (afterVersionRow as any)?.keywords_updated_at ?? null;
+            afterUpdatedAt =
+              (afterVersionRow as any)?.keywords_updated_at ?? null;
           }
         }
 
@@ -665,7 +695,8 @@ export function KeywordsTab({
           loadUserWebsites();
 
           // 2) If the currently selected website changed, refresh keywords cache.
-          const changedId = (payload as any)?.new?.id ?? (payload as any)?.old?.id;
+          const changedId =
+            (payload as any)?.new?.id ?? (payload as any)?.old?.id;
           if (changedId && selectedWebsiteIdRef.current === changedId) {
             fetchKeywords();
           }
@@ -933,12 +964,14 @@ export function KeywordsTab({
         console.log("Importing keywords:", importedKeywords);
         // Show importing dialog
         setShowImportingDialog(true);
-        
+
         // Persist to Supabase
         const success = await importKeywordsFromCSV(importedKeywords);
-        
+
         if (success) {
-          console.log(`✅ Successfully imported ${importedKeywords.length} keyword(s)`);
+          console.log(
+            `✅ Successfully imported ${importedKeywords.length} keyword(s)`
+          );
           // Close importing dialog and show success dialog after 2 seconds
           setTimeout(() => {
             setShowImportingDialog(false);
@@ -954,7 +987,7 @@ export function KeywordsTab({
           setShowImportingDialog(false);
         }
       }
-      
+
       setShowImportDialog(false);
     };
     reader.readAsText(file);
@@ -1007,7 +1040,7 @@ export function KeywordsTab({
 
       // Merge & dedupe by keyword text (case-insensitive)
       const map = new Map<string, any>();
-      
+
       // Add existing keywords
       existingList.forEach((k) => {
         const key = String(k.keyword || "").toLowerCase();
@@ -1029,14 +1062,14 @@ export function KeywordsTab({
       });
 
       const mergedList = Array.from(map.values());
-      const newPayload = { 
-        ...existingPayload, 
+      const newPayload = {
+        ...existingPayload,
         keywords: mergedList,
         analysis_metadata: {
           ...existingPayload.analysis_metadata,
           total_keywords: mergedList.length,
           analyzed_at: new Date().toISOString(),
-        }
+        },
       };
 
       // Update in Supabase
@@ -1128,14 +1161,14 @@ export function KeywordsTab({
   };
 
   const getCompetitorsCount = (keywordsData: any): number => {
-  if (!keywordsData) return 0;
-  if (keywordsData.competitors && Array.isArray(keywordsData.competitors)) {
-    return keywordsData.competitors.length;
-  }
-  return 0;
-};
+    if (!keywordsData) return 0;
+    if (keywordsData.competitors && Array.isArray(keywordsData.competitors)) {
+      return keywordsData.competitors.length;
+    }
+    return 0;
+  };
 
-const [analytics, setAnalytics] = useState<AnalyticsData>({
+  const [analytics, setAnalytics] = useState<AnalyticsData>({
     articlesGenerated: 0,
     articlesLive: 0,
     estimatedTraffic: 0,
@@ -1145,80 +1178,86 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
   });
 
   const fetchAnalytics = async (userId: string, websiteId?: string | null) => {
-      try {
-        let articlesQuery = supabase
-          .from("articles")
-          .select("status, estimated_traffic, keyword, word_count")
-          .eq("user_id", userId);
-  
-        if (websiteId) {
-          articlesQuery = articlesQuery.eq("website_id", websiteId);
-        }
-  
-        const { data: articles, error: articlesError } = await articlesQuery;
-  
-        if (articlesError) throw articlesError;
-  
-        const articlesGenerated = articles?.length || 0;
-        const articlesLive = articles?.filter(a => a.status === "published" || a.status === "UPLOADED").length || 0;
-        const draftArticles = articles?.filter(a => a.status === "draft" || a.status === "DRAFT").length || 0;
-        
-        const estimatedTraffic = articles?.reduce((sum, article) => {
+    try {
+      let articlesQuery = supabase
+        .from("articles")
+        .select("status, estimated_traffic, keyword, word_count")
+        .eq("user_id", userId);
+
+      if (websiteId) {
+        articlesQuery = articlesQuery.eq("website_id", websiteId);
+      }
+
+      const { data: articles, error: articlesError } = await articlesQuery;
+
+      if (articlesError) throw articlesError;
+
+      const articlesGenerated = articles?.length || 0;
+      const articlesLive =
+        articles?.filter(
+          (a) => a.status === "published" || a.status === "UPLOADED"
+        ).length || 0;
+      const draftArticles =
+        articles?.filter((a) => a.status === "draft" || a.status === "DRAFT")
+          .length || 0;
+
+      const estimatedTraffic =
+        articles?.reduce((sum, article) => {
           return sum + (article.estimated_traffic || 0);
         }, 0) || 0;
-  
-        const allKeywords = new Set<string>();
-        articles?.forEach(article => {
-          if (typeof article.keyword === 'string') {
-            article.keyword.split(',').forEach(k => allKeywords.add(k.trim()));
-          }
-        });
-        const keywordsTracked = allKeywords.size;
-  
-        let websitesQuery = supabase
-          .from("websites")
-          .select("keywords")
-          .eq("user_id", userId);
-  
-        if (websiteId) {
-          websitesQuery = websitesQuery.eq("id", websiteId);
+
+      const allKeywords = new Set<string>();
+      articles?.forEach((article) => {
+        if (typeof article.keyword === "string") {
+          article.keyword.split(",").forEach((k) => allKeywords.add(k.trim()));
         }
-  
-        const { data: websitesData, error: websitesError } = await websitesQuery;
-  
-        if (websitesError) throw websitesError;
-  
-        let totalCompetitors = 0;
-        websitesData?.forEach(website => {
-          const competitorCount = getCompetitorsCount(website.keywords);
-          totalCompetitors += competitorCount;
-        });
-  
-        setAnalytics({
-          articlesGenerated,
-          articlesLive,
-          estimatedTraffic,
-          keywordsTracked,
-          draftArticles,
-          totalCompetitors,
-        });
-      } catch (error) {
-        console.error("Error fetching analytics:", error);
+      });
+      const keywordsTracked = allKeywords.size;
+
+      let websitesQuery = supabase
+        .from("websites")
+        .select("keywords")
+        .eq("user_id", userId);
+
+      if (websiteId) {
+        websitesQuery = websitesQuery.eq("id", websiteId);
       }
-    };
+
+      const { data: websitesData, error: websitesError } = await websitesQuery;
+
+      if (websitesError) throw websitesError;
+
+      let totalCompetitors = 0;
+      websitesData?.forEach((website) => {
+        const competitorCount = getCompetitorsCount(website.keywords);
+        totalCompetitors += competitorCount;
+      });
+
+      setAnalytics({
+        articlesGenerated,
+        articlesLive,
+        estimatedTraffic,
+        keywordsTracked,
+        draftArticles,
+        totalCompetitors,
+      });
+    } catch (error) {
+      console.error("Error fetching analytics:", error);
+    }
+  };
 
   const handleWebsiteChange = async (websiteId: string) => {
-      setSelectedWebsiteId(websiteId);
-      writeSelectedWebsiteId(websiteId);
-      
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      
-      if (user) {
-        await fetchAnalytics(user.id, websiteId);
-      }
-    };
+    setSelectedWebsiteId(websiteId);
+    writeSelectedWebsiteId(websiteId);
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (user) {
+      await fetchAnalytics(user.id, websiteId);
+    }
+  };
 
   if (loadingWebsites && websites.length === 0) {
     return (
@@ -1283,39 +1322,46 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
         </div>
         <div className="flex lg:flex-row flex-col gap-3">
           <div className="flex ">
-          <Button
-            className="gap-2 cursor-pointer text-[#53f870] rounded-l-lg rounded-r-none hover:bg-[#53f8701a] bg-[#53f8701a] border-r border-[#53f870]"
-            onClick={() => setShowImportDialog(true)}
-          >
-            Import CSV
-            <Download className="w-4 h-4" />
-          </Button>
-          <Button
-            className="gap-2 text-[#53f870] bg-[#53f8701a] cursor-pointer border-gray-200 rounded-l-none hover:bg-[#53f8701a]"
-            onClick={() => setShowSyncDialog(true)}
-          >
-            <ExternalLink className="w-4 h-4" />
-            {websiteData.website.url?.replace(/^https?:\/\//, "")}
-          </Button>
+            <Button
+              className="gap-2 cursor-pointer text-[#53f870] rounded-l-lg rounded-r-none hover:bg-[#53f8701a] bg-[#53f8701a] border-r border-[#53f870]"
+              onClick={() => setShowImportDialog(true)}
+            >
+              Import CSV
+              <Download className="w-4 h-4" />
+            </Button>
+            <Button
+              className="gap-2 text-[#53f870] bg-[#53f8701a] cursor-pointer border-gray-200 rounded-l-none hover:bg-[#53f8701a]"
+              onClick={() => setShowSyncDialog(true)}
+            >
+              <ExternalLink className="w-4 h-4" />
+              {websiteData.website.url?.replace(/^https?:\/\//, "")}
+            </Button>
           </div>
           <div>
-              <Select value={selectedWebsiteId || undefined} onValueChange={handleWebsiteChange}>
-                <SelectTrigger className="h-10  bg-[rgba(83,248,112,0.1)]!  rounded-[5px] focus-visible:outline-none focus-visible:ring-0 border-[#0000001a] focus-visible:border-[#0000001a] focus:outline-none cursor-pointer outline-none active:outline-none px-3.5 py-2.5 text-[#53F870]">
-                  <SelectValue placeholder="Select your website" />
-                </SelectTrigger>
-                <SelectContent className="cursor-pointer bg-[#142517]! ">
-                  {websites.map((website, index) => (
-                    <SelectItem
-                      key={website.id}
-                      value={website.id}
-                      className={`cursor-pointer data-[state=checked]:text-[#53F870] data-[state=checked]:opacity-40 ${index < websites.length - 1 ? 'border-b rounded-none border-[#0000001a]' : ''}`}
-                    >
-                      {website.url}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <Select
+              value={selectedWebsiteId || undefined}
+              onValueChange={handleWebsiteChange}
+            >
+              <SelectTrigger className="h-10  bg-[rgba(83,248,112,0.1)]!  rounded-[5px] focus-visible:outline-none focus-visible:ring-0 border-[#0000001a] focus-visible:border-[#0000001a] focus:outline-none cursor-pointer outline-none active:outline-none px-3.5 py-2.5 text-[#53F870]">
+                <SelectValue placeholder="Select your website" />
+              </SelectTrigger>
+              <SelectContent className="cursor-pointer bg-[#142517]! ">
+                {websites.map((website, index) => (
+                  <SelectItem
+                    key={website.id}
+                    value={website.id}
+                    className={`cursor-pointer data-[state=checked]:text-[#53F870] data-[state=checked]:opacity-40 ${
+                      index < websites.length - 1
+                        ? "border-b rounded-none border-[#0000001a]"
+                        : ""
+                    }`}
+                  >
+                    {website.url}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
 
@@ -1328,7 +1374,12 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
               <p className="text-xs sm:text-xs font-medium text-[#ffffffb3] uppercase tracking-wide">
                 Total Keywords
               </p>
-              <Image src="/keywordcardimg1.png" alt="icon" height={15} width={19.5} />
+              <Image
+                src="/keywordcardimg1.png"
+                alt="icon"
+                height={15}
+                width={19.5}
+              />
             </div>
             <p className="text-2xl sm:text-4xl font-bold text-[#53f870]">
               {stats.totalKeywords}
@@ -1343,9 +1394,16 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
               <p className="text-xs sm:text-xs font-medium text-[#ffffffb3] uppercase tracking-wide">
                 High Potential
               </p>
-              <Image src="/keywordcardimg2.png" alt="icon" height={15} width={19.5} />
+              <Image
+                src="/keywordcardimg2.png"
+                alt="icon"
+                height={15}
+                width={19.5}
+              />
             </div>
-            <p className="text-2xl sm:text-4xl font-bold text-[#53f870]">{stats.highPotential}</p>
+            <p className="text-2xl sm:text-4xl font-bold text-[#53f870]">
+              {stats.highPotential}
+            </p>
           </CardContent>
         </Card>
 
@@ -1356,9 +1414,16 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
               <p className="text-xs sm:text-xs font-medium text-[#ffffffb3] uppercase tracking-wide">
                 With Content
               </p>
-              <Image src="/keywordcardimg3.png" alt="icon" height={15} width={19.5} />
+              <Image
+                src="/keywordcardimg3.png"
+                alt="icon"
+                height={15}
+                width={19.5}
+              />
             </div>
-            <p className="text-2xl sm:text-4xl font-bold text-[#53f870]">{stats.withContent}</p>
+            <p className="text-2xl sm:text-4xl font-bold text-[#53f870]">
+              {stats.withContent}
+            </p>
           </CardContent>
         </Card>
 
@@ -1369,9 +1434,16 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
               <p className="text-xs sm:text-xs font-medium text-[#ffffffb3] uppercase tracking-wide">
                 Without Content
               </p>
-              <Image src="/keywordcardimg4.png" alt="icon" height={15} width={19.5} />
+              <Image
+                src="/keywordcardimg4.png"
+                alt="icon"
+                height={15}
+                width={19.5}
+              />
             </div>
-            <p className="text-2xl sm:text-4xl font-bold text-[#53f870]">{stats.withoutContent}</p>
+            <p className="text-2xl sm:text-4xl font-bold text-[#53f870]">
+              {stats.withoutContent}
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -1384,15 +1456,27 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
               <button className="flex items-center focus-visible:outline-none! gap-1">
                 Filters
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-                  <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" />
+                  <path
+                    d="M6 9l6 6 6-6"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  />
                 </svg>
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-44">
-              <DropdownMenuItem onClick={() => setDifficultyFilter("all")}>All</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setDifficultyFilter("Low")}>Low Difficulty</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setDifficultyFilter("Medium")}>Medium Difficulty</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setDifficultyFilter("High")}>High Difficulty</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setDifficultyFilter("all")}>
+                All
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setDifficultyFilter("Low")}>
+                Low Difficulty
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setDifficultyFilter("Medium")}>
+                Medium Difficulty
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setDifficultyFilter("High")}>
+                High Difficulty
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 
@@ -1402,19 +1486,39 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
               <button className="flex items-center gap-1 hover:text-gray-700 lg:w-auto w-[250px] focus-visible:outline-none!">
                 Sort By
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-                  <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" />
+                  <path
+                    d="M6 9l6 6 6-6"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  />
                 </svg>
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-64">
-              <DropdownMenuItem onClick={() => setSortBy("volume-desc")}>Search Volume (High → Low)</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSortBy("volume-asc")}>Search Volume (Low → High)</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSortBy("difficulty-asc")}>Difficulty (Low → High)</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSortBy("difficulty-desc")}>Difficulty (High → Low)</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSortBy("cpc-desc")}>CPC (High → Low)</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSortBy("cpc-asc")}>CPC (Low → High)</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSortBy("competition-asc")}>Competition (Low → High)</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSortBy("competition-desc")}>Competition (High → Low)</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSortBy("volume-desc")}>
+                Search Volume (High → Low)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSortBy("volume-asc")}>
+                Search Volume (Low → High)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSortBy("difficulty-asc")}>
+                Difficulty (Low → High)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSortBy("difficulty-desc")}>
+                Difficulty (High → Low)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSortBy("cpc-desc")}>
+                CPC (High → Low)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSortBy("cpc-asc")}>
+                CPC (Low → High)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSortBy("competition-asc")}>
+                Competition (Low → High)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSortBy("competition-desc")}>
+                Competition (High → Low)
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 
@@ -1433,7 +1537,7 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
         </div>
 
         {/* RIGHT */}
-        <button 
+        <button
           onClick={() => setShowCreateDialog(true)}
           disabled={!selectedKeywords || selectedKeywords.size === 0}
           className="h-9 border-2 border-[#53f870] px-8 rounded-md bg-[#171717] hover:bg-bg-[#171717] cursor-pointer text-[#53f870] order-2 lg:order-0 text-base transition-colors disabled:cursor-not-allowed disabled:border-[#53f8701a] disabled:text-[#3a3a3a]"
@@ -1442,46 +1546,46 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
         </button>
         {/* Filters and Table */}
 
-      <div className="bg-[#0d0d0d] w-[362px] lg:w-full rounded-lg border border-[#53f8701a] lg:mt-2.5 overflow-x-auto lg:overflow-hidden">
-        <table className="w-full border border-[#53f8701a] bg-[#101110] border-collapse">
-          {/* ================= HEADER ================= */}
-          <thead>
-            <tr className="border-b border-[#53f8701a] bg-[#0d0d0d]">
-              <th className="px-6 py-3 text-left w-10">
-                <input
-                  type="checkbox"
-                  checked={
-                    filteredAndSortedKeywords.length > 0 &&
-                    selectedKeywords.size === filteredAndSortedKeywords.length
-                  }
-                  onChange={toggleSelectAll}
-                  aria-label="Select all keywords"
-                  className="w-4 h-4 rounded border border-gray-300 bg-transparent cursor-pointer accent-[#53f870]"
-                />
-              </th>
-              <th className="px-6 py-3 text-left text-sm font-normal text-[#ffffff4d]">
-                Keyword
-              </th>
-              <th className="px-6 py-3 text-left text-sm font-normal text-[#ffffff4d]">
-                Search Volume
-              </th>
-              <th className="px-6 py-3 text-left text-sm font-normal text-[#ffffff4d]">
-                Difficulty
-              </th>
-              <th className="px-6 py-3 text-left text-sm font-normal text-[#ffffff4d]">
-                Competition
-              </th>
-              <th className="px-6 py-3 text-left text-sm font-normal text-[#ffffff4d]">
-                Post Status
-              </th>
-              <th className="px-6 py-3 text-left text-sm font-normal text-[#ffffff4d]">
-                Traffic Potential
-              </th>
-              <th className="px-6 py-3 text-left text-sm font-normal text-[#ffffff4d]">
-                Action
-              </th>
-            </tr>
-          </thead>
+        <div className="bg-[#0d0d0d] w-[362px] lg:w-full rounded-lg border border-[#53f8701a] lg:mt-2.5 overflow-x-auto lg:overflow-hidden">
+          <table className="w-full border border-[#53f8701a] bg-[#101110] border-collapse">
+            {/* ================= HEADER ================= */}
+            <thead>
+              <tr className="border-b border-[#53f8701a] bg-[#0d0d0d]">
+                <th className="px-6 py-3 text-left w-10">
+                  <input
+                    type="checkbox"
+                    checked={
+                      filteredAndSortedKeywords.length > 0 &&
+                      selectedKeywords.size === filteredAndSortedKeywords.length
+                    }
+                    onChange={toggleSelectAll}
+                    aria-label="Select all keywords"
+                    className="w-4 h-4 rounded border border-gray-300 bg-transparent cursor-pointer accent-[#53f870]"
+                  />
+                </th>
+                <th className="px-6 py-3 text-left text-sm font-normal text-[#ffffff4d]">
+                  Keyword
+                </th>
+                <th className="px-6 py-3 text-left text-sm font-normal text-[#ffffff4d]">
+                  Search Volume
+                </th>
+                <th className="px-6 py-3 text-left text-sm font-normal text-[#ffffff4d]">
+                  Difficulty
+                </th>
+                <th className="px-6 py-3 text-left text-sm font-normal text-[#ffffff4d]">
+                  Competition
+                </th>
+                <th className="px-6 py-3 text-left text-sm font-normal text-[#ffffff4d]">
+                  Post Status
+                </th>
+                <th className="px-6 py-3 text-left text-sm font-normal text-[#ffffff4d]">
+                  Traffic Potential
+                </th>
+                <th className="px-6 py-3 text-left text-sm font-normal text-[#ffffff4d]">
+                  Action
+                </th>
+              </tr>
+            </thead>
 
           {/* ================= BODY ================= */}
           <tbody className="border border-[#53f8701a]">
@@ -1518,13 +1622,13 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
                     <td className="px-6 text-[#fffffb3] py-3 text-sm">{trafficText}</td>
                     <td className="px-6 py-3">
                       <div className="flex items-center justify-start gap-0">
-                        <Button className="border w-[114px] border-[#53f8701a] rounded-r-none bg-transparent text-[#ffffffb3] hover:bg-transparent cursor-pointer border-r-0 px-4 h-8 text-xs font-medium">Edit</Button>
+                        <Button className="border w-[114px] border-[#53f8701a] rounded-r-none bg-transparent text-[#ffffffb3]  cursor-pointer border-r-0 px-4 h-8 text-xs font-medium hover:text-[#53f870] hover:!bg-[#53f8701a]">Edit</Button>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button className="border border-[#53f8701a] rounded-l-none bg-transparent hover:bg-transparent focus-visible:outline-none cursor-pointer w-8 h-8 p-0 flex items-center justify-center"><ChevronDown className="w-4 h-4 text-[#ffffffb3]" /></Button>
+                            <Button className="border border-[#53f8701a] rounded-l-none bg-transparent hover:text-[#53f870] hover:bg-[#53f8701a] focus-visible:outline-none cursor-pointer w-8 h-8 p-0 flex items-center justify-center"><ChevronDown className="w-4 h-4 text-[#ffffffb3]" /></Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-36 border bg-[#101110] border-[#53f8701a]">
-                            <DropdownMenuItem onClick={() => handleDeleteKeyword(index)} className="text-red-600 hover:text-red-600! hover:bg-transparent! focus-visible:bg-transparent! px-10 text-center cursor-pointer">Delete</DropdownMenuItem>
+                          <DropdownMenuContent align="end" className="w-36 border bg-[#101110] hover:!bg-red-200 border-[#53f8701a]">
+                            <DropdownMenuItem onClick={() => handleDeleteKeyword(index)} className="text-red-600 hover:text-red-600! hover:!bg-red-200 focus-visible:!bg-red-200 px-10 text-center cursor-pointer">Delete</DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
@@ -1542,8 +1646,6 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
       </div>
       </div>
 
-      
-
       {/* Selection Bar */}
       {selectedKeywords && selectedKeywords.size > 0 && (
         <div className="mt-4 flex items-center justify-between p-4 bg-[#101110] rounded-lg border border-blue-200">
@@ -1553,11 +1655,12 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
           </p>
           <div className="flex gap-2">
             <Button
-              size="sm" 
+              size="sm"
               className="h-14 lg:h-9 border-2 border-[#53f870] px-8 rounded-md bg-[#171717] hover:bg-[#171717] cursor-pointer text-[#53f870] w-[100px] lg:w-max text-base transition-colors disabled:cursor-not-allowed disabled:border-[#53f8701a] disabled:text-[#3a3a3a]"
               onClick={addSelectedKeywordsToWebsite}
             >
-              Add <br className="block lg:hidden" />Keywords
+              Add <br className="block lg:hidden" />
+              Keywords
             </Button>
             <Button
               size="sm"
@@ -1565,7 +1668,8 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
               onClick={() => setShowCreateDialog(true)}
               disabled={generatingContent}
             >
-              Create <br className="block lg:hidden" />Post
+              Create <br className="block lg:hidden" />
+              Post
             </Button>
           </div>
         </div>

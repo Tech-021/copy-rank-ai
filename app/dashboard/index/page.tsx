@@ -1,7 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ChevronDown } from "lucide-react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -81,7 +87,9 @@ const writeSelectedWebsiteId = (websiteId: string) => {
 
 export default function DashboardIndexPage() {
   const [currentUser, setCurrentUser] = useState<any>(null);
-  const [selectedWebsiteId, setSelectedWebsiteId] = useState<string | null>(null);
+  const [selectedWebsiteId, setSelectedWebsiteId] = useState<string | null>(
+    null
+  );
   const [websites, setWebsites] = useState<Website[]>([]);
   const [posts, setPosts] = useState<IndexPost[]>([]);
   const [loading, setLoading] = useState(true);
@@ -177,7 +185,8 @@ export default function DashboardIndexPage() {
         // Transform articles to index posts
         const indexPosts: IndexPost[] = (articles || []).map((article: any) => {
           // Determine status
-          let status: "indexed" | "requested" | "pending" | "un-indexed" = "un-indexed";
+          let status: "indexed" | "requested" | "pending" | "un-indexed" =
+            "un-indexed";
           if (article.status === "published" || article.status === "UPLOADED") {
             status = "indexed";
           } else if (article.status === "draft") {
@@ -316,17 +325,28 @@ export default function DashboardIndexPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 sm:gap-0">
         <div>
-          <h2 className="text-2xl sm:text-3xl font-normal text-white">Index Posts</h2>
-          <p className="text-xs sm:text-sm text-gray-500 mt-2">Publish posts to be detected and indexed by search engines.</p>
+          <h2 className="text-2xl sm:text-3xl font-normal text-white">
+            Index Posts
+          </h2>
+          <p className="text-xs sm:text-sm text-gray-500 mt-2">
+            Publish posts to be detected and indexed by search engines.
+          </p>
         </div>
         <div className="w-full sm:w-48 sm:mr-8">
-          <Select value={selectedWebsiteId || ""} onValueChange={handleWebsiteChange}>
+          <Select
+            value={selectedWebsiteId || ""}
+            onValueChange={handleWebsiteChange}
+          >
             <SelectTrigger className="h-10 bg-[rgba(83,248,112,0.1)]! border-none rounded-lg focus-visible:outline-none focus-visible:ring-0 px-3 py-2 text-[#53F870] font-medium text-xs sm:text-sm">
               <SelectValue placeholder="Select website" />
             </SelectTrigger>
             <SelectContent className="bg-[#142517]! border-none rounded-lg">
               {websites.map((website) => (
-                <SelectItem key={website.id} value={website.id} className="cursor-pointer text-green-600">
+                <SelectItem
+                  key={website.id}
+                  value={website.id}
+                  className="cursor-pointer text-green-600"
+                >
                   {website.url}
                 </SelectItem>
               ))}
@@ -344,9 +364,17 @@ export default function DashboardIndexPage() {
               <p className="text-xs sm:text-xs font-medium text-white tracking-wide">
                 Indexed Posts
               </p>
-              <Image src="/index1.png" alt="icon" height={20} width={20} className="sm:h-6 sm:w-6" />
+              <Image
+                src="/index1.png"
+                alt="icon"
+                height={20}
+                width={20}
+                className="sm:h-6 sm:w-6"
+              />
             </div>
-            <p className="text-3xl sm:text-4xl font-bold text-[#53F870]">{indexStats.indexed}</p>
+            <p className="text-3xl sm:text-4xl font-bold text-[#53F870]">
+              {indexStats.indexed}
+            </p>
           </CardContent>
         </Card>
 
@@ -357,9 +385,17 @@ export default function DashboardIndexPage() {
               <p className="text-xs sm:text-xs font-medium text-white tracking-wide">
                 Requested Index
               </p>
-              <Image src="/index2.png" alt="icon" height={20} width={20} className="sm:h-6 sm:w-6" />
+              <Image
+                src="/index2.png"
+                alt="icon"
+                height={20}
+                width={20}
+                className="sm:h-6 sm:w-6"
+              />
             </div>
-            <p className="text-3xl sm:text-4xl font-bold text-[#53F870]">{indexStats.requested}</p>
+            <p className="text-3xl sm:text-4xl font-bold text-[#53F870]">
+              {indexStats.requested}
+            </p>
           </CardContent>
         </Card>
 
@@ -370,9 +406,17 @@ export default function DashboardIndexPage() {
               <p className="text-xs sm:text-xs font-medium text-white tracking-wide">
                 Pending Index
               </p>
-              <Image src="/index3.png" alt="icon" height={20} width={20} className="sm:h-6 sm:w-6" />
+              <Image
+                src="/index3.png"
+                alt="icon"
+                height={20}
+                width={20}
+                className="sm:h-6 sm:w-6"
+              />
             </div>
-            <p className="text-3xl sm:text-4xl font-bold text-[#53F870]">{indexStats.pending}</p>
+            <p className="text-3xl sm:text-4xl font-bold text-[#53F870]">
+              {indexStats.pending}
+            </p>
           </CardContent>
         </Card>
 
@@ -383,9 +427,17 @@ export default function DashboardIndexPage() {
               <p className="text-xs sm:text-xs font-medium text-white tracking-wide">
                 Un-Indexed Posts
               </p>
-              <Image src="/index4.png" alt="icon" height={24} width={24} className="sm:h-8 sm:w-8" />
+              <Image
+                src="/index4.png"
+                alt="icon"
+                height={24}
+                width={24}
+                className="sm:h-8 sm:w-8"
+              />
             </div>
-            <p className="text-3xl sm:text-4xl font-bold text-[#53F870]">{indexStats.unIndexed}</p>
+            <p className="text-3xl sm:text-4xl font-bold text-[#53F870]">
+              {indexStats.unIndexed}
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -393,7 +445,9 @@ export default function DashboardIndexPage() {
       {/* Table Section */}
       <div className="bg-black border border-gray-600 rounded-lg overflow-hidden">
         <div className="p-3 sm:p-4 border-b border-gray-700">
-          <h3 className="text-base sm:text-lg font-normal text-white">Index Your Posts</h3>
+          <h3 className="text-base sm:text-lg font-normal text-white">
+            Index Your Posts
+          </h3>
         </div>
 
         <div className="w-full overflow-x-auto">
@@ -409,29 +463,58 @@ export default function DashboardIndexPage() {
             <table className="w-full border-collapse">
               <thead>
                 <tr className="border-b border-gray-800">
-                  <th className="text-left py-3 sm:py-4 px-2 sm:px-6 text-xs font-normal text-gray-500 min-w-[200px] sm:min-w-auto">Post</th>
-                  <th className="text-left py-3 sm:py-4 px-2 sm:px-6 text-xs font-normal text-gray-500 hidden sm:table-cell whitespace-nowrap">Status</th>
-                  <th className="text-left py-3 sm:py-4 px-2 sm:px-6 text-xs font-normal text-gray-500 hidden sm:table-cell whitespace-nowrap">Keyword</th>
-                  <th className="text-left py-3 sm:py-4 px-2 sm:px-6 text-xs font-normal text-gray-500 hidden lg:table-cell whitespace-nowrap">Visibility</th>
-                  <th className="text-left py-3 sm:py-4 px-2 sm:px-6 text-xs font-normal text-gray-500 whitespace-nowrap">Action</th>
+                  <th className="text-left py-3 sm:py-4 px-2 sm:px-6 text-xs font-normal text-gray-500 min-w-[200px] sm:min-w-auto">
+                    Post
+                  </th>
+                  <th className="text-left py-3 sm:py-4 px-2 sm:px-6 text-xs font-normal text-gray-500 hidden sm:table-cell whitespace-nowrap">
+                    Status
+                  </th>
+                  <th className="text-left py-3 sm:py-4 px-2 sm:px-6 text-xs font-normal text-gray-500 hidden sm:table-cell whitespace-nowrap">
+                    Keyword
+                  </th>
+                  <th className="text-left py-3 sm:py-4 px-2 sm:px-6 text-xs font-normal text-gray-500 hidden lg:table-cell whitespace-nowrap">
+                    Visibility
+                  </th>
+                  <th className="text-left py-3 sm:py-4 px-2 sm:px-6 text-xs font-normal text-gray-500 whitespace-nowrap">
+                    Action
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {posts.map((post, index) => (
-                  <tr key={post.id} className={`${index !== posts.length - 1 ? "border-b border-gray-800" : ""}`}>
+                  <tr
+                    key={post.id}
+                    className={`${
+                      index !== posts.length - 1
+                        ? "border-b border-gray-800"
+                        : ""
+                    }`}
+                  >
                     <td className="py-3 sm:py-4 px-2 sm:px-6 min-w-[200px] sm:min-w-auto">
-                      <span className="text-xs sm:text-sm text-[#53F870] font-normal wrap-break-word">{post.title}</span>
-                    </td>
-                    <td className="py-3 sm:py-4 px-2 sm:px-6 hidden sm:table-cell whitespace-nowrap">
-                      <span className={`text-xs font-normal capitalize ${getStatusColor(post.status)}`}>
-                        {post.status}
+                      <span className="text-xs sm:text-sm text-[#53F870] font-normal ">
+                        {post.title}
                       </span>
                     </td>
                     <td className="py-3 sm:py-4 px-2 sm:px-6 hidden sm:table-cell whitespace-nowrap">
-                      <span className="text-xs font-normal text-gray-500 truncate max-w-[150px]">{post.keyword}</span>
+                      <span
+                        className={`text-xs font-normal capitalize ${getStatusColor(
+                          post.status
+                        )}`}
+                      >
+                        {post.status}
+                      </span>
+                    </td>
+                    <td className="py-3 sm:py-4 px-2 sm:px-6 hidden sm:table-cell ">
+                      <span className="text-xs font-normal text-gray-500">
+                        {post.keyword}
+                      </span>
                     </td>
                     <td className="py-3 sm:py-4 px-2 sm:px-6 hidden lg:table-cell whitespace-nowrap">
-                      <span className={`text-xs font-normal capitalize ${getVisibilityColor(post.visibility)}`}>
+                      <span
+                        className={`text-xs font-normal capitalize ${getVisibilityColor(
+                          post.visibility
+                        )}`}
+                      >
                         {post.visibility}
                       </span>
                     </td>
@@ -439,35 +522,46 @@ export default function DashboardIndexPage() {
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <div className="flex items-center ">
-                            <Button 
+                            <Button
                               disabled={updatingPostId === post.id}
-                              className="bg-transparent px-2 sm:px-8 rounded-r-none hover:bg-gray-900 border border-gray-600 text-xs font-normal text-gray-500 h-auto py-1 sm:py-2 min-w-fit"
+                              className="bg-transparent px-2 sm:px-8 rounded-r-none hover:text-[#53f870] hover:!bg-[#53f8701a] border border-gray-600 text-xs font-normal text-gray-500 h-auto py-1 sm:py-2 min-w-fit"
                             >
-                              {post.status === "indexed" ? "Request Index" : "Requested"}
+                              {post.status === "indexed"
+                                ? "Request Index"
+                                : "Requested"}
                             </Button>
-                            <Button 
+                            <Button
                               disabled={updatingPostId === post.id}
-                              className="bg-transparent hover:bg-gray-900 rounded-l-none border border-gray-600 px-2 sm:px-3 h-auto py-1 sm:py-2"
+                              className="group bg-transparent hover:!bg-[#53f8701a] rounded-l-none border border-gray-600 px-2 sm:px-3 h-auto py-1 sm:py-2"
                             >
-                              <ChevronDown className="w-3 h-3 sm:w-4 sm:h-4 text-gray-600" />
+                              <ChevronDown className="w-3 h-3 sm:w-4 sm:h-4 text-gray-600 group-hover:text-[#53f870] transition-colors duration-200" />
                             </Button>
                           </div>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="bg-black border border-gray-700">
+                        <DropdownMenuContent
+                          align="end"
+                          className="bg-black border border-gray-700"
+                        >
                           <DropdownMenuItem
-                            onClick={() => updateArticleStatus(post.id, "requested")}
+                            onClick={() =>
+                              updateArticleStatus(post.id, "requested")
+                            }
                             className="text-xs text-gray-400 hover:text-white cursor-pointer"
                           >
                             Request Index
                           </DropdownMenuItem>
                           <DropdownMenuItem
-                            onClick={() => updateArticleStatus(post.id, "indexed")}
+                            onClick={() =>
+                              updateArticleStatus(post.id, "indexed")
+                            }
                             className="text-xs text-gray-400 hover:text-white cursor-pointer"
                           >
                             Mark as Indexed
                           </DropdownMenuItem>
                           <DropdownMenuItem
-                            onClick={() => updateArticleStatus(post.id, "un-indexed")}
+                            onClick={() =>
+                              updateArticleStatus(post.id, "un-indexed")
+                            }
                             className="text-xs text-gray-400 hover:text-white cursor-pointer"
                           >
                             Un-Index
