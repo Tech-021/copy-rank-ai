@@ -1518,13 +1518,13 @@ const [analytics, setAnalytics] = useState<AnalyticsData>({
                     <td className="px-6 text-[#fffffb3] py-3 text-sm">{trafficText}</td>
                     <td className="px-6 py-3">
                       <div className="flex items-center justify-start gap-0">
-                        <Button className="border w-[114px] border-[#53f8701a] rounded-r-none bg-transparent text-[#ffffffb3] hover:bg-transparent cursor-pointer border-r-0 px-4 h-8 text-xs font-medium">Edit</Button>
+                        <Button className="border w-[114px] border-[#53f8701a] rounded-r-none bg-transparent text-[#ffffffb3]  cursor-pointer border-r-0 px-4 h-8 text-xs font-medium hover:text-[#53f870] hover:!bg-[#53f8701a]">Edit</Button>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button className="border border-[#53f8701a] rounded-l-none bg-transparent hover:bg-transparent focus-visible:outline-none cursor-pointer w-8 h-8 p-0 flex items-center justify-center"><ChevronDown className="w-4 h-4 text-[#ffffffb3]" /></Button>
+                            <Button className="border border-[#53f8701a] rounded-l-none bg-transparent hover:text-[#53f870] hover:bg-[#53f8701a] focus-visible:outline-none cursor-pointer w-8 h-8 p-0 flex items-center justify-center"><ChevronDown className="w-4 h-4 text-[#ffffffb3]" /></Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-36 border bg-[#101110] border-[#53f8701a]">
-                            <DropdownMenuItem onClick={() => handleDeleteKeyword(index)} className="text-red-600 hover:text-red-600! hover:bg-transparent! focus-visible:bg-transparent! px-10 text-center cursor-pointer">Delete</DropdownMenuItem>
+                          <DropdownMenuContent align="end" className="w-36 border bg-[#101110] hover:!bg-red-200 border-[#53f8701a]">
+                            <DropdownMenuItem onClick={() => handleDeleteKeyword(index)} className="text-red-600 hover:text-red-600! hover:!bg-red-200 focus-visible:!bg-red-200 px-10 text-center cursor-pointer">Delete</DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
