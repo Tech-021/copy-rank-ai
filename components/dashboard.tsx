@@ -21,6 +21,24 @@ interface DashboardProps {
   children?: React.ReactNode;
 }
 
+const selectedWebsiteStorageKey = "selected-website-id";
+
+const readSelectedWebsiteId = () => {
+  try {
+    return sessionStorage.getItem(selectedWebsiteStorageKey);
+  } catch {
+    return null;
+  }
+};
+
+const writeSelectedWebsiteId = (websiteId: string) => {
+  try {
+    sessionStorage.setItem(selectedWebsiteStorageKey, websiteId);
+  } catch {
+    // ignore storage failures
+  }
+};
+
 export function Dashboard({
   onLogout,
   userEmail,
@@ -85,6 +103,19 @@ export function Dashboard({
     fetchAvatarIfMissing();
   }, [localAvatar]);
 
+  // Restore last selected website across page navigations
+  useEffect(() => {
+    if (selectedWebsiteId) return;
+    const stored = readSelectedWebsiteId();
+    if (stored) setSelectedWebsiteId(stored);
+  }, [selectedWebsiteId]);
+
+  // Persist whenever selection changes
+  useEffect(() => {
+    if (!selectedWebsiteId) return;
+    writeSelectedWebsiteId(selectedWebsiteId);
+  }, [selectedWebsiteId]);
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Header */}
@@ -101,7 +132,7 @@ export function Dashboard({
             <div
               className="
     hidden lg:flex gap-4 p-1.5 rounded-full
-    dark:bg-gradient-to-b
+    dark:bg-linear-to-b
     dark:from-[rgba(46,152,57,0.38)]
     dark:via-[rgba(26,69,26,1)]
     dark:to-[rgba(4,35,13,1)]
@@ -190,7 +221,7 @@ export function Dashboard({
           <div
             className="hidden lg:flex items-center gap-4 p-1.5 rounded-full
       text-[#53F870]
-      dark:bg-gradient-to-b
+      dark:bg-linear-to-b
       dark:from-[rgba(46,152,57,0.38)]
       dark:via-[rgba(26,69,26,1)]
       dark:to-[rgba(4,35,13,1)]
@@ -257,7 +288,7 @@ export function Dashboard({
                 <Link onClick={() => setMobileMenuOpen(false)} href="/dashboard/index">Index</Link>
                 <Link onClick={() => setMobileMenuOpen(false)} href="/dashboard/settings">Settings</Link>
                 {/* PROFILE */}
-              <div className=" w-max flex items-center gap-4 py-1.5 rounded-full text-[#53F870] dark:bg-gradient-to-b dark:from-[rgba(46,152,57,0.38)] dark:via-[rgba(26,69,26,1)] dark:to-[rgba(4,35,13,1)] border border-transparent dark:border-[#2E9839] ">
+              <div className=" w-max flex items-center gap-4 py-1.5 rounded-full text-[#53F870] dark:bg-linear-to-b dark:from-[rgba(46,152,57,0.38)] dark:via-[rgba(26,69,26,1)] dark:to-[rgba(4,35,13,1)] border border-transparent dark:border-[#2E9839] ">
                 {" "}
                 {userEmail && (
                   <ProfileDropdown
