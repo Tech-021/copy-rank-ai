@@ -85,15 +85,20 @@ export async function POST(req: Request) {
     }
 
     // Build checkout payload
+    const baseUrl =
+      process.env.NEXT_PUBLIC_SITE_URL ||
+      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
     const checkoutData: any = {
       data: {
         type: "checkouts",
         attributes: {
           product_options: {
             enabled_variants: [parseInt(String(variantId))],
-            redirect_url: `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/dashboard`,
-            receipt_button_text: "Go to Dashboard",
-            receipt_thank_you_note: "Thank you for your purchase!"
+            // After successful payment, send user to our payment callback
+            // The callback page will verify subscription via webhook and redirect to the requested next path
+            redirect_url: `${baseUrl}/payment/callback?next=/about-yourself`,
+            receipt_button_text: "Return to App",
+            receipt_thank_you_note: "Thanks! Redirecting you to finish setup."
           },
           checkout_options: {
             embed: false,

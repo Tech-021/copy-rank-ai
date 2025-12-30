@@ -1,31 +1,74 @@
-"use client"
+"use client";
 
-import { useState, useMemo, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Search, Download, TrendingUp, BarChart3, Filter, Loader2, ExternalLink } from "lucide-react"
-import { useToast } from "../ui/toast"
-import { getUser } from "@/lib/auth"
-import { supabase } from "@/lib/client"
-import { getUserArticleLimit } from '@/lib/articleLimits'
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
+import { RefreshCw } from "lucide-react";
+import { Plus } from "lucide-react";
+import { LoaderChevron } from "@/components/ui/LoaderChevron";
+import { CreatePostDialog } from "@/components/ui/CreatePostDialog";
+import { CreatePostDialogDashboard } from "../dialog2";
+import { ImportCSVDialog } from "@/components/ui/ImportCSVDialog";
+import { ImportingKeywordsDialog } from "@/components/ui/ImportingKeywordsDialog";
+import { KeywordsSyncedDialog } from "@/components/ui/KeywordsSyncedDialog";
+import { SyncCompetitorsDialog } from "@/components/ui/SyncCompetitorsDialog";
+import { AddKeywordsDialog } from "@/components/ui/AddKeywordsDialog";
+import { DeleteKeywordDialog } from "@/components/ui/DeleteKeywordDialog";
+
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Search,
+  Download,
+  TrendingUp,
+  BarChart3,
+  Filter,
+  Loader2,
+  ExternalLink,
+  ChevronDown,
+} from "lucide-react";
+import { useToast } from "../ui/toast";
+import { getUser } from "@/lib/auth";
+import { supabase } from "@/lib/client";
+import { getUserArticleLimit } from "@/lib/articleLimits";
+import Image from "next/image";
 
 interface KeywordsTabProps {
-  websiteId?: string | null;
+  websiteId?: string;
   onArticlesGenerated?: (articles: any[]) => void;
 }
 
 interface Keyword {
-  id?: string
-  keyword: string
-  search_volume: number
-  difficulty: number
-  cpc: number
-  competition: number
-  selected?: boolean
-  is_target_keyword?: boolean
+  id?: string;
+  keyword: string;
+  search_volume: number;
+  websiteId?: string;
+  difficulty: number;
+  cpc: number;
+  competition: number;
+  selected?: boolean;
+  is_target_keyword?: boolean;
+  post_status?: "Live" | "Draft" | "No Plan";
+  traffic_potential?: string;
 }
 
 interface Website {
@@ -37,385 +80,729 @@ interface Website {
 
 interface WebsiteData {
   website: {
-    id: string
-    url: string
-    topic: string
-  }
-  keywords: Keyword[]
+    id: string;
+    url: string;
+    topic: string;
+  };
+  keywords: Keyword[];
 }
 
 interface Article {
-  id: string
-  title: string
-  content: string
-  keyword: string
-  status: "Published" | "Scheduled" | "Draft"
-  date: string
-  preview: string
-  wordCount: number
-  metaTitle?: string
-  metaDescription?: string
-  slug?: string
-  focusKeyword?: string
-  readingTime?: string
-  contentScore?: number
-  keywordDensity?: number
-  tags?: string[]
-  category?: string
-  generatedAt?: string
-  estimatedTraffic?: number
+  id: string;
+  title: string;
+  content: string;
+  keyword: string;
+
+  status: "Published" | "Scheduled" | "Draft";
+  date: string;
+  preview: string;
+  wordCount: number;
+  metaTitle?: string;
+  metaDescription?: string;
+  slug?: string;
+  focusKeyword?: string;
+  readingTime?: string;
+  contentScore?: number;
+  keywordDensity?: number;
+  tags?: string[];
+  category?: string;
+  generatedAt?: string;
+  estimatedTraffic?: number;
 }
 
-export function KeywordsTab({ websiteId: initialWebsiteId, onArticlesGenerated }: KeywordsTabProps) {
-  const [selectedWebsiteId, setSelectedWebsiteId] = useState<string | null>(initialWebsiteId || null)
-  const [websites, setWebsites] = useState<Website[]>([])
-  const [websiteData, setWebsiteData] = useState<WebsiteData | null>(null)
-  const [keywords, setKeywords] = useState<Keyword[]>([])
-  const [loading, setLoading] = useState(true)
-  const [loadingWebsites, setLoadingWebsites] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [generatingContent, setGeneratingContent] = useState(false)
-  const [currentUser, setCurrentUser] = useState<any>(null)
-  const [searchQuery, setSearchQuery] = useState("")
-  const [difficultyFilter, setDifficultyFilter] = useState<string>("all")
-  const [sortBy, setSortBy] = useState<string>("volume-desc")
-  const [selectedKeywords, setSelectedKeywords] = useState<Set<number>>(new Set()) // FIX: Use useState properly
-  const toast = useToast()
+interface AnalyticsData {
+  articlesGenerated: number;
+  articlesLive: number;
+  estimatedTraffic: number;
+  keywordsTracked: number;
+  draftArticles: number;
+  totalCompetitors: number;
+}
 
-  // Get current user on component mount
+type KeywordsCache = {
+  website: WebsiteData["website"];
+  keywords: Keyword[];
+  keywordsUpdatedAt: string | null;
+};
+
+const selectedWebsiteStorageKey = "selected-website-id";
+const websitesStorageKey = (userId: string) => `websites-cache:${userId}`;
+
+const readSelectedWebsiteId = () => {
+  try {
+    return localStorage.getItem(selectedWebsiteStorageKey);
+  } catch {
+    return null;
+  }
+};
+
+const writeSelectedWebsiteId = (websiteId: string) => {
+  try {
+    localStorage.setItem(selectedWebsiteStorageKey, websiteId);
+  } catch {
+    // ignore storage failures
+  }
+};
+
+type WebsitesCache = {
+  websites: Website[];
+  cachedAt: string;
+};
+
+const readWebsitesCache = (userId: string): WebsitesCache | null => {
+  try {
+    const raw = localStorage.getItem(websitesStorageKey(userId));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as WebsitesCache;
+    if (!parsed?.websites || !Array.isArray(parsed.websites)) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+};
+
+const writeWebsitesCache = (userId: string, websites: Website[]) => {
+  try {
+    localStorage.setItem(
+      websitesStorageKey(userId),
+      JSON.stringify({ websites, cachedAt: new Date().toISOString() } as WebsitesCache)
+    );
+  } catch {
+    // ignore storage failures
+  }
+};
+
+const keywordsCacheKey = (websiteId: string) => `keywords-cache:${websiteId}`;
+
+const readKeywordsCache = (websiteId: string): KeywordsCache | null => {
+  try {
+    const raw = localStorage.getItem(keywordsCacheKey(websiteId));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as KeywordsCache;
+    if (!parsed?.website || !Array.isArray(parsed.keywords)) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+};
+
+const writeKeywordsCache = (websiteId: string, value: KeywordsCache) => {
+  try {
+    localStorage.setItem(keywordsCacheKey(websiteId), JSON.stringify(value));
+  } catch {
+    // ignore storage failures
+  }
+};
+
+// Removed mock data: now pulling real keywords via /api/keyword and websites via Supabase
+
+export function KeywordsTab({
+  websiteId,
+  onArticlesGenerated,
+}: KeywordsTabProps) {
+  const [selectedWebsiteId, setSelectedWebsiteId] = useState<string | null>(
+    websiteId ?? null
+  );
+  const [websites, setWebsites] = useState<Website[]>([]);
+  const [websiteData, setWebsiteData] = useState<WebsiteData | null>(null);
+  const [keywords, setKeywords] = useState<Keyword[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadingWebsites, setLoadingWebsites] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [loadingUser, setLoadingUser] = useState<boolean>(true);
+  const [generatingContent, setGeneratingContent] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [difficultyFilter, setDifficultyFilter] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<string>("volume-desc");
+  const [selectedKeywords, setSelectedKeywords] = useState<Set<number>>(
+    new Set()
+  );
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [dialogCompleted, setDialogCompleted] = useState(false);
+  const [showImportDialog, setShowImportDialog] = useState(false);
+  const [showImportingDialog, setShowImportingDialog] = useState(false);
+  const [showKeywordsSyncedDialog, setShowKeywordsSyncedDialog] = useState(false);
+  const [showSyncDialog, setShowSyncDialog] = useState(false);
+  const [showAddKeywordsDialog, setShowAddKeywordsDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [keywordToDelete, setKeywordToDelete] = useState<{ index: number; keyword: string } | null>(null);
+  const toast = useToast();
+
+  // Keep latest values available inside async callbacks (prevents stale requests overwriting UI)
+  const selectedWebsiteIdRef = useRef<string | null>(selectedWebsiteId);
+  const websitesRef = useRef<Website[]>(websites);
+  const fetchKeywordsSeqRef = useRef(0);
+  const loadWebsitesSeqRef = useRef(0);
+
+  useEffect(() => {
+    selectedWebsiteIdRef.current = selectedWebsiteId;
+  }, [selectedWebsiteId]);
+
+  useEffect(() => {
+    websitesRef.current = websites;
+  }, [websites]);
+
+  // Handle dialog completion timing
+  useEffect(() => {
+    if (showCreateDialog && !dialogCompleted && generatingContent) {
+      const timer = setTimeout(() => {
+        setDialogCompleted(true);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [showCreateDialog, dialogCompleted, generatingContent]);
+
+  // Handle dialog closing
+  useEffect(() => {
+    if (dialogCompleted) {
+      const timer = setTimeout(() => {
+        setShowCreateDialog(false);
+        setDialogCompleted(false);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [dialogCompleted]);
+
   useEffect(() => {
     const fetchCurrentUser = async () => {
       try {
-        const { data: user, error } = await getUser()
+        const { data: user, error } = await getUser();
         if (error) {
-          console.error("Error fetching current user:", error)
-          return
+          console.error("Error fetching current user:", error);
+          setCurrentUser(null);
+          return;
         }
-        setCurrentUser(user)
-        console.log("👤 Current user:", user?.id)
+        setCurrentUser(user);
+        console.log("👤 Current user:", user?.id);
       } catch (err) {
-        console.error("Failed to get current user:", err)
+        console.error("Failed to get current user:", err);
+        setCurrentUser(null);
+      } finally {
+        setLoadingUser(false);
       }
-    }
+    };
 
-    fetchCurrentUser()
-  }, [])
+    fetchCurrentUser();
+  }, []);
 
-  // Load user websites if no websiteId is provided
-  const loadUserWebsites = async () => {
+ const loadUserWebsites = useCallback(async () => {
+    const seq = ++loadWebsitesSeqRef.current;
+    const isCurrent = () => loadWebsitesSeqRef.current === seq;
+
     try {
-      setLoadingWebsites(true)
-      const { data: { user } } = await supabase.auth.getUser()
+      if (!currentUser?.id) return;
 
-      if (!user) {
-        setError("Please log in to view keywords")
-        return
-      }
-
-      const { data, error } = await supabase
-        .from("websites")
-        .select("id, url, topic, created_at")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-
-      if (error) {
-        console.error("Error loading websites:", error)
-        setError("Failed to load websites")
-        return
-      }
-
-      if (data && data.length > 0) {
-        setWebsites(data)
-        // Auto-select first website if no websiteId was provided
-        if (!selectedWebsiteId) {
-          setSelectedWebsiteId(data[0].id)
+      // Session-first: hydrate the dropdown immediately.
+      const cached = readWebsitesCache(currentUser.id);
+      if (cached && websitesRef.current.length === 0) {
+        if (isCurrent()) setWebsites(cached.websites);
+        if (!selectedWebsiteIdRef.current && cached.websites.length > 0) {
+          const stored = readSelectedWebsiteId();
+          const nextId =
+            stored && cached.websites.some((w) => w.id === stored)
+              ? stored
+              : cached.websites[0].id;
+          if (isCurrent()) setSelectedWebsiteId(nextId);
+          writeSelectedWebsiteId(nextId);
         }
-      } else {
-        setError("No websites found. Add a website in the Analyze tab first.")
       }
-    } catch (error) {
-      console.error("Error loading websites:", error)
-      setError("Failed to load websites")
+
+      // Only show dropdown loading state if we have nothing cached to render.
+      if ((!cached || websitesRef.current.length === 0) && isCurrent()) {
+        setLoadingWebsites(true);
+      }
+
+      const { data, error: dbError } = await supabase
+        .from("websites")
+        .select("id, url, topic, keywords")
+        .eq("user_id", currentUser.id)
+        .order("created_at", { ascending: false });
+
+      if (dbError) {
+        console.error("Error loading websites:", dbError);
+        setError("Failed to load websites");
+        return;
+      }
+
+      const userWebsites: Website[] = (data || []).map((w: any) => ({
+        id: w.id,
+        url: w.url,
+        topic: w.topic || "General",
+        created_at: w.created_at,
+      }));
+
+      if (!isCurrent()) return;
+
+      setWebsites(userWebsites);
+      setError(null);
+
+      writeWebsitesCache(currentUser.id, userWebsites);
+
+      if (!selectedWebsiteIdRef.current && userWebsites.length > 0) {
+        const stored = readSelectedWebsiteId();
+        const nextId =
+          stored && userWebsites.some((w) => w.id === stored)
+            ? stored
+            : userWebsites[0].id;
+        setSelectedWebsiteId(nextId);
+        writeSelectedWebsiteId(nextId);
+      }
+    } catch (e) {
+      console.error("Error loading websites:", e);
+      setError("Failed to load websites");
     } finally {
-      setLoadingWebsites(false)
+      // Only end loading for the latest in-flight websites request.
+      if (isCurrent()) setLoadingWebsites(false);
     }
-  }
+  }, [currentUser?.id])
 
-  // Load websites on mount if no websiteId provided
   useEffect(() => {
-    if (!initialWebsiteId) {
-      loadUserWebsites()
-    } else {
-      setSelectedWebsiteId(initialWebsiteId)
+    if (websiteId) {
+      setSelectedWebsiteId(websiteId);
+      writeSelectedWebsiteId(websiteId);
+      return;
     }
-  }, [initialWebsiteId])
+    if (!loadingUser && currentUser?.id) {
+      loadUserWebsites();
+    }
+  }, [websiteId, loadingUser, currentUser?.id, loadUserWebsites])
 
-  // Fetch keywords when selectedWebsiteId changes
+  const fetchKeywords = useCallback(
+    async (options?: { forceRefresh?: boolean }) => {
+      if (!selectedWebsiteId) return;
+
+      const requestWebsiteId = selectedWebsiteId;
+      const requestSeq = ++fetchKeywordsSeqRef.current;
+      const isCurrent = () =>
+        fetchKeywordsSeqRef.current === requestSeq &&
+        selectedWebsiteIdRef.current === requestWebsiteId;
+
+      const forceRefresh = !!options?.forceRefresh;
+
+      const normalizeKeyword = (kw: any): Keyword | null => {
+        if (!kw) return null;
+        const text = typeof kw === "string" ? kw : kw.keyword;
+        if (!text) return null;
+
+        return {
+          id: kw.id || undefined,
+          keyword: String(text),
+          search_volume: Number(kw.search_volume ?? 0),
+          difficulty: Number(kw.difficulty ?? 0),
+          cpc: Number(kw.cpc ?? 0),
+          competition: Number(kw.competition ?? 0),
+          is_target_keyword: !!kw.is_target_keyword,
+          post_status: kw.post_status || "No Plan",
+          traffic_potential:
+            kw.traffic_potential ||
+            (kw.search_volume
+              ? `${Math.round(Number(kw.search_volume) * 0.1)}+/mo`
+              : "—"),
+        };
+      };
+
+      const getErrorMessage = (err: unknown) => {
+        if (err instanceof Error) return err.message;
+        if (typeof err === "string") return err;
+        if (err && typeof err === "object") {
+          const maybeMessage = (err as any).message;
+          const maybeDetails = (err as any).details;
+          if (typeof maybeMessage === "string" && maybeMessage.trim()) {
+            return typeof maybeDetails === "string" && maybeDetails.trim()
+              ? `${maybeMessage} (${maybeDetails})`
+              : maybeMessage;
+          }
+        }
+        return "Failed to load keywords";
+      };
+
+      try {
+        if (isCurrent()) setError(null);
+
+        // 0) Render instantly from session cache (no spinner)
+        const cached = !forceRefresh ? readKeywordsCache(requestWebsiteId) : null;
+        if (cached) {
+          if (isCurrent()) {
+            setWebsiteData({ website: cached.website, keywords: cached.keywords });
+            setKeywords(cached.keywords);
+            setSelectedKeywords(new Set());
+            setLoading(false);
+          }
+        } else {
+          // No cache => keep existing behavior (spinner while first loading)
+          if (isCurrent()) {
+            // Avoid showing stale keywords from the previous website while loading the new one.
+            setWebsiteData(null);
+            setKeywords([]);
+            setSelectedKeywords(new Set());
+            setLoading(true);
+          }
+        }
+
+        // 0.5) Cheap DB version check: if unchanged, don't re-render / don't show spinner
+        if (!forceRefresh) {
+          const { data: versionRow, error: versionErr } = await supabase
+            .from("websites")
+            .select("keywords_updated_at")
+            .eq("id", requestWebsiteId)
+            .single();
+
+          if (!versionErr) {
+            const dbUpdatedAt: string | null = (versionRow as any)?.keywords_updated_at ?? null;
+            const cachedUpdatedAt: string | null = cached?.keywordsUpdatedAt ?? null;
+            if (cached && dbUpdatedAt && cachedUpdatedAt && dbUpdatedAt === cachedUpdatedAt) {
+              return;
+            }
+
+            // DB changed and we had cache => show spinner for refresh
+            if (cached) {
+              if (isCurrent()) setLoading(true);
+            }
+          }
+        }
+
+        if (isCurrent()) setError(null);
+
+        // 1) Load from DB first (fast)
+        // Backward-compatible select: keywords_updated_at may not exist until migration runs
+        let singleSite: any = null;
+        {
+          const { data, error: siteErr } = await supabase
+            .from("websites")
+            .select("id, url, topic, keywords, keywords_updated_at")
+            .eq("id", requestWebsiteId)
+            .single();
+
+          if (siteErr) {
+            const msg = siteErr.message || "Failed to load website";
+            // If the column doesn't exist yet, retry without it.
+            if (/keywords_updated_at/i.test(msg) && /column/i.test(msg)) {
+              const { data: retryData, error: retryErr } = await supabase
+                .from("websites")
+                .select("id, url, topic, keywords")
+                .eq("id", requestWebsiteId)
+                .single();
+              if (retryErr) throw new Error(retryErr.message || "Failed to load website");
+              singleSite = retryData;
+            } else {
+              throw new Error(msg);
+            }
+          } else {
+            singleSite = data;
+          }
+        }
+        if (!singleSite) throw new Error("Website not found");
+
+        // If the user switched websites while we were waiting, drop this result.
+        if (!isCurrent()) return;
+
+        const siteKeywords = (singleSite as any).keywords;
+        const storedArray: any[] = Array.isArray(siteKeywords)
+          ? siteKeywords
+          : Array.isArray(siteKeywords?.keywords)
+            ? siteKeywords.keywords
+            : [];
+
+        const storedKeywords: Keyword[] = storedArray
+          .map(normalizeKeyword)
+          .filter(Boolean) as Keyword[];
+
+        // If we already have stored keywords and we're not forcing refresh, stop here.
+        if (storedKeywords.length > 0 && !forceRefresh) {
+          const nextWebsite = {
+            id: singleSite.id,
+            url: singleSite.url,
+            topic: singleSite.topic || "General",
+          };
+
+          if (isCurrent()) {
+            setWebsiteData({ website: nextWebsite, keywords: storedKeywords });
+            setKeywords(storedKeywords);
+            setSelectedKeywords(new Set());
+          }
+
+          // Cache the DB result so next visit is instant
+          writeKeywordsCache(requestWebsiteId, {
+            website: nextWebsite,
+            keywords: storedKeywords,
+            keywordsUpdatedAt: (singleSite as any).keywords_updated_at ?? null,
+          });
+          return;
+        }
+
+        // 2) DB is empty (or forced): call slow API once, then persist into DB
+        const response = await fetch(`/api/keyword`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            topic: singleSite.topic || "General",
+            websiteUrl: singleSite.url || "",
+            includeCompetitors: true,
+            maxVolume: 10000,
+            minVolume: 50,
+            maxDifficulty: 100,
+            limit: 100,
+          }),
+        });
+
+        const apiData = await response.json();
+        if (!response.ok || !apiData.success) {
+          throw new Error(apiData.error || "Failed to fetch keywords from DataForSEO");
+        }
+
+        const primaryKeywords: Keyword[] = Array.isArray(apiData.keywords)
+          ? (apiData.keywords.map(normalizeKeyword).filter(Boolean) as Keyword[])
+          : [];
+
+        const competitorKeywords: Keyword[] = Array.isArray(apiData.competitors)
+          ? (apiData.competitors
+              .flatMap((comp: any) => comp?.keywords || [])
+              .map(normalizeKeyword)
+              .filter(Boolean) as Keyword[])
+          : [];
+
+        // Keep any stored target keywords (if present)
+        const storedTargets = storedKeywords.filter((k) => k.is_target_keyword);
+
+        const mergedMap = new Map<string, Keyword>();
+        [...primaryKeywords, ...competitorKeywords, ...storedTargets].forEach((kw) => {
+          const key = String(kw.keyword).toLowerCase();
+          if (!mergedMap.has(key)) mergedMap.set(key, kw);
+        });
+
+        const merged = Array.from(mergedMap.values());
+
+        const existingPayload =
+          siteKeywords && typeof siteKeywords === "object" && !Array.isArray(siteKeywords)
+            ? siteKeywords
+            : {};
+
+        const newPayload = {
+          ...existingPayload,
+          keywords: merged,
+          competitors: apiData.competitors || existingPayload.competitors || [],
+          analysis_metadata: {
+            ...(existingPayload.analysis_metadata || {}),
+            analyzed_at: new Date().toISOString(),
+            total_keywords: merged.length,
+          },
+        };
+
+        const { error: updateErr } = await supabase
+          .from("websites")
+          .update({ keywords: newPayload })
+          .eq("id", requestWebsiteId);
+
+        if (updateErr) {
+          console.error("Failed to persist refreshed keywords:", updateErr);
+        }
+
+        const nextWebsite = {
+          id: singleSite.id,
+          url: singleSite.url,
+          topic: singleSite.topic || "General",
+        };
+
+        if (isCurrent()) {
+          setWebsiteData({ website: nextWebsite, keywords: merged });
+          setKeywords(merged);
+          setSelectedKeywords(new Set());
+        }
+
+        // Re-read keywords_updated_at so cache has the correct DB version after update
+        let afterUpdatedAt: string | null = null;
+        {
+          const { data: afterVersionRow, error: afterVersionErr } = await supabase
+            .from("websites")
+            .select("keywords_updated_at")
+            .eq("id", requestWebsiteId)
+            .single();
+
+          if (!afterVersionErr) {
+            afterUpdatedAt = (afterVersionRow as any)?.keywords_updated_at ?? null;
+          }
+        }
+
+        writeKeywordsCache(requestWebsiteId, {
+          website: nextWebsite,
+          keywords: merged,
+          keywordsUpdatedAt: afterUpdatedAt,
+        });
+      } catch (err) {
+        const message = getErrorMessage(err);
+        // Next.js dev overlay sometimes serializes objects as `{}`; log message separately.
+        console.error("Error fetching keywords:", message);
+        console.error(err);
+        if (isCurrent()) setError(message);
+      } finally {
+        // Only the latest request may change the loading state.
+        if (fetchKeywordsSeqRef.current === requestSeq) {
+          setLoading(false);
+        }
+      }
+    },
+    [selectedWebsiteId]
+  );
+
+  // Auto-refresh caches when the websites table changes (new website added, keywords updated elsewhere, etc.)
+  useEffect(() => {
+    if (!currentUser?.id) return;
+
+    const channel = supabase
+      .channel(`websites-changes:${currentUser.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "websites",
+          filter: `user_id=eq.${currentUser.id}`,
+        },
+        (payload) => {
+          // 1) Refresh websites list (updates state + localStorage) without showing loader if cached.
+          loadUserWebsites();
+
+          // 2) If the currently selected website changed, refresh keywords cache.
+          const changedId = (payload as any)?.new?.id ?? (payload as any)?.old?.id;
+          if (changedId && selectedWebsiteIdRef.current === changedId) {
+            fetchKeywords();
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      try {
+        supabase.removeChannel(channel);
+      } catch {
+        // ignore cleanup failures
+      }
+    };
+  }, [currentUser?.id, loadUserWebsites, fetchKeywords]);
+
   useEffect(() => {
     console.log("🔍 KeywordsTab - selectedWebsiteId:", selectedWebsiteId);
 
     if (selectedWebsiteId) {
-      fetchKeywords()
+      fetchKeywords();
     } else if (!loadingWebsites) {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [selectedWebsiteId])
+  }, [selectedWebsiteId, loadingWebsites, fetchKeywords]);
 
-  const fetchKeywords = async () => {
-    if (!selectedWebsiteId) return;
-
-    try {
-      setLoading(true)
-      setError(null)
-      console.log(`🔍 Fetching keywords for website: ${selectedWebsiteId}`)
-
-      const response = await fetch(`/api/keyword/${selectedWebsiteId}`)
-
-      if (!response.ok) {
-        if (response.status === 404) {
-          throw new Error("Website not found")
-        }
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-
-      const data = await response.json()
-
-      if (!data.success) {
-        throw new Error(data.error || "Failed to fetch keywords")
-      }
-
-      setWebsiteData(data)
-
-      // Handle both old and new data formats
-      let keywordsArray = [];
-
-      if (Array.isArray(data.keywords)) {
-        // Old format: direct array of keywords
-        keywordsArray = data.keywords;
-        console.log(`✅ Loaded ${keywordsArray.length} keywords (old format)`);
-      } else if (data.keywords && Array.isArray(data.keywords.keywords)) {
-        // New format: object with keywords array inside
-        keywordsArray = data.keywords.keywords;
-        console.log(`✅ Loaded ${keywordsArray.length} keywords (new format)`);
-      } else {
-        console.warn('❌ Unexpected keywords format:', data.keywords);
-        keywordsArray = [];
-      }
-
-      // Fetch 4-5 additional related keywords from API
-      if (data.website?.topic && keywordsArray.length > 0) {
-        try {
-          console.log(`📊 Fetching 4-5 additional related keywords for topic: ${data.website.topic}`)
-          
-          const relatedResponse = await fetch('/api/keyword', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              topic: data.website.topic,
-              websiteUrl: data.website.url,
-              maxDifficulty: 60,
-              minVolume: 100,
-              maxVolume: 5000,
-              limit: 5
-            })
-          })
-
-          if (relatedResponse.ok) {
-            const relatedData = await relatedResponse.json()
-            
-            if (relatedData.success && Array.isArray(relatedData.keywords)) {
-              // Filter out duplicates
-              const newKeywords = relatedData.keywords.filter(
-                (newKw: any) => !keywordsArray.some(
-                  (existing: any) => existing.keyword.toLowerCase() === newKw.keyword.toLowerCase()
-                )
-              ).slice(0, 5)
-              
-              const combinedKeywords = [...keywordsArray, ...newKeywords]
-              setKeywords(combinedKeywords)
-              console.log(`✅ Added ${newKeywords.length} related keywords - Total: ${combinedKeywords.length}`)
-            } else {
-              setKeywords(keywordsArray)
-            }
-          } else {
-            setKeywords(keywordsArray)
-          }
-        } catch (relatedErr) {
-          console.warn('⚠️ Failed to fetch related keywords, showing base keywords only:', relatedErr)
-          setKeywords(keywordsArray)
-        }
-      } else {
-        setKeywords(keywordsArray)
-      }
-
-      // Reset selected keywords when new keywords are loaded
-      setSelectedKeywords(new Set())
-      console.log(`✅ Total keywords loaded and displayed`)
-
-    } catch (err) {
-      console.error('Error fetching keywords:', err)
-      setError(err instanceof Error ? err.message : "Failed to load keywords")
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  // Move filteredAndSortedKeywords BEFORE generateContentFromKeywords
   const filteredAndSortedKeywords = useMemo(() => {
     const filtered = keywords.filter((kw) => {
-      const matchesSearch = kw.keyword.toLowerCase().includes(searchQuery.toLowerCase())
+      const matchesSearch = kw.keyword
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase());
 
-      let difficultyCategory: "Low" | "Medium" | "High"
-      if (kw.difficulty <= 40) difficultyCategory = "Low"
-      else if (kw.difficulty <= 70) difficultyCategory = "Medium"
-      else difficultyCategory = "High"
+      let difficultyCategory: "Low" | "Medium" | "High";
+      if (kw.difficulty <= 40) difficultyCategory = "Low";
+      else if (kw.difficulty <= 70) difficultyCategory = "Medium";
+      else difficultyCategory = "High";
 
-      const matchesDifficulty = difficultyFilter === "all" || difficultyCategory === difficultyFilter
-      return matchesSearch && matchesDifficulty
-    })
+      const matchesDifficulty =
+        difficultyFilter === "all" || difficultyCategory === difficultyFilter;
+      return matchesSearch && matchesDifficulty;
+    });
 
     filtered.sort((a, b) => {
       switch (sortBy) {
         case "volume-desc":
-          return b.search_volume - a.search_volume
+          return b.search_volume - a.search_volume;
         case "volume-asc":
-          return a.search_volume - b.search_volume
+          return a.search_volume - b.search_volume;
         case "difficulty-asc":
-          return a.difficulty - b.difficulty
+          return a.difficulty - b.difficulty;
         case "difficulty-desc":
-          return b.difficulty - a.difficulty
+          return b.difficulty - a.difficulty;
         case "cpc-desc":
-          return b.cpc - a.cpc
+          return b.cpc - a.cpc;
         case "cpc-asc":
-          return a.cpc - b.cpc
+          return a.cpc - b.cpc;
         case "competition-asc":
-          return a.competition - b.competition
+          return a.competition - b.competition;
         case "competition-desc":
-          return b.competition - a.competition
+          return b.competition - a.competition;
         default:
-          return 0
+          return 0;
       }
-    })
+    });
 
-    return filtered
-  }, [keywords, searchQuery, difficultyFilter, sortBy])
+    return filtered;
+  }, [keywords, searchQuery, difficultyFilter, sortBy]);
 
   const generateContentFromKeywords = async () => {
+    // Open dialog immediately without validation toasts
+    setGeneratingContent(true);
+    setShowCreateDialog(true);
+    setDialogCompleted(false);
+
     if (!selectedKeywords || selectedKeywords.size === 0) {
-      alert("Please select at least one keyword to generate content.")
       return;
     }
 
     if (!currentUser) {
-      alert("Please log in to generate content.")
       return;
     }
 
     if (!filteredAndSortedKeywords || filteredAndSortedKeywords.length === 0) {
-      alert("No keywords available to generate content.")
       return;
     }
 
     try {
-      setGeneratingContent(true);
-
-      const selectedKeywordTexts = Array.from(selectedKeywords).map(
-        index => filteredAndSortedKeywords[index]?.keyword
-      ).filter(Boolean);
+      const selectedKeywordTexts = Array.from(selectedKeywords)
+        .map((index) => filteredAndSortedKeywords[index]?.keyword)
+        .filter(Boolean);
 
       if (selectedKeywordTexts.length === 0) {
-        alert("No valid keywords selected.")
-        setGeneratingContent(false);
         return;
       }
 
-      // Get user's package limit
-      const userLimit = await getUserArticleLimit(currentUser.id);
-      const totalArticles = userLimit;
+      // TODO: Replace with real API when ready
+      // const userLimit = await getUserArticleLimit(currentUser.id);
+      // const response = await fetch("/api/test-generate-article", {
+      //   method: "POST",
+      //   headers: { "Content-Type": "application/json" },
+      //   body: JSON.stringify({
+      //     keywords: selectedKeywordTexts,
+      //     userId: currentUser.id,
+      //     websiteId: selectedWebsiteId,
+      //   }),
+      // });
 
-      console.log(`🚀 Generating ${totalArticles} articles (package limit) with keywords:`, selectedKeywordTexts);
-      console.log("👤 Current user ID:", currentUser.id);
-
-      const generatedArticles: Article[] = [];
-
-      for (let i = 0; i < totalArticles; i++) {
-        console.log(`📄 Generating article ${i + 1}/${totalArticles}...`);
-        
-        const response = await fetch('/api/test-generate-article', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            keywords: selectedKeywordTexts,
-            userId: currentUser.id,
-            websiteId: selectedWebsiteId,
-            articleNumber: i + 1,
-            totalArticles: totalArticles,
+      // Mock content generation for now
+      const generatedArticles: Article[] = selectedKeywordTexts.map(
+        (keyword, i) => ({
+          id: `article-${i}`,
+          title: `Complete Guide to ${keyword}`,
+          content: `This is a comprehensive guide about ${keyword}...`,
+          keyword,
+          status: "Draft" as const,
+          date: new Date().toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
           }),
-        });
-
-        if (!response.ok) {
-          console.error(`Failed to generate article ${i + 1}`);
-          continue;
-        }
-
-        const data = await response.json();
-        
-        if (data.success && data.article) {
-          const newArticle: Article = {
-            id: data.article.id,
-            title: data.article.title,
-            content: data.article.content,
-            keyword: selectedKeywordTexts.join(', '),
-            status: "Draft",
-            date: new Date().toLocaleDateString('en-US', {
-              year: 'numeric',
-              month: 'short',
-              day: 'numeric'
-            }),
-            preview: data.article.metaDescription || data.article.content.substring(0, 150) + '...',
-            wordCount: data.article.wordCount,
-            metaTitle: data.article.metaTitle,
-            metaDescription: data.article.metaDescription,
-            readingTime: data.article.readingTime,
-            contentScore: data.article.contentScore,
-            keywordDensity: data.article.keywordDensity,
-            tags: data.article.tags,
-            category: data.article.category,
-            estimatedTraffic: data.article.estimatedTraffic
-          };
-
-          generatedArticles.push(newArticle);
-          console.log(`✅ Generated article ${i + 1}/${totalArticles}`);
-        }
-
-        if (i < totalArticles - 1) {
-          await new Promise(resolve => setTimeout(resolve, 500));
-        }
-      }
+          preview: `Learn everything you need to know about ${keyword}...`,
+          wordCount: 2500,
+          metaTitle: `${keyword} - Complete Guide`,
+          metaDescription: `Comprehensive guide to ${keyword}. Learn best practices and tips.`,
+          readingTime: "12 min",
+          contentScore: 85,
+          keywordDensity: 2.5,
+        })
+      );
 
       if (onArticlesGenerated && generatedArticles.length > 0) {
         onArticlesGenerated(generatedArticles);
       }
 
-      console.log(`✅ Generated ${generatedArticles.length} articles with keywords:`, selectedKeywordTexts);
-
       setSelectedKeywords(new Set());
-
-      toast.showToast({
-        title: `Successfully generated ${generatedArticles.length} articles with ${selectedKeywordTexts.length} keywords! Check the Articles tab.`,
-        type: "success",
-        duration: 5000
-      });
-
     } catch (error) {
-      console.error('Error generating content:', error);
-      toast.showToast({
-        title: "Failed to generate content",
-        description: "Please try again.",
-        type: "error"
-      });
+      console.error("Error generating content:", error);
     } finally {
       setGeneratingContent(false);
     }
@@ -423,419 +810,816 @@ export function KeywordsTab({ websiteId: initialWebsiteId, onArticlesGenerated }
 
   const toggleKeywordSelection = (index: number) => {
     if (!selectedKeywords) return;
-    const newSelected = new Set(selectedKeywords)
+    const newSelected = new Set(selectedKeywords);
     if (newSelected.has(index)) {
-      newSelected.delete(index)
+      newSelected.delete(index);
     } else {
-      newSelected.add(index)
+      newSelected.add(index);
     }
-    setSelectedKeywords(newSelected)
-  }
+    setSelectedKeywords(newSelected);
+  };
 
   const toggleSelectAll = () => {
     if (!selectedKeywords || !filteredAndSortedKeywords) return;
     if (selectedKeywords.size === filteredAndSortedKeywords.length) {
-      setSelectedKeywords(new Set())
+      setSelectedKeywords(new Set());
     } else {
-      setSelectedKeywords(new Set(filteredAndSortedKeywords.map((_, index) => index)))
+      setSelectedKeywords(
+        new Set(filteredAndSortedKeywords.map((_, index) => index))
+      );
     }
-  }
+  };
 
   const getDifficultyColor = (difficulty: number) => {
-    if (difficulty <= 40) return "bg-green-100 text-green-700 border-green-200"
-    else if (difficulty <= 70) return "bg-yellow-100 text-yellow-700 border-yellow-200"
-    else return "bg-red-100 text-red-700 border-red-200"
-  }
+    if (difficulty <= 40) return "bg-green-100 text-green-700 border-green-200";
+    else if (difficulty <= 70)
+      return "bg-yellow-100 text-yellow-700 border-yellow-200";
+    else return "bg-red-100 text-red-700 border-red-200";
+  };
 
   const getDifficultyText = (difficulty: number) => {
-    if (difficulty <= 40) return "Low"
-    else if (difficulty <= 70) return "Medium"
-    else return "High"
-  }
+    if (difficulty <= 40) return "Low";
+    else if (difficulty <= 70) return "Medium";
+    else return "High";
+  };
 
   const getCompetitionColor = (competition: number) => {
-    if (competition <= 0.3) return "bg-green-100 text-green-700 border-green-200"
-    else if (competition <= 0.6) return "bg-yellow-100 text-yellow-700 border-yellow-200"
-    else return "bg-red-100 text-red-700 border-red-200"
-  }
+    if (competition <= 0.3)
+      return "bg-green-100 text-green-700 border-green-200";
+    else if (competition <= 0.6)
+      return "bg-yellow-100 text-yellow-700 border-yellow-200";
+    else return "bg-red-100 text-red-700 border-red-200";
+  };
 
   const getCompetitionText = (competition: number) => {
-    if (competition <= 0.3) return "Low"
-    else if (competition <= 0.6) return "Medium"
-    else return "High"
-  }
+    if (competition <= 0.3) return "Low";
+    else if (competition <= 0.6) return "Medium";
+    else return "High";
+  };
 
+  const getPostStatusColor = (status?: string) => {
+    switch (status) {
+      case "Live":
+        return "bg-[#53f870] text-black border border-green-200";
+      case "Draft":
+        return "bg-[#ffffff66] text-black border-none";
+      case "No Post":
+        return "bg-[#ffffff66] text-black border-none";
+      default:
+        return "bg-[#ffffff66] text-black border-none";
+    }
+  };
+
+  // Calculate stats
   const stats = {
-    totalKeywords: filteredAndSortedKeywords.length,
-    avgVolume: Math.round(
-      filteredAndSortedKeywords.reduce((sum, kw) => sum + kw.search_volume, 0) / Math.max(filteredAndSortedKeywords.length, 1)
-    ),
-    avgCpc: (filteredAndSortedKeywords.reduce((sum, kw) => sum + kw.cpc, 0) / Math.max(filteredAndSortedKeywords.length, 1)).toFixed(2),
-    avgDifficulty: Math.round(
-      filteredAndSortedKeywords.reduce((sum, kw) => sum + kw.difficulty, 0) / Math.max(filteredAndSortedKeywords.length, 1)
-    )
-  }
+    totalKeywords: keywords.length,
+    highPotential: keywords.filter((kw) => kw.difficulty <= 40).length,
+    withContent: keywords.filter(
+      (kw) => kw.post_status === "Live" || kw.post_status === "Draft"
+    ).length,
+    withoutContent: keywords.filter((kw) => kw.post_status === "No Plan")
+      .length,
+  };
 
   const exportKeywords = () => {
     const csvContent = [
-      ["Keyword", "Search Volume", "Difficulty", "CPC", "Competition"],
-      ...filteredAndSortedKeywords.map(kw => [
+      [
+        "Keyword",
+        "Search Volume",
+        "Difficulty",
+        "CPC",
+        "Competition",
+        "Status",
+      ],
+      ...filteredAndSortedKeywords.map((kw) => [
         kw.keyword,
         kw.search_volume,
         kw.difficulty,
         `$${kw.cpc.toFixed(2)}`,
-        kw.competition.toFixed(2)
-      ])
-    ].map(row => row.join(",")).join("\n")
+        kw.competition.toFixed(2),
+        kw.post_status || "N/A",
+      ]),
+    ]
+      .map((row) => row.join(","))
+      .join("\n");
 
-    const blob = new Blob([csvContent], { type: "text/csv" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = `keywords-${websiteData?.website.topic || "export"}.csv`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
+    const blob = new Blob([csvContent], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `keywords-${websiteData?.website.topic || "export"}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportCSV = async (file: File) => {
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const csv = e.target?.result as string;
+      const lines = csv.split("\n");
+      const importedKeywords: string[] = [];
+
+      // Skip header, parse each line
+      for (let i = 1; i < lines.length; i++) {
+        if (lines[i].trim()) {
+          const keyword = lines[i].split(",")[0]?.trim();
+          if (keyword) importedKeywords.push(keyword);
+        }
+      }
+
+      if (importedKeywords.length > 0) {
+        console.log("Importing keywords:", importedKeywords);
+        // Show importing dialog
+        setShowImportingDialog(true);
+        
+        // Persist to Supabase
+        const success = await importKeywordsFromCSV(importedKeywords);
+        
+        if (success) {
+          console.log(`✅ Successfully imported ${importedKeywords.length} keyword(s)`);
+          // Close importing dialog and show success dialog after 2 seconds
+          setTimeout(() => {
+            setShowImportingDialog(false);
+            setShowKeywordsSyncedDialog(true);
+            setShowImportDialog(false);
+          }, 2000);
+          // Close success dialog after another 2 seconds
+          setTimeout(() => {
+            setShowKeywordsSyncedDialog(false);
+          }, 4000);
+          // toast?.success(`Successfully imported ${importedKeywords.length} keywords`);
+        } else {
+          setShowImportingDialog(false);
+        }
+      }
+      
+      setShowImportDialog(false);
+    };
+    reader.readAsText(file);
+  };
+
+  const handleDeleteKeyword = (index: number) => {
+    const keyword = filteredAndSortedKeywords[index];
+    if (keyword) {
+      setKeywordToDelete({ index, keyword: keyword.keyword });
+      setShowDeleteDialog(true);
+    }
+  };
+
+  const confirmDeleteKeyword = () => {
+    if (keywordToDelete) {
+      const newKeywords = keywords.filter(
+        (kw) => kw.keyword !== keywordToDelete.keyword
+      );
+      setKeywords(newKeywords);
+      setShowDeleteDialog(false);
+      setKeywordToDelete(null);
+      // toast?.success(`Deleted "${keywordToDelete.keyword}"`);
+    }
+  };
+
+  // Helper: Persist keywords to Supabase website's keywords array
+  const persistKeywordsToWebsite = async (newKeywords: Keyword[]) => {
+    try {
+      if (!selectedWebsiteId) {
+        console.error("No website selected");
+        return false;
+      }
+
+      // Fetch current website keywords payload
+      const { data: siteData, error: siteErr } = await supabase
+        .from("websites")
+        .select("id, keywords")
+        .eq("id", selectedWebsiteId)
+        .single();
+
+      if (siteErr) {
+        console.error("Failed to fetch website:", siteErr);
+        return false;
+      }
+
+      const existingPayload = (siteData as any)?.keywords || {};
+      const existingList: any[] = Array.isArray(existingPayload?.keywords)
+        ? existingPayload.keywords
+        : [];
+
+      // Merge & dedupe by keyword text (case-insensitive)
+      const map = new Map<string, any>();
+      
+      // Add existing keywords
+      existingList.forEach((k) => {
+        const key = String(k.keyword || "").toLowerCase();
+        if (key) map.set(key, k);
+      });
+
+      // Add/update new keywords
+      newKeywords.forEach((k) => {
+        const key = String(k.keyword || "").toLowerCase();
+        if (key) {
+          const existing = map.get(key) || {};
+          map.set(key, {
+            ...existing,
+            ...k,
+            is_target_keyword: true,
+            post_status: k.post_status || "No Plan",
+          });
+        }
+      });
+
+      const mergedList = Array.from(map.values());
+      const newPayload = { 
+        ...existingPayload, 
+        keywords: mergedList,
+        analysis_metadata: {
+          ...existingPayload.analysis_metadata,
+          total_keywords: mergedList.length,
+          analyzed_at: new Date().toISOString(),
+        }
+      };
+
+      // Update in Supabase
+      const { error: updateErr } = await supabase
+        .from("websites")
+        .update({ keywords: newPayload })
+        .eq("id", selectedWebsiteId);
+
+      if (updateErr) {
+        console.error("Failed to update website keywords:", updateErr);
+        return false;
+      }
+
+      console.log(`✅ Saved ${newKeywords.length} keyword(s) to website`);
+      return true;
+    } catch (e) {
+      console.error("Error persisting keywords:", e);
+      return false;
+    }
+  };
+
+  // Add selected keywords from table to website
+  const addSelectedKeywordsToWebsite = async () => {
+    try {
+      if (!selectedWebsiteId) {
+        console.log("No website selected");
+        return;
+      }
+      if (!selectedKeywords || selectedKeywords.size === 0) {
+        console.log("No keywords selected");
+        return;
+      }
+
+      // Show importing dialog
+      setShowAddKeywordsDialog(true);
+
+      // Get selected keyword objects from the filtered/sorted view
+      const selectedKeywordObjs = Array.from(selectedKeywords)
+        .map((idx) => filteredAndSortedKeywords[idx])
+        .filter(Boolean);
+
+      // Persist to Supabase
+      const success = await persistKeywordsToWebsite(selectedKeywordObjs);
+
+      if (success) {
+        // Refresh keywords to show newly added ones
+        await fetchKeywords();
+        // Clear selection
+        setSelectedKeywords(new Set());
+      }
+    } catch (e) {
+      console.error("Error adding keywords:", e);
+    }
+  };
+
+  // Import keywords from CSV
+  const importKeywordsFromCSV = async (importedStrings: string[]) => {
+    try {
+      if (!selectedWebsiteId) {
+        console.error("No website selected");
+        return false;
+      }
+
+      // Convert strings to keyword objects with defaults
+      const keywordObjs: Keyword[] = importedStrings.map((keyword) => ({
+        keyword: keyword.trim(),
+        search_volume: 0,
+        difficulty: 0,
+        cpc: 0,
+        competition: 0,
+        post_status: "No Plan" as const,
+        is_target_keyword: true,
+      }));
+
+      // Persist to Supabase
+      const success = await persistKeywordsToWebsite(keywordObjs);
+
+      if (success) {
+        // Refresh keywords
+        await fetchKeywords();
+        console.log(`✅ Imported ${keywordObjs.length} keyword(s)`);
+      }
+
+      return success;
+    } catch (e) {
+      console.error("Error importing keywords:", e);
+      return false;
+    }
+  };
+
+  const getCompetitorsCount = (keywordsData: any): number => {
+  if (!keywordsData) return 0;
+  if (keywordsData.competitors && Array.isArray(keywordsData.competitors)) {
+    return keywordsData.competitors.length;
   }
+  return 0;
+};
 
-  if (loadingWebsites) {
+const [analytics, setAnalytics] = useState<AnalyticsData>({
+    articlesGenerated: 0,
+    articlesLive: 0,
+    estimatedTraffic: 0,
+    keywordsTracked: 0,
+    draftArticles: 0,
+    totalCompetitors: 0,
+  });
+
+  const fetchAnalytics = async (userId: string, websiteId?: string | null) => {
+      try {
+        let articlesQuery = supabase
+          .from("articles")
+          .select("status, estimated_traffic, keyword, word_count")
+          .eq("user_id", userId);
+  
+        if (websiteId) {
+          articlesQuery = articlesQuery.eq("website_id", websiteId);
+        }
+  
+        const { data: articles, error: articlesError } = await articlesQuery;
+  
+        if (articlesError) throw articlesError;
+  
+        const articlesGenerated = articles?.length || 0;
+        const articlesLive = articles?.filter(a => a.status === "published" || a.status === "UPLOADED").length || 0;
+        const draftArticles = articles?.filter(a => a.status === "draft" || a.status === "DRAFT").length || 0;
+        
+        const estimatedTraffic = articles?.reduce((sum, article) => {
+          return sum + (article.estimated_traffic || 0);
+        }, 0) || 0;
+  
+        const allKeywords = new Set<string>();
+        articles?.forEach(article => {
+          if (typeof article.keyword === 'string') {
+            article.keyword.split(',').forEach(k => allKeywords.add(k.trim()));
+          }
+        });
+        const keywordsTracked = allKeywords.size;
+  
+        let websitesQuery = supabase
+          .from("websites")
+          .select("keywords")
+          .eq("user_id", userId);
+  
+        if (websiteId) {
+          websitesQuery = websitesQuery.eq("id", websiteId);
+        }
+  
+        const { data: websitesData, error: websitesError } = await websitesQuery;
+  
+        if (websitesError) throw websitesError;
+  
+        let totalCompetitors = 0;
+        websitesData?.forEach(website => {
+          const competitorCount = getCompetitorsCount(website.keywords);
+          totalCompetitors += competitorCount;
+        });
+  
+        setAnalytics({
+          articlesGenerated,
+          articlesLive,
+          estimatedTraffic,
+          keywordsTracked,
+          draftArticles,
+          totalCompetitors,
+        });
+      } catch (error) {
+        console.error("Error fetching analytics:", error);
+      }
+    };
+
+  const handleWebsiteChange = async (websiteId: string) => {
+      setSelectedWebsiteId(websiteId);
+      writeSelectedWebsiteId(websiteId);
+      
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      
+      if (user) {
+        await fetchAnalytics(user.id, websiteId);
+      }
+    };
+
+  if (loadingWebsites && websites.length === 0) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-primary" />
-          <p className="text-muted-foreground">Loading websites...</p>
-        </div>
+        <LoaderChevron />
       </div>
-    )
+    );
   }
 
-  if (error && !selectedWebsiteId && websites.length === 0) {
+  if (error && !selectedWebsiteId && websites.length === 0 && !loadingUser) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
-          <BarChart3 className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-          <p className="text-destructive mb-4">{error}</p>
+          <BarChart3 className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+          <p className="text-red-600 mb-4">{error}</p>
           <Button onClick={loadUserWebsites} variant="outline">
             Try Again
           </Button>
         </div>
       </div>
-    )
+    );
   }
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-primary" />
-          <p className="text-muted-foreground">Loading keywords...</p>
-        </div>
+        <LoaderChevron />
       </div>
-    )
-  }
-
-  if (error && selectedWebsiteId) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <p className="text-destructive mb-4">{error}</p>
-          <Button onClick={fetchKeywords} variant="outline">
-            Try Again
-          </Button>
-        </div>
-      </div>
-    )
+    );
   }
 
   if (!websiteData) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
-          <p className="text-muted-foreground mb-4">No website data found</p>
-          <p className="text-sm text-muted-foreground">
-            Please select a website from the list above.
-          </p>
+          {error ? (
+            <>
+              <p className="text-red-600 mb-4">{error}</p>
+              <Button onClick={() => fetchKeywords()} variant="outline">
+                Retry
+              </Button>
+            </>
+          ) : (
+            <>
+              <LoaderChevron />
+            </>
+          )}
         </div>
       </div>
-    )
+    );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Website Selector Pills */}
-      {websites.length > 0 && (
-        <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
-          <CardHeader>
-            <CardTitle>Select Website</CardTitle>
-            <CardDescription>Choose a website to view its keywords</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2">
-              {websites.map((website) => (
-                <Button
-                  key={website.id}
-                  variant={selectedWebsiteId === website.id ? "default" : "outline"}
-                  onClick={() => setSelectedWebsiteId(website.id)}
-                  className={`cursor-pointer ${
-                    selectedWebsiteId === website.id
-                      ? "bg-primary text-primary-foreground"
-                      : "border-border/40 hover:bg-accent"
-                  }`}
-                >
-                  {website.url}
-                  {selectedWebsiteId === website.id && (
-                    <Badge className="ml-2 bg-primary-foreground/20 text-primary-foreground">
-                      Active
-                    </Badge>
-                  )}
-                </Button>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Website Info Header */}
-      <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
-        <CardContent className="pt-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">SEO Keywords</h1>
-              <div className="flex items-center gap-4 mt-2">
-                <p className="text-sm text-muted-foreground">
-                  <span className="font-medium">Website:</span> {websiteData.website.url}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  <span className="font-medium">Topic:</span> {websiteData.website.topic}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  <span className="font-medium">Total Keywords:</span> {keywords.length}
-                </p>
-              </div>
-            </div>
-            <Button
-              variant="outline"
-              className="cursor-pointer border-border/40 gap-2"
-              onClick={() => window.open(websiteData.website.url, '_blank')}
-            >
-              <ExternalLink className="w-4 h-4" />
-              Visit Website
-            </Button>
+    <div className="space-y-6 pb-6">
+      {/* Header */}
+      <div className="flex lg:flex-row flex-col items-start gap-4 lg:gap-0 lg:items-center justify-between">
+        <div>
+          <h2 className="text-2xl text-white font-medium">Keywords</h2>
+          <p className="text-sm text-[#ffffff3b] mt-1">
+            Track the keywords driving your traffic
+          </p>
+        </div>
+        <div className="flex lg:flex-row flex-col gap-3">
+          <div className="flex ">
+          <Button
+            className="gap-2 cursor-pointer text-[#53f870] rounded-l-lg rounded-r-none hover:bg-[#53f8701a] bg-[#53f8701a] border-r border-[#53f870]"
+            onClick={() => setShowImportDialog(true)}
+          >
+            Import CSV
+            <Download className="w-4 h-4" />
+          </Button>
+          <Button
+            className="gap-2 text-[#53f870] bg-[#53f8701a] cursor-pointer border-gray-200 rounded-l-none hover:bg-[#53f8701a]"
+            onClick={() => setShowSyncDialog(true)}
+          >
+            <ExternalLink className="w-4 h-4" />
+            {websiteData.website.url?.replace(/^https?:\/\//, "")}
+          </Button>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Stats Cards */}
-      <div className="grid md:grid-cols-4 gap-4">
-        <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total Keywords</p>
-                <p className="text-2xl font-bold text-foreground">{stats.totalKeywords}</p>
-              </div>
-              <BarChart3 className="w-8 h-8 text-primary/40" />
+          <div>
+              <Select value={selectedWebsiteId || undefined} onValueChange={handleWebsiteChange}>
+                <SelectTrigger className="h-10  bg-[rgba(83,248,112,0.1)]!  rounded-[5px] focus-visible:outline-none focus-visible:ring-0 border-[#0000001a] focus-visible:border-[#0000001a] focus:outline-none cursor-pointer outline-none active:outline-none px-3.5 py-2.5 text-[#53F870]">
+                  <SelectValue placeholder="Select your website" />
+                </SelectTrigger>
+                <SelectContent className="cursor-pointer bg-[#142517]! ">
+                  {websites.map((website, index) => (
+                    <SelectItem
+                      key={website.id}
+                      value={website.id}
+                      className={`cursor-pointer data-[state=checked]:text-[#53F870] data-[state=checked]:opacity-40 ${index < websites.length - 1 ? 'border-b rounded-none border-[#0000001a]' : ''}`}
+                    >
+                      {website.url}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
+        </div>
+      </div>
+
+      {/* Stats Cards - Responsive Grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-0 rounded-xl shadow-xl overflow-hidden">
+        {/* Card 1 */}
+        <Card className="border-b sm:border-b sm:border-r lg:border-r lg:border-b-0 border-l-0 border-t-0 rounded-none border-[#53f8704b] bg-[#101110]">
+          <CardContent className="flex flex-col justify-start gap-4 sm:gap-8">
+            <div className="flex items-center justify-between">
+              <p className="text-xs sm:text-xs font-medium text-[#ffffffb3] uppercase tracking-wide">
+                Total Keywords
+              </p>
+              <Image src="/keywordcardimg1.png" alt="icon" height={15} width={19.5} />
+            </div>
+            <p className="text-2xl sm:text-4xl font-bold text-[#53f870]">
+              {stats.totalKeywords}
+            </p>
           </CardContent>
         </Card>
 
-        <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
-          <CardContent className="pt-6">
+        {/* Card 2 */}
+        <Card className="border-b sm:border-b lg:border-b-0 border-l-0 border-t-0 border-r-0 sm:border-r-0 lg:border-r rounded-none border-[#53f8704b] bg-[#101110]">
+          <CardContent className="flex flex-col justify-start gap-4 sm:gap-8">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Avg. Volume</p>
-                <p className="text-2xl font-bold text-foreground">{stats.avgVolume.toLocaleString()}</p>
-              </div>
-              <TrendingUp className="w-8 h-8 text-accent/40" />
+              <p className="text-xs sm:text-xs font-medium text-[#ffffffb3] uppercase tracking-wide">
+                High Potential
+              </p>
+              <Image src="/keywordcardimg2.png" alt="icon" height={15} width={19.5} />
             </div>
+            <p className="text-2xl sm:text-4xl font-bold text-[#53f870]">{stats.highPotential}</p>
           </CardContent>
         </Card>
 
-        <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
-          <CardContent className="pt-6">
+        {/* Card 3 */}
+        <Card className="border-b-0 sm:border-b sm:border-r lg:border-r lg:border-b-0 border-l-0 border-t-0 rounded-none border-[#53f8704b] bg-[#101110]">
+          <CardContent className="flex flex-col justify-start gap-4 sm:gap-8">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Avg. CPC</p>
-                <p className="text-2xl font-bold text-foreground">${stats.avgCpc}</p>
-              </div>
-              <Filter className="w-8 h-8 text-primary/40" />
+              <p className="text-xs sm:text-xs font-medium text-[#ffffffb3] uppercase tracking-wide">
+                With Content
+              </p>
+              <Image src="/keywordcardimg3.png" alt="icon" height={15} width={19.5} />
             </div>
+            <p className="text-2xl sm:text-4xl font-bold text-[#53f870]">{stats.withContent}</p>
           </CardContent>
         </Card>
 
-        <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
-          <CardContent className="pt-6">
+        {/* Card 4 */}
+        <Card className="border-b-0 sm:border-b lg:border-b-0 border-l-0 border-t-0 border-r-0 lg:border-r-0 rounded-none border-[#53f8704b] bg-[#101110]">
+          <CardContent className="flex flex-col justify-start gap-4 sm:gap-8">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Avg. Difficulty</p>
-                <p className="text-2xl font-bold text-foreground">{stats.avgDifficulty}/100</p>
-              </div>
-              <BarChart3 className="w-8 h-8 text-yellow-500/40" />
+              <p className="text-xs sm:text-xs font-medium text-[#ffffffb3] uppercase tracking-wide">
+                Without Content
+              </p>
+              <Image src="/keywordcardimg4.png" alt="icon" height={15} width={19.5} />
             </div>
+            <p className="text-2xl sm:text-4xl font-bold text-[#53f870]">{stats.withoutContent}</p>
           </CardContent>
         </Card>
       </div>
+      <div className="flex flex-col lg:gap-0 gap-4 flex-wrap lg:flex-row lg:flex-wrap items-start lg:items-center justify-between w-full">
+        {/* LEFT */}
+        <div className="flex items-center gap-6 flex-wrap lg:flex-nowrap lg:gap-6 text-sm text-[#ffffffb3]">
+          {/* Filters Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="flex items-center focus-visible:outline-none! gap-1">
+                Filters
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                  <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" />
+                </svg>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-44">
+              <DropdownMenuItem onClick={() => setDifficultyFilter("all")}>All</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setDifficultyFilter("Low")}>Low Difficulty</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setDifficultyFilter("Medium")}>Medium Difficulty</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setDifficultyFilter("High")}>High Difficulty</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
-      {/* Filters and Search */}
-      <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
-        <CardHeader>
-          <CardTitle>Keyword Analysis</CardTitle>
-          <CardDescription>Analyze and filter keywords for {websiteData.website.topic}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex flex-col md:flex-row gap-3">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="Search keywords..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 bg-input border-border/40"
-              />
-            </div>
+          {/* Sort By Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="flex items-center gap-1 hover:text-gray-700 lg:w-auto w-[250px] focus-visible:outline-none!">
+                Sort By
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                  <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" />
+                </svg>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-64">
+              <DropdownMenuItem onClick={() => setSortBy("volume-desc")}>Search Volume (High → Low)</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSortBy("volume-asc")}>Search Volume (Low → High)</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSortBy("difficulty-asc")}>Difficulty (Low → High)</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSortBy("difficulty-desc")}>Difficulty (High → Low)</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSortBy("cpc-desc")}>CPC (High → Low)</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSortBy("cpc-asc")}>CPC (Low → High)</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSortBy("competition-asc")}>Competition (Low → High)</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSortBy("competition-desc")}>Competition (High → Low)</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
-            <Select value={difficultyFilter} onValueChange={setDifficultyFilter}>
-              <SelectTrigger className="w-full md:w-40 bg-input border-border/40">
-                <SelectValue placeholder="Difficulty" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Difficulties</SelectItem>
-                <SelectItem value="Low">Low</SelectItem>
-                <SelectItem value="Medium">Medium</SelectItem>
-                <SelectItem value="High">High</SelectItem>
-              </SelectContent>
-            </Select>
+          {/* Search */}
+          <div className="relative w-full max-w-[210px]">
+            <Input
+              type="text"
+              placeholder="Search Keywords"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              aria-label="Search keywords"
+              className="h-9 px-3 bg-gray-50 border-[#ffffff10] focus-visible:border-[#ffffff10] text-sm placeholder:text-[#FFFFFF4D] focus-visible:outline-none focus-visible:ring-0"
+            />
+            <Search className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#ffffff4d]" />
+          </div>
+        </div>
 
-            <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-full md:w-48 bg-input border-border/40">
-                <SelectValue placeholder="Sort by" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="volume-desc">Volume (High to Low)</SelectItem>
-                <SelectItem value="volume-asc">Volume (Low to High)</SelectItem>
-                <SelectItem value="difficulty-asc">Difficulty (Easy to Hard)</SelectItem>
-                <SelectItem value="difficulty-desc">Difficulty (Hard to Easy)</SelectItem>
-                <SelectItem value="cpc-desc">CPC (High to Low)</SelectItem>
-                <SelectItem value="cpc-asc">CPC (Low to High)</SelectItem>
-                <SelectItem value="competition-asc">Competition (Low to High)</SelectItem>
-                <SelectItem value="competition-desc">Competition (High to Low)</SelectItem>
-              </SelectContent>
-            </Select>
+        {/* RIGHT */}
+        <button 
+          onClick={() => setShowCreateDialog(true)}
+          disabled={!selectedKeywords || selectedKeywords.size === 0}
+          className="h-9 border-2 border-[#53f870] px-8 rounded-md bg-[#171717] hover:bg-bg-[#171717] cursor-pointer text-[#53f870] order-2 lg:order-0 text-base transition-colors disabled:cursor-not-allowed disabled:border-[#53f8701a] disabled:text-[#3a3a3a]"
+        >
+          Create Post
+        </button>
+        {/* Filters and Table */}
 
+      <div className="bg-[#0d0d0d] w-[362px] lg:w-full rounded-lg border border-[#53f8701a] lg:mt-2.5 overflow-x-auto lg:overflow-hidden">
+        <table className="w-full border border-[#53f8701a] bg-[#101110] border-collapse">
+          {/* ================= HEADER ================= */}
+          <thead>
+            <tr className="border-b border-[#53f8701a] bg-[#0d0d0d]">
+              <th className="px-6 py-3 text-left w-10">
+                <input
+                  type="checkbox"
+                  checked={
+                    filteredAndSortedKeywords.length > 0 &&
+                    selectedKeywords.size === filteredAndSortedKeywords.length
+                  }
+                  onChange={toggleSelectAll}
+                  aria-label="Select all keywords"
+                  className="w-4 h-4 rounded border border-gray-300 bg-transparent cursor-pointer accent-[#53f870]"
+                />
+              </th>
+              <th className="px-6 py-3 text-left text-sm font-normal text-[#ffffff4d]">
+                Keyword
+              </th>
+              <th className="px-6 py-3 text-left text-sm font-normal text-[#ffffff4d]">
+                Search Volume
+              </th>
+              <th className="px-6 py-3 text-left text-sm font-normal text-[#ffffff4d]">
+                Difficulty
+              </th>
+              <th className="px-6 py-3 text-left text-sm font-normal text-[#ffffff4d]">
+                Competition
+              </th>
+              <th className="px-6 py-3 text-left text-sm font-normal text-[#ffffff4d]">
+                Post Status
+              </th>
+              <th className="px-6 py-3 text-left text-sm font-normal text-[#ffffff4d]">
+                Traffic Potential
+              </th>
+              <th className="px-6 py-3 text-left text-sm font-normal text-[#ffffff4d]">
+                Action
+              </th>
+            </tr>
+          </thead>
+
+          {/* ================= BODY ================= */}
+          <tbody className="border border-[#53f8701a]">
+            {filteredAndSortedKeywords.length > 0 ? (
+              filteredAndSortedKeywords.map((kw, index) => {
+                const difficultyText = getDifficultyText(kw.difficulty);
+                const difficultyColor = getDifficultyColor(kw.difficulty);
+                const competitionText = getCompetitionText(kw.competition);
+                const competitionColor = getCompetitionColor(kw.competition);
+                const trafficText = kw.traffic_potential || "—";
+                return (
+                  <tr
+                    key={`${kw.keyword}-${index}`}
+                    className={`border-b border-[#53f8701a] transition-colors`}
+                  >
+                    <td className="px-6 py-3 w-10">
+                      <input
+                        className="w-4 h-4 rounded border border-[#53f8701a] bg-transparent cursor-pointer accent-[#53f870]"
+                        type="checkbox"
+                        checked={selectedKeywords.has(index)}
+                        onChange={() => toggleKeywordSelection(index)}
+                        aria-label={`Select keyword ${kw.keyword}`}
+                      />
+                    </td>
+                    <td className="px-6 text-[#53f870] py-3 text-sm font-medium">{kw.keyword}</td>
+                    <td className="px-6 text-[#fffffb3] py-3 text-sm">{kw.search_volume?.toLocaleString() || "—"}</td>
+                    <td className="px-6 text-[#fffffb3] py-3 text-sm">{difficultyText}</td>
+                    <td className="px-6 text-[#fffffb3] py-3 text-sm">{competitionText}</td>
+                    <td className="px-6 py-3">
+                      <span className={`inline-flex items-center px-2.5 py-1 text-xs font-medium border rounded ${getPostStatusColor(kw.post_status)}`}>
+                        {kw.post_status || "No Post"}
+                      </span>
+                    </td>
+                    <td className="px-6 text-[#fffffb3] py-3 text-sm">{trafficText}</td>
+                    <td className="px-6 py-3">
+                      <div className="flex items-center justify-start gap-0">
+                        <Button className="border w-[114px] border-[#53f8701a] rounded-r-none bg-transparent text-[#ffffffb3] hover:bg-transparent cursor-pointer border-r-0 px-4 h-8 text-xs font-medium">Edit</Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button className="border border-[#53f8701a] rounded-l-none bg-transparent hover:bg-transparent focus-visible:outline-none cursor-pointer w-8 h-8 p-0 flex items-center justify-center"><ChevronDown className="w-4 h-4 text-[#ffffffb3]" /></Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-36 border bg-[#101110] border-[#53f8701a]">
+                            <DropdownMenuItem onClick={() => handleDeleteKeyword(index)} className="text-red-600 hover:text-red-600! hover:bg-transparent! focus-visible:bg-transparent! px-10 text-center cursor-pointer">Delete</DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
+            ) : (
+              <tr>
+                <td colSpan={8} className="px-6 py-8 text-center text-sm text-[#ffffffb3]">No keywords found for this website</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+      </div>
+
+      
+
+      {/* Selection Bar */}
+      {selectedKeywords && selectedKeywords.size > 0 && (
+        <div className="mt-4 flex items-center justify-between p-4 bg-[#101110] rounded-lg border border-blue-200">
+          <p className="text-sm font-medium text-[#53f870]">
+            {selectedKeywords.size} keyword
+            {selectedKeywords.size !== 1 ? "s" : ""} selected
+          </p>
+          <div className="flex gap-2">
             <Button
-              variant="outline"
-              className="cursor-pointer border-border/40 gap-2 bg-transparent"
-              onClick={exportKeywords}
+              size="sm" 
+              className="h-14 lg:h-9 border-2 border-[#53f870] px-8 rounded-md bg-[#171717] hover:bg-[#171717] cursor-pointer text-[#53f870] w-[100px] lg:w-max text-base transition-colors disabled:cursor-not-allowed disabled:border-[#53f8701a] disabled:text-[#3a3a3a]"
+              onClick={addSelectedKeywordsToWebsite}
             >
-              <Download className="w-4 h-4" />
-              Export CSV
+              Add <br className="block lg:hidden" />Keywords
+            </Button>
+            <Button
+              size="sm"
+              className="h-14 lg:h-9 px-4 bg-[#53f8701a] hover:bg-[#53f8701a] text-[#53f870] cursor-pointer text-sm font-medium"
+              onClick={() => setShowCreateDialog(true)}
+              disabled={generatingContent}
+            >
+              Create <br className="block lg:hidden" />Post
             </Button>
           </div>
+        </div>
+      )}
 
-          <div className="border border-border/40 rounded-lg overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-border/40 bg-muted/30">
-                    <th className="px-4 py-3 text-left">
-                      <input
-                        type="checkbox"
-                        checked={
-                          selectedKeywords && 
-                          selectedKeywords.size === filteredAndSortedKeywords.length &&
-                          filteredAndSortedKeywords.length > 0
-                        }
-                        onChange={toggleSelectAll}
-                        className="rounded"
-                      />
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Keyword</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Search Volume</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Difficulty</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">CPC</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Competition</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredAndSortedKeywords.map((keyword, index) => (
-                    <tr key={index} className="border-b border-border/40 hover:bg-muted/20 transition-colors">
-                      <td className="px-4 py-3">
-                        <input
-                          type="checkbox"
-                          checked={selectedKeywords ? selectedKeywords.has(index) : false}
-                          onChange={() => toggleKeywordSelection(index)}
-                          className="rounded"
-                        />
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <p className="font-medium text-foreground">{keyword.keyword}</p>
-                          {keyword.is_target_keyword && (
-                            <Badge className="bg-blue-100 text-blue-700 border-blue-200 text-xs">
-                              Targeted
-                            </Badge>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <p className="text-foreground font-medium">{keyword.search_volume.toLocaleString()}</p>
-                      </td>
-                      <td className="px-4 py-3">
-                        <Badge className={getDifficultyColor(keyword.difficulty)}>
-                          {getDifficultyText(keyword.difficulty)} ({keyword.difficulty})
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-3">
-                        <p className="text-foreground font-medium">${keyword.cpc.toFixed(2)}</p>
-                      </td>
-                      <td className="px-4 py-3">
-                        <Badge className={getCompetitionColor(keyword.competition)}>
-                          {getCompetitionText(keyword.competition)} ({(keyword.competition * 100).toFixed(0)}%)
-                        </Badge>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+      {/* Create Post Dialog (enqueue-backed) */}
+      <CreatePostDialogDashboard
+        open={showCreateDialog}
+        onOpenChange={(val) => {
+          setShowCreateDialog(val);
+          if (!val) setDialogCompleted(false);
+        }}
+        websiteId={selectedWebsiteId ?? undefined}
+        onCreated={() => {
+          setDialogCompleted(true);
+          fetchKeywords();
+        }}
+      />
 
-          {filteredAndSortedKeywords.length === 0 && (
-            <div className="text-center py-8 text-muted-foreground">
-              No keywords found matching your filters.
-            </div>
-          )}
+      {/* Import CSV Dialog */}
+      <ImportCSVDialog
+        isOpen={showImportDialog}
+        onClose={() => setShowImportDialog(false)}
+        onImport={handleImportCSV}
+      />
 
-          {selectedKeywords && selectedKeywords.size > 0 && (
-            <div className="flex items-center justify-between p-4 bg-primary/5 rounded-lg border border-primary/20">
-              <p className="text-sm font-medium text-foreground">
-                {selectedKeywords.size} keyword{selectedKeywords.size !== 1 ? "s" : ""} selected
-              </p>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" className="cursor-pointer border-border/40 bg-transparent">
-                  Add to Campaign
-                </Button>
-                <Button
-                  size="sm"
-                  className="cursor-pointer bg-primary hover:bg-primary/90 text-primary-foreground"
-                  onClick={generateContentFromKeywords}
-                  disabled={generatingContent}
-                >
-                  {generatingContent ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Generating...
-                    </>
-                  ) : (
-                    "Generate Content Ideas"
-                  )}
-                </Button>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {/* Importing Keywords Dialog */}
+      <ImportingKeywordsDialog
+        isOpen={showImportingDialog}
+        onClose={() => setShowImportingDialog(false)}
+      />
+
+      {/* Keywords Synced Dialog */}
+      <KeywordsSyncedDialog
+        isOpen={showKeywordsSyncedDialog}
+        onClose={() => setShowKeywordsSyncedDialog(false)}
+      />
+
+      {/* Sync Competitors Dialog */}
+      <SyncCompetitorsDialog
+        isOpen={showSyncDialog}
+        onClose={() => setShowSyncDialog(false)}
+      />
+
+      {/* Delete Keyword Dialog */}
+      <DeleteKeywordDialog
+        isOpen={showDeleteDialog}
+        keyword={keywordToDelete?.keyword || ""}
+        onClose={() => {
+          setShowDeleteDialog(false);
+          setKeywordToDelete(null);
+        }}
+        onConfirm={confirmDeleteKeyword}
+      />
     </div>
-  )
+  );
 }

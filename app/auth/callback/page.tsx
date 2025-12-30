@@ -4,6 +4,8 @@ import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/client"
 import { useToast } from "@/components/ui/toast"
+import Image from "next/image"
+import { LoaderChevron } from "@/components/ui/LoaderChevron"
 
 export default function AuthCallbackPage() {
   const router = useRouter()
@@ -96,7 +98,9 @@ export default function AuthCallbackPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
       <div className="text-center">
-        <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+        <div className="min-h-screen flex items-center justify-center">
+          <LoaderChevron />
+        </div>
         <h2 className="text-xl font-semibold text-white mb-2">Completing Authentication</h2>
         <p className="text-slate-400">Please wait while we sign you in...</p>
       </div>

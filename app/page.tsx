@@ -8,11 +8,14 @@ import { useToast } from "@/components/ui/toast"
 import { LandingPage } from "@/components/landing-page"
 import { Dashboard } from "@/components/dashboard"
 import { LoginPage } from "@/components/login-page"
+import { LoaderChevron } from "@/components/ui/LoaderChevron"
 import { SignUpPage } from "@/components/signup-page"
+import Image from "next/image"
 
 export default function Home() {
   const [authState, setAuthState] = useState<"landing" | "login" | "signup" | "dashboard">("landing")
   const [userEmail, setUserEmail] = useState("")
+  const [userAvatar, setUserAvatar] = useState<string | null>(null)
   const [isCheckingSubscription, setIsCheckingSubscription] = useState(true)
   const router = useRouter()
 
@@ -27,6 +30,20 @@ export default function Home() {
         
         if (mounted && user && (user.id || user.email)) {
           setUserEmail(user.email ?? "")
+          
+          // Set user avatar from Google OAuth
+          const avatar = user.user_metadata?.avatar_url || 
+                        user.user_metadata?.picture || 
+                        user.identities?.[0]?.identity_data?.avatar_url ||
+                        user.identities?.[0]?.identity_data?.picture ||
+                        null
+          setUserAvatar(avatar)
+          
+          console.log("=== HOME PAGE USER DATA ===")
+          console.log("Email:", user.email)
+          console.log("Avatar:", avatar)
+          console.log("User metadata:", user.user_metadata)
+          console.log("Identities:", user.identities)
           
           // Check subscription status
           const { data: userData, error: dbError } = await supabase
@@ -121,6 +138,13 @@ export default function Home() {
     }
   }
 
+  // If user becomes authenticated (dashboard state), redirect to the dashboard route
+  useEffect(() => {
+    if (authState === "dashboard") {
+      router.replace("/dashboard")
+    }
+  }, [authState, router])
+
   const toast = useToast()
 
   const handleLogout = async () => {
@@ -156,13 +180,14 @@ export default function Home() {
   if (isCheckingSubscription) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <LoaderChevron />
       </div>
     )
   }
 
   if (authState === "dashboard") {
-    return <Dashboard onLogout={handleLogout} userEmail={userEmail} />
+    // Redirecting to /dashboard via effect above; render nothing here.
+    return null
   }
 
   if (authState === "login") {

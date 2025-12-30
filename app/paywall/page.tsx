@@ -6,6 +6,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import PaywallScreen from '@/components/PaywallScreen';
 import { getUser } from '@/lib/auth';
 import { supabase } from '@/lib/client';
+import Image from 'next/image';
+import { LoaderChevron } from '@/components/ui/LoaderChevron';
 
 export default function PaywallPage() {
   const router = useRouter();
@@ -65,7 +67,9 @@ export default function PaywallPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div className="min-h-screen flex items-center justify-center">
+            <LoaderChevron />
+          </div>
           <p className="text-gray-600">Loading...</p>
         </div>
       </div>
