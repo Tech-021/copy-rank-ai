@@ -1,7 +1,7 @@
 // components/tabs/competitors-tab.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Plus, X } from "lucide-react";
 import { LoaderChevron } from "@/components/ui/LoaderChevron";
 import { RefreshCcw } from "lucide-react";
@@ -110,9 +110,11 @@ type CompetitorsCache = {
 
 const selectedWebsiteStorageKey = "selected-website-id";
 
+const websitesStorageKey = (userId: string) => `websites-cache:${userId}`;
+
 const readSelectedWebsiteId = () => {
   try {
-    return sessionStorage.getItem(selectedWebsiteStorageKey);
+    return localStorage.getItem(selectedWebsiteStorageKey);
   } catch {
     return null;
   }
@@ -120,7 +122,35 @@ const readSelectedWebsiteId = () => {
 
 const writeSelectedWebsiteId = (websiteId: string) => {
   try {
-    sessionStorage.setItem(selectedWebsiteStorageKey, websiteId);
+    localStorage.setItem(selectedWebsiteStorageKey, websiteId);
+  } catch {
+    // ignore storage failures
+  }
+};
+
+type WebsitesCache = {
+  websites: Website[];
+  cachedAt: string;
+};
+
+const readWebsitesCache = (userId: string): WebsitesCache | null => {
+  try {
+    const raw = localStorage.getItem(websitesStorageKey(userId));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as WebsitesCache;
+    if (!parsed?.websites || !Array.isArray(parsed.websites)) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+};
+
+const writeWebsitesCache = (userId: string, websites: Website[]) => {
+  try {
+    localStorage.setItem(
+      websitesStorageKey(userId),
+      JSON.stringify({ websites, cachedAt: new Date().toISOString() } as WebsitesCache)
+    );
   } catch {
     // ignore storage failures
   }
@@ -130,7 +160,7 @@ const competitorsCacheKey = (websiteId: string) => `competitors-cache:${websiteI
 
 const readCompetitorsCache = (websiteId: string): CompetitorsCache | null => {
   try {
-    const raw = sessionStorage.getItem(competitorsCacheKey(websiteId));
+    const raw = localStorage.getItem(competitorsCacheKey(websiteId));
     if (!raw) return null;
     const parsed = JSON.parse(raw) as CompetitorsCache;
     if (!parsed?.website || !Array.isArray(parsed.competitors)) return null;
@@ -142,7 +172,7 @@ const readCompetitorsCache = (websiteId: string): CompetitorsCache | null => {
 
 const writeCompetitorsCache = (websiteId: string, value: CompetitorsCache) => {
   try {
-    sessionStorage.setItem(competitorsCacheKey(websiteId), JSON.stringify(value));
+    localStorage.setItem(competitorsCacheKey(websiteId), JSON.stringify(value));
   } catch {
     // ignore storage failures
   }
@@ -174,17 +204,54 @@ export function CompetitorsTab({
   const [competitorTags, setCompetitorTags] = useState<string[]>([]);
   const [selectedKeywords, setSelectedKeywords] = useState<Set<number>>(new Set());
 
-  // Load user websites if no websiteId is provided
-  const loadUserWebsites = async () => {
+  // Prevent stale async requests from overwriting UI after website switch
+  const selectedWebsiteIdRef = useRef<string | null>(selectedWebsiteId);
+  const websitesRef = useRef<Website[]>(websites);
+  const fetchCompetitorsSeqRef = useRef(0);
+  const loadWebsitesSeqRef = useRef(0);
+
+  useEffect(() => {
+    selectedWebsiteIdRef.current = selectedWebsiteId;
+  }, [selectedWebsiteId]);
+
+  useEffect(() => {
+    websitesRef.current = websites;
+  }, [websites]);
+
+  // Load user websites (session-first so dropdown renders instantly after first load)
+  const loadUserWebsites = useCallback(async () => {
+    const seq = ++loadWebsitesSeqRef.current;
+    const isCurrent = () => loadWebsitesSeqRef.current === seq;
+
     try {
-      setLoadingWebsites(true);
       const {
         data: { user },
       } = await supabase.auth.getUser();
 
       if (!user) {
-        setError("Please log in to view competitors");
+        if (isCurrent()) setError("Please log in to view competitors");
         return;
+      }
+
+      // Session-first: hydrate dropdown immediately.
+      const cached = readWebsitesCache(user.id);
+      if (cached && websitesRef.current.length === 0) {
+        if (isCurrent()) setWebsites(cached.websites);
+
+        if (!selectedWebsiteIdRef.current && cached.websites.length > 0) {
+          const stored = readSelectedWebsiteId();
+          const nextId =
+            stored && cached.websites.some((w) => w.id === stored)
+              ? stored
+              : cached.websites[0].id;
+          if (isCurrent()) setSelectedWebsiteId(nextId);
+          writeSelectedWebsiteId(nextId);
+        }
+      }
+
+      // Only show websites loader if nothing cached to render.
+      if ((!cached || websitesRef.current.length === 0) && isCurrent()) {
+        setLoadingWebsites(true);
       }
 
       const { data, error } = await supabase
@@ -195,74 +262,117 @@ export function CompetitorsTab({
 
       if (error) {
         console.error("Error loading websites:", error);
-        setError("Failed to load websites");
+        if (isCurrent()) setError("Failed to load websites");
         return;
       }
 
-      if (data && data.length > 0) {
-        setWebsites(data);
-        // Auto-select first website if no websiteId was provided
-        if (!selectedWebsiteId) {
-          const stored = readSelectedWebsiteId();
-          const nextId =
-            stored && data.some((w) => w.id === stored) ? stored : data[0].id;
-          setSelectedWebsiteId(nextId);
-          writeSelectedWebsiteId(nextId);
-        }
-      } else {
+      const list: Website[] = (data || []).map((w: any) => ({
+        id: w.id,
+        url: w.url,
+        topic: w.topic || "General",
+        created_at: w.created_at,
+      }));
+
+      writeWebsitesCache(user.id, list);
+
+      if (!isCurrent()) return;
+
+      setWebsites(list);
+
+      if (list.length === 0) {
         setError("No websites found. Add a website in the Analyze tab first.");
+        return;
+      }
+
+      setError(null);
+
+      // Auto-select only if nothing selected yet (don't override a selection)
+      if (!selectedWebsiteIdRef.current) {
+        const stored = readSelectedWebsiteId();
+        const nextId = stored && list.some((w) => w.id === stored) ? stored : list[0].id;
+        setSelectedWebsiteId(nextId);
+        writeSelectedWebsiteId(nextId);
       }
     } catch (error) {
       console.error("Error loading websites:", error);
-      setError("Failed to load websites");
+      if (isCurrent()) setError("Failed to load websites");
     } finally {
-      setLoadingWebsites(false);
+      if (isCurrent()) setLoadingWebsites(false);
     }
-  };
+  }, []);
 
   // Load websites on mount if no websiteId provided
   useEffect(() => {
-    if (!initialWebsiteId) {
-      loadUserWebsites();
-    } else {
+    if (initialWebsiteId) {
       setSelectedWebsiteId(initialWebsiteId);
       writeSelectedWebsiteId(initialWebsiteId);
     }
-  }, [initialWebsiteId]);
 
-  // Fetch competitors when selectedWebsiteId changes
-  useEffect(() => {
-    if (selectedWebsiteId) {
-      fetchCompetitors();
-    } else if (!loadingWebsites) {
-      setLoading(false);
-    }
-  }, [selectedWebsiteId]);
+    // Always load the websites list for the dropdown (and to keep cache fresh)
+    loadUserWebsites();
+  }, [initialWebsiteId, loadUserWebsites]);
 
-  const fetchCompetitors = async (id?: string) => {
+  const fetchCompetitors = useCallback(async (id?: string) => {
     const siteId = id || selectedWebsiteId;
     if (!siteId) return;
 
+    const requestSiteId = siteId;
+    const requestSeq = ++fetchCompetitorsSeqRef.current;
+    const isCurrent = () =>
+      fetchCompetitorsSeqRef.current === requestSeq &&
+      selectedWebsiteIdRef.current === requestSiteId;
+
     try {
-      setError(null);
+      if (isCurrent()) setError(null);
       console.log(`🔍 Fetching competitors for website: ${siteId}`);
 
       // 1) Render instantly from session cache (no spinner)
-      const cached = readCompetitorsCache(siteId);
+      const cached = readCompetitorsCache(requestSiteId);
       if (cached) {
-        setWebsiteData({
-          website: cached.website,
-          competitors: cached.competitors,
-          metadata: cached.metadata,
-        });
-        setCompetitors(cached.competitors);
-        setLoading(false);
+        if (isCurrent()) {
+          setWebsiteData({
+            website: cached.website,
+            competitors: cached.competitors,
+            metadata: cached.metadata,
+          });
+          setCompetitors(cached.competitors);
+          setLoading(false);
+        }
       } else {
         // No cache => keep existing behavior (spinner while first loading)
-        setLoading(true);
+        if (isCurrent()) {
+          // Avoid showing stale competitors from previous website while loading
+          setWebsiteData(null);
+          setCompetitors([]);
+          setSiteKeywords([]);
+          setSelectedKeywords(new Set());
+          setLoading(true);
+        }
       }
 
-      const response = await fetch(`/api/keyword/${siteId}`);
+      // 1.5) Cheap DB version check (no loader, no API fetch if unchanged)
+      if (cached) {
+        const cachedUpdatedAt: string | null = cached?.competitorsUpdatedAt ?? null;
+        if (cachedUpdatedAt) {
+          const { data: versionRow, error: versionErr } = await supabase
+            .from("websites")
+            .select("competitors_updated_at")
+            .eq("id", requestSiteId)
+            .single();
+
+          if (!versionErr) {
+            const dbUpdatedAt: string | null = (versionRow as any)?.competitors_updated_at ?? null;
+            if (dbUpdatedAt && dbUpdatedAt === cachedUpdatedAt) {
+              return;
+            }
+
+            // DB changed and we had cache => show spinner for the refresh
+            if (isCurrent()) setLoading(true);
+          }
+        }
+      }
+
+      const response = await fetch(`/api/keyword/${requestSiteId}`);
       
 
       if (!response.ok) {
@@ -284,7 +394,7 @@ export function CompetitorsTab({
 
       // DB changed (or no cache/version) => show spinner for the update
       if (cached) {
-        setLoading(true);
+        if (isCurrent()) setLoading(true);
       }
 
       // Extract competitors from the API response
@@ -305,15 +415,17 @@ export function CompetitorsTab({
         competitorsData = [];
       }
 
-      setWebsiteData({
-        website: data.website,
-        competitors: competitorsData,
-        metadata: data.metadata,
-      });
-      setCompetitors(competitorsData);
+      if (isCurrent()) {
+        setWebsiteData({
+          website: data.website,
+          competitors: competitorsData,
+          metadata: data.metadata,
+        });
+        setCompetitors(competitorsData);
+      }
 
       // 3) Update session cache so next visit is instant
-      writeCompetitorsCache(siteId, {
+      writeCompetitorsCache(requestSiteId, {
         website: data.website,
         competitors: competitorsData,
         metadata: data.metadata,
@@ -342,18 +454,74 @@ export function CompetitorsTab({
         sites: k.sites || k.sites_count || k.competition || "N/A",
       }));
 
-      setSiteKeywords(normalized);
+      if (isCurrent()) setSiteKeywords(normalized);
 
       console.log(`✅ Total competitors loaded: ${competitorsData.length}`);
     } catch (err) {
       console.error("Error fetching competitors:", err);
-      setError(
-        err instanceof Error ? err.message : "Failed to load competitors"
-      );
+      if (isCurrent()) {
+        setError(err instanceof Error ? err.message : "Failed to load competitors");
+      }
     } finally {
+      if (fetchCompetitorsSeqRef.current === requestSeq) {
+        setLoading(false);
+      }
+    }
+  }, [selectedWebsiteId]);
+
+  // Fetch competitors when selectedWebsiteId changes
+  useEffect(() => {
+    if (selectedWebsiteId) {
+      fetchCompetitors();
+    } else if (!loadingWebsites) {
       setLoading(false);
     }
-  };
+  }, [selectedWebsiteId, loadingWebsites, fetchCompetitors]);
+
+  // Keep caches fresh automatically when the DB changes
+  useEffect(() => {
+    let channel: any;
+
+    (async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+
+      channel = supabase
+        .channel(`websites-changes:${user.id}:competitors`)
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "websites",
+            filter: `user_id=eq.${user.id}`,
+          },
+          (payload) => {
+            // 1) Update dropdown list + session cache
+            loadUserWebsites();
+
+            // 2) If current site changed, refresh competitors (loader only if DB version changed)
+            const changedId = (payload as any)?.new?.id ?? (payload as any)?.old?.id;
+            if (changedId && selectedWebsiteIdRef.current === changedId) {
+              fetchCompetitors(changedId);
+            }
+          }
+        )
+        .subscribe();
+    })();
+
+    return () => {
+      if (channel) {
+        try {
+          supabase.removeChannel(channel);
+        } catch {
+          // ignore cleanup failures
+        }
+      }
+    };
+  }, [loadUserWebsites, fetchCompetitors]);
 
   // Helper function to check if competitor is in new format (from onboarding)
   const isNewFormat = (competitor: Competitor | undefined): boolean => {
@@ -960,7 +1128,7 @@ export function CompetitorsTab({
     }
   };
 
-  if (loadingWebsites) {
+  if (loadingWebsites && websites.length === 0) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <LoaderChevron />
