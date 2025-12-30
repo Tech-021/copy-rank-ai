@@ -156,7 +156,8 @@ const writeWebsitesCache = (userId: string, websites: Website[]) => {
   }
 };
 
-const competitorsCacheKey = (websiteId: string) => `competitors-cache:${websiteId}`;
+const competitorsCacheKey = (websiteId: string) =>
+  `competitors-cache:${websiteId}`;
 
 const readCompetitorsCache = (websiteId: string): CompetitorsCache | null => {
   try {
@@ -172,6 +173,10 @@ const readCompetitorsCache = (websiteId: string): CompetitorsCache | null => {
 
 const writeCompetitorsCache = (websiteId: string, value: CompetitorsCache) => {
   try {
+    sessionStorage.setItem(
+      competitorsCacheKey(websiteId),
+      JSON.stringify(value)
+    );
     localStorage.setItem(competitorsCacheKey(websiteId), JSON.stringify(value));
   } catch {
     // ignore storage failures
@@ -202,7 +207,9 @@ export function CompetitorsTab({
   const [addCompetitorCompleted, setAddCompetitorCompleted] = useState(false);
   const [competitorInput, setCompetitorInput] = useState("");
   const [competitorTags, setCompetitorTags] = useState<string[]>([]);
-  const [selectedKeywords, setSelectedKeywords] = useState<Set<number>>(new Set());
+  const [selectedKeywords, setSelectedKeywords] = useState<Set<number>>(
+    new Set()
+  );
 
   // Prevent stale async requests from overwriting UI after website switch
   const selectedWebsiteIdRef = useRef<string | null>(selectedWebsiteId);
@@ -350,6 +357,7 @@ export function CompetitorsTab({
         }
       }
 
+      const response = await fetch(`/api/keyword/${siteId}`);
       // 1.5) Cheap DB version check (no loader, no API fetch if unchanged)
       if (cached) {
         const cachedUpdatedAt: string | null = cached?.competitorsUpdatedAt ?? null;
@@ -386,9 +394,16 @@ export function CompetitorsTab({
       }
 
       // 2) If DB competitors didn't change, keep cached UI and exit
-      const dbUpdatedAt: string | null = data?.versions?.competitors_updated_at ?? null;
-      const cachedUpdatedAt: string | null = cached?.competitorsUpdatedAt ?? null;
-      if (cached && dbUpdatedAt && cachedUpdatedAt && dbUpdatedAt === cachedUpdatedAt) {
+      const dbUpdatedAt: string | null =
+        data?.versions?.competitors_updated_at ?? null;
+      const cachedUpdatedAt: string | null =
+        cached?.competitorsUpdatedAt ?? null;
+      if (
+        cached &&
+        dbUpdatedAt &&
+        cachedUpdatedAt &&
+        dbUpdatedAt === cachedUpdatedAt
+      ) {
         return;
       }
 
@@ -1184,7 +1199,9 @@ export function CompetitorsTab({
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-0">
           {/* Left side */}
           <div>
-            <h2 className="text-lg sm:text-2xl text-white font-medium">Competitors</h2>
+            <h2 className="text-lg sm:text-2xl text-white font-medium">
+              Competitors
+            </h2>
             <p className="text-xs sm:text-sm text-gray-500 mt-1">
               Track and compare your competitors
             </p>
@@ -1197,7 +1214,7 @@ export function CompetitorsTab({
               <Button
                 onClick={handleAddCompetitor}
                 variant="outline"
-                className="gap-2 text-[#53F870] border border-gray-800!  rounded-r-none sm:rounded-r-none cursor-pointer bg-[rgba(83,248,112,0.1)]! hover:bg-[rgba(83,248,112,0.2)] text-xs sm:text-sm"
+                className="gap-2 text-[#53F870] border border-gray-800!  rounded-r-none sm:rounded-r-none cursor-pointer bg-[rgba(83,248,112,0.1)]! hover:text-gray-500 hover:bg-[rgba(83,248,112,0.2)] text-xs sm:text-sm"
               >
                 Add Competitors
                 <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -1205,7 +1222,7 @@ export function CompetitorsTab({
 
               <Button
                 variant="outline"
-                className="gap-2 text-[#53F870] border border-gray-800! lg:rounded-l-none sm:rounded-l-none cursor-pointer bg-[rgba(83,248,112,0.1)]! rounded-none rounded-r-lg hover:bg-[rgba(83,248,112,0.2)] text-xs sm:text-sm"
+                className="gap-2 text-[#53F870] border hover:text-gray-500 border-gray-800! lg:rounded-l-none sm:rounded-l-none cursor-pointer bg-[rgba(83,248,112,0.1)]! rounded-none rounded-r-lg hover:bg-[rgba(83,248,112,0.2)] text-xs sm:text-sm"
                 onClick={async () => {
                   const fallbackId =
                     initialWebsiteId ||
@@ -1314,7 +1331,9 @@ export function CompetitorsTab({
         </div>
         {/* Best Keyword Opportunities Table */}
         <div className="bg-black rounded-xl border border-gray-700 overflow-x-auto">
-          <h4 className="text-xs sm:text-sm text-white p-3 sm:p-4">Best Keyword Opportunities</h4>
+          <h4 className="text-xs sm:text-sm text-white p-3 sm:p-4">
+            Best Keyword Opportunities
+          </h4>
           <table className="w-full border-collapse min-w-full">
             {/* ================= HEADER ================= */}
             <thead>
@@ -1323,7 +1342,8 @@ export function CompetitorsTab({
                   <input
                     type="checkbox"
                     checked={
-                      siteKeywords && siteKeywords.length > 0 &&
+                      siteKeywords &&
+                      siteKeywords.length > 0 &&
                       selectedKeywords.size === siteKeywords.length
                     }
                     onChange={toggleSelectAllKeywords}
@@ -1359,7 +1379,7 @@ export function CompetitorsTab({
                       index !== siteKeywords.length - 1
                         ? "border-b border-gray-700"
                         : ""
-                    } hover:bg-gray-900`}
+                    } hover:bg-transparent`}
                   >
                     <td className="px-2 sm:px-4 py-2 sm:py-3 w-10">
                       <input
@@ -1386,13 +1406,13 @@ export function CompetitorsTab({
                     </td>
                     <td className="px-2 sm:px-4 py-2 sm:py-3">
                       <div className="flex justify-start ">
-                        <Button className="border rounded-r-none bg-transparent hover:bg-transparent text-gray-300 cursor-pointer border-gray-700 rounded-l-md px-3 sm:px-6 h-7 sm:h-8 text-xs">
+                        <Button className="border rounded-r-none bg-transparent hover:text-[#53f870] hover:!bg-[#53f8701a] text-gray-300 cursor-pointer border-gray-700 rounded-l-md px-3 sm:px-6 h-7 sm:h-8 text-xs">
                           View
                         </Button>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button className="border border-l-0 rounded-l-none bg-transparent border-gray-600 rounded-r-md w-7 sm:w-8 h-7 sm:h-8 p-0 flex items-center justify-center hover:bg-gray-50">
-                              <ChevronDown className="w-4 h-4 text-gray-300" />
+                            <Button className="group border border-l-0 hover:!bg-[#53f8701a] rounded-l-none bg-transparent border-gray-600 rounded-r-md w-7 sm:w-8 h-7 sm:h-8 p-0 flex items-center justify-center">
+                              <ChevronDown className="w-4 h-4 text-gray-300 group-hover:text-[#53f870]" />
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-32">
@@ -1435,7 +1455,7 @@ export function CompetitorsTab({
                     <div className="mt-4 sm:mt-6 flex justify-end mr-2 sm:mr-4">
                       <Button
                         onClick={handleCreatePost}
-                        className="bg-transparent text-gray-400 border border-gray-800 px-4 sm:px-6 mb-4 sm:mb-5 h-8 sm:h-9 text-xs sm:text-sm hover:bg-gray-500"
+                        className="bg-transparent text-gray-400 border border-gray-800 px-4 sm:px-6 mb-4 sm:mb-5 h-8 sm:h-9 text-xs sm:text-sm hover:text-[#53f870] hover:!bg-[#53f8701a]"
                       >
                         Create post
                       </Button>
@@ -1475,7 +1495,9 @@ export function CompetitorsTab({
 
         {/* Competitor Overview Table */}
         <div className="bg-black rounded-xl border border-gray-800 overflow-x-auto">
-          <h4 className="text-xs sm:text-sm text-white p-3 sm:p-4">Competitor Overview</h4>
+          <h4 className="text-xs sm:text-sm text-white p-3 sm:p-4">
+            Competitor Overview
+          </h4>
           <table className="w-full border-collapse min-w-full">
             {/* ================= HEADER ================= */}
             <thead>
@@ -1525,9 +1547,9 @@ export function CompetitorsTab({
                       idx !== filteredAndSortedCompetitors.length - 1
                         ? "border-b border-gray-700"
                         : ""
-                    } hover:bg-gray-900`}
+                    } hover:bg-transparent`}
                   >
-                    <td className="px-4 py-3 text-sm text-gray-700 font-medium">
+                    <td className="px-4 py-3 text-sm text-gray-500 font-medium">
                       <div className="flex items-center gap-3">
                         <img
                           src={`https://ui-avatars.com/api/?name=${d.domain}&background=random&color=fff&bold=true&size=32`}
@@ -1537,7 +1559,7 @@ export function CompetitorsTab({
                         {d.domain}
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-700">
+                    <td className="px-4 py-3 text-sm text-gray-500">
                       {d.topic}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-500">
@@ -1554,13 +1576,13 @@ export function CompetitorsTab({
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex justify-start">
-                        <Button className="border text-gray-300 rounded-r-none bg-transparent hover:bg-transparent text-gray-300cursor-pointer border-gray-700 rounded-l-md px-6 h-8 text-xs">
+                        <Button className="border hover:text-[#53f870] hover:!bg-[#53f8701a] text-gray-300 rounded-r-none bg-transparent hover:bg-transparent text-gray-300cursor-pointer border-gray-700 rounded-l-md px-6 h-8 text-xs">
                           Visit
                         </Button>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button className="border border-l-0 rounded-l-none bg-transparent border-gray-700 rounded-r-md w-8 h-8 p-0 flex items-center justify-center hover:bg-gray-50">
-                              <ChevronDown className="w-4 h-4 text-gray-600" />
+                            <Button className="group border border-l-0 rounded-l-none bg-transparent border-gray-700 rounded-r-md w-8 h-8 p-0 flex items-center justify-center hover:!bg-[#53f8701a]">
+                              <ChevronDown className="w-4 h-4 text-gray-600 group-hover:text-[#53f870] transition-colors duration-200" />
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-32">
