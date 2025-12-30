@@ -319,12 +319,12 @@ export default function DashboardIndexPage() {
           <h2 className="text-2xl sm:text-3xl font-normal text-white">Index Posts</h2>
           <p className="text-xs sm:text-sm text-gray-500 mt-2">Publish posts to be detected and indexed by search engines.</p>
         </div>
-        <div className="w-full sm:w-48">
+        <div className="w-full sm:w-48 sm:mr-8">
           <Select value={selectedWebsiteId || ""} onValueChange={handleWebsiteChange}>
-            <SelectTrigger className="h-10 bg-transparent border border-green-700 rounded-lg focus-visible:outline-none focus-visible:ring-0 px-3 py-2 text-green-600 font-medium text-xs sm:text-sm">
+            <SelectTrigger className="h-10 bg-[rgba(83,248,112,0.1)]! border-none rounded-lg focus-visible:outline-none focus-visible:ring-0 px-3 py-2 text-[#53F870] font-medium text-xs sm:text-sm">
               <SelectValue placeholder="Select website" />
             </SelectTrigger>
-            <SelectContent className="bg-black border border-green-700 rounded-lg">
+            <SelectContent className="bg-[#142517]! border-none rounded-lg">
               {websites.map((website) => (
                 <SelectItem key={website.id} value={website.id} className="cursor-pointer text-green-600">
                   {website.url}
@@ -377,7 +377,7 @@ export default function DashboardIndexPage() {
         </Card>
 
         {/* Card 4 - Un-Indexed Posts */}
-        <Card className="border border-t-0 rounded-none! border-b-0 border-r-0 rounded-tr-xl rounded-br-xl lg:rounded-tr-none lg:rounded-br-none lg:border-r-0 border-[#53f8704b] bg-[#101110] shadow-xl">
+        <Card className="border border-t-0 rounded-none! border-b-0 border-r-0 rounded-tr-xl rounded-br-xl lg:rounded-tr-none lg:!rounded-r-xl lg:border-r-0 border-[#53f8704b] bg-[#101110] shadow-xl">
           <CardContent className="flex flex-col justify-start gap-6 sm:gap-8 p-3 sm:p-6">
             <div className="flex justify-between items-start">
               <p className="text-xs sm:text-xs font-medium text-white tracking-wide">
