@@ -101,6 +101,53 @@ interface WebsiteData {
   };
 }
 
+type CompetitorsCache = {
+  website: WebsiteData["website"];
+  competitors: Competitor[];
+  metadata?: WebsiteData["metadata"];
+  competitorsUpdatedAt: string | null;
+};
+
+const selectedWebsiteStorageKey = "selected-website-id";
+
+const readSelectedWebsiteId = () => {
+  try {
+    return sessionStorage.getItem(selectedWebsiteStorageKey);
+  } catch {
+    return null;
+  }
+};
+
+const writeSelectedWebsiteId = (websiteId: string) => {
+  try {
+    sessionStorage.setItem(selectedWebsiteStorageKey, websiteId);
+  } catch {
+    // ignore storage failures
+  }
+};
+
+const competitorsCacheKey = (websiteId: string) => `competitors-cache:${websiteId}`;
+
+const readCompetitorsCache = (websiteId: string): CompetitorsCache | null => {
+  try {
+    const raw = sessionStorage.getItem(competitorsCacheKey(websiteId));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as CompetitorsCache;
+    if (!parsed?.website || !Array.isArray(parsed.competitors)) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+};
+
+const writeCompetitorsCache = (websiteId: string, value: CompetitorsCache) => {
+  try {
+    sessionStorage.setItem(competitorsCacheKey(websiteId), JSON.stringify(value));
+  } catch {
+    // ignore storage failures
+  }
+};
+
 export function CompetitorsTab({
   websiteId: initialWebsiteId,
 }: CompetitorsTabProps) {
@@ -156,7 +203,11 @@ export function CompetitorsTab({
         setWebsites(data);
         // Auto-select first website if no websiteId was provided
         if (!selectedWebsiteId) {
-          setSelectedWebsiteId(data[0].id);
+          const stored = readSelectedWebsiteId();
+          const nextId =
+            stored && data.some((w) => w.id === stored) ? stored : data[0].id;
+          setSelectedWebsiteId(nextId);
+          writeSelectedWebsiteId(nextId);
         }
       } else {
         setError("No websites found. Add a website in the Analyze tab first.");
@@ -175,6 +226,7 @@ export function CompetitorsTab({
       loadUserWebsites();
     } else {
       setSelectedWebsiteId(initialWebsiteId);
+      writeSelectedWebsiteId(initialWebsiteId);
     }
   }, [initialWebsiteId]);
 
@@ -192,11 +244,26 @@ export function CompetitorsTab({
     if (!siteId) return;
 
     try {
-      setLoading(true);
       setError(null);
       console.log(`🔍 Fetching competitors for website: ${siteId}`);
 
+      // 1) Render instantly from session cache (no spinner)
+      const cached = readCompetitorsCache(siteId);
+      if (cached) {
+        setWebsiteData({
+          website: cached.website,
+          competitors: cached.competitors,
+          metadata: cached.metadata,
+        });
+        setCompetitors(cached.competitors);
+        setLoading(false);
+      } else {
+        // No cache => keep existing behavior (spinner while first loading)
+        setLoading(true);
+      }
+
       const response = await fetch(`/api/keyword/${siteId}`);
+      
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -206,6 +273,18 @@ export function CompetitorsTab({
 
       if (!data.success) {
         throw new Error(data.error || "Failed to fetch competitors");
+      }
+
+      // 2) If DB competitors didn't change, keep cached UI and exit
+      const dbUpdatedAt: string | null = data?.versions?.competitors_updated_at ?? null;
+      const cachedUpdatedAt: string | null = cached?.competitorsUpdatedAt ?? null;
+      if (cached && dbUpdatedAt && cachedUpdatedAt && dbUpdatedAt === cachedUpdatedAt) {
+        return;
+      }
+
+      // DB changed (or no cache/version) => show spinner for the update
+      if (cached) {
+        setLoading(true);
       }
 
       // Extract competitors from the API response
@@ -232,6 +311,14 @@ export function CompetitorsTab({
         metadata: data.metadata,
       });
       setCompetitors(competitorsData);
+
+      // 3) Update session cache so next visit is instant
+      writeCompetitorsCache(siteId, {
+        website: data.website,
+        competitors: competitorsData,
+        metadata: data.metadata,
+        competitorsUpdatedAt: dbUpdatedAt,
+      });
 
       // Extract site keywords/opportunities if present in fullData
       let extractedKeywords: any[] = [];
@@ -487,6 +574,7 @@ export function CompetitorsTab({
 
   const handleWebsiteChange = async (websiteId: string) => {
     setSelectedWebsiteId(websiteId);
+    writeSelectedWebsiteId(websiteId);
 
     const {
       data: { user },
@@ -1399,7 +1487,7 @@ export function CompetitorsTab({
       h-14
       pr-32
       border border-[#2E9839]
-      bg-gradient-to-b
+                  bg-linear-to-b
       from-[rgba(46,152,57,0.38)]
       to-[rgba(4,35,13,1)]
       text-white
@@ -1445,7 +1533,7 @@ export function CompetitorsTab({
     ${
       competitorTags.includes(tag)
         ? "border border-[#53F870] text-white"
-        : "bg-gradient-to-b from-[rgba(46,152,57,0.38)] to-[#04230D] text-[#53F870] border-[#53F870] hover:border-gray-300"
+        : "bg-linear-to-b from-[rgba(46,152,57,0.38)] to-[#04230D] text-[#53F870] border-[#53F870] hover:border-gray-300"
     }
   `}
                         >

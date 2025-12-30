@@ -118,6 +118,24 @@ const getCompetitorsCount = (keywordsData: any): number => {
   return 0;
 };
 
+const selectedWebsiteStorageKey = "selected-website-id";
+
+const readSelectedWebsiteId = () => {
+  try {
+    return sessionStorage.getItem(selectedWebsiteStorageKey);
+  } catch {
+    return null;
+  }
+};
+
+const writeSelectedWebsiteId = (websiteId: string) => {
+  try {
+    sessionStorage.setItem(selectedWebsiteStorageKey, websiteId);
+  } catch {
+    // ignore storage failures
+  }
+};
+
 export function AnalyzeTab({
   onViewKeywords,
   onViewCompetitors,
@@ -500,7 +518,11 @@ export function AnalyzeTab({
       if (data) {
         setWebsites(data);
         if (data.length > 0 && !selectedWebsiteId) {
-          setSelectedWebsiteId(data[0].id);
+          const stored = readSelectedWebsiteId();
+          const nextId =
+            stored && data.some((w) => w.id === stored) ? stored : data[0].id;
+          setSelectedWebsiteId(nextId);
+          writeSelectedWebsiteId(nextId);
         }
       }
       await fetchAnalytics(user.id, selectedWebsiteId);
@@ -641,6 +663,7 @@ export function AnalyzeTab({
 
   const handleWebsiteChange = async (websiteId: string) => {
     setSelectedWebsiteId(websiteId);
+    writeSelectedWebsiteId(websiteId);
 
     const {
       data: { user },
@@ -1164,7 +1187,7 @@ export function AnalyzeTab({
       h-14
       pr-32
       border border-[#2E9839]
-      bg-gradient-to-b
+      bg-linear-to-b
       from-[rgba(46,152,57,0.38)]
       to-[rgba(4,35,13,1)]
       text-white
@@ -1210,7 +1233,7 @@ export function AnalyzeTab({
     ${
       competitorTags.includes(tag)
         ? "border border-[#53F870] text-white"
-        : "bg-gradient-to-b from-[rgba(46,152,57,0.38)] to-[#04230D] text-[#53F870] border-[#53F870] hover:border-[#53f8701a]"
+        : "bg-linear-to-b from-[rgba(46,152,57,0.38)] to-[#04230D] text-[#53F870] border-[#53F870] hover:border-[#53f8701a]"
     }
   `}
                         >
@@ -1300,7 +1323,7 @@ export function AnalyzeTab({
                         e.stopPropagation();
                         openEditDialog(article);
                       }}
-                      className="text-[#53f870] hover:text-[#53f870] bg-[#53f8701a] hover:!bg-[#53f8701a] cursor-pointer h-8 w-full sm:w-8 px-[18px] sm:px-2 py-1.5 border-[#53f8701a] flex-shrink-0"
+                      className="text-[#53f870] hover:text-[#53f870] bg-[#53f8701a] hover:bg-[#53f8701a]! cursor-pointer h-8 w-full sm:w-8 px-[18px] sm:px-2 py-1.5 border-[#53f8701a] shrink-0"
                     >
                       Edit
                     </Button>

@@ -144,6 +144,24 @@ export function ArticlesTab({
     created_at?: string;
   }
 
+  const selectedWebsiteStorageKey = "selected-website-id";
+
+  const readSelectedWebsiteId = () => {
+    try {
+      return sessionStorage.getItem(selectedWebsiteStorageKey);
+    } catch {
+      return null;
+    }
+  };
+
+  const writeSelectedWebsiteId = (websiteId: string) => {
+    try {
+      sessionStorage.setItem(selectedWebsiteStorageKey, websiteId);
+    } catch {
+      // ignore storage failures
+    }
+  };
+
   const [websites, setWebsites] = useState<Website[]>([]);
   const [loadingWebsites, setLoadingWebsites] = useState(false);
   const [selectedWebsiteId, setSelectedWebsiteId] = useState<string | null>(
@@ -181,7 +199,15 @@ export function ArticlesTab({
 
       if (data && data.length > 0) {
         setWebsites(data as Website[]);
-        if (!selectedWebsiteId) setSelectedWebsiteId((data as any)[0].id);
+        if (!selectedWebsiteId) {
+          const stored = readSelectedWebsiteId();
+          const nextId =
+            stored && (data as any).some((w: any) => w.id === stored)
+              ? stored
+              : (data as any)[0].id;
+          setSelectedWebsiteId(nextId);
+          writeSelectedWebsiteId(nextId);
+        }
       }
     } catch (err) {
       console.error("Error loading websites:", err);
@@ -195,6 +221,7 @@ export function ArticlesTab({
       loadUserWebsites();
     } else {
       setSelectedWebsiteId(websiteId);
+      writeSelectedWebsiteId(websiteId);
     }
   }, [websiteId]);
 
@@ -783,6 +810,7 @@ export function ArticlesTab({
 
   const handleWebsiteChange = async (websiteId: string) => {
     setSelectedWebsiteId(websiteId);
+    writeSelectedWebsiteId(websiteId);
 
     const {
       data: { user },
@@ -991,7 +1019,7 @@ export function ArticlesTab({
         {/* Stats Grid */}
         <div className="flex flex-wrap mt-4 sm:mt-5 mb-2.5 gap-2 text-xs sm:text-sm">
           <Select value={filterStatus} onValueChange={setFilterStatus}>
-            <SelectTrigger className="border-none !bg-transparent  ring-0 text-[#ffffff80] focus:ring-0 focus:ring-offset-0">
+            <SelectTrigger className="border-none bg-transparent! ring-0 text-[#ffffff80] focus:ring-0 focus:ring-offset-0">
               <SelectValue placeholder="All" />
             </SelectTrigger>
             <SelectContent>
@@ -1006,7 +1034,7 @@ export function ArticlesTab({
           <span className="text-gray-300"></span>
 
           <Select defaultValue="27-jan-2025">
-            <SelectTrigger className="border-none !bg-transparent  ring-0 text-[#ffffff80] focus:ring-0 focus:ring-offset-0">
+            <SelectTrigger className="border-none bg-transparent! ring-0 text-[#ffffff80] focus:ring-0 focus:ring-offset-0">
               <SelectValue placeholder="27-Jan, 2025" />
             </SelectTrigger>
             <SelectContent>
@@ -1020,7 +1048,7 @@ export function ArticlesTab({
           <span className="text-gray-300"></span>
 
           <Select defaultValue="4-mar-2025">
-            <SelectTrigger className="border-none !bg-transparent  ring-0 text-[#ffffff80] focus:ring-0 focus:ring-offset-0">
+            <SelectTrigger className="border-none bg-transparent! ring-0 text-[#ffffff80] focus:ring-0 focus:ring-offset-0">
               <SelectValue placeholder="4 Mar, 2025" />
             </SelectTrigger>
             <SelectContent>
@@ -1058,7 +1086,7 @@ export function ArticlesTab({
                   <img
                     src={article.generatedImages?.[0] || "/article-image.jpg"}
                     alt={article.title}
-                    className="w-full sm:w-20 h-48 sm:h-20 rounded object-cover flex-shrink-0"
+                    className="w-full sm:w-20 h-48 sm:h-20 rounded object-cover shrink-0"
                   />
 
                   {/* Main Content Column */}
@@ -1098,7 +1126,7 @@ export function ArticlesTab({
                         <Button
                           size="sm"
                           variant="ghost"
-                          className="text-[#53f870] hover:text-[#53f870] bg-[#53f8701a] hover:!bg-[#53f8701a] cursor-pointer h-8 w-full sm:w-8 px-[18px] sm:px-2 py-1.5 border-[#53f8701a] flex-shrink-0"
+                          className="text-[#53f870] hover:text-[#53f870] bg-[#53f8701a] hover:bg-[#53f8701a]! cursor-pointer h-8 w-full sm:w-8 px-[18px] sm:px-2 py-1.5 border-[#53f8701a] shrink-0"
                           onClick={(e) => {
                             e.stopPropagation();
                             openEditDialog(article);
@@ -1133,9 +1161,9 @@ export function ArticlesTab({
 
           {/* Right Side - Edit/Preview Panel */}
           {selectedArticle && (
-            <div className="fixed lg:static inset-0 lg:inset-auto z-50 lg:z-auto max-w-full lg:max-w-[640px] bg-[#0d0d0d] rounded-[16px] lg:border-l border-[#53f8701a] overflow-hidden flex flex-col">
+            <div className="fixed lg:static inset-0 lg:inset-auto z-50 lg:z-auto max-w-full lg:max-w-[640px] bg-[#0d0d0d] rounded-2xl lg:border-l border-[#53f8701a] overflow-hidden flex flex-col">
               {/* Header */}
-              <div className="flex items-center justify-between p-3 sm:p-4 border  border-[#53f8701a] flex-shrink-0">
+              <div className="flex items-center justify-between p-3 sm:p-4 border  border-[#53f8701a] shrink-0">
                 <span className="text-xs sm:text-sm text-[#ffffffb3]">VIEW POST</span>
                 <button
                   onClick={() => setSelectedArticle(null)}
@@ -1153,12 +1181,12 @@ export function ArticlesTab({
                     <label className="block text-[10px] text-[#ffffff80]">
                       Title:
                     </label>
-                    <h4 className="text-base sm:text-lg text-white font-normal break-words">{selectedArticle.title || ""}</h4>
+                    <h4 className="text-base sm:text-lg text-white font-normal wrap-break-word">{selectedArticle.title || ""}</h4>
                   </div>
 
                   {/* Keywords */}
                   <div className="flex flex-col sm:flex-row gap-1 sm:gap-2">
-                    <label className="block text-[10px] text-[#ffffff80] flex-shrink-0">
+                    <label className="block text-[10px] text-[#ffffff80] shrink-0">
                       Keywords:
                     </label>
 
@@ -1262,7 +1290,7 @@ export function ArticlesTab({
                     selectedArticle.slug && (
                       <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
                         <div className="flex items-start gap-2">
-                          <Globe className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                          <Globe className="w-4 h-4 text-green-600 shrink-0 mt-0.5" />
                           <div className="flex-1 min-w-0">
                             <h4 className="text-sm font-semibold text-green-900 mb-1">
                               Live Article URL
@@ -1287,7 +1315,7 @@ export function ArticlesTab({
                                     type: "success",
                                   });
                                 }}
-                                className="text-green-600 hover:text-green-800 flex-shrink-0"
+                                className="text-green-600 hover:text-green-800 shrink-0"
                                 title="Copy URL"
                               >
                                 <Copy className="w-3 h-3" />
@@ -1330,7 +1358,7 @@ export function ArticlesTab({
               </div>
 
               {/* Footer Actions */}
-              <div className="border-t border-[#53f8701a] p-3 sm:p-4 bg-[#0d0d0d] flex  sm:flex-row gap-2 flex-shrink-0">
+              <div className="border-t border-[#53f8701a] p-3 sm:p-4 bg-[#0d0d0d] flex  sm:flex-row gap-2 shrink-0">
                 <Button
                   className="flex-1 bg-[#53f870] text-black font-medium hover:bg-[#53f870] cursor-pointer h-9 sm:h-10 text-xs sm:text-sm rounded disabled:opacity-60"
                   onClick={handlePublish}
@@ -1365,7 +1393,7 @@ export function ArticlesTab({
                 {selectedArticle.status === "published" &&
                   selectedArticle.slug && (
                     <Button
-                      className="flex-1 sm:flex-none h-9 sm:h-10 px-2 sm:px-4 flex bg-[#101110] hover:bg-[#101110] text-[#ffffffd3] hover:!text-[#ffffffd3] items-center justify-center sm:justify-start gap-1 sm:gap-2 text-xs sm:text-sm"
+                      className="flex-1 sm:flex-none h-9 sm:h-10 px-2 sm:px-4 flex bg-[#101110] hover:bg-[#101110] text-[#ffffffd3] hover:text-[#ffffffd3]! items-center justify-center sm:justify-start gap-1 sm:gap-2 text-xs sm:text-sm"
                       onClick={() =>
                         handleIndexNow(
                           selectedArticle.id,
