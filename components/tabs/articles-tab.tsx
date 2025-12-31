@@ -1161,7 +1161,7 @@ export function ArticlesTab({
 
           {/* Right Side - Edit/Preview Panel */}
           {selectedArticle && (
-            <div className="fixed lg:static inset-0 lg:inset-auto z-40 lg:z-auto max-w-full lg:max-w-[640px] bg-gradient-to-b from-[#07120a] to-[#0d0d0d] rounded-2xl lg:border-l-2 border-[#53f87033] shadow-2xl overflow-hidden flex flex-col">
+            <div className="fixed lg:static inset-0 lg:inset-auto z-40 lg:z-auto max-w-full lg:max-w-[640px] bg-gradient-to-b from-[#07120a] to-[#0d0d0d] rounded-2xl lg:border-2 border-[#53f87033] shadow-2xl overflow-hidden flex flex-col">
               {/* Header */}
               <div className="flex items-center justify-between p-3 sm:p-4 border  border-[#53f8701a] shrink-0">
                 <span className="text-xs sm:text-sm text-[#ffffffb3]">VIEW POST</span>
