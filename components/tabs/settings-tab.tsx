@@ -599,7 +599,9 @@ export function SettingsTab() {
               </h4>
               <div className="space-y-2">
               {connectedWebsitesLoading ? (
-                <div className="px-3 py-2 text-xs text-gray-500">Loading…</div>
+                <div className="flex items-center justify-center py-6">
+                  <LoaderChevron />
+                </div>
               ) : connectedWebsites.length === 0 ? (
                 <div className="px-3 py-2 text-xs text-gray-500">
                   No websites connected yet.
