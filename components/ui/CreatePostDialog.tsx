@@ -1,6 +1,7 @@
 "use client"
 
-import { X, Loader2 } from "lucide-react"
+import { X } from "lucide-react"
+import { LoaderChevron } from "./LoaderChevron"
 import Image from "next/image";
 
 interface CreatePostDialogProps {
@@ -31,12 +32,12 @@ export function CreatePostDialog({
         {isLoading ? (
           <>
             {/* Creating State */}
-            <div className="text-center flex flex-col  space-y-6">
-              <h2 className="text-2xl  text-white">
+            <div className="text-center flex flex-col space-y-6">
+              <h2 className="text-2xl text-white">
                 Creating Post
               </h2>
               <div className="flex justify-center">
-                <Loader2 className="w-8 h-8 animate-spin" />
+                <LoaderChevron />
               </div>
               {/* Loading Button */}
               <button

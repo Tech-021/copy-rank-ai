@@ -55,6 +55,10 @@ export function SettingsTab() {
   const toast = useToast();
   const [isDirty, setIsDirty] = useState(false);
 
+  // Inline feedback for publishing automation and subtle save success state
+  const [inlineMessage, setInlineMessage] = useState<string | null>(null);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+
   // Mock states
   const [apiKey, setApiKey] = useState("sk_live_51234567890abcdefghijklmnop");
   const [showApiKey, setShowApiKey] = useState(false);
@@ -278,6 +282,24 @@ export function SettingsTab() {
     setIsDirty(true);
   };
 
+  // Update inline feedback when publishing-related settings change
+  useEffect(() => {
+    const { autoPublish, publishingFrequency, publishingTime } = settings;
+    if (autoPublish) {
+      const freqLabel =
+        publishingFrequency === "daily"
+          ? "daily"
+          : publishingFrequency === "weekly"
+          ? "weekly"
+          : "monthly";
+      setInlineMessage(
+        `Posts will publish ${freqLabel} at ${publishingTime}`
+      );
+    } else {
+      setInlineMessage("Auto-publish is turned off");
+    }
+  }, [settings.autoPublish, settings.publishingFrequency, settings.publishingTime]);
+
   const loadUserSettings = async (
     websiteId?: string | null,
     userId?: string | null
@@ -334,6 +356,9 @@ export function SettingsTab() {
           description: "Settings saved",
           type: "success",
         });
+        // subtle inline success state near the Save button
+        setSaveSuccess(true);
+        setTimeout(() => setSaveSuccess(false), 3000);
         setIsDirty(false);
         return;
       }
@@ -352,6 +377,8 @@ export function SettingsTab() {
           type: "info",
         });
         setIsDirty(false);
+        setSaveSuccess(true);
+        setTimeout(() => setSaveSuccess(false), 3000);
       } catch {
         toast.showToast({
           title: "Save failed",
@@ -525,6 +552,11 @@ export function SettingsTab() {
                     </SelectContent>
                   </Select>
                 </div>
+                {inlineMessage && (
+                  <p className={`text-xs mt-2 p-2 ${settings.autoPublish ? "text-green-400" : "text-gray-500"}`}>
+                    {inlineMessage}
+                  </p>
+                )}
               </div>
 
               {/* Queue Size */}
@@ -556,21 +588,29 @@ export function SettingsTab() {
               </div>
             </div>
 
-            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2">
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 items-center">
               <Button
-                className="h-8 sm:h-9 bg-transparent text-gray-100 border border-gray-600 text-xs sm:text-sm"
+                className="h-8 sm:h-9 bg-transparent text-gray-300 border border-gray-600 text-xs sm:text-sm hover:bg-gray-800"
                 onClick={() => handleResetSettings()}
                 disabled={!isDirty}
               >
                 Reset
               </Button>
-              <Button
-                className="h-8 sm:h-9 bg-transparent text-gray-100 border border-gray-600 text-xs sm:text-sm"
-                onClick={() => handleSaveSettings()}
-                disabled={!isDirty}
-              >
-                Save changes
-              </Button>
+              <div className="flex items-center gap-3">
+                <Button
+                  className="h-8 sm:h-9 bg-green-600 hover:bg-green-700 text-white border-transparent text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={() => handleSaveSettings()}
+                  disabled={!isDirty}
+                >
+                  Save changes
+                </Button>
+                {saveSuccess && (
+                  <div className="flex items-center gap-1 text-green-400 text-xs">
+                    <Check className="h-4 w-4" />
+                    <span>Saved</span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -599,7 +639,9 @@ export function SettingsTab() {
               </h4>
               <div className="space-y-2">
               {connectedWebsitesLoading ? (
-                <div className="px-3 py-2 text-xs text-gray-500">Loading…</div>
+                <div className="flex items-center justify-center py-6">
+                  <LoaderChevron />
+                </div>
               ) : connectedWebsites.length === 0 ? (
                 <div className="px-3 py-2 text-xs text-gray-500">
                   No websites connected yet.

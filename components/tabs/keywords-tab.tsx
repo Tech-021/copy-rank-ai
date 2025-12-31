@@ -46,6 +46,7 @@ import {
   ExternalLink,
   ChevronDown,
 } from "lucide-react";
+import { HelpIcon } from "@/components/ui/help-icon";
 import { useToast } from "../ui/toast";
 import { getUser } from "@/lib/auth";
 import { supabase } from "@/lib/client";
@@ -1567,13 +1568,22 @@ export function KeywordsTab({
                   Keyword
                 </th>
                 <th className="px-6 py-3 text-left text-sm font-normal text-[#ffffff4d]">
-                  Search Volume
+                  <div className="flex items-center gap-2">
+                    <span>Search Volume</span>
+                    <span title="Monthly search volume estimate." className="text-gray-400"><HelpIcon className="w-3 h-3" /></span>
+                  </div>
                 </th>
                 <th className="px-6 py-3 text-left text-sm font-normal text-[#ffffff4d]">
-                  Difficulty
+                  <div className="flex items-center gap-2">
+                    <span>Difficulty</span>
+                    <span title="Difficulty score (0-100). Lower = easier to rank for." className="text-gray-400"><HelpIcon className="w-3 h-3" /></span>
+                  </div>
                 </th>
                 <th className="px-6 py-3 text-left text-sm font-normal text-[#ffffff4d]">
-                  Competition
+                  <div className="flex items-center gap-2">
+                    <span>Competition</span>
+                    <span title="Competition level (0-1). Lower = less competition." className="text-gray-400"><HelpIcon className="w-3 h-3" /></span>
+                  </div>
                 </th>
                 <th className="px-6 py-3 text-left text-sm font-normal text-[#ffffff4d]">
                   Post Status
@@ -1610,16 +1620,68 @@ export function KeywordsTab({
                         aria-label={`Select keyword ${kw.keyword}`}
                       />
                     </td>
-                    <td className="px-6 text-[#53f870] py-3 text-sm font-medium">{kw.keyword}</td>
-                    <td className="px-6 text-[#fffffb3] py-3 text-sm">{kw.search_volume?.toLocaleString() || "—"}</td>
-                    <td className="px-6 text-[#fffffb3] py-3 text-sm">{difficultyText}</td>
-                    <td className="px-6 text-[#fffffb3] py-3 text-sm">{competitionText}</td>
+                    <td className="px-6 py-3 text-sm font-medium text-[#53f870] max-w-[320px] truncate">{kw.keyword}</td>
+
+                    {/* Emphasize volume */}
+                    <td className="px-6 py-3 text-sm font-semibold text-[#53F870]">{kw.search_volume?.toLocaleString() || "—"}</td>
+
+                    {/* Difficulty - de-emphasized */}
+                    <td className="px-6 py-3 text-xs text-[#bfc9bf]">
+                      <span
+                        title={`Difficulty ${kw.difficulty}: lower numbers are easier to rank for (0-100).`}
+                        className={`inline-flex items-center px-2 py-0.5 rounded ${getDifficultyColor(kw.difficulty)} text-[12px] font-medium`}
+                      >
+                        {difficultyText}
+                      </span>
+                    </td>
+
+                    {/* Competition - de-emphasized but with badge color; low competition uses blue highlight */}
+                    <td className="px-6 py-3 text-xs text-[#bfc9bf]">
+                      {typeof kw.competition === "number" ? (
+                        (() => {
+                          const competitionBadgeClass =
+                            kw.competition <= 0.3
+                              ? "bg-blue-100 text-blue-800 border-blue-200"
+                              : getCompetitionColor(kw.competition);
+                          return (
+                              <span
+                                title={`Competition ${kw.competition.toFixed(2)}: 0 = low competition, 1 = high competition.`}
+                                className={`inline-flex items-center px-2 py-0.5 rounded ${competitionBadgeClass} text-[12px] font-medium`}
+                              >
+                                {competitionText}
+                              </span>
+                            );
+                        })()
+                      ) : (
+                        <span className="text-[#9aa79a]">—</span>
+                      )}
+                    </td>
                     <td className="px-6 py-3">
                       <span className={`inline-flex items-center px-2.5 py-1 text-xs font-medium border rounded ${getPostStatusColor(kw.post_status)}`}>
                         {kw.post_status || "No Post"}
                       </span>
                     </td>
-                    <td className="px-6 text-[#fffffb3] py-3 text-sm">{trafficText}</td>
+                    {/* Traffic potential - prominent badge */}
+                    <td className="px-6 py-3">
+                      {trafficText && trafficText !== "—" ? (
+                        (() => {
+                          const vol = kw.search_volume || 0;
+                          let trafficBadgeClass = "bg-red-600 text-white";
+                          if (vol >= 1000) trafficBadgeClass = "bg-blue-600 text-white";
+                          else if (vol >= 300) trafficBadgeClass = "bg-yellow-400 text-black";
+                          return (
+                            <span
+                              title={`Estimated traffic potential based on search volume.`}
+                              className={`${trafficBadgeClass} inline-flex items-center px-3 py-1 rounded text-sm font-semibold`}
+                            >
+                              {trafficText}
+                            </span>
+                          );
+                        })()
+                      ) : (
+                        <span className="text-[#9aa79a]">—</span>
+                      )}
+                    </td>
                     <td className="px-6 py-3">
                       <div className="flex items-center justify-start gap-0">
                         <Button className="border w-[114px] border-[#53f8701a] rounded-r-none bg-transparent text-[#ffffffb3]  cursor-pointer border-r-0 px-4 h-8 text-xs font-medium hover:text-[#53f870] hover:!bg-[#53f8701a]">Edit</Button>

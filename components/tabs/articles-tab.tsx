@@ -119,6 +119,7 @@ export function ArticlesTab({
   >(null);
   const [isCreatingCheckout, setIsCreatingCheckout] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editTab, setEditTab] = useState("basic");
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleteCompletedDialogOpen, setIsDeleteCompletedDialogOpen] =
@@ -965,7 +966,7 @@ export function ArticlesTab({
       <div>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4 sm:mb-6">
           <div>
-            <p className="text-2xl sm:text-3xl text-white font-medium">Blogs</p>
+            <p className="text-2xl sm:text-3xl text-white font-medium">Articles & Blog Posts</p>
             <p className="text-[#ffffffb3] mt-2 sm:mt-3 text-xs sm:text-sm">
               Create, review, and publish your AI-generated posts.
             </p>
@@ -993,19 +994,19 @@ export function ArticlesTab({
         {/* Create a Ranking Post Section */}
         <Card className="border-[#53f8701a] shadow-none bg-transparent">
           <CardContent className="">
-            <div>
-              <h3 className="text-lg font-medium text-white mb-2">
+            <div className="">
+              <Button
+                onClick={() => setOpenPostDialog(true)}
+                className="bg-black cursor-pointer text-lg py-5 px-8 text-[#53f870] border border-[#53f870] hover:bg-black"
+              >
+                Create Post
+              </Button>
+              <h3 className="text-lg font-medium text-white mb-2 mt-5">
                 Create a Ranking Post
               </h3>
               <p className="text-sm text-[#ffffffb3] mb-4">
                 Turn competitor keywords into SEO-ready blog posts in one click.
               </p>
-              <Button
-                onClick={() => setOpenPostDialog(true)}
-                className="bg-black cursor-pointer py-5 px-8 text-[#53f870] border border-[#53f870] hover:bg-black"
-              >
-                Create Post
-              </Button>
             </div>
           </CardContent>
         </Card>
@@ -1061,32 +1062,34 @@ export function ArticlesTab({
         </div>
 
         {/* Main Layout - Articles + Preview */}
-        <div className="flex flex-col lg:flex-row gap-6 h-auto lg:overflow-hidden">
+        <div className="flex flex-col lg:flex-row gap-6 h-auto lg:overflow-visible">
           {/* Left Side - Articles List */}
-          <div className="space-y-3 lg:pr-2 w-full lg:w-auto">
+          <div className="space-y-4 lg:pr-2 w-full lg:w-auto">
             {filteredArticles.length === 0 ? (
               <div className="text-center py-12 text-gray-400">
                 <p className="text-sm">No articles found</p>
               </div>
             ) : (
-              filteredArticles.map((article) => (
+              filteredArticles.map((article) => {
+                const isSelected = selectedArticle?.id === article.id;
+                return (
                 <div
                   key={article.id}
                   onClick={() => {
                     setSelectedArticle(article);
                     setIsContentExpanded(false);
                   }}
-                  className={`relative flex flex-col sm:flex-row gap-3 px-3 sm:px-3 py-3 sm:py-5 bg-[#101110] border border-[#53f8701a] rounded-lg cursor-pointer hover:shadow-sm transition-all ${
-                    selectedArticle?.id === article.id
-                      ? "border-[#53f8701a] bg-[#101110]"
-                      : "border-[#53f8701a]"
+                  className={`relative group flex flex-col sm:flex-row gap-3 px-3 sm:px-3 py-3 sm:py-5 rounded-lg cursor-pointer transition-all duration-150 ${
+                    isSelected
+                      ? "z-50 border border-[#53f870] bg-gradient-to-b from-[#081a0f] to-[#07110b] shadow-lg ring-1 ring-[#53f87033] scale-[1.01]"
+                      : "border border-transparent hover:border-[#53f8701a] hover:bg-[#0f1310]"
                   }`}
                 >
                   {/* Thumbnail */}
                   <img
                     src={article.generatedImages?.[0] || "/article-image.jpg"}
                     alt={article.title}
-                    className="w-full sm:w-20 h-48 sm:h-20 rounded object-cover shrink-0"
+                    className={`w-full sm:w-20 h-48 sm:h-20 rounded object-cover shrink-0 ${isSelected ? '' : 'opacity-95'}`}
                   />
 
                   {/* Main Content Column */}
@@ -1094,28 +1097,24 @@ export function ArticlesTab({
                     {/* Title + Meta */}
                     <div className="flex flex-col sm:flex-row sm:justify-between gap-2">
                       <div className="min-w-0 flex-1">
-                        <h4 className="font-medium text-white text-sm sm:text-sm line-clamp-2">
+                        <h4 className={`line-clamp-2 text-sm sm:text-sm ${isSelected ? 'font-semibold text-white' : 'font-medium text-white/80'}`}>
                           {article.title}
                         </h4>
 
-                        <div className="flex items-center gap-1 mt-1">
+                        <div className={`flex items-center gap-1 mt-1 ${isSelected ? '' : 'opacity-80'}`}>
                           <Image
                             src="/clock1.png"
                             height={13}
                             width={13}
                             alt="icon"
                           />
-                          <p className="text-xs text-[#ffffff80]">
+                          <p className={`text-xs ${isSelected ? 'text-[#ffffffb3]' : 'text-[#ffffff66]'}`}>
                             {getReadingTime(article.wordCount)}
                           </p>
                         </div>
 
                         <Badge
-                          className={`mt-2 text-xs font-medium rounded-full w-fit ${
-                            (article.status || "").toLowerCase() === "uploaded"
-                              ? "bg-transparent text-green-700 border border-green-600"
-                              : "bg-[#0d0d0d] text-[#58a955] border border-[#58a955]"
-                          }`}
+                          className={`mt-2 text-[11px] font-medium rounded-full w-fit ${isSelected ? 'bg-[#0d0d0d] text-[#58a955] border border-[#58a955]' : 'bg-[#0b0b0b] text-[#58a955] border border-[#53f87014] opacity-80'}`}
                         >
                           {article.status}
                         </Badge>
@@ -1138,16 +1137,16 @@ export function ArticlesTab({
                     </div>
 
                     {/* Preview (FULL WIDTH, NOT under image) */}
-                    <p className="text-xs text-gray-500 line-clamp-2 mt-2">
+                    <p className={`text-xs line-clamp-2 mt-2 ${isSelected ? 'text-gray-500' : 'text-gray-400'}`}>
                       {article.preview}
                     </p>
 
                     {/* Tags */}
-                    <div className="flex gap-1 flex-wrap mt-2">
+                    <div className="flex gap-2 flex-wrap mt-3">
                       {article.tags?.slice(0, 5).map((tag) => (
                         <span
                           key={tag}
-                          className="text-xs bg-[#0d0d0d]  text-[#58a955] px-2 py-0.5 rounded-2xl border border-[#53f8701a]"
+                          className={`text-[11px] bg-[#0b0b0b] text-[#4fa85a] px-1.5 py-0.5 rounded-2xl border border-[#53f87012] ${isSelected ? '' : 'opacity-80'}`}
                         >
                           {tag}
                         </span>
@@ -1155,13 +1154,14 @@ export function ArticlesTab({
                     </div>
                   </div>
                 </div>
-              ))
+              );
+              })
             )}
           </div>
 
           {/* Right Side - Edit/Preview Panel */}
           {selectedArticle && (
-            <div className="fixed lg:static inset-0 lg:inset-auto z-50 lg:z-auto max-w-full lg:max-w-[640px] bg-[#0d0d0d] rounded-2xl lg:border-l border-[#53f8701a] overflow-hidden flex flex-col">
+            <div className="fixed lg:static inset-0 lg:inset-auto z-40 lg:z-auto max-w-full lg:max-w-[640px] bg-gradient-to-b from-[#07120a] to-[#0d0d0d] rounded-2xl lg:border-2 border-[#53f87033] shadow-2xl overflow-hidden flex flex-col">
               {/* Header */}
               <div className="flex items-center justify-between p-3 sm:p-4 border  border-[#53f8701a] shrink-0">
                 <span className="text-xs sm:text-sm text-[#ffffffb3]">VIEW POST</span>
@@ -1202,13 +1202,13 @@ export function ArticlesTab({
                           : [];
                         return keywords.length > 0 ? (
                           keywords.map((keyword, index) => (
-                            <span
-                              key={index}
-                              className="px-1 py-1  rounded-full text-xs font-medium bg-[#53f8701a] text-[#53f870] border border-[#53f8701a] inline-block"
-                            >
-                              {keyword}
-                            </span>
-                          ))
+                              <span
+                                key={index}
+                                className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-[#07120a] text-[#53f870cc] border border-[#53f87012] inline-block"
+                              >
+                                {keyword}
+                              </span>
+                            ))
                         ) : (
                           <span className="text-xs text-gray-500">
                             No keywords
@@ -1657,145 +1657,216 @@ export function ArticlesTab({
           setIsEditDialogOpen(open);
           if (!open) {
             setSelectedArticle(null);
+            setEditTab("basic");
           }
         }}
       >
-        <DialogContent className="sm:max-w-[720px] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
-            <DialogTitle>Edit Article</DialogTitle>
-            <DialogDescription>
-              Update the article content and SEO fields, then save your changes.
-            </DialogDescription>
+            <DialogTitle className="text-2xl">Edit Article</DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-foreground">Title</p>
-                <Input
-                  value={editForm.title}
-                  onChange={(e) =>
-                    setEditForm((prev) => ({ ...prev, title: e.target.value }))
-                  }
-                  placeholder="Article title"
-                />
-              </div>
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-foreground">Keyword</p>
-                <Input
-                  value={editForm.keyword}
-                  onChange={(e) =>
-                    setEditForm((prev) => ({
-                      ...prev,
-                      keyword: e.target.value,
-                    }))
-                  }
-                  placeholder="Focus keyword"
-                />
-              </div>
-            </div>
+          {/* Tabs Navigation */}
+          <div className="flex gap-1 border-b border-gray-700 px-0">
+            <button
+              onClick={() => setEditTab("basic")}
+              className={`px-4 py-3 font-medium text-sm transition-colors border-b-2 -mb-[2px] ${
+                editTab === "basic"
+                  ? "border-b-[#53F870] text-[#53F870]"
+                  : "border-b-transparent text-gray-400 hover:text-gray-300"
+              }`}
+            >
+              Basic Info
+            </button>
+            <button
+              onClick={() => setEditTab("seo")}
+              className={`px-4 py-3 font-medium text-sm transition-colors border-b-2 -mb-[2px] ${
+                editTab === "seo"
+                  ? "border-b-[#53F870] text-[#53F870]"
+                  : "border-b-transparent text-gray-400 hover:text-gray-300"
+              }`}
+            >
+              SEO
+            </button>
+            <button
+              onClick={() => setEditTab("content")}
+              className={`px-4 py-3 font-medium text-sm transition-colors border-b-2 -mb-[2px] ${
+                editTab === "content"
+                  ? "border-b-[#53F870] text-[#53F870]"
+                  : "border-b-transparent text-gray-400 hover:text-gray-300"
+              }`}
+            >
+              Content
+            </button>
+          </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-foreground">Slug</p>
-                <Input
-                  value={editForm.slug}
-                  onChange={(e) =>
-                    setEditForm((prev) => ({ ...prev, slug: e.target.value }))
-                  }
-                  placeholder="my-article-slug"
-                />
-              </div>
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-foreground">Preview</p>
-                <textarea
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                  rows={3}
-                  value={editForm.preview}
-                  onChange={(e) =>
-                    setEditForm((prev) => ({
-                      ...prev,
-                      preview: e.target.value,
-                    }))
-                  }
-                  placeholder="Short preview shown in listings"
-                />
-              </div>
-            </div>
+          {/* Tab Content */}
+          <div className="flex-1 overflow-y-auto">
+            <div className="space-y-6 p-6">
+              {/* Basic Info Tab */}
+              {editTab === "basic" && (
+                <div className="space-y-6">
+                  <div className="space-y-3">
+                    <label className="text-base font-semibold text-white">Title</label>
+                    <Input
+                      value={editForm.title}
+                      onChange={(e) =>
+                        setEditForm((prev) => ({ ...prev, title: e.target.value }))
+                      }
+                      placeholder="Article title"
+                      className="h-11 text-base border border-gray-700 bg-gray-950"
+                    />
+                    <p className="text-xs text-gray-500">The main headline of your article</p>
+                  </div>
 
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-foreground">Meta Title</p>
-              <Input
-                value={editForm.metaTitle}
-                onChange={(e) =>
-                  setEditForm((prev) => ({
-                    ...prev,
-                    metaTitle: e.target.value,
-                  }))
-                }
-                placeholder="SEO meta title"
-              />
-            </div>
+                  <div className="space-y-3">
+                    <label className="text-base font-semibold text-white">Focus Keyword</label>
+                    <Input
+                      value={editForm.keyword}
+                      onChange={(e) =>
+                        setEditForm((prev) => ({
+                          ...prev,
+                          keyword: e.target.value,
+                        }))
+                      }
+                      placeholder="e.g., best SEO tools"
+                      className="h-11 text-base border border-gray-700 bg-gray-950"
+                    />
+                    <p className="text-xs text-gray-500">The primary keyword to optimize for</p>
+                  </div>
 
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-foreground">
-                Meta Description
-              </p>
-              <textarea
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                rows={3}
-                value={editForm.metaDescription}
-                onChange={(e) =>
-                  setEditForm((prev) => ({
-                    ...prev,
-                    metaDescription: e.target.value,
-                  }))
-                }
-                placeholder="SEO meta description"
-              />
-            </div>
+                  <div className="space-y-3">
+                    <label className="text-base font-semibold text-white">Slug</label>
+                    <Input
+                      value={editForm.slug}
+                      onChange={(e) =>
+                        setEditForm((prev) => ({ ...prev, slug: e.target.value }))
+                      }
+                      placeholder="my-article-slug"
+                      className="h-11 text-base border border-gray-700 bg-gray-950"
+                    />
+                    <p className="text-xs text-gray-500">URL-friendly version of your title</p>
+                  </div>
 
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-foreground">
-                Content (HTML)
-              </p>
-              <textarea
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                rows={10}
-                value={editForm.content}
-                onChange={(e) =>
-                  setEditForm((prev) => ({ ...prev, content: e.target.value }))
-                }
-                placeholder="Article content in HTML"
-              />
-              <p className="text-xs text-muted-foreground">
-                Rich text is stored as HTML. Make sure headings, lists, and
-                paragraphs are valid markup.
-              </p>
-            </div>
+                  <div className="space-y-3">
+                    <label className="text-base font-semibold text-white">Preview</label>
+                    <textarea
+                      className="w-full rounded-md border border-gray-700 bg-gray-950 px-4 py-3 text-base leading-relaxed text-white placeholder:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#53F870] focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+                      rows={5}
+                      value={editForm.preview}
+                      onChange={(e) =>
+                        setEditForm((prev) => ({
+                          ...prev,
+                          preview: e.target.value,
+                        }))
+                      }
+                      placeholder="Short preview shown in article listings..."
+                    />
+                    <p className="text-xs text-gray-500">Brief summary shown in search results and listings</p>
+                  </div>
+                </div>
+              )}
 
-            <div className="flex justify-end gap-2 pt-2">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setIsEditDialogOpen(false);
-                  setSelectedArticle(null);
-                }}
-                disabled={isSavingEdit}
-              >
-                Cancel
-              </Button>
-              <Button onClick={handleSaveEditedArticle} disabled={isSavingEdit}>
-                {isSavingEdit ? (
-                  <span className="flex items-center gap-2">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Saving...
-                  </span>
-                ) : (
-                  "Save Changes"
-                )}
-              </Button>
+              {/* SEO Tab */}
+              {editTab === "seo" && (
+                <div className="space-y-6">
+                  <div className="bg-gray-900 border border-gray-800 rounded-lg p-4 mb-4">
+                    <p className="text-sm text-gray-400">Optimize your article for search engines with these SEO fields</p>
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="text-base font-semibold text-white">Meta Title</label>
+                    <Input
+                      value={editForm.metaTitle}
+                      onChange={(e) =>
+                        setEditForm((prev) => ({
+                          ...prev,
+                          metaTitle: e.target.value,
+                        }))
+                      }
+                      placeholder="Title tag for search results (50-60 chars)"
+                      className="h-11 text-base border border-gray-700 bg-gray-950"
+                    />
+                    <div className="flex justify-between items-center">
+                      <p className="text-xs text-gray-500">Displayed in search engine results</p>
+                      <p className={`text-xs ${editForm.metaTitle.length > 60 ? "text-red-500" : "text-gray-500"}`}>
+                        {editForm.metaTitle.length}/60
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="text-base font-semibold text-white">Meta Description</label>
+                    <textarea
+                      className="w-full rounded-md border border-gray-700 bg-gray-950 px-4 py-3 text-base leading-relaxed text-white placeholder:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#53F870] focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+                      rows={4}
+                      value={editForm.metaDescription}
+                      onChange={(e) =>
+                        setEditForm((prev) => ({
+                          ...prev,
+                          metaDescription: e.target.value,
+                        }))
+                      }
+                      placeholder="Meta description for search results (155-160 chars)"
+                    />
+                    <div className="flex justify-between items-center">
+                      <p className="text-xs text-gray-500">Shown below title in search results</p>
+                      <p className={`text-xs ${editForm.metaDescription.length > 160 ? "text-red-500" : "text-gray-500"}`}>
+                        {editForm.metaDescription.length}/160
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Content Tab */}
+              {editTab === "content" && (
+                <div className="space-y-4">
+                  <div className="space-y-3">
+                    <label className="text-base font-semibold text-white">Content (HTML)</label>
+                    <textarea
+                      className="w-full rounded-md border border-gray-700 bg-gray-950 px-4 py-3 text-sm leading-relaxed text-white placeholder:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#53F870] focus-visible:ring-offset-2 focus-visible:ring-offset-black font-mono"
+                      rows={14}
+                      value={editForm.content}
+                      onChange={(e) =>
+                        setEditForm((prev) => ({ ...prev, content: e.target.value }))
+                      }
+                      placeholder="&lt;h1&gt;Article title&lt;/h1&gt;&#10;&lt;p&gt;Your content here...&lt;/p&gt;"
+                    />
+                    <div className="bg-gray-900 border border-gray-800 rounded-lg p-3 space-y-2">
+                      <p className="text-xs font-medium text-gray-300">HTML Content Tips:</p>
+                      <ul className="text-xs text-gray-500 space-y-1 ml-3 list-disc">
+                        <li>Use proper HTML tags: &lt;h1&gt;, &lt;h2&gt;, &lt;p&gt;, &lt;ul&gt;, &lt;li&gt;</li>
+                        <li>Ensure all tags are properly closed</li>
+                        <li>Avoid inline styles when possible</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
+          </div>
+
+          {/* Footer with Actions */}
+          <div className="border-t border-gray-700 bg-black px-6 py-4 flex justify-end gap-3">
+            <Button
+              onClick={() => {
+                setIsEditDialogOpen(false);
+                setSelectedArticle(null);
+                setEditTab("basic");
+              }}
+              className="px-6 h-11 border border-gray-700 bg-transparent text-white hover:bg-gray-900 transition-colors"
+              disabled={isSavingEdit}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveEditedArticle}
+              className="px-8 h-11 bg-[#53F870] hover:bg-[#53F870] text-black font-semibold"
+              disabled={isSavingEdit}
+            >
+              {isSavingEdit ? "Saving..." : "Save Changes"}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

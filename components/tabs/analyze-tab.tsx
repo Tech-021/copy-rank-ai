@@ -336,6 +336,7 @@ export function AnalyzeTab({
   }
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editTab, setEditTab] = useState("basic");
   const [open, setOpen] = useState(false);
   const [openPostDialog, setOpenPostDialog] = useState(false);
   const [editForm, setEditForm] = useState({
@@ -1229,11 +1230,11 @@ export function AnalyzeTab({
                           key={tag}
                           onClick={() => toggleCompetitorTag(tag)}
                           className={`
-    px-3 py-1 text-xs rounded-[5px] border transition-colors
+    px-3 py-0.5 text-[11px] rounded-md border transition-colors mr-2 mb-2 h-7 flex items-center
     ${
       competitorTags.includes(tag)
-        ? "border border-[#53F870] text-white"
-        : "bg-linear-to-b from-[rgba(46,152,57,0.38)] to-[#04230D] text-[#53F870] border-[#53F870] hover:border-[#53f8701a]"
+        ? "border-[#4aa85a] bg-[rgba(74,168,90,0.12)] text-white"
+        : "bg-[rgba(46,152,57,0.06)] text-[#8fd59a] border-[#274e2a] hover:bg-[rgba(46,152,57,0.08)]"
     }
   `}
                         >
@@ -1243,12 +1244,14 @@ export function AnalyzeTab({
                     </div>
                   </div>
                   {/* Done Button */}
-                  <button
-                    onClick={handleAddCompetitorSubmit}
-                    className="w-full bg-[#5AFF78] hover:bg-green-700 text-black font-medium py-3 rounded-lg transition-colors"
-                  >
-                    Add
-                  </button>
+                  <div className="mt-6">
+                    <button
+                      onClick={handleAddCompetitorSubmit}
+                      className="w-full bg-[#2E8B37] hover:bg-[#257F31] text-white font-medium py-3 rounded-lg transition-colors"
+                    >
+                      Add
+                    </button>
+                  </div>
                 </div>
               </>
             ) : (
@@ -1289,7 +1292,7 @@ export function AnalyzeTab({
       <div className="space-y-3 md:w-2/5 w-full border px-2 py-2 rounded-xl overflow-y-auto min-w-0">
         {loadingArticles ? (
           <div className="text-center py-12">
-            {/* <LoaderChevron /> */}
+            <LoaderChevron />
           </div>
         ) : articles.length === 0 ? (
           <div className="text-center py-12 text-gray-400">
@@ -1367,199 +1370,276 @@ export function AnalyzeTab({
         )}
       </div>
 
-      {/* Edit Dialog */}
+      {/* Edit Dialog with Tabs */}
       <Dialog
         open={isEditDialogOpen}
         onOpenChange={(open) => {
           setIsEditDialogOpen(open);
           if (!open) {
             setSelectedArticle(null);
+            setEditTab("basic");
           }
         }}
       >
-        <DialogContent className="sm:max-w-[720px] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
-            <DialogTitle>Edit Article</DialogTitle>
+            <DialogTitle className="text-2xl">Edit Article</DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-foreground">Title</p>
-                <Input
-                  value={editForm.title}
-                  onChange={(e) =>
-                    setEditForm((prev) => ({ ...prev, title: e.target.value }))
+          {/* Tabs Navigation */}
+          <div className="flex gap-1 border-b border-gray-700 px-0">
+            <button
+              onClick={() => setEditTab("basic")}
+              className={`px-4 py-3 font-medium text-sm transition-colors border-b-2 -mb-[2px] ${
+                editTab === "basic"
+                  ? "border-b-[#53F870] text-[#53F870]"
+                  : "border-b-transparent text-gray-400 hover:text-gray-300"
+              }`}
+            >
+              Basic Info
+            </button>
+            <button
+              onClick={() => setEditTab("seo")}
+              className={`px-4 py-3 font-medium text-sm transition-colors border-b-2 -mb-[2px] ${
+                editTab === "seo"
+                  ? "border-b-[#53F870] text-[#53F870]"
+                  : "border-b-transparent text-gray-400 hover:text-gray-300"
+              }`}
+            >
+              SEO
+            </button>
+            <button
+              onClick={() => setEditTab("content")}
+              className={`px-4 py-3 font-medium text-sm transition-colors border-b-2 -mb-[2px] ${
+                editTab === "content"
+                  ? "border-b-[#53F870] text-[#53F870]"
+                  : "border-b-transparent text-gray-400 hover:text-gray-300"
+              }`}
+            >
+              Content
+            </button>
+          </div>
+
+          {/* Tab Content */}
+          <div className="flex-1 overflow-y-auto">
+            <div className="space-y-6 p-6">
+              {/* Basic Info Tab */}
+              {editTab === "basic" && (
+                <div className="space-y-6">
+                  <div className="space-y-3">
+                    <label className="text-base font-semibold text-white">Title</label>
+                    <Input
+                      value={editForm.title}
+                      onChange={(e) =>
+                        setEditForm((prev) => ({ ...prev, title: e.target.value }))
+                      }
+                      placeholder="Article title"
+                      className="h-11 text-base border border-gray-700 bg-gray-950"
+                    />
+                    <p className="text-xs text-gray-500">The main headline of your article</p>
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="text-base font-semibold text-white">Focus Keyword</label>
+                    <Input
+                      value={editForm.keyword}
+                      onChange={(e) =>
+                        setEditForm((prev) => ({
+                          ...prev,
+                          keyword: e.target.value,
+                        }))
+                      }
+                      placeholder="e.g., best SEO tools"
+                      className="h-11 text-base border border-gray-700 bg-gray-950"
+                    />
+                    <p className="text-xs text-gray-500">The primary keyword to optimize for</p>
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="text-base font-semibold text-white">Slug</label>
+                    <Input
+                      value={editForm.slug}
+                      onChange={(e) =>
+                        setEditForm((prev) => ({ ...prev, slug: e.target.value }))
+                      }
+                      placeholder="my-article-slug"
+                      className="h-11 text-base border border-gray-700 bg-gray-950"
+                    />
+                    <p className="text-xs text-gray-500">URL-friendly version of your title</p>
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="text-base font-semibold text-white">Preview</label>
+                    <textarea
+                      className="w-full rounded-md border border-gray-700 bg-gray-950 px-4 py-3 text-base leading-relaxed text-white placeholder:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#53F870] focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+                      rows={5}
+                      value={editForm.preview}
+                      onChange={(e) =>
+                        setEditForm((prev) => ({
+                          ...prev,
+                          preview: e.target.value,
+                        }))
+                      }
+                      placeholder="Short preview shown in article listings..."
+                    />
+                    <p className="text-xs text-gray-500">Brief summary shown in search results and listings</p>
+                  </div>
+                </div>
+              )}
+
+              {/* SEO Tab */}
+              {editTab === "seo" && (
+                <div className="space-y-6">
+                  <div className="bg-gray-900 border border-gray-800 rounded-lg p-4 mb-4">
+                    <p className="text-sm text-gray-400">Optimize your article for search engines with these SEO fields</p>
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="text-base font-semibold text-white">Meta Title</label>
+                    <Input
+                      value={editForm.metaTitle}
+                      onChange={(e) =>
+                        setEditForm((prev) => ({
+                          ...prev,
+                          metaTitle: e.target.value,
+                        }))
+                      }
+                      placeholder="Title tag for search results (50-60 chars)"
+                      className="h-11 text-base border border-gray-700 bg-gray-950"
+                    />
+                    <div className="flex justify-between items-center">
+                      <p className="text-xs text-gray-500">Displayed in search engine results</p>
+                      <p className={`text-xs ${editForm.metaTitle.length > 60 ? "text-red-500" : "text-gray-500"}`}>
+                        {editForm.metaTitle.length}/60
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="text-base font-semibold text-white">Meta Description</label>
+                    <textarea
+                      className="w-full rounded-md border border-gray-700 bg-gray-950 px-4 py-3 text-base leading-relaxed text-white placeholder:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#53F870] focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+                      rows={4}
+                      value={editForm.metaDescription}
+                      onChange={(e) =>
+                        setEditForm((prev) => ({
+                          ...prev,
+                          metaDescription: e.target.value,
+                        }))
+                      }
+                      placeholder="Meta description for search results (155-160 chars)"
+                    />
+                    <div className="flex justify-between items-center">
+                      <p className="text-xs text-gray-500">Shown below title in search results</p>
+                      <p className={`text-xs ${editForm.metaDescription.length > 160 ? "text-red-500" : "text-gray-500"}`}>
+                        {editForm.metaDescription.length}/160
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Content Tab */}
+              {editTab === "content" && (
+                <div className="space-y-4">
+                  <div className="space-y-3">
+                    <label className="text-base font-semibold text-white">Content (HTML)</label>
+                    <textarea
+                      className="w-full rounded-md border border-gray-700 bg-gray-950 px-4 py-3 text-sm leading-relaxed text-white placeholder:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#53F870] focus-visible:ring-offset-2 focus-visible:ring-offset-black font-mono"
+                      rows={14}
+                      value={editForm.content}
+                      onChange={(e) =>
+                        setEditForm((prev) => ({ ...prev, content: e.target.value }))
+                      }
+                      placeholder="&lt;h1&gt;Article title&lt;/h1&gt;&#10;&lt;p&gt;Your content here...&lt;/p&gt;"
+                    />
+                    <div className="bg-gray-900 border border-gray-800 rounded-lg p-3 space-y-2">
+                      <p className="text-xs font-medium text-gray-300">HTML Content Tips:</p>
+                      <ul className="text-xs text-gray-500 space-y-1 ml-3 list-disc">
+                        <li>Use proper HTML tags: &lt;h1&gt;, &lt;h2&gt;, &lt;p&gt;, &lt;ul&gt;, &lt;li&gt;</li>
+                        <li>Ensure all tags are properly closed</li>
+                        <li>Avoid inline styles when possible</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Footer with Actions */}
+          <div className="border-t border-gray-700 bg-black px-6 py-4 flex justify-end gap-3">
+            <Button
+              onClick={() => {
+                setIsEditDialogOpen(false);
+                setSelectedArticle(null);
+                setEditTab("basic");
+              }}
+              className="px-6 h-11 border border-gray-700 bg-transparent text-white hover:bg-gray-900 transition-colors"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={async () => {
+                if (!selectedArticle) return;
+                setIsSubmitting(true);
+                try {
+                  const {
+                    data: { user },
+                  } = await supabase.auth.getUser();
+
+                  if (!user) {
+                    throw new Error("User not authenticated");
                   }
-                  placeholder="Article title"
-                />
-              </div>
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-foreground">Keyword</p>
-                <Input
-                  value={editForm.keyword}
-                  onChange={(e) =>
-                    setEditForm((prev) => ({
-                      ...prev,
-                      keyword: e.target.value,
-                    }))
-                  }
-                  placeholder="Focus keyword"
-                />
-              </div>
-            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-foreground">Slug</p>
-                <Input
-                  value={editForm.slug}
-                  onChange={(e) =>
-                    setEditForm((prev) => ({ ...prev, slug: e.target.value }))
-                  }
-                  placeholder="my-article-slug"
-                />
-              </div>
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-foreground">Preview</p>
-                <textarea
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                  rows={3}
-                  value={editForm.preview}
-                  onChange={(e) =>
-                    setEditForm((prev) => ({
-                      ...prev,
-                      preview: e.target.value,
-                    }))
-                  }
-                  placeholder="Short preview shown in listings"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-foreground">Meta Title</p>
-              <Input
-                value={editForm.metaTitle}
-                onChange={(e) =>
-                  setEditForm((prev) => ({
-                    ...prev,
-                    metaTitle: e.target.value,
-                  }))
-                }
-                placeholder="SEO meta title"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-foreground">
-                Meta Description
-              </p>
-              <textarea
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                rows={3}
-                value={editForm.metaDescription}
-                onChange={(e) =>
-                  setEditForm((prev) => ({
-                    ...prev,
-                    metaDescription: e.target.value,
-                  }))
-                }
-                placeholder="SEO meta description"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-foreground">
-                Content (HTML)
-              </p>
-              <textarea
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                rows={10}
-                value={editForm.content}
-                onChange={(e) =>
-                  setEditForm((prev) => ({ ...prev, content: e.target.value }))
-                }
-                placeholder="Article content in HTML"
-              />
-              <p className="text-xs text-muted-foreground">
-                Rich text is stored as HTML. Make sure headings, lists, and
-                paragraphs are valid markup.
-              </p>
-            </div>
-
-            <div className="flex justify-end gap-2 pt-2">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setIsEditDialogOpen(false);
-                  setSelectedArticle(null);
-                }}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={async () => {
-                  if (!selectedArticle) return;
-                  setIsSubmitting(true);
-                  try {
-                    const {
-                      data: { user },
-                    } = await supabase.auth.getUser();
-
-                    if (!user) {
-                      throw new Error("User not authenticated");
-                    }
-
-                    const response = await fetch(`/api/articles?id=${selectedArticle.id}`, {
-                      method: "PATCH",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({
-                        userId: user.id,
-                        title: editForm.title,
-                        keyword: editForm.keyword,
-                        slug: editForm.slug,
-                        autoSlugFromTitle: !editForm.slug,
-                        metaTitle: editForm.metaTitle,
-                        metaDescription: editForm.metaDescription,
-                        preview: editForm.preview,
-                        content: editForm.content,
-                      }),
-                    });
-                    const data = await response.json();
-                    if (response.ok) {
-                      setIsEditDialogOpen(false);
-                      setSelectedArticle(null);
-                      await fetchArticles();
-                      toast.showToast({
-                        title: "Success",
-                        description: "Article updated successfully",
-                        type: "success",
-                      });
-                    } else {
-                      throw new Error(data.error || "Failed to update article");
-                    }
-                  } catch (error) {
+                  const response = await fetch(`/api/articles?id=${selectedArticle.id}`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      userId: user.id,
+                      title: editForm.title,
+                      keyword: editForm.keyword,
+                      slug: editForm.slug,
+                      autoSlugFromTitle: !editForm.slug,
+                      metaTitle: editForm.metaTitle,
+                      metaDescription: editForm.metaDescription,
+                      preview: editForm.preview,
+                      content: editForm.content,
+                    }),
+                  });
+                  const data = await response.json();
+                  if (response.ok) {
+                    setIsEditDialogOpen(false);
+                    setSelectedArticle(null);
+                    setEditTab("basic");
+                    await fetchArticles();
                     toast.showToast({
-                      title: "Error",
-                      description: error instanceof Error ? error.message : "Unknown error",
-                      type: "error",
+                      title: "Success",
+                      description: "Article updated successfully",
+                      type: "success",
                     });
-                  } finally {
-                    setIsSubmitting(false);
+                  } else {
+                    throw new Error(data.error || "Failed to update article");
                   }
-                }}
-              >
-                {isSubmitting ? (
-                  <span className="flex items-center gap-2">
-                    <LoaderChevron />
-                    Saving...
-                  </span>
-                ) : (
-                  "Save Changes"
-                )}
-              </Button>
-            </div>
+                } catch (error) {
+                  toast.showToast({
+                    title: "Error",
+                    description: error instanceof Error ? error.message : "Unknown error",
+                    type: "error",
+                  });
+                } finally {
+                  setIsSubmitting(false);
+                }
+              }}
+              className="px-8 h-11 bg-[#53F870] hover:bg-[#53F870] text-black font-semibold"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                "Saving..."
+              ) : (
+                "Save Changes"
+              )}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
