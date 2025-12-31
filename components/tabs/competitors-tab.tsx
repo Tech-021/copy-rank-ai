@@ -34,6 +34,7 @@ import {
   ChevronDown,
   Download,
 } from "lucide-react";
+import { HelpIcon } from "@/components/ui/help-icon";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -1271,9 +1272,12 @@ export function CompetitorsTab({
           {/* Card 1 */}
           <Card className="border-b sm:border-b sm:border-r lg:border-r lg:border-b-0 border-l-0 border-t-0 rounded-none border-[#53f8704b] bg-[#101110]">
             <CardContent className="flex flex-col justify-start gap-4 sm:gap-8">
-              <div className="flex justify-between">
-                <p className="text-xs sm:text-xs font-medium text-white tracking-wide">
+              <div className="flex justify-between items-center">
+                <p className="text-xs sm:text-xs font-medium text-white tracking-wide flex items-center">
                   Total Competitors
+                  <span title="Number of competitor websites currently tracked." className="ml-2 text-gray-400">
+                    <HelpIcon className="w-4 h-4" />
+                  </span>
                 </p>
                 <Image src="/compdark1.png" alt="icon" height={24} width={24} />
               </div>
@@ -1286,9 +1290,12 @@ export function CompetitorsTab({
           {/* Card 2 */}
           <Card className="border-b sm:border-b lg:border-b-0 border-l-0 border-t-0 border-r-0 sm:border-r-0 lg:border-r rounded-none border-[#53f8704b] bg-[#101110]">
             <CardContent className="flex flex-col justify-start gap-4 sm:gap-8">
-              <div className="flex justify-between">
-                <p className="text-xs sm:text-xs font-medium text-white tracking-wide">
+              <div className="flex justify-between items-center">
+                <p className="text-xs sm:text-xs font-medium text-white tracking-wide flex items-center">
                   Shared Keywords
+                  <span title="Number of keywords your site and competitors both rank for." className="ml-2 text-gray-400">
+                    <HelpIcon className="w-4 h-4" />
+                  </span>
                 </p>
                 <Image src="/compdark2.png" alt="icon" height={24} width={24} />
               </div>
@@ -1301,9 +1308,12 @@ export function CompetitorsTab({
           {/* Card 3 */}
           <Card className="border-b-0 sm:border-b sm:border-r lg:border-r lg:border-b-0 border-l-0 border-t-0 rounded-none border-r-[#53f8704b] bg-[#101110]">
             <CardContent className="flex flex-col justify-start gap-4 sm:gap-8">
-              <div className="flex justify-between">
-                <p className="text-xs sm:text-xs font-medium text-white tracking-wide">
+              <div className="flex justify-between items-center">
+                <p className="text-xs sm:text-xs font-medium text-white tracking-wide flex items-center">
                   Keyword Gaps
+                  <span title="Keywords competitors rank for but your site doesn't. These are quick opportunities to capture traffic." className="ml-2 text-gray-400">
+                    <HelpIcon className="w-4 h-4" />
+                  </span>
                 </p>
                 <Image src="/compdark3.png" alt="icon" height={24} width={24} />
               </div>
@@ -1314,9 +1324,12 @@ export function CompetitorsTab({
           {/* Card 4 */}
           <Card className="border-b-0 sm:border-b lg:border-b-0 border-l-0 border-t-0 border-r-0 lg:border-r-0 rounded-none border-[#53f8704b] bg-[#101110]">
             <CardContent className="flex flex-col justify-start gap-4 sm:gap-8">
-              <div className="flex justify-between">
-                <p className="text-xs sm:text-xs font-medium text-white tracking-wide">
+              <div className="flex justify-between items-center">
+                <p className="text-xs sm:text-xs font-medium text-white tracking-wide flex items-center">
                   High Value Gaps
+                  <span title="High value gaps are keywords competitors rank for that you don't, and which have significant traffic potential." className="ml-2 text-gray-400">
+                    <HelpIcon className="w-4 h-4" />
+                  </span>
                 </p>
                 <Image src="/compdark4.png" alt="icon" height={30} width={30} />
               </div>

@@ -137,14 +137,25 @@ export default function WelcomePage() {
 
   const getStepNumber = () => {
     if (tab === "tab1") return "1 of 3";
-    if (tab === "tab2") return "2 of 3";
-    if (tab === "tab3") return "3 of 3";
+    if (tab === "tab2") {
+      const step = Math.min(competitorsCount + 1, 3);
+      return `${step} of 3`;
+    }
+    if (tab === "tab3") {
+      const step = Math.min(keywordsCount + 1, 3);
+      return `${step} of 3`;
+    }
     return "1 of 3";
   };
 
   const getStepTitle = () => {
     if (tab === "tab1") return "";
-    if (tab === "tab2") return "Who are your top 3 competitors?";
+    if (tab === "tab2") {
+      if (!competitor1) return "Who is your biggest competitor?";
+      if (competitor1 && !competitor2) return "Who is your second competitor?";
+      if (competitor1 && competitor2 && !competitor3) return "Who is your third competitor?";
+      return "Who is your third competitor?";
+    }
     if (tab === "tab3") return allKeywordsAdded ? "" : "Add 3 keywords related to your business";
     return "";
   };
