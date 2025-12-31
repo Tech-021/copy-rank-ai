@@ -1,6 +1,7 @@
 "use client"
 
-import { X, Loader2 } from "lucide-react"
+import { X } from "lucide-react"
+import { LoaderChevron } from "./LoaderChevron"
 import Image from "next/image"
 import { useEffect, useState } from "react"
 
@@ -118,7 +119,7 @@ export function AddKeywordsDialog({
 
                   {/* Loading Animation */}
                   <div className="flex justify-center">
-                    <Loader2 className="w-8 h-8 animate-spin" />
+                    <LoaderChevron />
                   </div>
 
                   {/* Loading Button */}
