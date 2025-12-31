@@ -1061,32 +1061,34 @@ export function ArticlesTab({
         </div>
 
         {/* Main Layout - Articles + Preview */}
-        <div className="flex flex-col lg:flex-row gap-6 h-auto lg:overflow-hidden">
+        <div className="flex flex-col lg:flex-row gap-6 h-auto lg:overflow-visible">
           {/* Left Side - Articles List */}
-          <div className="space-y-3 lg:pr-2 w-full lg:w-auto">
+          <div className="space-y-4 lg:pr-2 w-full lg:w-auto">
             {filteredArticles.length === 0 ? (
               <div className="text-center py-12 text-gray-400">
                 <p className="text-sm">No articles found</p>
               </div>
             ) : (
-              filteredArticles.map((article) => (
+              filteredArticles.map((article) => {
+                const isSelected = selectedArticle?.id === article.id;
+                return (
                 <div
                   key={article.id}
                   onClick={() => {
                     setSelectedArticle(article);
                     setIsContentExpanded(false);
                   }}
-                  className={`relative flex flex-col sm:flex-row gap-3 px-3 sm:px-3 py-3 sm:py-5 bg-[#101110] border border-[#53f8701a] rounded-lg cursor-pointer hover:shadow-sm transition-all ${
-                    selectedArticle?.id === article.id
-                      ? "border-[#53f8701a] bg-[#101110]"
-                      : "border-[#53f8701a]"
+                  className={`relative group flex flex-col sm:flex-row gap-3 px-3 sm:px-3 py-3 sm:py-5 rounded-lg cursor-pointer transition-all duration-150 ${
+                    isSelected
+                      ? "z-50 border border-[#53f870] bg-gradient-to-b from-[#081a0f] to-[#07110b] shadow-lg ring-1 ring-[#53f87033] scale-[1.01]"
+                      : "border border-transparent hover:border-[#53f8701a] hover:bg-[#0f1310]"
                   }`}
                 >
                   {/* Thumbnail */}
                   <img
                     src={article.generatedImages?.[0] || "/article-image.jpg"}
                     alt={article.title}
-                    className="w-full sm:w-20 h-48 sm:h-20 rounded object-cover shrink-0"
+                    className={`w-full sm:w-20 h-48 sm:h-20 rounded object-cover shrink-0 ${isSelected ? '' : 'opacity-95'}`}
                   />
 
                   {/* Main Content Column */}
@@ -1094,28 +1096,24 @@ export function ArticlesTab({
                     {/* Title + Meta */}
                     <div className="flex flex-col sm:flex-row sm:justify-between gap-2">
                       <div className="min-w-0 flex-1">
-                        <h4 className="font-medium text-white text-sm sm:text-sm line-clamp-2">
+                        <h4 className={`line-clamp-2 text-sm sm:text-sm ${isSelected ? 'font-semibold text-white' : 'font-medium text-white/80'}`}>
                           {article.title}
                         </h4>
 
-                        <div className="flex items-center gap-1 mt-1">
+                        <div className={`flex items-center gap-1 mt-1 ${isSelected ? '' : 'opacity-80'}`}>
                           <Image
                             src="/clock1.png"
                             height={13}
                             width={13}
                             alt="icon"
                           />
-                          <p className="text-xs text-[#ffffff80]">
+                          <p className={`text-xs ${isSelected ? 'text-[#ffffffb3]' : 'text-[#ffffff66]'}`}>
                             {getReadingTime(article.wordCount)}
                           </p>
                         </div>
 
                         <Badge
-                          className={`mt-2 text-xs font-medium rounded-full w-fit ${
-                            (article.status || "").toLowerCase() === "uploaded"
-                              ? "bg-transparent text-green-700 border border-green-600"
-                              : "bg-[#0d0d0d] text-[#58a955] border border-[#58a955]"
-                          }`}
+                          className={`mt-2 text-[11px] font-medium rounded-full w-fit ${isSelected ? 'bg-[#0d0d0d] text-[#58a955] border border-[#58a955]' : 'bg-[#0b0b0b] text-[#58a955] border border-[#53f87014] opacity-80'}`}
                         >
                           {article.status}
                         </Badge>
@@ -1138,16 +1136,16 @@ export function ArticlesTab({
                     </div>
 
                     {/* Preview (FULL WIDTH, NOT under image) */}
-                    <p className="text-xs text-gray-500 line-clamp-2 mt-2">
+                    <p className={`text-xs line-clamp-2 mt-2 ${isSelected ? 'text-gray-500' : 'text-gray-400'}`}>
                       {article.preview}
                     </p>
 
                     {/* Tags */}
-                    <div className="flex gap-1 flex-wrap mt-2">
+                    <div className="flex gap-2 flex-wrap mt-3">
                       {article.tags?.slice(0, 5).map((tag) => (
                         <span
                           key={tag}
-                          className="text-xs bg-[#0d0d0d]  text-[#58a955] px-2 py-0.5 rounded-2xl border border-[#53f8701a]"
+                          className={`text-[11px] bg-[#0b0b0b] text-[#4fa85a] px-1.5 py-0.5 rounded-2xl border border-[#53f87012] ${isSelected ? '' : 'opacity-80'}`}
                         >
                           {tag}
                         </span>
@@ -1155,13 +1153,14 @@ export function ArticlesTab({
                     </div>
                   </div>
                 </div>
-              ))
+              );
+              })
             )}
           </div>
 
           {/* Right Side - Edit/Preview Panel */}
           {selectedArticle && (
-            <div className="fixed lg:static inset-0 lg:inset-auto z-50 lg:z-auto max-w-full lg:max-w-[640px] bg-[#0d0d0d] rounded-2xl lg:border-l border-[#53f8701a] overflow-hidden flex flex-col">
+            <div className="fixed lg:static inset-0 lg:inset-auto z-40 lg:z-auto max-w-full lg:max-w-[640px] bg-gradient-to-b from-[#07120a] to-[#0d0d0d] rounded-2xl lg:border-l-2 border-[#53f87033] shadow-2xl overflow-hidden flex flex-col">
               {/* Header */}
               <div className="flex items-center justify-between p-3 sm:p-4 border  border-[#53f8701a] shrink-0">
                 <span className="text-xs sm:text-sm text-[#ffffffb3]">VIEW POST</span>
@@ -1202,13 +1201,13 @@ export function ArticlesTab({
                           : [];
                         return keywords.length > 0 ? (
                           keywords.map((keyword, index) => (
-                            <span
-                              key={index}
-                              className="px-1 py-1  rounded-full text-xs font-medium bg-[#53f8701a] text-[#53f870] border border-[#53f8701a] inline-block"
-                            >
-                              {keyword}
-                            </span>
-                          ))
+                              <span
+                                key={index}
+                                className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-[#07120a] text-[#53f870cc] border border-[#53f87012] inline-block"
+                              >
+                                {keyword}
+                              </span>
+                            ))
                         ) : (
                           <span className="text-xs text-gray-500">
                             No keywords
