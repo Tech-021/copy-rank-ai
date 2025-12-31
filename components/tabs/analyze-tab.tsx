@@ -1298,17 +1298,15 @@ export function AnalyzeTab({
             <p className="text-sm">No articles found</p>
           </div>
         ) : (
-          articles.map((article) => {
-            const isSelected = selectedArticle?.id === article.id;
-            return (
-              <div
-                key={article.id}
-                className={`relative flex gap-4 p-4 transition-all rounded-lg border ${
-                  isSelected
-                    ? "border-[#53F87055] bg-[rgba(83,248,112,0.08)] shadow-md"
-                    : "border-transparent bg-transparent hover:border-[#2f7f3a] hover:bg-[rgba(47,127,58,0.02)] opacity-80"
-                }`}
-              >
+          articles.map((article) => (
+            <div
+              key={article.id}
+              className={`relative flex gap-3 p-3 bg-transparent border border-[#53f8701a] rounded-lg transition-all ${
+                selectedArticle?.id === article.id
+                  ? "border-[#53f8701a] bg-transparent"
+                  : "border-[#53f8701a]"
+              }`}
+            >
               <img
                 src={article.generatedImages?.[0] || "/article-image.jpg"}
                 alt={article.title}
@@ -1316,51 +1314,60 @@ export function AnalyzeTab({
               />
 
               <div className="flex flex-col min-w-0 flex-1">
-                <div className="flex justify-between items-start gap-3">
+                <div className="flex justify-between gap-2">
                   <div className="min-w-0">
-                    <div className="flex items-start gap-3">
-                      <h4 className={`line-clamp-2 ${isSelected ? 'text-lg font-semibold text-white' : 'text-sm font-medium text-white/90'}`}>
-                        {article.title}
-                      </h4>
-                      <Button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openEditDialog(article);
-                        }}
-                        className={`text-[#53f870] hover:text-[#53f870] bg-transparent cursor-pointer h-8 w-8 p-1 border border-transparent ${isSelected ? 'border-[#53F87033]' : ''}`}
-                      >
-                        Edit
-                      </Button>
+                    <div className="flex gap-2">
+                    <h4 className="font-medium text-white text-sm line-clamp-2">
+                      {article.title}
+                    </h4>
+                    <Button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openEditDialog(article);
+                      }}
+                      className="text-[#53f870] hover:text-[#53f870] bg-[#53f8701a] hover:bg-[#53f8701a]! cursor-pointer h-8 w-full sm:w-8 px-[18px] sm:px-2 py-1.5 border-[#53f8701a] shrink-0"
+                    >
+                      Edit
+                    </Button>
                     </div>
-
-                    <div className={`flex items-center gap-2 mt-3 ${isSelected ? 'text-xs text-gray-400' : 'text-xs text-gray-500/80'}`}>
-                      <Image src="/clock.png" height={13} width={13} alt="icon" />
-                      <p>{article.readingTime || '—'}</p>
-                      <span className="mx-1">·</span>
-                      <p>{article.wordCount ? `${article.wordCount} words` : '—'}</p>
+                    <div className="flex items-center gap-1 mt-1">
+                      <Image
+                        src="/clock.png"
+                        height={13}
+                        width={13}
+                        alt="icon"
+                      />
+                      <p className="text-xs text-gray-500">
+                        {article.readingTime || "—"}
+                      </p>
                     </div>
-
-                    <p className={`mt-4 ${isSelected ? 'text-sm text-gray-300' : 'text-xs text-gray-500/80'} line-clamp-2`}>{article.preview}</p>
-
-                    <div className="flex gap-2 flex-wrap mt-4">
-                      {article.tags?.slice(0, 5).map((tag) => (
-                        <span
-                          key={tag}
-                          className={`text-[10px] px-2 py-0.5 rounded-md ${isSelected ? 'bg-[rgba(74,168,90,0.14)] text-white' : 'bg-[rgba(103,159,95,0.03)] text-[#6eae79]'}`}
-                        >
-                          {tag}
-                        </span>
-                      ))}
+                    <div className="mt-2 text-xs">
+                      <span className="bg-transparent text-green-700 border border-green-600 px-2 py-0.5 rounded-2xl">
+                        {article.status}
+                      </span>
                     </div>
                   </div>
                 </div>
+
+                <p className="text-xs text-gray-500 line-clamp-2 mt-2">
+                  {article.preview}
+                </p>
+
+                <div className="flex gap-1 flex-wrap mt-2">
+                  {article.tags?.slice(0, 5).map((tag) => (
+                    <span
+                      key={tag}
+                      className="text-xs bg-[rgba(103,159,95,0.13)]  text-[#53F870] px-2 py-0.5 rounded-2xl border border-[#0000001a]"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
               </div>
             </div>
-            );
-          })
+          ))
         )}
       </div>
-
 
       {/* Edit Dialog */}
       <Dialog
