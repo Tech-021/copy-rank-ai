@@ -590,7 +590,7 @@ export function SettingsTab() {
 
             <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 items-center">
               <Button
-                className="h-8 sm:h-9 bg-transparent text-gray-100 border border-gray-600 text-xs sm:text-sm"
+                className="h-8 sm:h-9 bg-transparent text-gray-300 border border-gray-600 text-xs sm:text-sm hover:bg-gray-800"
                 onClick={() => handleResetSettings()}
                 disabled={!isDirty}
               >
@@ -598,7 +598,7 @@ export function SettingsTab() {
               </Button>
               <div className="flex items-center gap-3">
                 <Button
-                  className="h-8 sm:h-9 bg-transparent text-gray-100 border border-gray-600 text-xs sm:text-sm"
+                  className="h-8 sm:h-9 bg-green-600 hover:bg-green-700 text-white border-transparent text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                   onClick={() => handleSaveSettings()}
                   disabled={!isDirty}
                 >
