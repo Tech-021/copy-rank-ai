@@ -965,7 +965,7 @@ export function ArticlesTab({
       <div>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4 sm:mb-6">
           <div>
-            <p className="text-2xl sm:text-3xl text-white font-medium">Blogs</p>
+            <p className="text-2xl sm:text-3xl text-white font-medium">Articles & Blog Posts</p>
             <p className="text-[#ffffffb3] mt-2 sm:mt-3 text-xs sm:text-sm">
               Create, review, and publish your AI-generated posts.
             </p>
@@ -993,19 +993,19 @@ export function ArticlesTab({
         {/* Create a Ranking Post Section */}
         <Card className="border-[#53f8701a] shadow-none bg-transparent">
           <CardContent className="">
-            <div>
-              <h3 className="text-lg font-medium text-white mb-2">
+            <div className="">
+              <Button
+                onClick={() => setOpenPostDialog(true)}
+                className="bg-black cursor-pointer text-lg py-5 px-8 text-[#53f870] border border-[#53f870] hover:bg-black"
+              >
+                Create Post
+              </Button>
+              <h3 className="text-lg font-medium text-white mb-2 mt-5">
                 Create a Ranking Post
               </h3>
               <p className="text-sm text-[#ffffffb3] mb-4">
                 Turn competitor keywords into SEO-ready blog posts in one click.
               </p>
-              <Button
-                onClick={() => setOpenPostDialog(true)}
-                className="bg-black cursor-pointer py-5 px-8 text-[#53f870] border border-[#53f870] hover:bg-black"
-              >
-                Create Post
-              </Button>
             </div>
           </CardContent>
         </Card>
