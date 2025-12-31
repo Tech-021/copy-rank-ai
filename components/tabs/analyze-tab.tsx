@@ -1229,11 +1229,11 @@ export function AnalyzeTab({
                           key={tag}
                           onClick={() => toggleCompetitorTag(tag)}
                           className={`
-    px-3 py-1 text-xs rounded-[5px] border transition-colors
+    px-3 py-0.5 text-[11px] rounded-md border transition-colors mr-2 mb-2 h-7 flex items-center
     ${
       competitorTags.includes(tag)
-        ? "border border-[#53F870] text-white"
-        : "bg-linear-to-b from-[rgba(46,152,57,0.38)] to-[#04230D] text-[#53F870] border-[#53F870] hover:border-[#53f8701a]"
+        ? "border-[#4aa85a] bg-[rgba(74,168,90,0.12)] text-white"
+        : "bg-[rgba(46,152,57,0.06)] text-[#8fd59a] border-[#274e2a] hover:bg-[rgba(46,152,57,0.08)]"
     }
   `}
                         >
@@ -1243,12 +1243,14 @@ export function AnalyzeTab({
                     </div>
                   </div>
                   {/* Done Button */}
-                  <button
-                    onClick={handleAddCompetitorSubmit}
-                    className="w-full bg-[#5AFF78] hover:bg-green-700 text-black font-medium py-3 rounded-lg transition-colors"
-                  >
-                    Add
-                  </button>
+                  <div className="mt-6">
+                    <button
+                      onClick={handleAddCompetitorSubmit}
+                      className="w-full bg-[#2E8B37] hover:bg-[#257F31] text-white font-medium py-3 rounded-lg transition-colors"
+                    >
+                      Add
+                    </button>
+                  </div>
                 </div>
               </>
             ) : (
