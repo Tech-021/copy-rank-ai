@@ -127,15 +127,15 @@ export function WebsiteDialog({ open, onOpenChange, onSuccess }: WebsiteDialogPr
                   value={websiteName}
                   onChange={(e) => setWebsiteName(e.target.value)}
                   disabled={isLoading}
-                  className="w-full h-[50px] border border-solid border-[#0000001a] focus-visible:border focus-visible:border-[#5aff78] !bg-[#5aff781a] text-white focus-visible:ring-0 placeholder:text-[#ffffff4d] disabled:opacity-50"
+                  className="w-full h-[48px] border border-solid border-[#0000001a] focus-visible:border focus-visible:border-[#3fa45a] bg-transparent text-white focus-visible:ring-0 placeholder:text-[#ffffff4d] disabled:opacity-50"
                 />
               </div>
             </div>
-            <div>
+            <div className="mt-6">
               <Button 
                 onClick={handleAddWebsite}
                 disabled={isLoading}
-                className="bg-[#5baf57] hover:bg-[#5baf57] border border-[#0000001a] text-white px-[60px] py-1 w-full h-[50px] rounded-[10px] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                className="bg-[#2E8B37] hover:bg-[#257F31] border border-[#0000001a] text-white px-[60px] py-2 w-full h-[48px] rounded-[10px] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isLoading ? (
                   <span className="flex items-center justify-center">

@@ -46,6 +46,7 @@ import {
   ExternalLink,
   ChevronDown,
 } from "lucide-react";
+import { HelpIcon } from "@/components/ui/help-icon";
 import { useToast } from "../ui/toast";
 import { getUser } from "@/lib/auth";
 import { supabase } from "@/lib/client";
@@ -1567,13 +1568,22 @@ export function KeywordsTab({
                   Keyword
                 </th>
                 <th className="px-6 py-3 text-left text-sm font-normal text-[#ffffff4d]">
-                  Search Volume
+                  <div className="flex items-center gap-2">
+                    <span>Search Volume</span>
+                    <span title="Monthly search volume estimate." className="text-gray-400"><HelpIcon className="w-3 h-3" /></span>
+                  </div>
                 </th>
                 <th className="px-6 py-3 text-left text-sm font-normal text-[#ffffff4d]">
-                  Difficulty
+                  <div className="flex items-center gap-2">
+                    <span>Difficulty</span>
+                    <span title="Difficulty score (0-100). Lower = easier to rank for." className="text-gray-400"><HelpIcon className="w-3 h-3" /></span>
+                  </div>
                 </th>
                 <th className="px-6 py-3 text-left text-sm font-normal text-[#ffffff4d]">
-                  Competition
+                  <div className="flex items-center gap-2">
+                    <span>Competition</span>
+                    <span title="Competition level (0-1). Lower = less competition." className="text-gray-400"><HelpIcon className="w-3 h-3" /></span>
+                  </div>
                 </th>
                 <th className="px-6 py-3 text-left text-sm font-normal text-[#ffffff4d]">
                   Post Status
@@ -1617,7 +1627,10 @@ export function KeywordsTab({
 
                     {/* Difficulty - de-emphasized */}
                     <td className="px-6 py-3 text-xs text-[#bfc9bf]">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded ${getDifficultyColor(kw.difficulty)} text-[12px] font-medium`}>
+                      <span
+                        title={`Difficulty ${kw.difficulty}: lower numbers are easier to rank for (0-100).`}
+                        className={`inline-flex items-center px-2 py-0.5 rounded ${getDifficultyColor(kw.difficulty)} text-[12px] font-medium`}
+                      >
                         {difficultyText}
                       </span>
                     </td>
@@ -1631,10 +1644,13 @@ export function KeywordsTab({
                               ? "bg-blue-100 text-blue-800 border-blue-200"
                               : getCompetitionColor(kw.competition);
                           return (
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded ${competitionBadgeClass} text-[12px] font-medium`}>
-                              {competitionText}
-                            </span>
-                          );
+                              <span
+                                title={`Competition ${kw.competition.toFixed(2)}: 0 = low competition, 1 = high competition.`}
+                                className={`inline-flex items-center px-2 py-0.5 rounded ${competitionBadgeClass} text-[12px] font-medium`}
+                              >
+                                {competitionText}
+                              </span>
+                            );
                         })()
                       ) : (
                         <span className="text-[#9aa79a]">—</span>
@@ -1654,7 +1670,10 @@ export function KeywordsTab({
                           if (vol >= 1000) trafficBadgeClass = "bg-blue-600 text-white";
                           else if (vol >= 300) trafficBadgeClass = "bg-yellow-400 text-black";
                           return (
-                            <span className={`${trafficBadgeClass} inline-flex items-center px-3 py-1 rounded text-sm font-semibold`}>
+                            <span
+                              title={`Estimated traffic potential based on search volume.`}
+                              className={`${trafficBadgeClass} inline-flex items-center px-3 py-1 rounded text-sm font-semibold`}
+                            >
                               {trafficText}
                             </span>
                           );

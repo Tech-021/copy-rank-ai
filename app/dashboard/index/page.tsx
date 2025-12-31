@@ -11,6 +11,7 @@ import {
 import { ChevronDown } from "lucide-react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
+import { HelpIcon } from "@/components/ui/help-icon";
 import { supabase } from "@/lib/client";
 import { getUser } from "@/lib/auth";
 import { LoaderChevron } from "@/components/ui/LoaderChevron";
@@ -361,8 +362,11 @@ export default function DashboardIndexPage() {
         <Card className="border-r sm:border-r lg:border-r border-l-0 border-t-0 border-b-0 sm:rounded-r-none lg:rounded-r-none rounded-tl-xl rounded-bl-xl border-gray-800 bg-[#101110] shadow-xl">
           <CardContent className="flex flex-col justify-start gap-6 sm:gap-8 p-3 sm:p-6">
             <div className="flex justify-between items-start">
-              <p className="text-xs sm:text-xs font-medium text-white tracking-wide">
+              <p className="text-xs sm:text-xs font-medium text-white tracking-wide flex items-center">
                 Indexed Posts
+                <span title="Posts that are published and should be discoverable by search engines." className="ml-2 text-gray-400">
+                  <HelpIcon className="w-4 h-4" />
+                </span>
               </p>
               <Image
                 src="/index1.png"
@@ -382,8 +386,11 @@ export default function DashboardIndexPage() {
         <Card className="border border-t-0 border-b-0 rounded-none border-[#53f8704b] bg-[#101110] shadow-xl">
           <CardContent className="flex flex-col justify-start gap-6 sm:gap-8 p-3 sm:p-6">
             <div className="flex justify-between items-start">
-              <p className="text-xs sm:text-xs font-medium text-white tracking-wide">
+              <p className="text-xs sm:text-xs font-medium text-white tracking-wide flex items-center">
                 Requested Index
+                <span title="Posts you've requested to be indexed (e.g., drafts marked for indexing)." className="ml-2 text-gray-400">
+                  <HelpIcon className="w-4 h-4" />
+                </span>
               </p>
               <Image
                 src="/index2.png"
@@ -403,8 +410,11 @@ export default function DashboardIndexPage() {
         <Card className="border border-t-0 border-b-0 rounded-none border-[#53f8704b] bg-[#101110] shadow-xl">
           <CardContent className="flex flex-col justify-start gap-6 sm:gap-8 p-3 sm:p-6">
             <div className="flex justify-between items-start">
-              <p className="text-xs sm:text-xs font-medium text-white tracking-wide">
+              <p className="text-xs sm:text-xs font-medium text-white tracking-wide flex items-center">
                 Pending Index
+                <span title="Posts that are queued for indexing and awaiting processing by our indexing service." className="ml-2 text-gray-400">
+                  <HelpIcon className="w-4 h-4" />
+                </span>
               </p>
               <Image
                 src="/index3.png"
@@ -424,8 +434,11 @@ export default function DashboardIndexPage() {
         <Card className="border border-t-0 rounded-none! border-b-0 border-r-0 rounded-tr-xl rounded-br-xl lg:rounded-tr-none lg:!rounded-r-xl lg:border-r-0 border-[#53f8704b] bg-[#101110] shadow-xl">
           <CardContent className="flex flex-col justify-start gap-6 sm:gap-8 p-3 sm:p-6">
             <div className="flex justify-between items-start">
-              <p className="text-xs sm:text-xs font-medium text-white tracking-wide">
+              <p className="text-xs sm:text-xs font-medium text-white tracking-wide flex items-center">
                 Un-Indexed Posts
+                <span title="Posts that haven't been indexed yet — they may need publishing or manual submission to search engines." className="ml-2 text-gray-400">
+                  <HelpIcon className="w-4 h-4" />
+                </span>
               </p>
               <Image
                 src="/index4.png"
