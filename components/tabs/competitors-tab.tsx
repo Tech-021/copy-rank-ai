@@ -794,6 +794,10 @@ export function CompetitorsTab({
     highQualityCount: competitors.filter(
       (c) => !isNewFormat(c) && c.serp_overlap_quality === "High"
     ).length,
+    keywordGaps: siteKeywords.length,
+    highValueGaps: siteKeywords.filter(
+      (k) => (k.volume || 0) > 1000 && typeof k.difficulty === "string" && (k.difficulty.toLowerCase() === "low" || k.difficulty.toLowerCase().includes("low"))
+    ).length,
   };
 
   const handleCreatePost = () => {
@@ -1317,7 +1321,7 @@ export function CompetitorsTab({
                 </p>
                 <Image src="/compdark3.png" alt="icon" height={24} width={24} />
               </div>
-              <p className="text-2xl sm:text-4xl font-bold text-[#53F870]">9</p>
+              <p className="text-2xl sm:text-4xl font-bold text-[#53F870]">{stats.keywordGaps}</p>
             </CardContent>
           </Card>
 
@@ -1333,7 +1337,7 @@ export function CompetitorsTab({
                 </p>
                 <Image src="/compdark4.png" alt="icon" height={30} width={30} />
               </div>
-              <p className="text-2xl sm:text-4xl font-bold text-[#53F870]">4</p>
+              <p className="text-2xl sm:text-4xl font-bold text-[#53F870]">{stats.highValueGaps}</p>
             </CardContent>
           </Card>
         </div>
