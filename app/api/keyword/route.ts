@@ -8,6 +8,7 @@ interface KeywordRequest {
   maxDifficulty?: number;
   minVolume?: number;
   maxVolume?: number;  // NEW: Add this line
+  maxCompetition?: number; // NEW: allow caller to set competition threshold
   limit?: number;
   includeCompetitors?: boolean;
 }
@@ -59,8 +60,9 @@ export async function POST(request: Request) {
       websiteUrl,
       maxDifficulty = 70, 
       minVolume = 100,
-      maxVolume = 500,  // NEW: Default max volume 500
-      limit = 20,
+      maxVolume = Infinity,  // Allow high-volume keywords by default
+      maxCompetition = 0.3,
+      limit = 30,
       includeCompetitors = false
     } = body;
 
@@ -90,7 +92,7 @@ export async function POST(request: Request) {
     
     console.log(`📊 Raw keywords from DataForSEO: ${rawKeywords.length}`);
     
-    const keywords = filterKeywords(rawKeywords, maxDifficulty, minVolume, maxVolume).slice(0, limit);
+    const keywords = filterKeywords(rawKeywords, maxDifficulty, minVolume, maxVolume, maxCompetition).slice(0, limit);
     
     console.log(`✅ DataForSEO Success: ${keywords.length} real keywords, ${competitors.length} competitors`);
     
@@ -123,6 +125,7 @@ export async function POST(request: Request) {
         maxDifficulty,
         minVolume,
         maxVolume,  // NEW: Add this line
+        maxCompetition,
         limit,
         includeCompetitors
       }
