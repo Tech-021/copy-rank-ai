@@ -144,6 +144,29 @@ export function ArticlesTab({
   });
 
   const articlesRef = useRef<Article[]>(articles);
+  const isFetchingRef = useRef(false);
+  const lastFetchedSiteRef = useRef<string | null>(null);
+  const initialFetchFlagKey = "__articles_initial_fetch_done";
+
+  const hasInitialFetchRun = () => {
+    try {
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      return typeof window !== "undefined" && Boolean((window as any)[initialFetchFlagKey]);
+    } catch {
+      return false;
+    }
+  };
+
+  const markInitialFetchRun = () => {
+    try {
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      if (typeof window !== "undefined") (window as any)[initialFetchFlagKey] = true;
+    } catch {
+      // ignore
+    }
+  };
 
   useEffect(() => {
     articlesRef.current = articles;
@@ -191,6 +214,21 @@ export function ArticlesTab({
       );
     } catch {
       // ignore storage failures
+    }
+  };
+
+  const isArticlesCacheFresh = (
+    userId: string,
+    siteId: string | null,
+    ttlMs = 60 * 1000
+  ) => {
+    try {
+      const raw = readArticlesCache(userId, siteId);
+      if (!raw || !raw.cachedAt) return false;
+      const age = Date.now() - new Date(raw.cachedAt).getTime();
+      return age <= ttlMs;
+    } catch {
+      return false;
     }
   };
 
@@ -476,6 +514,16 @@ export function ArticlesTab({
   const fetchArticles = useCallback(async () => {
     if (!currentUser) return;
 
+    // Skip fetching when on standalone article route
+    if (typeof window !== "undefined" && window.location.pathname.startsWith("/articles")) return;
+
+    // Prevent duplicate concurrent fetches
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
+
+    // Mark that an initial fetch has run so other tabs/components skip their first fetch
+    markInitialFetchRun();
+
     const siteId = selectedWebsiteId || websiteId || null;
     const cached = readArticlesCache(currentUser.id, siteId);
     const shouldHydrateFromCache =
@@ -548,6 +596,8 @@ export function ArticlesTab({
         );
         setArticles(normalizedArticles);
         writeArticlesCache(currentUser.id, siteId, normalizedArticles);
+        // remember which site we fetched so we can avoid redundant initial fetches
+        lastFetchedSiteRef.current = siteId;
         console.log(`✅ Loaded ${normalizedArticles.length} articles`);
       } else {
         throw new Error(data.error || "Failed to fetch articles");
@@ -555,20 +605,50 @@ export function ArticlesTab({
     } catch (error) {
       console.error("❌ Error fetching articles:", error);
     } finally {
+      isFetchingRef.current = false;
       if (!shouldHydrateFromCache) setLoading(false);
     }
   }, [currentUser, selectedWebsiteId, websiteId]);
   // ...existing code...
 
   useEffect(() => {
-    if (currentUser) fetchArticles();
-  }, [currentUser, selectedWebsiteId]);
+    if (!currentUser) return;
+
+    // Skip fetching when on standalone article route
+    if (typeof window !== "undefined" && window.location.pathname.startsWith("/articles")) return;
+
+    const siteId = selectedWebsiteId || websiteId || null;
+
+    // If cache is recent, hydrate from it and skip an immediate fetch to
+    // avoid a visible refresh when navigating to the tab. Background
+    // polling will keep data fresh.
+    // If some other component already performed the initial fetch for the same site, skip ours to avoid duplication
+    if (hasInitialFetchRun() && lastFetchedSiteRef.current === siteId) return;
+    const cacheIsFresh = isArticlesCacheFresh(currentUser.id, siteId, 60_000);
+    if (!cacheIsFresh) {
+      fetchArticles();
+    } else {
+      const cached = readArticlesCache(currentUser.id, siteId);
+      if (cached && (articlesRef.current?.length ?? 0) === 0) {
+        setArticles(cached.articles);
+        setLoading(false);
+      }
+    }
+  }, [currentUser, selectedWebsiteId, websiteId, fetchArticles]);
 
   useEffect(() => {
     if (!currentUser) return;
+
+    // Pause polling while a single article is open to avoid a visible
+    // refresh/flicker when the user is reading an article.
+    if (selectedArticle) return;
+
+    // Also skip polling when on the standalone article route
+    if (typeof window !== "undefined" && window.location.pathname.startsWith("/articles")) return;
+
     const interval = setInterval(() => fetchArticles(), 30000);
     return () => clearInterval(interval);
-  }, [currentUser, selectedWebsiteId, fetchArticles]);
+  }, [currentUser, selectedWebsiteId, fetchArticles, selectedArticle]);
 
   useEffect(() => {
     if (generatedArticles && generatedArticles.length > 0) {

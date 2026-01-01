@@ -770,10 +770,15 @@ export function AnalyzeTab({
   };
 
   useEffect(() => {
+    // Skip fetching while viewing an article page to avoid background
+    // polling triggering visible reloads when navigating to /articles/[slug].
+    if (typeof window !== "undefined" && window.location.pathname.startsWith("/articles")) return;
     fetchArticles();
   }, [selectedWebsiteId]);
 
   useEffect(() => {
+    if (typeof window !== "undefined" && window.location.pathname.startsWith("/articles")) return;
+
     const interval = setInterval(() => fetchArticles(), 30000);
     return () => clearInterval(interval);
   }, [selectedWebsiteId]);
