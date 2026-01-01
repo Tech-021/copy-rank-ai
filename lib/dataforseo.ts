@@ -32,7 +32,7 @@ export async function fetchKeywordsFromDataForSEO(topic: string): Promise<Keywor
         language: "en",
         location: 2840, // United States
         sort_by: "search_volume",
-        limit: 20
+        limit: 100
       }]
     },
     {
@@ -42,16 +42,35 @@ export async function fetchKeywordsFromDataForSEO(topic: string): Promise<Keywor
         target: topic, // Try using the topic as a website/domain
         language: "en",
         location: 2840,
-        limit: 20
+        limit: 100
       }]
     },
     {
       name: "search_volume",
       url: 'https://api.dataforseo.com/v3/keywords_data/google/search_volume/live',
       body: [{
-        keywords: [topic, `${topic} tips`, `best ${topic}`, `${topic} 2024`, `${topic} guide`, `${topic} tutorial`, `learn ${topic}`, `${topic} for beginners`],
+        // broaden seed phrases to generate more related keywords
+        keywords: [
+          topic,
+          `${topic} tips`,
+          `best ${topic}`,
+          `${topic} 2025`,
+          `${topic} guide`,
+          `${topic} tutorial`,
+          `learn ${topic}`,
+          `${topic} for beginners`,
+          `what is ${topic}`,
+          `latest ${topic}`,
+          `${topic} news`,
+          `${topic} trends`,
+          `${topic} careers`,
+          `${topic} jobs`,
+          `${topic} meaning`,
+          `how to ${topic}`
+        ],
         language: "en",
         location: 2840,
+        limit: 200
       }]
     }
   ];
@@ -141,7 +160,9 @@ function transformItems(items: any[], topic: string): KeywordData[] {
       const search_volume = item.search_volume || item.monthly_searches?.[0]?.search_volume || 0;
       const difficulty = item.difficulty || item.keyword_difficulty || 50;
       const cpc = item.cpc || item.cost_per_click || 0.5;
-      const competition = item.competition || item.competition_level || 0.5;
+      // Normalize competition to 0-1 scale if it's provided as percent (0-100)
+      let competitionRaw = item.competition || item.competition_level || item.competition_rate || 0.5;
+      const competition = (typeof competitionRaw === 'number' && competitionRaw > 1) ? competitionRaw / 100 : competitionRaw;
       
       return {
         keyword,
@@ -162,9 +183,9 @@ function transformItems(items: any[], topic: string): KeywordData[] {
 export function filterKeywords(
   keywords: KeywordData[], 
   maxDifficulty: number = 70,
-  minVolume: number = 100,
-  maxVolume: number = 500,  // NEW: Maximum search volume
-  maxCompetition: number = 0.3  // CHANGED: Low competition threshold (30%)
+  minVolume: number = 50,
+  maxVolume: number = Infinity,  // Allow high-volume keywords by default
+  maxCompetition: number = 0.5  // Low competition threshold (50%)
 ): KeywordData[] {
   console.log(`🔍 Filtering ${keywords.length} keywords with criteria:`);
   console.log(`   minVolume: ${minVolume}, maxVolume: ${maxVolume}`);
