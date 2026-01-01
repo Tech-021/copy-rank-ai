@@ -110,6 +110,10 @@ export async function fetchKeywordsFromDataForSEO(
             `${topic} common problems`,
             `${topic} solutions`,
             `${topic} FAQs`,
+            `${topic} resources`,
+            `${topic} tools and software`,
+            `${topic} future trends`,
+
           ],
           language: "en",
           location: 2840,
