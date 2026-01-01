@@ -32,7 +32,7 @@ export async function fetchKeywordsFromDataForSEO(topic: string): Promise<Keywor
         language: "en",
         location: 2840, // United States
         sort_by: "search_volume",
-        limit: 100
+        limit: 200
       }]
     },
     {
@@ -42,7 +42,7 @@ export async function fetchKeywordsFromDataForSEO(topic: string): Promise<Keywor
         target: topic, // Try using the topic as a website/domain
         language: "en",
         location: 2840,
-        limit: 100
+        limit: 200
       }]
     },
     {
@@ -66,11 +66,24 @@ export async function fetchKeywordsFromDataForSEO(topic: string): Promise<Keywor
           `${topic} careers`,
           `${topic} jobs`,
           `${topic} meaning`,
-          `how to ${topic}`
+          `how to ${topic}`,
+          `${topic} examples`,
+          `${topic} uses`,
+          `${topic} tools`,
+          `${topic} ideas`,
+          `${topic} vs`,
+          `${topic}s`,
+          `top ${topic} resources`,
+          `best ${topic} tools`,
+          `${topic} benefits`,
+          `${topic} advantages`,
+          `${topic} disadvantages`,
+          `${topic} tutorials`,
+          `${topic} examples`
         ],
         language: "en",
         location: 2840,
-        limit: 200
+        limit: 500
       }]
     }
   ];
@@ -183,7 +196,7 @@ function transformItems(items: any[], topic: string): KeywordData[] {
 export function filterKeywords(
   keywords: KeywordData[], 
   maxDifficulty: number = 70,
-  minVolume: number = 50,
+  minVolume: number = 30,
   maxVolume: number = Infinity,  // Allow high-volume keywords by default
   maxCompetition: number = 0.5  // Low competition threshold (50%)
 ): KeywordData[] {
@@ -213,7 +226,7 @@ export function filterKeywords(
   
   return filtered
     .sort((a, b) => (b.search_volume || 0) - (a.search_volume || 0))  // Sort by volume (highest first)
-    .slice(0, 30);
+    .slice(0, 40);
 }
 
 // Fetch keyword overview data for target keywords
