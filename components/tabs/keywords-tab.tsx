@@ -236,6 +236,8 @@ export function KeywordsTab({
     index: number;
     keyword: string;
   } | null>(null);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const itemsPerPage = 20;
   const toast = useToast();
 
   // Keep latest values available inside async callbacks (prevents stale requests overwriting UI)
@@ -814,6 +816,22 @@ export function KeywordsTab({
 
     return filtered;
   }, [keywords, searchQuery, difficultyFilter, sortBy]);
+
+  // Reset pagination when filter/sort/search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filteredAndSortedKeywords.length, searchQuery, difficultyFilter, sortBy]);
+
+  // Pagination calculations
+  const paginated = (() => {
+    const total = filteredAndSortedKeywords.length;
+    const totalPages = Math.max(1, Math.ceil(total / itemsPerPage));
+    const clampedPage = Math.min(Math.max(1, currentPage), totalPages);
+    const start = (clampedPage - 1) * itemsPerPage;
+    const end = start + itemsPerPage;
+    const pageItems = filteredAndSortedKeywords.slice(start, end);
+    return { total, totalPages, clampedPage, start, end, pageItems };
+  })();
 
   const generateContentFromKeywords = async () => {
     // Open dialog immediately without validation toasts
@@ -1649,7 +1667,8 @@ export function KeywordsTab({
           {/* ================= BODY ================= */}
           <tbody className="border border-[#53f8701a]">
             {filteredAndSortedKeywords.length > 0 ? (
-              filteredAndSortedKeywords.map((kw, index) => {
+              paginated.pageItems.map((kw, localIndex) => {
+                const index = paginated.start + localIndex; // global index into filteredAndSortedKeywords
                 const difficultyText = getDifficultyText(kw.difficulty);
                 const difficultyColor = getDifficultyColor(kw.difficulty);
                 const competitionText = getCompetitionText(kw.competition);
@@ -1755,6 +1774,46 @@ export function KeywordsTab({
           </tbody>
         </table>
       </div>
+      </div>
+
+      {/* Pagination Controls */}
+      <div className="mt-4 flex items-center justify-between">
+        <div className="text-sm text-[#ffffffb3]">
+          {(() => {
+            const total = filteredAndSortedKeywords.length;
+            const totalPages = Math.max(1, Math.ceil(total / itemsPerPage));
+            const clampedPage = Math.min(Math.max(1, currentPage), totalPages);
+            const start = total === 0 ? 0 : (clampedPage - 1) * itemsPerPage + 1;
+            const end = Math.min(total, clampedPage * itemsPerPage);
+            return (
+              <span>
+                Showing <span className="font-medium text-[#53f870]">{start}</span> - <span className="font-medium text-[#53f870]">{end}</span> of <span className="font-medium">{total}</span>
+              </span>
+            );
+          })()}
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+            disabled={currentPage <= 1}
+            className="px-3 h-8"
+          >
+            Prev
+          </Button>
+          <div className="text-sm text-[#ffffffb3] px-2">Page {Math.max(1, Math.min(currentPage, Math.max(1, Math.ceil(filteredAndSortedKeywords.length / itemsPerPage))))} of {Math.max(1, Math.ceil(filteredAndSortedKeywords.length / itemsPerPage))}</div>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setCurrentPage((p) => p + 1)}
+            disabled={currentPage >= Math.max(1, Math.ceil(filteredAndSortedKeywords.length / itemsPerPage))}
+            className="px-3 h-8"
+          >
+            Next
+          </Button>
+        </div>
       </div>
 
       {/* Selection Bar */}

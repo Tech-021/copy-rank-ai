@@ -207,6 +207,10 @@ export function CompetitorsTab({
   const [selectedKeywords, setSelectedKeywords] = useState<Set<number>>(
     new Set()
   );
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const itemsPerPage = 20;
+  const [siteKeywordsPage, setSiteKeywordsPage] = useState<number>(1);
+  const siteKeywordsPerPage = 20;
 
   // Prevent stale async requests from overwriting UI after website switch
   const selectedWebsiteIdRef = useRef<string | null>(selectedWebsiteId);
@@ -837,6 +841,22 @@ export function CompetitorsTab({
     }
   };
 
+  // Pagination for siteKeywords table
+  const siteKeywordsPaginated = (() => {
+    const total = siteKeywords.length;
+    const totalPages = Math.max(1, Math.ceil(total / siteKeywordsPerPage));
+    const clampedPage = Math.min(Math.max(1, siteKeywordsPage), totalPages);
+    const start = (clampedPage - 1) * siteKeywordsPerPage;
+    const end = start + siteKeywordsPerPage;
+    const pageItems = siteKeywords.slice(start, end);
+    return { total, totalPages, clampedPage, start, end, pageItems };
+  })();
+
+  // Reset site keywords page when data or search changes
+  useEffect(() => {
+    setSiteKeywordsPage(1);
+  }, [siteKeywords.length, searchQuery]);
+
   const handleAddCompetitorSubmit = () => {
     (async () => {
       try {
@@ -1384,73 +1404,76 @@ export function CompetitorsTab({
             {/* ================= BODY ================= */}
             <tbody>
               {siteKeywords && siteKeywords.length > 0 ? (
-                siteKeywords.map((row, index) => (
-                  <tr
-                    key={row.keyword + index}
-                    className={`${
-                      index !== siteKeywords.length - 1
-                        ? "border-b border-gray-700"
-                        : ""
-                    } hover:bg-transparent`}
-                  >
-                    <td className="px-2 sm:px-4 py-2 sm:py-3 w-10">
-                      <input
-                        type="checkbox"
-                        checked={selectedKeywords.has(index)}
-                        onChange={() => toggleKeywordSelection(index)}
-                        aria-label={`Select keyword ${row.keyword}`}
-                        className="w-4 h-4 rounded border border-gray-600 bg-transparent cursor-pointer accent-[#53F870]"
-                      />
-                    </td>
-                    <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-[#53F870]">
-                      {row.keyword}
-                    </td>
-                    <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-500 hidden sm:table-cell">
-                      {row.volume ? row.volume.toLocaleString() : "-"}
-                    </td>
-                    <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-500 hidden sm:table-cell">
-                      <span className="px-2 py-0.5 text-xs">
-                        {row.difficulty}
-                      </span>
-                    </td>
-                    <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs text-gray-500 hidden lg:table-cell">
-                      <span className="px-2 py-0.5 text-xs">{row.sites}</span>
-                    </td>
-                    <td className="px-2 sm:px-4 py-2 sm:py-3">
-                      <div className="flex justify-start ">
-                        <Button className="border rounded-r-none bg-transparent hover:text-[#53f870] hover:bg-[#53f8701a]! text-gray-300 cursor-pointer border-gray-700 rounded-l-md px-3 sm:px-6 h-7 sm:h-8 text-xs">
-                          View
-                        </Button>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button className="group border border-l-0 hover:bg-[#53f8701a]! rounded-l-none bg-transparent border-gray-600 rounded-r-md w-7 sm:w-8 h-7 sm:h-8 p-0 flex items-center justify-center">
-                              <ChevronDown className="w-4 h-4 text-gray-300 group-hover:text-[#53f870]" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-32">
-                            <DropdownMenuItem
-                              className="text-red-600 hover:bg-transparent! hover:text-red-600! cursor-pointer"
-                              onClick={async () => {
-                                const siteId =
-                                  selectedWebsiteId ||
-                                  initialWebsiteId ||
-                                  (websites && websites.length > 0
-                                    ? websites[0].id
-                                    : undefined);
-                                await removeKeywordFromWebsite(
-                                  siteId,
-                                  row.keyword
-                                );
-                              }}
-                            >
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                siteKeywordsPaginated.pageItems.map((row, localIdx) => {
+                  const globalIdx = siteKeywordsPaginated.start + localIdx;
+                  return (
+                    <tr
+                      key={row.keyword + globalIdx}
+                      className={`${
+                        localIdx !== siteKeywordsPaginated.pageItems.length - 1
+                          ? "border-b border-gray-700"
+                          : ""
+                      } hover:bg-transparent`}
+                    >
+                      <td className="px-2 sm:px-4 py-2 sm:py-3 w-10">
+                        <input
+                          type="checkbox"
+                          checked={selectedKeywords.has(globalIdx)}
+                          onChange={() => toggleKeywordSelection(globalIdx)}
+                          aria-label={`Select keyword ${row.keyword}`}
+                          className="w-4 h-4 rounded border border-gray-600 bg-transparent cursor-pointer accent-[#53F870]"
+                        />
+                      </td>
+                      <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-[#53F870]">
+                        {row.keyword}
+                      </td>
+                      <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-500 hidden sm:table-cell">
+                        {row.volume ? row.volume.toLocaleString() : "-"}
+                      </td>
+                      <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-500 hidden sm:table-cell">
+                        <span className="px-2 py-0.5 text-xs">
+                          {row.difficulty}
+                        </span>
+                      </td>
+                      <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs text-gray-500 hidden lg:table-cell">
+                        <span className="px-2 py-0.5 text-xs">{row.sites}</span>
+                      </td>
+                      <td className="px-2 sm:px-4 py-2 sm:py-3">
+                        <div className="flex justify-start ">
+                          <Button className="border rounded-r-none bg-transparent hover:text-[#53f870] hover:bg-[#53f8701a]! text-gray-300 cursor-pointer border-gray-700 rounded-l-md px-3 sm:px-6 h-7 sm:h-8 text-xs">
+                            View
+                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button className="group border border-l-0 hover:bg-[#53f8701a]! rounded-l-none bg-transparent border-gray-600 rounded-r-md w-7 sm:w-8 h-7 sm:h-8 p-0 flex items-center justify-center">
+                                <ChevronDown className="w-4 h-4 text-gray-300 group-hover:text-[#53f870]" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-32">
+                              <DropdownMenuItem
+                                className="text-red-600 hover:bg-transparent! hover:text-red-600! cursor-pointer"
+                                onClick={async () => {
+                                  const siteId =
+                                    selectedWebsiteId ||
+                                    initialWebsiteId ||
+                                    (websites && websites.length > 0
+                                      ? websites[0].id
+                                      : undefined);
+                                  await removeKeywordFromWebsite(
+                                    siteId,
+                                    row.keyword
+                                  );
+                                }}
+                              >
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               ) : (
                 <tr>
                   <td
@@ -1477,6 +1500,33 @@ export function CompetitorsTab({
               )}
             </tbody>
           </table>
+
+          {/* Pagination Controls for Site Keywords */}
+          {siteKeywords && siteKeywords.length > 0 && (
+            <div className="flex items-center justify-between px-4 py-3 border-t border-gray-800">
+              <div className="text-sm text-gray-400">
+                Showing {siteKeywordsPaginated.start + 1}–
+                {Math.min(siteKeywordsPaginated.end, siteKeywordsPaginated.total)} of{" "}
+                {siteKeywordsPaginated.total} keywords
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => setSiteKeywordsPage(siteKeywordsPaginated.clampedPage - 1)}
+                  disabled={siteKeywordsPaginated.clampedPage === 1}
+                  className="px-3 py-1 text-sm border border-gray-700 bg-transparent text-gray-300 hover:bg-[#53f8701a] hover:text-[#53f870] disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Previous
+                </Button>
+                <Button
+                  onClick={() => setSiteKeywordsPage(siteKeywordsPaginated.clampedPage + 1)}
+                  disabled={siteKeywordsPaginated.clampedPage === siteKeywordsPaginated.totalPages}
+                  className="px-3 py-1 text-sm border border-gray-700 bg-transparent text-gray-300 hover:bg-[#53f8701a] hover:text-[#53f870] disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Selection Bar - Shows when keywords are selected */}
