@@ -32,7 +32,7 @@ export async function fetchKeywordsFromDataForSEO(topic: string): Promise<Keywor
         language: "en",
         location: 2840, // United States
         sort_by: "search_volume",
-        limit: 200
+        limit: 500
       }]
     },
     {
@@ -42,7 +42,7 @@ export async function fetchKeywordsFromDataForSEO(topic: string): Promise<Keywor
         target: topic, // Try using the topic as a website/domain
         language: "en",
         location: 2840,
-        limit: 200
+        limit: 500
       }]
     },
     {
@@ -99,7 +99,7 @@ export async function fetchKeywordsFromDataForSEO(topic: string): Promise<Keywor
         ],
         language: "en",
         location: 2840,
-        limit: 1000
+        limit: 2000
       }]
     }
   ];
@@ -242,7 +242,7 @@ export function filterKeywords(
   
   return filtered
     .sort((a, b) => (b.search_volume || 0) - (a.search_volume || 0))  // Sort by volume (highest first)
-    .slice(0, 60);
+    .slice(0, 100);
 }
 
 // Fetch keyword overview data for target keywords
