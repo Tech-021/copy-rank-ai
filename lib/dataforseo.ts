@@ -32,7 +32,7 @@ export async function fetchKeywordsFromDataForSEO(topic: string): Promise<Keywor
         language: "en",
         location: 2840, // United States
         sort_by: "search_volume",
-        limit: 100
+        limit: 200
       }]
     },
     {
@@ -42,7 +42,7 @@ export async function fetchKeywordsFromDataForSEO(topic: string): Promise<Keywor
         target: topic, // Try using the topic as a website/domain
         language: "en",
         location: 2840,
-        limit: 100
+        limit: 200
       }]
     },
     {
@@ -66,11 +66,40 @@ export async function fetchKeywordsFromDataForSEO(topic: string): Promise<Keywor
           `${topic} careers`,
           `${topic} jobs`,
           `${topic} meaning`,
-          `how to ${topic}`
+          `how to ${topic}`,
+          `${topic} examples`,
+          `${topic} uses`,
+          `${topic} tools`,
+          `${topic} ideas`,
+          `top ${topic} resources`,
+          `best ${topic} tools`,
+          `${topic} benefits`,
+          `${topic} advantages`,
+          `${topic} disadvantages`,
+          `${topic} tutorials`,
+          `${topic} examples`,
+          // related & adjacent terms to broaden discovery
+          `${topic} platforms`,
+          `${topic} artificial intelligence`,
+          `${topic} innovation`,
+          `${topic} development`,
+          `${topic} framework`,
+          `${topic} examples and uses`,
+          `how ${topic} works`,
+          `${topic} beginner guide`,
+          `advanced ${topic}`,
+          `intro to ${topic}`,
+          `compare ${topic} vs`,
+          `best ${topic} companies`,
+          `top ${topic} trends 2025`,
+          `${topic} tutorial for beginners`,
+          `${topic} use cases`,
+          `${topic} case studies`,
+          `${topic} news 2025`
         ],
         language: "en",
         location: 2840,
-        limit: 200
+        limit: 1000
       }]
     }
   ];
@@ -183,7 +212,7 @@ function transformItems(items: any[], topic: string): KeywordData[] {
 export function filterKeywords(
   keywords: KeywordData[], 
   maxDifficulty: number = 70,
-  minVolume: number = 50,
+  minVolume: number = 30,
   maxVolume: number = Infinity,  // Allow high-volume keywords by default
   maxCompetition: number = 0.5  // Low competition threshold (50%)
 ): KeywordData[] {
@@ -213,7 +242,7 @@ export function filterKeywords(
   
   return filtered
     .sort((a, b) => (b.search_volume || 0) - (a.search_volume || 0))  // Sort by volume (highest first)
-    .slice(0, 30);
+    .slice(0, 60);
 }
 
 // Fetch keyword overview data for target keywords

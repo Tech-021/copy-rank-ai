@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { LoaderChevron } from "@/components/ui/LoaderChevron";
@@ -93,6 +93,11 @@ interface ArticlesTabProps {
   websiteId?: string;
 }
 
+type ArticlesCache = {
+  articles: Article[];
+  cachedAt: string;
+};
+
 export function ArticlesTab({
   generatedArticles,
   onArticlesUpdate,
@@ -138,6 +143,12 @@ export function ArticlesTab({
     content: "",
   });
 
+  const articlesRef = useRef<Article[]>(articles);
+
+  useEffect(() => {
+    articlesRef.current = articles;
+  }, [articles]);
+
   interface Website {
     id: string;
     url: string;
@@ -146,6 +157,42 @@ export function ArticlesTab({
   }
 
   const selectedWebsiteStorageKey = "selected-website-id";
+
+  const articlesCacheKey = (userId: string, siteId: string | null) =>
+    `articles-cache:${userId}:${siteId ?? "all"}`;
+
+  const readArticlesCache = (
+    userId: string,
+    siteId: string | null
+  ): ArticlesCache | null => {
+    try {
+      const raw = localStorage.getItem(articlesCacheKey(userId, siteId));
+      if (!raw) return null;
+      const parsed = JSON.parse(raw) as ArticlesCache;
+      if (!parsed?.articles || !Array.isArray(parsed.articles)) return null;
+      return parsed;
+    } catch {
+      return null;
+    }
+  };
+
+  const writeArticlesCache = (
+    userId: string,
+    siteId: string | null,
+    nextArticles: Article[]
+  ) => {
+    try {
+      localStorage.setItem(
+        articlesCacheKey(userId, siteId),
+        JSON.stringify({
+          articles: nextArticles,
+          cachedAt: new Date().toISOString(),
+        } satisfies ArticlesCache)
+      );
+    } catch {
+      // ignore storage failures
+    }
+  };
 
   const readSelectedWebsiteId = () => {
     try {
@@ -427,12 +474,22 @@ export function ArticlesTab({
 
   // ...existing code...
   const fetchArticles = useCallback(async () => {
-    try {
+    if (!currentUser) return;
+
+    const siteId = selectedWebsiteId || websiteId || null;
+    const cached = readArticlesCache(currentUser.id, siteId);
+    const shouldHydrateFromCache =
+      !!cached && (articlesRef.current?.length ?? 0) === 0;
+
+    // If we have cache and nothing rendered yet, render instantly and refresh in the background.
+    if (shouldHydrateFromCache) {
+      setArticles(cached.articles);
+      setLoading(false);
+    } else {
       setLoading(true);
+    }
 
-      if (!currentUser) return;
-
-      const siteId = selectedWebsiteId || websiteId || null;
+    try {
       const url = siteId
         ? `/api/articles?websiteId=${siteId}&userId=${currentUser.id}`
         : `/api/articles?userId=${currentUser.id}`;
@@ -490,6 +547,7 @@ export function ArticlesTab({
           normalizedArticles[0]?.generatedImages?.length ?? 0
         );
         setArticles(normalizedArticles);
+        writeArticlesCache(currentUser.id, siteId, normalizedArticles);
         console.log(`✅ Loaded ${normalizedArticles.length} articles`);
       } else {
         throw new Error(data.error || "Failed to fetch articles");
@@ -497,9 +555,9 @@ export function ArticlesTab({
     } catch (error) {
       console.error("❌ Error fetching articles:", error);
     } finally {
-      setLoading(false);
+      if (!shouldHydrateFromCache) setLoading(false);
     }
-  }, [currentUser, selectedWebsiteId]);
+  }, [currentUser, selectedWebsiteId, websiteId]);
   // ...existing code...
 
   useEffect(() => {
@@ -1082,7 +1140,7 @@ export function ArticlesTab({
                   className={`relative group flex flex-col sm:flex-row gap-3 px-3 sm:px-3 py-3 sm:py-5 rounded-lg cursor-pointer transition-all duration-150 ${
                     isSelected
                       ? "z-50 border border-[#53f870] bg-gradient-to-b from-[#081a0f] to-[#07110b] shadow-lg ring-1 ring-[#53f87033] scale-[1.01]"
-                      : "border border-transparent hover:border-[#53f8701a] hover:bg-[#0f1310]"
+                      : "border !border-[#53f8701a] hover:border-[#53f8701a] hover:bg-[#0f1310]"
                   }`}
                 >
                   {/* Thumbnail */}
@@ -1100,7 +1158,6 @@ export function ArticlesTab({
                         <h4 className={`line-clamp-2 text-sm sm:text-sm ${isSelected ? 'font-semibold text-white' : 'font-medium text-white/80'}`}>
                           {article.title}
                         </h4>
-
                         <div className={`flex items-center gap-1 mt-1 ${isSelected ? '' : 'opacity-80'}`}>
                           <Image
                             src="/clock1.png"

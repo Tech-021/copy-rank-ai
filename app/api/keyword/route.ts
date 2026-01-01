@@ -59,10 +59,10 @@ export async function POST(request: Request) {
       topic, 
       websiteUrl,
       maxDifficulty = 70, 
-      minVolume = 100,
+      minVolume = 10,
       maxVolume = Infinity,  // Allow high-volume keywords by default
-      maxCompetition = 0.3,
-      limit = 30,
+      maxCompetition = 0.6,
+      limit = 60,
       includeCompetitors = false
     } = body;
 
@@ -96,9 +96,11 @@ export async function POST(request: Request) {
     
     console.log(`✅ DataForSEO Success: ${keywords.length} real keywords, ${competitors.length} competitors`);
     
-    // If no keywords were found after filtering, add fallback keywords
+    // If no keywords were found after filtering, add fallback keywords and flag it
     let finalKeywords = keywords;
+    let fallbackUsed = false;
     if (finalKeywords.length === 0) {
+      fallbackUsed = true;
       console.warn("⚠️ No keywords passed the filter, adding fallback keywords");
       const fallbackKeywords: KeywordData[] = [
         { keyword: `${topic}`, search_volume: 1000, difficulty: 30, cpc: 0.5, competition: 0.3 },
@@ -111,20 +113,23 @@ export async function POST(request: Request) {
       console.log(`✅ Using ${fallbackKeywords.length} fallback keywords`);
     }
 
+    const isRealData = !fallbackUsed && keywords.length > 0;
+
     return NextResponse.json({
       success: true,
       topic: topic,
-      websiteUrl: websiteUrl || null, // NEW
+      websiteUrl: websiteUrl || null,
       keywords: finalKeywords,
-      competitors: competitors, // NEW
-      totalKeywords: keywords.length,
-      totalCompetitors: competitors.length, // NEW
-      source: "DataForSEO-Real-API",
-      is_real_data: true,
+      competitors: competitors,
+      totalKeywords: finalKeywords.length,
+      totalCompetitors: competitors.length,
+      source: isRealData ? "DataForSEO-Real-API" : "fallback",
+      is_real_data: isRealData,
+      fallback_used: fallbackUsed,
       filters: {
         maxDifficulty,
         minVolume,
-        maxVolume,  // NEW: Add this line
+        maxVolume,
         maxCompetition,
         limit,
         includeCompetitors
