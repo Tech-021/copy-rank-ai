@@ -1018,7 +1018,15 @@ export function CompetitorsTab({
         (c) => String(c.domain || "").toLowerCase() !== domain.toLowerCase()
       );
 
-    
+      const newPayload = {
+        ...existingPayload,
+        competitors: filtered,
+        analysis_metadata: {
+          ...existingPayload.analysis_metadata,
+          totalCompetitors: filtered.length,
+          analyzed_at: new Date().toISOString(),
+        },
+      };
 
       const { error: updateErr } = await supabase
         .from("websites")
