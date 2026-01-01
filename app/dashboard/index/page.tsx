@@ -321,6 +321,12 @@ export default function DashboardIndexPage() {
 
   const selectedWebsite = websites.find((w) => w.id === selectedWebsiteId);
 
+  const truncateWords = (text: string, count: number = 4) => {
+    if (!text) return "";
+    const words = text.split(/\s+/).filter(Boolean);
+    return words.length <= count ? text : words.slice(0, count).join(" ") + "...";
+  };
+
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* Header */}
@@ -504,8 +510,8 @@ export default function DashboardIndexPage() {
                     }`}
                   >
                     <td className="py-3 sm:py-4 px-2 sm:px-6 min-w-[200px] sm:min-w-auto">
-                      <span className="text-xs sm:text-sm text-[#53F870] font-normal ">
-                        {post.title}
+                      <span className="truncate max-w-[220px] sm:max-w-[520px] whitespace-nowrap inline-block text-xs sm:text-sm text-[#53F870] font-normal">
+                        {truncateWords(post.title, 4)}
                       </span>
                     </td>
                     <td className="py-3 sm:py-4 px-2 sm:px-6 hidden sm:table-cell whitespace-nowrap">
