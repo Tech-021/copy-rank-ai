@@ -71,19 +71,35 @@ export async function fetchKeywordsFromDataForSEO(topic: string): Promise<Keywor
           `${topic} uses`,
           `${topic} tools`,
           `${topic} ideas`,
-          `${topic} vs`,
-          `${topic}s`,
           `top ${topic} resources`,
           `best ${topic} tools`,
           `${topic} benefits`,
           `${topic} advantages`,
           `${topic} disadvantages`,
           `${topic} tutorials`,
-          `${topic} examples`
+          `${topic} examples`,
+          // related & adjacent terms to broaden discovery
+          `${topic} platforms`,
+          `${topic} artificial intelligence`,
+          `${topic} innovation`,
+          `${topic} development`,
+          `${topic} framework`,
+          `${topic} examples and uses`,
+          `how ${topic} works`,
+          `${topic} beginner guide`,
+          `advanced ${topic}`,
+          `intro to ${topic}`,
+          `compare ${topic} vs`,
+          `best ${topic} companies`,
+          `top ${topic} trends 2025`,
+          `${topic} tutorial for beginners`,
+          `${topic} use cases`,
+          `${topic} case studies`,
+          `${topic} news 2025`
         ],
         language: "en",
         location: 2840,
-        limit: 500
+        limit: 1000
       }]
     }
   ];
@@ -226,7 +242,7 @@ export function filterKeywords(
   
   return filtered
     .sort((a, b) => (b.search_volume || 0) - (a.search_volume || 0))  // Sort by volume (highest first)
-    .slice(0, 40);
+    .slice(0, 60);
 }
 
 // Fetch keyword overview data for target keywords

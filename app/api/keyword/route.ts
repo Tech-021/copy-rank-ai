@@ -59,10 +59,10 @@ export async function POST(request: Request) {
       topic, 
       websiteUrl,
       maxDifficulty = 70, 
-      minVolume = 30,
+      minVolume = 10,
       maxVolume = Infinity,  // Allow high-volume keywords by default
-      maxCompetition = 0.5,
-      limit = 40,
+      maxCompetition = 0.6,
+      limit = 60,
       includeCompetitors = false
     } = body;
 
