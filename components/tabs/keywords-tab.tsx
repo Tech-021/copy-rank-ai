@@ -205,7 +205,7 @@ export function KeywordsTab({
   onArticlesGenerated,
 }: KeywordsTabProps) {
   const [selectedWebsiteId, setSelectedWebsiteId] = useState<string | null>(
-    websiteId ?? null
+    () => websiteId ?? readSelectedWebsiteId()
   );
   const [websites, setWebsites] = useState<Website[]>([]);
   const [websiteData, setWebsiteData] = useState<WebsiteData | null>(null);
@@ -247,6 +247,38 @@ export function KeywordsTab({
   useEffect(() => {
     selectedWebsiteIdRef.current = selectedWebsiteId;
   }, [selectedWebsiteId]);
+
+  useEffect(() => {
+    if (websiteId) return;
+
+    const syncFromStorage = () => {
+      const stored = readSelectedWebsiteId();
+      if (stored && stored !== selectedWebsiteIdRef.current) {
+        setSelectedWebsiteId(stored);
+      }
+    };
+
+    // Run once on mount (important when navigating to this tab)
+    syncFromStorage();
+
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === selectedWebsiteStorageKey) syncFromStorage();
+    };
+
+    const onVisibilityChange = () => {
+      if (!document.hidden) syncFromStorage();
+    };
+
+    window.addEventListener("storage", onStorage);
+    window.addEventListener("focus", syncFromStorage);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener("focus", syncFromStorage);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, [websiteId]);
 
   useEffect(() => {
     websitesRef.current = websites;
@@ -306,14 +338,22 @@ export function KeywordsTab({
       const cached = readWebsitesCache(currentUser.id);
       if (cached && websitesRef.current.length === 0) {
         if (isCurrent()) setWebsites(cached.websites);
-        if (!selectedWebsiteIdRef.current && cached.websites.length > 0) {
-          const stored = readSelectedWebsiteId();
+
+        // Ensure selected website matches stored selection (if valid), otherwise fallback.
+        const stored = readSelectedWebsiteId();
+        const candidate = selectedWebsiteIdRef.current ?? stored;
+        const hasCandidate =
+          !!candidate && cached.websites.some((w) => w.id === candidate);
+
+        if (!hasCandidate && cached.websites.length > 0) {
           const nextId =
             stored && cached.websites.some((w) => w.id === stored)
               ? stored
               : cached.websites[0].id;
           if (isCurrent()) setSelectedWebsiteId(nextId);
           writeSelectedWebsiteId(nextId);
+        } else if (candidate && candidate !== selectedWebsiteIdRef.current) {
+          if (isCurrent()) setSelectedWebsiteId(candidate);
         }
       }
 
@@ -348,14 +388,23 @@ export function KeywordsTab({
 
       writeWebsitesCache(currentUser.id, userWebsites);
 
-      if (!selectedWebsiteIdRef.current && userWebsites.length > 0) {
+      // If current selection isn't in the fetched list, adopt stored selection or fallback to first.
+      if (userWebsites.length > 0) {
         const stored = readSelectedWebsiteId();
-        const nextId =
-          stored && userWebsites.some((w) => w.id === stored)
-            ? stored
-            : userWebsites[0].id;
-        setSelectedWebsiteId(nextId);
-        writeSelectedWebsiteId(nextId);
+        const candidate = selectedWebsiteIdRef.current ?? stored;
+        const hasCandidate =
+          !!candidate && userWebsites.some((w) => w.id === candidate);
+
+        if (!hasCandidate) {
+          const nextId =
+            stored && userWebsites.some((w) => w.id === stored)
+              ? stored
+              : userWebsites[0].id;
+          setSelectedWebsiteId(nextId);
+          writeSelectedWebsiteId(nextId);
+        } else if (candidate && candidate !== selectedWebsiteIdRef.current) {
+          setSelectedWebsiteId(candidate);
+        }
       }
     } catch (e) {
       console.error("Error loading websites:", e);
