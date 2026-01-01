@@ -62,7 +62,7 @@ export async function POST(request: Request) {
       minVolume = 10,
       maxVolume = Infinity,  // Allow high-volume keywords by default
       maxCompetition = 0.6,
-      limit = 60,
+      limit = 100,
       includeCompetitors = false
     } = body;
 
