@@ -69,17 +69,7 @@ export default function WelcomePage() {
     
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        toast.showToast({
-          title: "Authentication Required",
-          description: "Please log in to continue",
-          type: "error",
-        });
-        setIsLoading(false);
-        return;
-      }
-  
+
       const onboardingData = {
         clientDomain: websiteName.trim(),
         competitors: [
@@ -91,8 +81,32 @@ export default function WelcomePage() {
           keyword1.trim(),
           keyword2.trim(),
           keyword3.trim()
-        ],
-        userId: user.id
+        ]
+      };
+
+      // If user isn't authenticated, save onboarding to localStorage and redirect to signup
+      if (!user) {
+        try {
+          localStorage.setItem('pendingOnboarding', JSON.stringify(onboardingData));
+        } catch (e) {
+          console.error('Failed to save pending onboarding:', e);
+        }
+
+        toast.showToast({
+          title: "Authentication Required",
+          description: "Please sign up or log in to continue",
+          type: "info",
+        });
+
+        setIsLoading(false);
+        router.push('/signup');
+        return;
+      }
+  
+      // attach userId and perform onboarding now that user is authenticated
+      const onboardingDataWithUser = {
+        ...onboardingData,
+        userId: user.id,
       };
   
       console.log("Onboarding Data:", onboardingData);
@@ -102,7 +116,7 @@ export default function WelcomePage() {
         headers: { 
           'Content-Type': 'application/json' 
         },
-        body: JSON.stringify(onboardingData)
+        body: JSON.stringify(onboardingDataWithUser)
       });
   
       const data = await response.json();

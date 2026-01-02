@@ -9,7 +9,7 @@ export default function SignUpRoute() {
   return (
     <SignUpPage
       onSignUpSuccess={(email) => {
-        router.push("/dashboard")
+        router.push("/paywall")
       }}
       onBackToLanding={() => {
         router.push("/")
