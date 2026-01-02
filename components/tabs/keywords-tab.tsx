@@ -1069,15 +1069,105 @@ export function KeywordsTab({
     }
   };
 
-  const confirmDeleteKeyword = () => {
-    if (keywordToDelete) {
+  const confirmDeleteKeyword = async () => {
+    if (!keywordToDelete) return;
+
+    if (!selectedWebsiteId) {
+      toast.showToast({
+        title: "Delete Failed",
+        description: "No website selected",
+        type: "error",
+      });
+      return;
+    }
+
+    try {
+      // Fetch current website keywords payload
+      const { data: siteData, error: siteErr } = await supabase
+        .from("websites")
+        .select("id, keywords")
+        .eq("id", selectedWebsiteId)
+        .single();
+
+      if (siteErr) {
+        console.error("Failed to fetch website for deletion:", siteErr);
+        toast.showToast({
+          title: "Delete Failed",
+          description: siteErr.message || "Failed to fetch website",
+          type: "error",
+        });
+        return;
+      }
+
+      const existingPayload = (siteData as any)?.keywords || {};
+      const existingList: any[] = Array.isArray(existingPayload?.keywords)
+        ? existingPayload.keywords
+        : [];
+
+      const filteredList = existingList.filter(
+        (k) =>
+          String(k?.keyword || "").toLowerCase() !==
+          String(keywordToDelete.keyword).toLowerCase()
+      );
+
+      const newPayload = {
+        ...existingPayload,
+        keywords: filteredList,
+        analysis_metadata: {
+          ...existingPayload.analysis_metadata,
+          total_keywords: filteredList.length,
+          analyzed_at: new Date().toISOString(),
+        },
+      };
+
+      const { error: updateErr } = await supabase
+        .from("websites")
+        .update({ keywords: newPayload })
+        .eq("id", selectedWebsiteId);
+
+      if (updateErr) {
+        console.error("Failed to update website keywords:", updateErr);
+        toast.showToast({
+          title: "Delete Failed",
+          description: updateErr.message || "Failed to delete keyword",
+          type: "error",
+        });
+        return;
+      }
+
+      // Update local state and cache
       const newKeywords = keywords.filter(
-        (kw) => kw.keyword !== keywordToDelete.keyword
+        (kw) =>
+          String(kw.keyword || "").toLowerCase() !==
+          String(keywordToDelete.keyword).toLowerCase()
       );
       setKeywords(newKeywords);
+
+      try {
+        writeKeywordsCache(selectedWebsiteId, {
+          website: websiteData?.website || { id: selectedWebsiteId, url: "", topic: "" },
+          keywords: newKeywords,
+          keywordsUpdatedAt: new Date().toISOString(),
+        });
+      } catch {
+        // ignore cache write failures
+      }
+
       setShowDeleteDialog(false);
       setKeywordToDelete(null);
-      // toast?.success(`Deleted "${keywordToDelete.keyword}"`);
+
+      toast.showToast({
+        title: "Deleted",
+        description: `Deleted "${keywordToDelete.keyword}"`,
+        type: "success",
+      });
+    } catch (e) {
+      console.error("Error deleting keyword:", e);
+      toast.showToast({
+        title: "Delete Failed",
+        description: e instanceof Error ? e.message : "Failed to delete keyword",
+        type: "error",
+      });
     }
   };
 
