@@ -1530,7 +1530,7 @@ export function ArticlesTab({
                 {selectedArticle.status === "published" &&
                   selectedArticle.slug && (
                     <Button
-                      className="flex-1 sm:flex-none h-9 sm:h-10 px-2 sm:px-4 flex bg-[#101110] hover:bg-[#101110] text-[#ffffffd3] hover:text-[#ffffffd3]! items-center justify-center sm:justify-start gap-1 sm:gap-2 text-xs sm:text-sm"
+                      className="flex-1 cursor-pointer sm:flex-none h-9 sm:h-10 px-2 sm:px-4 flex bg-[#101110] hover:bg-[#101110] text-[#ffffffd3] hover:text-[#ffffffd3]! items-center justify-center sm:justify-start gap-1 sm:gap-2 text-xs sm:text-sm"
                       onClick={() =>
                         handleIndexNow(
                           selectedArticle.id,

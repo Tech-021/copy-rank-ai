@@ -344,7 +344,7 @@ export default function DashboardIndexPage() {
             value={selectedWebsiteId || ""}
             onValueChange={handleWebsiteChange}
           >
-            <SelectTrigger className="h-10 bg-[rgba(83,248,112,0.1)]! border-none rounded-lg focus-visible:outline-none focus-visible:ring-0 px-3 py-2 text-[#53F870] font-medium text-xs sm:text-sm">
+            <SelectTrigger className="h-10 cursor-pointer bg-[rgba(83,248,112,0.1)]! border-none rounded-lg focus-visible:outline-none focus-visible:ring-0 px-3 py-2 text-[#53F870] font-medium text-xs sm:text-sm">
               <SelectValue placeholder="Select website" />
             </SelectTrigger>
             <SelectContent className="bg-[#142517]! border-none rounded-lg">
@@ -523,10 +523,14 @@ export default function DashboardIndexPage() {
                         {post.status}
                       </span>
                     </td>
-                    <td className="py-3 sm:py-4 px-2 sm:px-6 hidden sm:table-cell ">
-                      <span className="text-xs font-normal text-gray-500">
-                        {post.keyword}
-                      </span>
+                    <td className="py-3 sm:py-4 px-2 sm:px-6 hidden sm:table-cell max-w-xs">
+                      <a 
+                        href={`/dashboard/keywords?search=${encodeURIComponent(post.keyword)}`}
+                        className="text-xs font-normal text-gray-400 hover:text-[#7CFF9F] truncate block cursor-pointer transition-colors"
+                        title={post.keyword}
+                      >
+                        {truncateWords(post.keyword, 4)}
+                      </a>
                     </td>
                     <td className="py-3 sm:py-4 px-2 sm:px-6 hidden lg:table-cell whitespace-nowrap">
                       <span
@@ -543,7 +547,7 @@ export default function DashboardIndexPage() {
                           <div className="flex items-center ">
                             <Button
                               disabled={updatingPostId === post.id}
-                              className="bg-transparent px-2 sm:px-8 rounded-r-none hover:text-[#53f870] hover:!bg-[#53f8701a] border border-gray-600 text-xs font-normal text-gray-500 h-auto py-1 sm:py-2 min-w-fit"
+                              className="bg-transparent cursor-pointer px-2 sm:px-8 rounded-r-none hover:text-[#53f870] hover:!bg-[#53f8701a] border border-gray-600 text-xs font-normal text-gray-500 h-auto py-1 sm:py-2 min-w-fit"
                             >
                               {post.status === "indexed"
                                 ? "Request Index"
@@ -551,7 +555,7 @@ export default function DashboardIndexPage() {
                             </Button>
                             <Button
                               disabled={updatingPostId === post.id}
-                              className="group bg-transparent hover:!bg-[#53f8701a] rounded-l-none border border-gray-600 px-2 sm:px-3 h-auto py-1 sm:py-2"
+                              className="group bg-transparent cursor-pointer hover:!bg-[#53f8701a] rounded-l-none border border-gray-600 px-2 sm:px-3 h-auto py-1 sm:py-2"
                             >
                               <ChevronDown className="w-3 h-3 sm:w-4 sm:h-4 text-gray-600 group-hover:text-[#53f870] transition-colors duration-200" />
                             </Button>
