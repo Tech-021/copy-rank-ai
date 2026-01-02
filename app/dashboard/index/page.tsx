@@ -523,9 +523,9 @@ export default function DashboardIndexPage() {
                         {post.status}
                       </span>
                     </td>
-                    <td className="py-3 sm:py-4 px-2 sm:px-6 hidden sm:table-cell ">
-                      <span className="text-xs font-normal text-gray-500">
-                        {post.keyword}
+                    <td className="py-3 sm:py-4 px-2 sm:px-6 hidden sm:table-cell max-w-xs">
+                      <span className="text-xs font-normal text-gray-500 truncate block" title={post.keyword}>
+                        {truncateWords(post.keyword, 4)}
                       </span>
                     </td>
                     <td className="py-3 sm:py-4 px-2 sm:px-6 hidden lg:table-cell whitespace-nowrap">
