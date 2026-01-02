@@ -523,10 +523,14 @@ export default function DashboardIndexPage() {
                         {post.status}
                       </span>
                     </td>
-                    <td className="py-3 sm:py-4 px-2 sm:px-6 hidden sm:table-cell ">
-                      <span className="text-xs font-normal text-gray-500">
-                        {post.keyword}
-                      </span>
+                    <td className="py-3 sm:py-4 px-2 sm:px-6 hidden sm:table-cell max-w-xs">
+                      <a 
+                        href={`/dashboard/keywords?search=${encodeURIComponent(post.keyword)}`}
+                        className="text-xs font-normal text-gray-400 hover:text-[#7CFF9F] truncate block cursor-pointer transition-colors"
+                        title={post.keyword}
+                      >
+                        {truncateWords(post.keyword, 4)}
+                      </a>
                     </td>
                     <td className="py-3 sm:py-4 px-2 sm:px-6 hidden lg:table-cell whitespace-nowrap">
                       <span
