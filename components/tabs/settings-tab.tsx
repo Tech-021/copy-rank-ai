@@ -462,7 +462,7 @@ export function SettingsTab() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`pb-3 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
+              className={`pb-3 text-xs sm:text-sm cursor-pointer font-medium transition-colors whitespace-nowrap ${
                 activeTab === tab.id
                   ? "text-green-600 bg-[rgba(83,248,112,0.1)] border w-auto px-2 sm:px-4 py-2 rounded-2xl rounded-b-none"
                   : "text-gray-600 hover:text-gray-900"
@@ -505,6 +505,7 @@ export function SettingsTab() {
                       onCheckedChange={(value) =>
                         handleSettingChange("autoPublish", value)
                       }
+                      className="cursor-pointer"
                     />
                   </div>
                 </div>
@@ -526,7 +527,7 @@ export function SettingsTab() {
                       handleSettingChange("publishingFrequency", value)
                     }
                   >
-                    <SelectTrigger className="w-28 h-9 rounded-r-none border-r-0 border-gray-800 text-xs sm:text-sm">
+                    <SelectTrigger className="w-28 cursor-pointer h-9 rounded-r-none border-r-0 border-gray-800 text-xs sm:text-sm">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -542,7 +543,7 @@ export function SettingsTab() {
                       handleSettingChange("publishingTime", value)
                     }
                   >
-                    <SelectTrigger className="w-28 h-9 rounded-l-none border-gray-800 text-xs sm:text-sm">
+                    <SelectTrigger className="w-28 h-9 cursor-pointer rounded-l-none border-gray-800 text-xs sm:text-sm">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -576,7 +577,7 @@ export function SettingsTab() {
                     handleSettingChange("queueSize", value)
                   }
                 >
-                  <SelectTrigger className="w-full sm:w-28 h-9 ml-0 sm:ml-4 border-gray-800 text-xs sm:text-sm">
+                  <SelectTrigger className="w-full cursor-pointer sm:w-28 h-9 ml-0 sm:ml-4 border-gray-800 text-xs sm:text-sm">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -590,7 +591,7 @@ export function SettingsTab() {
 
             <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 items-center">
               <Button
-                className="h-8 sm:h-9 bg-transparent text-gray-300 border border-gray-600 text-xs sm:text-sm hover:bg-gray-800"
+                className="h-8 sm:h-9 bg-transparent cursor-pointer text-gray-300 border border-gray-600 text-xs sm:text-sm hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={() => handleResetSettings()}
                 disabled={!isDirty}
               >
@@ -598,7 +599,7 @@ export function SettingsTab() {
               </Button>
               <div className="flex items-center gap-3">
                 <Button
-                  className="h-8 sm:h-9 bg-green-600 hover:bg-green-700 text-white border-transparent text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="h-8 sm:h-9 bg-green-600 hover:bg-green-700 cursor-pointer text-white border-transparent text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                   onClick={() => handleSaveSettings()}
                   disabled={!isDirty}
                 >
@@ -667,7 +668,7 @@ export function SettingsTab() {
               )}
             </div>
               <Button
-                className="mt-4 h-9 text-[#5baf57] border-[#d0d0d0] bg-[#53f8701a] hover:bg-[#53f8701a]"
+                className="mt-4 h-9 text-[#5baf57] border-[#d0d0d0] bg-[#53f8701a] cursor-pointer hover:bg-[#53f8701a]"
               >
                 <Plus />
               </Button>
@@ -729,7 +730,7 @@ export function SettingsTab() {
                       </p>
                     </div>
                   </div>
-                  <button className="h-7 sm:h-8 px-2 sm:px-3 text-xs hover:bg-gray-800 text-white flex-shrink-0">
+                  <button className="h-7 sm:h-8 px-2 sm:px-3 text-xs hover:bg-gray-800 text-white cursor-pointer flex-shrink-0">
                     Upgrade
                   </button>
                 </div>
@@ -744,7 +745,7 @@ export function SettingsTab() {
                   </div>
                   <Button
                     variant="ghost"
-                    className="h-7 sm:h-8 px-2 sm:px-3 text-xs text-gray-500 hover:text-gray-900 hover:bg-transparent flex-shrink-0"
+                    className="h-7 sm:h-8 px-2 sm:px-3 text-xs text-gray-500 cursor-pointer hover:text-gray-900 hover:bg-transparent flex-shrink-0"
                   >
                     Change email
                   </Button>
@@ -758,7 +759,7 @@ export function SettingsTab() {
                   </div>
                   <Button
                     variant="ghost"
-                    className="h-7 sm:h-8 px-2 sm:px-3 text-xs text-gray-500 hover:text-gray-900 hover:bg-transparent flex-shrink-0"
+                    className="h-7 sm:h-8 cursor-pointer px-2 sm:px-3 text-xs text-gray-500 hover:text-gray-900 hover:bg-transparent flex-shrink-0"
                   >
                     Change password
                   </Button>
@@ -778,7 +779,7 @@ export function SettingsTab() {
                         Know when competitor analysis finishes
                       </p>
                     </div>
-                    <Switch checked={true} className="flex-shrink-0" />
+                    <Switch checked={true} className="flex-shrink-0 cursor-pointer" />
                   </div>
                   <div className="space-y-3">
                     <div className="relative">
@@ -792,7 +793,7 @@ export function SettingsTab() {
                         type="button"
                         variant="ghost"
                         size="sm"
-                        className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0 hover:bg-transparent"
+                        className="absolute cursor-pointer right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0 hover:bg-transparent"
                         onClick={() => setShowApiKey(!showApiKey)}
                       >
                         {showApiKey ? (
@@ -805,7 +806,7 @@ export function SettingsTab() {
                     <div className="flex gap-3">
                       <Button
                         onClick={handleCopyApiKey}
-                        className="flex-1 h-9 bg-gray-900 hover:bg-gray-800 text-white text-sm"
+                        className="flex-1 h-9 bg-gray-900 hover:bg-gray-800 cursor-pointer text-white text-sm"
                       >
                         {copiedApiKey ? (
                           <Check className="h-4 w-4 mr-2" />
@@ -814,7 +815,7 @@ export function SettingsTab() {
                         )}
                         {copiedApiKey ? "Copied" : "Show key"}
                       </Button>
-                      <Button className="flex-1 h-9 bg-red-500 hover:bg-red-600 text-white text-sm">
+                      <Button className="flex-1 cursor-pointer h-9 bg-red-500 hover:bg-red-600 text-white text-sm">
                         Regenerate key
                       </Button>
                     </div>
@@ -1071,7 +1072,7 @@ export function SettingsTab() {
                   ) : (
                     <Button
                       variant="outline"
-                      className="h-8 sm:h-9 border-gray-200 bg-white text-xs sm:text-sm"
+                      className="h-8 sm:h-9 cursor-pointer border-gray-200 bg-white text-xs sm:text-sm"
                       disabled
                     >
                       Upgraded
@@ -1079,7 +1080,7 @@ export function SettingsTab() {
                   )}
                   <Button
                     variant="outline"
-                    className="h-8 sm:h-9 border-gray-200 bg-white text-xs sm:text-sm"
+                    className="h-8 sm:h-9 cursor-pointer border-gray-200 bg-white text-xs sm:text-sm"
                   >
                     View Invoices
                   </Button>
