@@ -1889,7 +1889,7 @@ export function KeywordsTab({
             variant="outline"
             onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
             disabled={currentPage <= 1}
-            className="px-3 h-8"
+            className="px-3 h-8 cursor-pointer"
           >
             Prev
           </Button>
@@ -1899,7 +1899,7 @@ export function KeywordsTab({
             variant="outline"
             onClick={() => setCurrentPage((p) => p + 1)}
             disabled={currentPage >= Math.max(1, Math.ceil(filteredAndSortedKeywords.length / itemsPerPage))}
-            className="px-3 h-8"
+            className="px-3 h-8 cursor-pointer"
           >
             Next
           </Button>

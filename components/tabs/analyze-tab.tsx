@@ -1248,6 +1248,7 @@ export function AnalyzeTab({
       font-medium
       hover:bg-[#257F31]
       transition
+      cursor-pointer
     "
                     >
                       <Check className="text-black" />
@@ -1282,7 +1283,7 @@ export function AnalyzeTab({
                   <div className="mt-6">
                     <button
                       onClick={handleAddCompetitorSubmit}
-                      className="w-full bg-[#2E8B37] hover:bg-[#257F31] text-white font-medium py-3 rounded-lg transition-colors"
+                      className="w-full bg-[#2E8B37] hover:bg-[#257F31] text-white font-medium py-3 rounded-lg transition-colors cursor-pointer"
                     >
                       Add
                     </button>
