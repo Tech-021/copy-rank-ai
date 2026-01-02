@@ -161,34 +161,43 @@ export default function WelcomePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-black via-[#0a2818] to-black relative overflow-hidden flex flex-col items-center justify-center">
-      {/* Background Image */}
+    <div className="min-h-screen relative overflow-hidden flex flex-col items-center justify-center">
+      {/* Main Background Image */}
       <Image
-        src="/planet.png"
+        src="/bgmain2.png"
+        alt="background"
+        fill
+        className=" -z-10"
+        priority
+      />
+      
+      {/* Background Image */}
+      {/* <Image
+        src="/planetg.png"
         alt="background"
         fill
         className="absolute bottom-0 right-0 object-cover opacity-40 pointer-events-none"
         priority
-      />
+      /> */}
 
       {/* Background decorative elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {/* Ellipse 1 - Bottom */}
-        <Image
-          src="/ellipse1.png"
+        {/* <Image
+          src="/ellidpse1.png"
           alt="ellipse1"
           fill
           className="absolute bottom-0 left-100 -translate-x-1/2 object-cover opacity-70"
           priority
-        />
+        /> */}
         {/* Ellipse 2 - Top */}
-        <Image
-          src="/ellipse2.png"
+        {/* <Image
+          src="/ellipsde2.png"
           alt="ellipse2"
           fill
           className="absolute -top-590 left-59 object-cover z-50 opacity-90"
           priority
-        />
+        /> */}
       </div>
 
       {/* Main Content */}
@@ -199,9 +208,9 @@ export default function WelcomePage() {
             <div className="rounded-3xl p-2 sm:p-4">
              <Image
              src="/logo.png"
-            height={50}
-            width={50}
-            className="sm:w-[71px] sm:h-[71px]"
+            height={60}
+            width={60}
+            className=""
              alt="icon"
              />
             </div>
@@ -216,7 +225,7 @@ export default function WelcomePage() {
   <span className="absolute right-0 w-1/4 h-px bg-gradient-to-l from-transparent to-green-500/60"></span>
 </p>
          <h4 className="
-  text-5xl sm:text-7xl lg:text-[120px] font-bold
+  text-5xl sm:text-7xl lg:text-[70px] font-bold
   text-transparent bg-clip-text
   bg-gradient-to-b
   from-[#1F7F2C]
@@ -230,18 +239,18 @@ export default function WelcomePage() {
         </div>
 
         {/* Form Container */}
-        <div className="bg-transparent backdrop-blur-md rounded-2xl p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8">
+        <div className="bg-transparent backdrop-blur-md rounded-2xl  ">
           {/* Step Title */}
-          <div className="text-center space-y-2">
-            <h2 className="text-lg sm:text-xl lg:text-2xl font-semibold text-[#53F870]">
+          <div className="text-center ">
+            <h2 className="text-lg sm:text-xl lg:text-lg  font-semibold text-[#53F870]">
               {getStepTitle()}
             </h2>
           </div>
 
           {/* Tab 1 - Website */}
           {tab === "tab1" && (
-            <div className="space-y-4 sm:space-y-6">
-            <div className="space-y-4">
+            <div className="sm:space-y-6">
+            <div className="">
   <div className="relative">
    <Input
   type="url"
@@ -532,22 +541,22 @@ export default function WelcomePage() {
       </div>
 
       {/* Footer - Full Width */}
-      <div className="relative w-screen mt-12 sm:mt-20 pt-8 sm:pt-12 left-1/2 -translate-x-1/2">
+      <div className="relative w-screen  sm:mt-20  sm:pt-12 left-1/2 -translate-x-1/2">
         {/* Background Image */}
-        <Image
-          src="/planet.png"
+        {/* <Image
+          src="/planetd.png"
           alt="background"
           width={1520}
           height={500}
           className="w-full object-cover opacity-60 pointer-events-none"
           priority
-        />
+        /> */}
         
         {/* Footer Content */}
-        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 sm:gap-6 py-6 sm:py-8 px-4">
-          {/* Social Icons */}
+        <div className="absolute inset-1 z-10 flex flex-col items-center justify-center gap-3 sm:gap-6 py-6 sm:py-8 px-4">
+         
        <div className="flex items-center gap-3 sm:gap-4">
-  {/* X / Twitter */}
+ 
   <a href="https://twitter.com/yourprofile" target="_blank" rel="noopener noreferrer">
     <Image
       src="/xpng.png"
@@ -557,7 +566,7 @@ export default function WelcomePage() {
     />
   </a>
 
-  {/* Threads */}
+  
   <a href="https://www.threads.net/yourprofile" target="_blank" rel="noopener noreferrer">
     <Image
       src="/thread.png"
@@ -567,7 +576,7 @@ export default function WelcomePage() {
     />
   </a>
 
-  {/* LinkedIn */}
+
   <a href="https://www.linkedin.com/in/yourprofile" target="_blank" rel="noopener noreferrer">
     <Image
       src="/in.png"
@@ -578,15 +587,15 @@ export default function WelcomePage() {
   </a>
 </div>
 
-          {/* Logo and Text */}
+          
           <div className="flex flex-col items-center gap-2 sm:gap-4">
-            {/* Mobile Layout - Stacked */}
+       
             <div className="lg:hidden flex flex-col items-center gap-2 text-[#53F870]">
               <a href="#" className="text-xs hover:text-green-400 transition-colors">Terms & Conditions</a>
               <a href="#" className="text-xs hover:text-green-400 transition-colors">Privacy Policy</a>
             </div>
             
-            {/* Desktop Layout - Inline with dot */}
+            
             <div className="hidden lg:flex items-center gap-4 text-[#53F870] text-sm">
               <a href="#" className="hover:text-green-400 transition-colors">Terms & Conditions</a>
               <span className="text-[#5AFF78]">•</span>
