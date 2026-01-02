@@ -1490,7 +1490,7 @@ export function CompetitorsTab({
                     <div className="mt-4 sm:mt-6 flex justify-end mr-2 sm:mr-4">
                       <Button
                         onClick={handleCreatePost}
-                        className="bg-transparent text-gray-400 border border-gray-800 px-4 sm:px-6 mb-4 sm:mb-5 h-8 sm:h-9 text-xs sm:text-sm hover:text-[#53f870] hover:bg-[#53f8701a]!"
+                        className="bg-transparent text-gray-400 border border-gray-800 px-4 sm:px-6 mb-4 sm:mb-5 h-8 sm:h-9 text-xs sm:text-sm cursor-not-allowed hover:bg-transparent"
                       >
                         Create post
                       </Button>
@@ -1513,14 +1513,14 @@ export function CompetitorsTab({
                 <Button
                   onClick={() => setSiteKeywordsPage(siteKeywordsPaginated.clampedPage - 1)}
                   disabled={siteKeywordsPaginated.clampedPage === 1}
-                  className="px-3 py-1 text-sm border border-gray-700 bg-transparent text-gray-300 hover:bg-[#53f8701a] hover:text-[#53f870] disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-3 py-1 text-sm border border-gray-700 bg-transparent text-gray-300 cursor-pointer hover:bg-[#53f8701a] hover:text-[#53f870] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Previous
                 </Button>
                 <Button
                   onClick={() => setSiteKeywordsPage(siteKeywordsPaginated.clampedPage + 1)}
                   disabled={siteKeywordsPaginated.clampedPage === siteKeywordsPaginated.totalPages}
-                  className="px-3 py-1 text-sm border border-gray-700 bg-transparent text-gray-300 hover:bg-[#53f8701a] hover:text-[#53f870] disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-3 py-1 text-sm border border-gray-700 bg-transparent text-gray-300 cursor-pointer hover:bg-[#53f8701a] hover:text-[#53f870] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Next
                 </Button>
@@ -1643,13 +1643,13 @@ export function CompetitorsTab({
                         </Button>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button className="group border border-l-0 rounded-l-none bg-transparent border-gray-700 rounded-r-md w-8 h-8 p-0 flex items-center justify-center hover:bg-[#53f8701a]!">
+                            <Button className="group border border-l-0 rounded-l-none bg-transparent cursor-pointer border-gray-700 rounded-r-md w-8 h-8 p-0 flex items-center justify-center hover:bg-[#53f8701a]!">
                               <ChevronDown className="w-4 h-4 text-gray-600 group-hover:text-[#53f870] transition-colors duration-200" />
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-32">
                             <DropdownMenuItem
-                              className="text-black hover:bg-transparent! hover:text-black cursor-pointer"
+                              className="text-[#ffffff80] hover:bg-transparent! hover:!text-[#ffffff80] cursor-pointer"
                               onClick={() =>
                                 window.open(`https://${d.domain}`, "_blank")
                               }
@@ -1763,7 +1763,7 @@ export function CompetitorsTab({
       text-sm
       font-medium
       hover:bg-[#257F31]
-      transition
+      transition cursor-pointer
     "
                     >
                       <Check className="text-black" />
@@ -1797,7 +1797,7 @@ export function CompetitorsTab({
                   {/* Done Button */}
                   <button
                     onClick={handleAddCompetitorSubmit}
-                    className="w-full bg-[#5AFF78] hover:bg-green-700 text-black font-medium py-3 rounded-lg transition-colors"
+                    className="w-full bg-[#5AFF78] hover:bg-green-700 text-black font-medium py-3 rounded-lg transition-colors cursor-pointer"
                   >
                     Add
                   </button>
