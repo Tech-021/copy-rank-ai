@@ -1,4 +1,4 @@
-"use client"
+"use client";
 import Image from "next/image";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
@@ -23,11 +23,23 @@ export default function WelcomePage() {
   const [currentKeywordInput, setCurrentKeywordInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
-  
-  const competitorsCount = [competitor1, competitor2, competitor3].filter(c => c.trim()).length;
-  const allCompetitorsAdded = !!(competitor1.trim() && competitor2.trim() && competitor3.trim());
-  const keywordsCount = [keyword1, keyword2, keyword3].filter(k => k.trim()).length;
-  const allKeywordsAdded = !!(keyword1.trim() && keyword2.trim() && keyword3.trim());
+
+  const competitorsCount = [competitor1, competitor2, competitor3].filter((c) =>
+    c.trim()
+  ).length;
+  const allCompetitorsAdded = !!(
+    competitor1.trim() &&
+    competitor2.trim() &&
+    competitor3.trim()
+  );
+  const keywordsCount = [keyword1, keyword2, keyword3].filter((k) =>
+    k.trim()
+  ).length;
+  const allKeywordsAdded = !!(
+    keyword1.trim() &&
+    keyword2.trim() &&
+    keyword3.trim()
+  );
   const validateTab1 = () => {
     if (!websiteName.trim()) {
       toast.showToast({
@@ -66,10 +78,12 @@ export default function WelcomePage() {
 
   const handleNext = async () => {
     setIsLoading(true);
-    
+
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
       if (!user) {
         toast.showToast({
           title: "Authentication Required",
@@ -79,55 +93,50 @@ export default function WelcomePage() {
         setIsLoading(false);
         return;
       }
-  
+
       const onboardingData = {
         clientDomain: websiteName.trim(),
         competitors: [
           competitor1.trim(),
           competitor2.trim(),
-          competitor3.trim()
+          competitor3.trim(),
         ],
-        targetKeywords: [
-          keyword1.trim(),
-          keyword2.trim(),
-          keyword3.trim()
-        ],
-        userId: user.id
+        targetKeywords: [keyword1.trim(), keyword2.trim(), keyword3.trim()],
+        userId: user.id,
       };
-  
+
       console.log("Onboarding Data:", onboardingData);
-  
-      const response = await fetch('/api/onboarding', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json' 
+
+      const response = await fetch("/api/onboarding", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify(onboardingData)
+        body: JSON.stringify(onboardingData),
       });
-  
+
       const data = await response.json();
-  
+
       if (!response.ok || !data.success) {
-        throw new Error(data.error || 'Onboarding failed');
+        throw new Error(data.error || "Onboarding failed");
       }
-  
+
       console.log("✅ Onboarding successful:", data);
-      
+
       toast.showToast({
         title: "Website Added Successfully!",
         description: `Found ${data.totalKeywords} keywords. 30 articles are being generated in the background.`,
         type: "success",
       });
-      
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
       router.push("/dashboard");
-      
     } catch (error) {
       console.error("Error during onboarding:", error);
       toast.showToast({
         title: "Onboarding Failed",
-        description: error instanceof Error ? error.message : 'Unknown error',
+        description: error instanceof Error ? error.message : "Unknown error",
         type: "error",
       });
     } finally {
@@ -153,10 +162,12 @@ export default function WelcomePage() {
     if (tab === "tab2") {
       if (!competitor1) return "Who is your biggest competitor?";
       if (competitor1 && !competitor2) return "Who is your second competitor?";
-      if (competitor1 && competitor2 && !competitor3) return "Who is your third competitor?";
+      if (competitor1 && competitor2 && !competitor3)
+        return "Who is your third competitor?";
       return "Who is your third competitor?";
     }
-    if (tab === "tab3") return allKeywordsAdded ? "" : "Add 3 keywords related to your business";
+    if (tab === "tab3")
+      return allKeywordsAdded ? "" : "Add 3 keywords related to your business";
     return "";
   };
 
@@ -170,7 +181,7 @@ export default function WelcomePage() {
         className=" -z-10"
         priority
       />
-      
+
       {/* Background Image */}
       {/* <Image
         src="/planetg.png"
@@ -201,30 +212,31 @@ export default function WelcomePage() {
       </div>
 
       {/* Main Content */}
-      <div className="relative z-10 w-full max-w-2xl mx-auto px-4 sm:px-6 lg:px-4 py-8 sm:py-12">
+      <div className="relative z-2 w-full max-w-2xl mx-auto px-4 sm:px-6 lg:px-4 py-2 sm:py-0">
         {/* Header */}
         <div className="text-center mb-8 sm:mb-12">
           <div className="flex items-center justify-center mb-6 sm:mb-8">
             <div className="rounded-3xl p-2 sm:p-4">
-             <Image
-             src="/logo.png"
-            height={60}
-            width={60}
-            className=""
-             alt="icon"
-             />
+              <Image
+                src="/logo.png"
+                height={60}
+                width={60}
+                className=""
+                alt="icon"
+              />
             </div>
           </div>
-         <p className="relative flex items-center justify-center text-green-400/70 text-xs sm:text-sm tracking-wider mb-4 sm:mb-6">
-  <span className="absolute left-0 w-1/4 h-px bg-gradient-to-r from-transparent to-green-500/60"></span>
+          <p className="relative flex items-center justify-center text-green-400/70 text-xs sm:text-sm tracking-wider mb-4 sm:mb-6">
+            <span className="absolute left-0 w-1/4 h-px bg-gradient-to-r from-transparent to-green-500/60"></span>
 
-  <span className="px-2 sm:px-4 text-sm sm:text-[16px] text-[#53F870]">
-    Getting your dashboard ready
-  </span>
+            <span className="px-2 sm:px-4 text-sm sm:text-[16px] text-[#53F870]">
+              Getting your dashboard ready
+            </span>
 
-  <span className="absolute right-0 w-1/4 h-px bg-gradient-to-l from-transparent to-green-500/60"></span>
-</p>
-         <h4 className="
+            <span className="absolute right-0 w-1/4 h-px bg-gradient-to-l from-transparent to-green-500/60"></span>
+          </p>
+          <h4
+            className="
   text-5xl sm:text-7xl lg:text-[70px] font-bold
   text-transparent bg-clip-text
   bg-gradient-to-b
@@ -232,10 +244,15 @@ export default function WelcomePage() {
   to-[#5AFF78]
   mb-4 sm:mb-6
   leading-tight
-">
-  CopyRank
-</h4>
-{tab === "tab1" && <p className="text-[#53F870] text-sm sm:text-base">Let's start with your website</p>}
+"
+          >
+            CopyRank
+          </h4>
+          {tab === "tab1" && (
+            <p className="text-[#53F870] text-sm sm:text-base">
+              Let's start with your website
+            </p>
+          )}
         </div>
 
         {/* Form Container */}
@@ -250,14 +267,14 @@ export default function WelcomePage() {
           {/* Tab 1 - Website */}
           {tab === "tab1" && (
             <div className="sm:space-y-6">
-            <div className="">
-  <div className="relative">
-   <Input
-  type="url"
-  placeholder="www.mywebsite.com"
-  value={websiteName}
-  onChange={(e) => setWebsiteName(e.target.value)}
-  className="
+              <div className="">
+                <div className="relative">
+                  <Input
+                    type="url"
+                    placeholder="www.mywebsite.com"
+                    value={websiteName}
+                    onChange={(e) => setWebsiteName(e.target.value)}
+                    className="
     w-full font-light! h-10 sm:h-12 pr-20 sm:pr-24
    dark:bg-gradient-to-b
     dark:from-[rgba(46,152,57,0.38)]
@@ -273,27 +290,29 @@ export default function WelcomePage() {
     focus:border-[#2E9839]
     focus:ring-2 focus:ring-[#2E9839]/30
   "
-/>
+                  />
 
-    <Button
-      onClick={() => {
-        if (validateTab1()) {
-          setTab("tab2");
-        }
-      }}
-      className="
-        absolute right-1 top-1/2 -translate-y-1/2
+                  <Button
+                    onClick={() => {
+                      if (validateTab1()) {
+                        setTab("tab2");
+                      }
+                    }}
+                    className="
+        absolute right-1 top-1 -translate-y-1/2
         h-8 sm:h-10 px-6 sm:px-9
         bg-[#5AFF78] hover:bg-green-600
         text-black text-sm sm:text-base
         rounded-md
       "
-    >
-      Next
-    </Button>
-  </div>
-</div>
-              <p className="text-center text-gray-500 text-xs sm:text-sm">{getStepNumber()}</p>
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+              <p className="text-center text-gray-500 text-xs sm:text-sm">
+                {getStepNumber()}
+              </p>
             </div>
           )}
 
@@ -307,7 +326,9 @@ export default function WelcomePage() {
                       type="text"
                       placeholder="www.competitor.com"
                       value={currentCompetitorInput}
-                      onChange={(e) => setCurrentCompetitorInput(e.target.value)}
+                      onChange={(e) =>
+                        setCurrentCompetitorInput(e.target.value)
+                      }
                       disabled={allCompetitorsAdded}
                       className="
                         w-full font-light! h-10 sm:h-12 pr-20 sm:pr-24
@@ -403,13 +424,14 @@ export default function WelcomePage() {
                   </div>
                 </div>
               )}
-              
+
               <div className="flex items-center justify-center">
                 <div className="">
-                <p className="text-gray-500 text-xs sm:text-sm">{getStepNumber()}</p>
+                  <p className="text-gray-500 text-xs sm:text-sm">
+                    {getStepNumber()}
+                  </p>
+                </div>
               </div>
-              </div>
-
             </div>
           )}
 
@@ -519,9 +541,11 @@ export default function WelcomePage() {
                   </div>
                 </div>
               )}
-              
+
               <div className="flex items-center justify-center">
-                <p className="text-gray-500 text-xs sm:text-sm">{getStepNumber()}</p>
+                <p className="text-gray-500 text-xs sm:text-sm">
+                  {getStepNumber()}
+                </p>
               </div>
             </div>
           )}
@@ -541,7 +565,7 @@ export default function WelcomePage() {
       </div>
 
       {/* Footer - Full Width */}
-      <div className="relative w-screen  sm:mt-20  sm:pt-12 left-1/2 -translate-x-1/2">
+      <div className="relative w-screen  sm:mt-8  sm:pt-12 left-1/2 -translate-x-1/2">
         {/* Background Image */}
         {/* <Image
           src="/planetd.png"
@@ -551,55 +575,59 @@ export default function WelcomePage() {
           className="w-full object-cover opacity-60 pointer-events-none"
           priority
         /> */}
-        
+
         {/* Footer Content */}
-        <div className="absolute inset-1 z-10 flex flex-col items-center justify-center gap-3 sm:gap-6 py-6 sm:py-8 px-4">
-         
-       <div className="flex items-center gap-3 sm:gap-4">
- 
-  <a href="https://twitter.com/yourprofile" target="_blank" rel="noopener noreferrer">
-    <Image
-      src="/xpng.png"
-      alt="X / Twitter"
-      height={25}
-      width={25}
-    />
-  </a>
+        <div className="absolute inset-0 z-0 flex flex-col items-center justify-center gap-3 sm:gap-6 py-6 sm:py-8 bottom-4 px-4">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <a
+              href="https://twitter.com/yourprofile"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Image src="/xpng.png" alt="X / Twitter" height={25} width={25} />
+            </a>
 
-  
-  <a href="https://www.threads.net/yourprofile" target="_blank" rel="noopener noreferrer">
-    <Image
-      src="/thread.png"
-      alt="Threads"
-      height={25}
-      width={25}
-    />
-  </a>
+            <a
+              href="https://www.threads.net/yourprofile"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Image src="/thread.png" alt="Threads" height={25} width={25} />
+            </a>
 
+            <a
+              href="https://www.linkedin.com/in/yourprofile"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Image src="/in.png" alt="LinkedIn" height={25} width={25} />
+            </a>
+          </div>
 
-  <a href="https://www.linkedin.com/in/yourprofile" target="_blank" rel="noopener noreferrer">
-    <Image
-      src="/in.png"
-      alt="LinkedIn"
-      height={25}
-      width={25}
-    />
-  </a>
-</div>
-
-          
           <div className="flex flex-col items-center gap-2 sm:gap-4">
-       
             <div className="lg:hidden flex flex-col items-center gap-2 text-[#53F870]">
-              <a href="#" className="text-xs hover:text-green-400 transition-colors">Terms & Conditions</a>
-              <a href="#" className="text-xs hover:text-green-400 transition-colors">Privacy Policy</a>
+              <a
+                href="#"
+                className="text-xs hover:text-green-400 transition-colors"
+              >
+                Terms & Conditions
+              </a>
+              <a
+                href="#"
+                className="text-xs hover:text-green-400 transition-colors"
+              >
+                Privacy Policy
+              </a>
             </div>
-            
-            
+
             <div className="hidden lg:flex items-center gap-4 text-[#53F870] text-sm">
-              <a href="#" className="hover:text-green-400 transition-colors">Terms & Conditions</a>
+              <a href="#" className="hover:text-green-400 transition-colors">
+                Terms & Conditions
+              </a>
               <span className="text-[#5AFF78]">•</span>
-              <a href="#" className="hover:text-green-400 transition-colors">Privacy Policy</a>
+              <a href="#" className="hover:text-green-400 transition-colors">
+                Privacy Policy
+              </a>
             </div>
           </div>
         </div>
