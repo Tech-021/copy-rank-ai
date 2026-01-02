@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { getUser, signOut } from "@/lib/auth"
 import { supabase } from "@/lib/client"
 import { useToast } from "@/components/ui/toast"
-import { LandingPage } from "@/components/landing-page"
+import WelcomePage from "@/app/welcome/page"
 import { Dashboard } from "@/components/dashboard"
 import { LoginPage } from "@/components/login-page"
 import { LoaderChevron } from "@/components/ui/LoaderChevron"
@@ -210,5 +210,5 @@ export default function Home() {
     )
   }
 
-  return <LandingPage onSignIn={handleSignIn} onSignUp={handleSignUp} />
+  return <WelcomePage />
 }
