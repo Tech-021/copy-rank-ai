@@ -505,6 +505,36 @@ export function AnalyzeTab({
       } = await supabase.auth.getUser();
       if (!user) return;
 
+      // If onboarding was started before signup/login, consume it now
+      try {
+        const pending = localStorage.getItem('pendingOnboarding');
+        if (pending) {
+          console.log('Found pending onboarding, processing...');
+          const payload = JSON.parse(pending);
+          // Ensure userId is set
+          payload.userId = payload.userId || user.id;
+
+          try {
+            const resp = await fetch('/api/onboarding', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload),
+            });
+            const d = await resp.json().catch(() => ({}));
+            if (resp.ok && d.success) {
+              localStorage.removeItem('pendingOnboarding');
+              console.log('Pending onboarding processed successfully');
+            } else {
+              console.error('Pending onboarding failed', d);
+            }
+          } catch (err) {
+            console.error('Error sending pending onboarding:', err);
+          }
+        }
+      } catch (err) {
+        // ignore localStorage parsing errors
+      }
+
       const { data, error } = await supabase
         .from("websites")
         .select("*")
