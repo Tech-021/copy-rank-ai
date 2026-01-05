@@ -315,7 +315,7 @@ export default function WelcomePage() {
                       }
                     }}
                     className="
-        absolute right-1 top-1 -translate-y-1/2
+        absolute right-1 top-6 -translate-y-1/2
         h-8 sm:h-10 px-6 sm:px-9
         bg-[#5AFF78] hover:bg-green-600
         text-black text-sm sm:text-base
