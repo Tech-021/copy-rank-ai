@@ -24,6 +24,37 @@ export default function WelcomePage() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
+  const normalizeUrl = (input: string): string | null => {
+    if (!input) return null;
+    try {
+      const url = new URL(input);
+      return url.toString();
+    } catch (e) {
+      try {
+        const url = new URL(`https://${input}`);
+        return url.toString();
+      } catch (e) {
+        return null;
+      }
+    }
+  };
+
+  const isValidUrl = (input: string) => {
+    const normalized = normalizeUrl(input);
+    if (!normalized) return false;
+    try {
+      const u = new URL(normalized);
+      const hostname = u.hostname || "";
+      if (hostname === "localhost") return false;
+      if (!hostname.includes(".")) return false;
+      if (!/[a-zA-Z]/.test(hostname)) return false;
+      if (/\s/.test(hostname)) return false;
+      return true;
+    } catch (e) {
+      return false;
+    }
+  };
+
   const competitorsCount = [competitor1, competitor2, competitor3].filter((c) =>
     c.trim()
   ).length;
@@ -41,7 +72,8 @@ export default function WelcomePage() {
     keyword3.trim()
   );
   const validateTab1 = () => {
-    if (!websiteName.trim()) {
+    const trimmed = websiteName.trim();
+    if (!trimmed) {
       toast.showToast({
         title: "Missing Website URL",
         description: "Please enter your website URL to continue.",
@@ -49,6 +81,16 @@ export default function WelcomePage() {
       });
       return false;
     }
+
+    if (!isValidUrl(trimmed)) {
+      toast.showToast({
+        title: "Invalid Website URL",
+        description: "Please enter a valid website URL (e.g. example.com or https://example.com).",
+        type: "error",
+      });
+      return false;
+    }
+
     return true;
   };
 
@@ -83,7 +125,7 @@ export default function WelcomePage() {
       const { data: { user } } = await supabase.auth.getUser();
 
       const onboardingData = {
-        clientDomain: websiteName.trim(),
+        clientDomain: normalizeUrl(websiteName.trim()) || websiteName.trim(),
         competitors: [
           competitor1.trim(),
           competitor2.trim(),
@@ -367,7 +409,8 @@ export default function WelcomePage() {
                             setTab("tab3");
                           }
                         } else {
-                          if (!currentCompetitorInput.trim()) {
+                          const trimmed = currentCompetitorInput.trim();
+                          if (!trimmed) {
                             toast.showToast({
                               title: "Empty Input",
                               description: "Please enter a competitor URL",
@@ -375,12 +418,24 @@ export default function WelcomePage() {
                             });
                             return;
                           }
+
+                          if (!isValidUrl(trimmed)) {
+                            toast.showToast({
+                              title: "Invalid Competitor URL",
+                              description: "Please enter a valid competitor URL (e.g. competitor.com or https://competitor.com).",
+                              type: "error",
+                            });
+                            return;
+                          }
+
+                          const normalized = normalizeUrl(trimmed)!;
+
                           if (!competitor1) {
-                            setCompetitor1(currentCompetitorInput.trim());
+                            setCompetitor1(normalized);
                           } else if (!competitor2) {
-                            setCompetitor2(currentCompetitorInput.trim());
+                            setCompetitor2(normalized);
                           } else if (!competitor3) {
-                            setCompetitor3(currentCompetitorInput.trim());
+                            setCompetitor3(normalized);
                           }
                           setCurrentCompetitorInput("");
                         }
