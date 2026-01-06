@@ -446,18 +446,38 @@ export async function POST(request: Request) {
       user_id: userId,
     };
 
-    const { data: savedWebsite, error: dbError } = await supabase
-      .from("websites")
-      .insert([insertData])
-      .select()
-      .single();
+    // Idempotency: check if this website already exists for this user (same normalized URL)
+    let savedWebsite: any = null;
+    try {
+      const { data: existing, error: existingErr } = await supabase
+        .from("websites")
+        .select("*")
+        .eq("user_id", userId)
+        .eq("url", normalizedClientDomain)
+        .single();
 
-    if (dbError) {
-      console.error("❌ Database error:", dbError);
-      throw new Error("Failed to save to database");
+      if (existing && !existingErr) {
+        console.log("ℹ️ Website already exists for user, reusing existing record", existing.id);
+        savedWebsite = existing;
+      } else {
+        const { data: inserted, error: dbError } = await supabase
+          .from("websites")
+          .insert([insertData])
+          .select()
+          .single();
+
+        if (dbError) {
+          console.error("❌ Database error on insert:", dbError);
+          throw new Error("Failed to save to database");
+        }
+
+        savedWebsite = inserted;
+        console.log("✅ Successfully saved to database", savedWebsite.id);
+      }
+    } catch (err) {
+      console.error("❌ Database check/insert error:", err);
+      throw err;
     }
-
-    console.log("✅ Successfully saved to database");
 
     // STEP 6: Enqueue articles for generation
     console.log("\n🚀 Step 6: Enqueueing articles for generation...");
