@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { LoaderChevron } from "@/components/ui/LoaderChevron";
@@ -112,7 +112,7 @@ export function ArticlesTab({
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterStartDate, setFilterStartDate] = useState("2-feb-2025");
   const [filterEndDate, setFilterEndDate] = useState("4-mar-2025");
-  const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
+  const [selectedArticleId, setSelectedArticleId] = useState<string | null>(null);
   const [isContentExpanded, setIsContentExpanded] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [userPackage, setUserPackage] = useState<
@@ -344,15 +344,15 @@ export function ArticlesTab({
         fetch(`/api/articles?userId=${currentUser?.id}`)
           .then((res) => res.json())
           .then((data) => {
-            if (data.success && data.articles) {
-              const updatedArticle = data.articles.find(
-                (a: Article) => a.id === selectedArticle.id
-              );
-              if (updatedArticle) {
-                setSelectedArticle(updatedArticle);
-                setArticles(data.articles);
+              if (data.success && data.articles) {
+                const updatedArticle = data.articles.find(
+                  (a: Article) => a.id === selectedArticle?.id
+                );
+                if (updatedArticle) {
+                  setSelectedArticleId(updatedArticle.id);
+                  setArticles(data.articles);
+                }
               }
-            }
           })
           .catch((err) =>
             console.error("Error fetching updated article:", err)
@@ -594,7 +594,20 @@ export function ArticlesTab({
           "🐞 Normalized first article images count:",
           normalizedArticles[0]?.generatedImages?.length ?? 0
         );
+        console.log("ArticlesTab: fetchArticles loaded", normalizedArticles.length, "items. selectedArticleId=", selectedArticleId);
         setArticles(normalizedArticles);
+        // If the current selection no longer exists in the new list, try to preserve UX by
+        // selecting the first article in the list (if any).
+        if (selectedArticleId && !normalizedArticles.find((a: Article) => a.id === selectedArticleId)) {
+          const first = normalizedArticles[0];
+          if (first) {
+            console.log("ArticlesTab: previously selected id not found, falling back to first article ->", first.id);
+            setSelectedArticleId(first.id);
+          } else {
+            console.log("ArticlesTab: no articles available after fetch, clearing selection");
+            setSelectedArticleId(null);
+          }
+        }
         writeArticlesCache(currentUser.id, siteId, normalizedArticles);
         // remember which site we fetched so we can avoid redundant initial fetches
         lastFetchedSiteRef.current = siteId;
@@ -629,12 +642,26 @@ export function ArticlesTab({
       fetchArticles();
     } else {
       const cached = readArticlesCache(currentUser.id, siteId);
-      if (cached && (articlesRef.current?.length ?? 0) === 0) {
+      // Always hydrate from cache when switching sites if cache is available.
+      // Previously we only hydrated when nothing was rendered yet which caused
+      // the UI to keep showing articles for the previously selected site.
+      if (cached) {
+        console.log("ArticlesTab: hydrating from cache for site ->", siteId, "items=", cached.articles.length);
         setArticles(cached.articles);
         setLoading(false);
+        lastFetchedSiteRef.current = siteId;
       }
     }
   }, [currentUser, selectedWebsiteId, websiteId, fetchArticles]);
+
+  const selectedArticle = useMemo(
+    () => articles.find((a) => a.id === selectedArticleId) ?? null,
+    [articles, selectedArticleId]
+  );
+
+  useEffect(() => {
+    console.log("ArticlesTab: selectedArticle changed ->", selectedArticleId, selectedArticle?.title ?? null);
+  }, [selectedArticleId, selectedArticle]);
 
   useEffect(() => {
     if (!currentUser) return;
@@ -661,7 +688,7 @@ export function ArticlesTab({
   }, [generatedArticles, onArticlesUpdate]);
 
   const openEditDialog = (article: Article) => {
-    setSelectedArticle(article);
+    setSelectedArticleId(article.id);
     setEditForm({
       title: article.title || "",
       keyword: Array.isArray(article.keyword)
@@ -857,7 +884,7 @@ export function ArticlesTab({
 
       await fetchArticles();
       setIsEditDialogOpen(false);
-      setSelectedArticle(null);
+      setSelectedArticleId(null);
     } catch (error) {
       console.error("Error updating article:", error);
       alert(
@@ -948,6 +975,7 @@ export function ArticlesTab({
   };
 
   const handleWebsiteChange = async (websiteId: string) => {
+    console.log("ArticlesTab: handleWebsiteChange ->", websiteId);
     setSelectedWebsiteId(websiteId);
     writeSelectedWebsiteId(websiteId);
 
@@ -970,7 +998,7 @@ export function ArticlesTab({
       return;
     }
 
-    setIndexingArticle(articleId);
+                            setSelectedArticleId(null);
 
     try {
       const response = await fetch("/api/articles/index-now", {
@@ -1214,7 +1242,8 @@ export function ArticlesTab({
                 <div
                   key={article.id}
                   onClick={() => {
-                    setSelectedArticle(article);
+                    console.log("ArticlesTab: article click ->", article.id, "prevSelectedId=", selectedArticleId);
+                    setSelectedArticleId(article.id);
                     setIsContentExpanded(false);
                   }}
                   className={`relative group flex flex-col sm:flex-row gap-3 px-3 sm:px-3 py-3 sm:py-5 rounded-lg cursor-pointer transition-all duration-150 ${
@@ -1303,11 +1332,11 @@ export function ArticlesTab({
               <div className="flex items-center justify-between p-3 sm:p-4 border  border-[#53f8701a] shrink-0">
                 <span className="text-xs sm:text-sm text-[#ffffffb3]">VIEW POST</span>
                 <button
-                  onClick={() => setSelectedArticle(null)}
-                  className="text-gray-400 hover:text-gray-600 text-xl leading-none font-bold"
-                >
-                  ×
-                </button>
+                    onClick={() => setSelectedArticleId(null)}
+                    className="text-gray-400 hover:text-gray-600 text-xl leading-none font-bold"
+                  >
+                    ×
+                  </button>
               </div>
 
               {/* Scrollable Content */}
@@ -1585,8 +1614,8 @@ export function ArticlesTab({
                         onClick={async () => {
                           if (selectedArticle) {
                             setIsDeleteDialogOpen(false);
-                            await handleDeleteArticle(selectedArticle.id);
-                            setSelectedArticle(null);
+                            await handleDeleteArticle(selectedArticle!.id);
+                            setSelectedArticleId(null);
                               setIsDeleteCompletedDialogOpen(true);
                           }
                         }}
@@ -1790,10 +1819,10 @@ export function ArticlesTab({
 
       <Dialog
         open={isEditDialogOpen}
-        onOpenChange={(open) => {
+          onOpenChange={(open) => {
           setIsEditDialogOpen(open);
           if (!open) {
-            setSelectedArticle(null);
+            setSelectedArticleId(null);
             setEditTab("basic");
           }
         }}
@@ -1989,7 +2018,7 @@ export function ArticlesTab({
             <Button
               onClick={() => {
                 setIsEditDialogOpen(false);
-                setSelectedArticle(null);
+                setSelectedArticleId(null);
                 setEditTab("basic");
               }}
               className="px-6 h-11 border border-gray-700 bg-transparent text-white hover:bg-gray-900 transition-colors"
