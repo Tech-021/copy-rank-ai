@@ -87,7 +87,7 @@ export default function OnboardingPage() {
   }
 
   return (
-    router.push('/welcome')
+    router.push('/dashboard')
   );
 }
 
