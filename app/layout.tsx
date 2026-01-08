@@ -33,16 +33,6 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${geist.variable} ${geistMono.variable} dark`} suppressHydrationWarning>
       <body className="antialiased dark" cz-shortcut-listen="true">
-        <header className="fixed top-4 right-4 z-50">
-          <Link
-            href="/login"
-            className="inline-flex items-center px-4 py-2 rounded-md bg-white/10 hover:bg-white/20 text-sm font-medium text-white"
-            aria-label="Sign in"
-          >
-            Sign in
-          </Link>
-        </header>
-
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
           <ToastProvider>
             <Suspense fallback={
