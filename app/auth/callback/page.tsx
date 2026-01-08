@@ -65,12 +65,33 @@ export default function AuthCallbackPage() {
         const { data: { session } } = await supabase.auth.getSession()
         
         if (session) {
-          toast.showToast({ 
-            title: "Successfully signed in!", 
-            description: "Welcome back!", 
-            type: "success" 
-          })
-          router.replace("/dashboard") // Redirect to dashboard instead of home
+          // For new signups, redirect to LemonSqueezy checkout
+          // For existing users, redirect to dashboard
+          const email = session.user?.email || '';
+          const userId = session.user?.id || '';
+          
+          // Check if this is a new user (created_at is very recent)
+          const createdAt = new Date(session.user?.created_at || '');
+          const now = new Date();
+          const diffMinutes = (now.getTime() - createdAt.getTime()) / (1000 * 60);
+          const isNewSignup = diffMinutes < 5; // New signup if created within last 5 minutes
+          
+          if (isNewSignup && email && userId) {
+            // New user - skip paywall and go to checkout
+            const checkoutUrl = process.env.NEXT_PUBLIC_LEMONSQUEEZY_CHECKOUT_URL_30 || 'https://copyrank.lemonsqueezy.com/buy/1e25810b-38ba-4de5-a753-c06514cb9e91';
+            const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
+            const successUrl = `${baseUrl}/payment/callback?next=/dashboard`;
+            const fullCheckoutUrl = `${checkoutUrl}?checkout[email]=${encodeURIComponent(email)}&checkout[custom][user_id]=${encodeURIComponent(userId)}&checkout[product_options][redirect_url]=${encodeURIComponent(successUrl)}`;
+            window.location.href = fullCheckoutUrl;
+          } else {
+            // Existing user - go to dashboard
+            toast.showToast({ 
+              title: "Successfully signed in!", 
+              description: "Welcome back!", 
+              type: "success" 
+            })
+            router.replace("/dashboard")
+          }
         } else {
           toast.showToast({ 
             title: "Authentication incomplete", 
