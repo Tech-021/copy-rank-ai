@@ -75,7 +75,6 @@ export async function middleware(request: NextRequest) {
     
     '/fonts',
     '/fav-icon.ico',
-    '/welcome',
   ]
 
   // Check if the current path is a public route
