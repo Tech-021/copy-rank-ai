@@ -47,6 +47,20 @@ export default function PaymentCallbackPage() {
 
         // Redirect based on subscription status
         if (userData?.subscribe === true) {
+          // Claim any pre_data for this user (triggers onboarding)
+          try {
+            const email = (user.email || "").trim().toLowerCase();
+            if (email) {
+              await fetch("/api/predata/claim", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, userId: user.id }),
+              }).catch(e => console.error("Claim pre_data failed:", e));
+            }
+          } catch (e) {
+            console.error("Error claiming pre_data:", e);
+          }
+
           // Successfully subscribed - redirect to requested next path
           router.push(nextPath);
         } else if (attempts >= MAX_ATTEMPTS) {
