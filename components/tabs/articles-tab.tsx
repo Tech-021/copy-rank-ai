@@ -373,7 +373,7 @@ export function ArticlesTab({
   const getArticleUrl = (slug: string) => {
     const baseUrl =
       process.env.NEXT_PUBLIC_SITE_URL ||
-      "https://v0-topic-detection-app-three.vercel.app";
+      "https://app.copyrank.ai";
     return `${baseUrl.replace(/\/$/, "")}/articles/${slug}`;
   };
 
