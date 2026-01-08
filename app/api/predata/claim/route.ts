@@ -5,13 +5,16 @@ const supabaseAdmin = process.env.SUPABASE_SERVICE_ROLE_KEY && process.env.NEXT_
   ? createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
   : null;
 
+const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+
 // POST /api/predata/claim
-// body: { email?: string, ids?: string[] }
+// body: { email?: string, ids?: string[], userId: string }
 export async function POST(req: Request) {
   try {
     const body = await req.json();
     const email = (body.email || "").trim().toLowerCase();
     const ids: string[] | undefined = body.ids;
+    const userId = body.userId as string | undefined;
 
     if (!email && (!ids || ids.length === 0)) {
       return NextResponse.json({ success: false, error: "email or ids required" }, { status: 400 });
@@ -19,18 +22,58 @@ export async function POST(req: Request) {
 
     if (!supabaseAdmin) return NextResponse.json({ success: false, error: "no-db" }, { status: 500 });
 
-    // Build update query
-    let query = supabaseAdmin.from("pre_data").update({ processed: true, processed_at: new Date().toISOString() });
+    // Fetch rows to claim
+    let query = supabaseAdmin.from("pre_data").select("*").eq("processed", false);
     if (ids && ids.length > 0) {
-      query = query.in("id", ids).eq("processed", false);
+      query = query.in("id", ids);
     } else if (email) {
-      query = query.eq("email", email).eq("processed", false);
+      query = query.eq("email", email);
     }
 
-    const { data, error } = await query.select();
-    if (error) return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    const { data: rows, error: fetchErr } = await query;
+    if (fetchErr) return NextResponse.json({ success: false, error: fetchErr.message }, { status: 500 });
+    if (!rows || rows.length === 0) return NextResponse.json({ success: true, claimed: [], message: "no_rows_to_claim" });
 
-    return NextResponse.json({ success: true, claimed: data || [] });
+    const results: any[] = [];
+
+    // For each row, call onboarding and mark processed
+    for (const row of rows) {
+      try {
+        const onboardingPayload = {
+          clientDomain: row.website,
+          competitors: row.competitors || [],
+          targetKeywords: row.keywords || [],
+          userId: userId || null,
+        };
+
+        // Call onboarding endpoint
+        const onboardingResp = await fetch(`${BASE_URL}/api/onboarding`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(onboardingPayload),
+        }).catch(e => ({ ok: false, error: String(e) }));
+
+        const onboardingResult = onboardingResp.ok
+          ? await onboardingResp.json().catch(() => ({ success: false, error: "parse_error" }))
+          : { success: false, error: "onboarding_call_failed" };
+
+        // Mark row as processed
+        await supabaseAdmin
+          .from("pre_data")
+          .update({
+            processed: true,
+            processed_at: new Date().toISOString(),
+            processed_result: onboardingResult,
+          })
+          .eq("id", row.id);
+
+        results.push({ id: row.id, website: row.website, onboarding_ok: onboardingResult.success });
+      } catch (innerErr) {
+        results.push({ id: row.id, error: String(innerErr) });
+      }
+    }
+
+    return NextResponse.json({ success: true, claimed: rows, processing_results: results });
   } catch (err: any) {
     return NextResponse.json({ success: false, error: String(err) }, { status: 500 });
   }
