@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation"
 import { getUser, signOut } from "@/lib/auth"
 import { supabase } from "@/lib/client"
 import { useToast } from "@/components/ui/toast"
-import WelcomePage from "@/app/welcome/page"
 import { Dashboard } from "@/components/dashboard"
 import { LoginPage } from "@/components/login-page"
 import { LoaderChevron } from "@/components/ui/LoaderChevron"
@@ -13,7 +12,7 @@ import { SignUpPage } from "@/components/signup-page"
 import Image from "next/image"
 
 export default function Home() {
-  const [authState, setAuthState] = useState<"landing" | "login" | "signup" | "dashboard">("landing")
+  const [authState, setAuthState] = useState<"signup" | "login" | "dashboard">("signup")
   const [userEmail, setUserEmail] = useState("")
   const [userAvatar, setUserAvatar] = useState<string | null>(null)
   const [isCheckingSubscription, setIsCheckingSubscription] = useState(true)
@@ -72,15 +71,15 @@ export default function Home() {
             }
           }
         } else {
-          // No user logged in, show landing page
+          // No user logged in, default to signup page
           if (mounted) {
-            setAuthState("landing")
+            setAuthState("signup")
           }
         }
       } catch (err) {
         console.error('Error in auth check:', err)
         if (mounted) {
-          setAuthState("landing")
+          setAuthState("signup")
         }
       } finally {
         if (mounted) {
@@ -165,15 +164,15 @@ export default function Home() {
     }
 
     setUserEmail("")
-    setAuthState("landing")
+    setAuthState("signup")
   }
 
   const handleBackToLanding = () => {
-    router.push("/")
+    setAuthState("signup")
   }
 
   const handleToggleAuthMode = (mode: "login" | "signup") => {
-    router.push(mode === "login" ? "/login" : "/signup")
+    setAuthState(mode)
   }
 
   // Show loading state while checking subscription
@@ -210,5 +209,12 @@ export default function Home() {
     )
   }
 
-  return <WelcomePage />
+  // Default: Show signup page
+  return (
+    <SignUpPage
+      onSignUpSuccess={handleSignUpSuccess}
+      onBackToLanding={handleBackToLanding}
+      onToggleLogin={() => handleToggleAuthMode("login")}
+    />
+  )
 }
