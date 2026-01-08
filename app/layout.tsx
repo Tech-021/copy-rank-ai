@@ -19,10 +19,10 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: "SEOFlow - AI-Powered SEO Content Generation",
+  title: "CopyRank - AI Article Generator",
   description: "Analyze websites, discover keywords, and generate SEO-optimized articles at scale",
   generator: "v0.app",
-  icons: "/fav-icon.ico"
+  icons: "https://framerusercontent.com/images/uUTspWzdJTU1pZaslWJjJXNsPM.svg"
 }
 
 export default function RootLayout({
