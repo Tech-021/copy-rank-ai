@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getUser } from '@/lib/auth';
 import { supabase } from '@/lib/client';
+import { useToast } from '@/components/ui/toast';
 
 export default function PaymentCallbackPage() {
   const router = useRouter();
@@ -11,6 +12,7 @@ export default function PaymentCallbackPage() {
   const [attempts, setAttempts] = useState(0);
   const MAX_ATTEMPTS = 10; // Poll for up to 10 seconds
   const nextPath = searchParams.get('next') || '/about-yourself';
+  const toast = useToast();
 
   useEffect(() => {
     async function checkSubscriptionAndRedirect() {
@@ -48,6 +50,7 @@ export default function PaymentCallbackPage() {
         // Redirect based on subscription status
         if (userData?.subscribe === true) {
           // Claim any pre_data for this user (triggers onboarding)
+          // Claim any pre_data for this user (triggers onboarding)
           try {
             const email = (user.email || "").trim().toLowerCase();
             if (email) {
@@ -57,6 +60,24 @@ export default function PaymentCallbackPage() {
                 body: JSON.stringify({ email, userId: user.id }),
               }).catch(e => console.error("Claim pre_data failed:", e));
             }
+
+            // Trigger immediate processing and show a toast so the user sees background work started
+            fetch("/api/article-jobs/trigger", { method: "POST" })
+              .then(async (res) => {
+                if (res.ok) {
+                  toast.showToast({
+                    title: "Processing Started",
+                    description: "Article processing has been triggered and will run in the background.",
+                    type: "success",
+                  });
+                } else {
+                  const err = await res.json().catch(() => ({}));
+                  console.warn("Trigger endpoint returned non-ok:", err);
+                }
+              })
+              .catch((e) => {
+                console.error("Failed to call trigger endpoint:", e);
+              });
           } catch (e) {
             console.error("Error claiming pre_data:", e);
           }
