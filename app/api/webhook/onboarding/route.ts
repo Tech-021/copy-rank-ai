@@ -6,21 +6,51 @@ const supabaseAdmin = process.env.SUPABASE_SERVICE_ROLE_KEY && process.env.NEXT_
   : null;
 
 export async function POST(req: Request) {
+  const startMs = Date.now();
+  console.info("[webhook:onboarding] handler start", new Date().toISOString());
   try {
-    const body = await req.json();
+    // Capture headers
+    const headersObj: Record<string, string> = {};
+    try {
+      req.headers.forEach((value, key) => {
+        headersObj[key] = value;
+      });
+    } catch (hErr) {
+      console.warn("[webhook:onboarding] failed to read headers", String(hErr));
+    }
 
-    // Accept fields from iframe submission
+    console.debug("[webhook:onboarding] request headers:", headersObj);
+    const url = (req as any).url || headersObj.host || "unknown";
+    console.info("[webhook:onboarding] request url:", url);
+
+    // Read raw body (we log it, then parse)
+    const rawText = await req.text();
+    console.debug("[webhook:onboarding] raw body text:", rawText);
+
+    let body: any = {};
+    try {
+      body = rawText ? JSON.parse(rawText) : {};
+      console.debug("[webhook:onboarding] parsed JSON body:", body);
+    } catch (parseErr) {
+      console.error("[webhook:onboarding] JSON parse error:", parseErr, "raw:", rawText);
+      return new NextResponse(
+        JSON.stringify({ success: false, error: "invalid_json", detail: String(parseErr) }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    // Accept fields from iframe submission (support many keys)
     const email = body.email || body.userEmail || body.user_email || null;
     const website = body.website || body.clientDomain || null;
     const competitors = body.competitors || body.competitor || body.competitorDomains || [];
     const keywords = body.keywords || body.targetKeywords || body.keywords_list || [];
 
+    console.info("[webhook:onboarding] extracted fields", { emailPresent: !!email, websitePresent: !!website, competitorsCount: Array.isArray(competitors) ? competitors.length : (competitors ? 1 : 0), keywordsCount: Array.isArray(keywords) ? keywords.length : (keywords ? 1 : 0) });
+
     if (!email || !website) {
+      console.warn("[webhook:onboarding] validation failed: missing email or website", { email, website });
       return new NextResponse(JSON.stringify({ success: false, error: "missing email or website" }), { status: 400, headers: { "Content-Type": "application/json" } });
     }
-
-    // Log for local testing
-    console.log("Received webhook payload:", { email, website, competitors, keywords });
 
     // Prepare row to insert
     const row = {
@@ -31,20 +61,32 @@ export async function POST(req: Request) {
       payload: body,
     };
 
+    console.debug("[webhook:onboarding] row prepared for insert:", row);
+
     if (!supabaseAdmin) {
-      console.warn("SUPABASE_SERVICE_ROLE_KEY not set — skipping DB write. To persist set SUPABASE_SERVICE_ROLE_KEY.");
+      console.warn("[webhook:onboarding] SUPABASE_SERVICE_ROLE_KEY not set — skipping DB write. To persist set SUPABASE_SERVICE_ROLE_KEY.");
+      const elapsed = Date.now() - startMs;
+      console.info(`[webhook:onboarding] handler end - no-db - ${elapsed}ms`);
       return new NextResponse(JSON.stringify({ success: true, received: row, note: "no-db" }), { status: 200, headers: { "Content-Type": "application/json" } });
     }
 
+    console.info("[webhook:onboarding] inserting into pre_data (starting DB call)");
+    const dbStart = Date.now();
     const { data, error } = await supabaseAdmin.from("pre_data").insert([row]).select().limit(1);
+    const dbElapsed = Date.now() - dbStart;
+    console.info(`[webhook:onboarding] DB call completed in ${dbElapsed}ms`);
+
     if (error) {
-      console.error("Failed to insert pre_data:", error);
+      console.error("[webhook:onboarding] Failed to insert pre_data:", error);
       return new NextResponse(JSON.stringify({ success: false, error: "db_insert_failed", detail: error.message }), { status: 500, headers: { "Content-Type": "application/json" } });
     }
 
+    console.debug("[webhook:onboarding] DB returned:", data);
+    const elapsed = Date.now() - startMs;
+    console.info(`[webhook:onboarding] handler end - success - ${elapsed}ms`);
     return new NextResponse(JSON.stringify({ success: true, received: data?.[0] || row }), { status: 200, headers: { "Content-Type": "application/json" } });
   } catch (err: any) {
-    console.error("Webhook handler error:", err);
+    console.error("[webhook:onboarding] Webhook handler error:", err?.stack || err, { err });
     return new NextResponse(JSON.stringify({ success: false, error: "invalid JSON or server error", detail: String(err) }), { status: 400, headers: { "Content-Type": "application/json" } });
   }
 }
