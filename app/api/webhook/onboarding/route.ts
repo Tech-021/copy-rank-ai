@@ -39,13 +39,36 @@ export async function POST(req: Request) {
       );
     }
 
+    // normalize CSV/string/array inputs into a flat array of trimmed strings
+    const normalizeToArray = (v: any): string[] => {
+      if (v === null || v === undefined) return [];
+      if (Array.isArray(v)) {
+        return v
+          .flatMap((item) => (typeof item === "string" ? item.split(",") : [String(item)]))
+          .map((s) => String(s).trim())
+          .filter(Boolean);
+      }
+      if (typeof v === "string") {
+        return v
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean);
+      }
+      return [String(v)]
+        .map((s) => s.trim())
+        .filter(Boolean);
+    };
+
     // Accept fields from iframe submission (support many keys)
     const email = body.email || body.userEmail || body.user_email || null;
     const website = body.website || body.clientDomain || null;
-    const competitors = body.competitors || body.competitor || body.competitorDomains || [];
-    const keywords = body.keywords || body.targetKeywords || body.keywords_list || [];
+    const competitorsRaw = body.competitors || body.competitor || body.competitorDomains || [];
+    const keywordsRaw = body.keywords || body.targetKeywords || body.keywords_list || [];
 
-    console.info("[webhook:onboarding] extracted fields", { emailPresent: !!email, websitePresent: !!website, competitorsCount: Array.isArray(competitors) ? competitors.length : (competitors ? 1 : 0), keywordsCount: Array.isArray(keywords) ? keywords.length : (keywords ? 1 : 0) });
+    const competitors = normalizeToArray(competitorsRaw);
+    const keywords = normalizeToArray(keywordsRaw);
+
+    console.info("[webhook:onboarding] extracted fields", { emailPresent: !!email, websitePresent: !!website, competitorsCount: competitors.length, keywordsCount: keywords.length });
 
     if (!email || !website) {
       console.warn("[webhook:onboarding] validation failed: missing email or website", { email, website });
@@ -56,8 +79,8 @@ export async function POST(req: Request) {
     const row = {
       email,
       website,
-      competitors: Array.isArray(competitors) ? competitors : [competitors].filter(Boolean),
-      keywords: Array.isArray(keywords) ? keywords : [keywords].filter(Boolean),
+      competitors,
+      keywords,
       payload: body,
     };
 
