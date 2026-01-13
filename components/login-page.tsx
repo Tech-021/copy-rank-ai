@@ -436,7 +436,7 @@ export function LoginPage({
       <div className="w-full lg:w-1/2 flex flex-col">
         {/* Back Button */}
         <div className="pt-2.5 pl-5">
-          <Link href="/">
+          <Link href="https://copyrank.ai">
             <Button className="bg-[#5AFF78] hover:bg-white text-black border border-[#dbdadd] rounded-full hover:text-[#838383] cursor-pointer">
               <ArrowLeft /> Go to Home
             </Button>

@@ -536,7 +536,7 @@ export function SignUpPage({
       <div className="w-full lg:w-1/2 flex flex-col">
         {/* Back Button */}
         <div className="pt-6 pl-6">
-          <Link href="/">
+          <Link href="https://copyrank.ai">
             <Button className="bg-[#5AFF78] hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-full px-5 py-2.5 text-[14px] font-medium hover:text-gray-900 cursor-pointer flex items-center gap-2 transition-colors">
               <ArrowLeft size={16} /> Go to Home
             </Button>
