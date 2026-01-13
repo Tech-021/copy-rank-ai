@@ -138,6 +138,16 @@ export async function POST(request: Request) {
 
     const { clientDomain, competitors, targetKeywords, userId, isQuickAdd } = body;
 
+    // Normalize competitor input to an array early for consistent length checks
+    const competitorList: string[] = Array.isArray(competitors)
+      ? competitors
+      : competitors
+        ? [competitors]
+        : [];
+
+    // Treat fewer than 3 competitors as quick-add mode automatically
+    const quickMode = isQuickAdd || competitorList.length < 3;
+
     // Validation
     if (!clientDomain) {
       return NextResponse.json(
@@ -147,13 +157,9 @@ export async function POST(request: Request) {
     }
 
     // For full onboarding, require exactly 3 competitors
-    // For quick adds, competitors are optional
-    if (!isQuickAdd) {
-      if (
-        !competitors ||
-        !Array.isArray(competitors) ||
-        competitors.length !== 3
-      ) {
+    // For quick adds (explicit or auto when <3 competitors), allow fewer
+    if (!quickMode) {
+      if (competitorList.length !== 3) {
         return NextResponse.json(
           { error: "Exactly 3 competitors are required" },
           { status: 400 }
@@ -179,11 +185,11 @@ export async function POST(request: Request) {
 
     // Normalize competitor URLs (only if provided)
     let normalizedCompetitors: string[] = [];
-    if (competitors && competitors.length > 0) {
-      normalizedCompetitors = competitors
+    if (competitorList && competitorList.length > 0) {
+      normalizedCompetitors = competitorList
         .map((comp) => normalizeUrl(comp))
         .filter(Boolean) as string[];
-      if (!isQuickAdd && normalizedCompetitors.length !== 3) {
+      if (!quickMode && normalizedCompetitors.length !== 3) {
         return NextResponse.json(
           { error: "Failed to normalize one or more competitor URLs" },
           { status: 400 }
@@ -193,7 +199,7 @@ export async function POST(request: Request) {
 
     console.log("🚀 Starting onboarding process...");
     console.log("📋 Client domain (normalized):", normalizedClientDomain);
-    console.log("📋 Quick add mode:", isQuickAdd);
+    console.log("📋 Quick add mode:", quickMode);
     if (normalizedCompetitors.length > 0) {
       console.log("📋 Competitors (normalized):", normalizedCompetitors);
     }
