@@ -594,7 +594,7 @@ export function SignUpPage({
                 create better content on autopilot, and rank higher in AI search
                 results.
               </p>
-              <p className="text-gray-400 text-[16px] mt-3">
+              {/* <p className="text-gray-400 text-[16px] mt-3">
                 Already have an account?{" "}
                 <button
                   type="button"
@@ -603,7 +603,7 @@ export function SignUpPage({
                 >
                   Sign in
                 </button>
-              </p>
+              </p> */}
             </div>
 
             {/* Error */}
