@@ -77,6 +77,67 @@ export default function AuthCallbackPage() {
           const isNewSignup = diffMinutes < 5; // New signup if created within last 5 minutes
           
           if (isNewSignup && email && userId) {
+            // VALIDATE PREDATA BEFORE ALLOWING SIGNUP
+            try {
+              const predataResponse = await fetch(`/api/predata?email=${encodeURIComponent(email)}`);
+              const predataResult = await predataResponse.json();
+              
+              // Check if email exists in predata
+              if (!predataResult.success || !predataResult.rows || predataResult.rows.length === 0) {
+                // Email not found in predata
+                await supabase.auth.signOut(); // Sign out the user
+                toast.showToast({
+                  title: "Submit form first",
+                  description: `Please submit the onboarding form with the email ${email} before signing up.`,
+                  type: "error"
+                });
+                router.replace("/");
+                return;
+              }
+              
+              // Get the most recent predata entry
+              const predata = predataResult.rows[0];
+              
+              // Validate required fields: website, competitors, keywords
+              const hasWebsite = predata.website && predata.website.trim() !== '';
+              const hasCompetitors = Array.isArray(predata.competitors) && predata.competitors.length > 0;
+              const hasKeywords = Array.isArray(predata.keywords) && predata.keywords.length > 0;
+              
+              if (!hasWebsite) {
+                await supabase.auth.signOut();
+                toast.showToast({
+                  title: "Website required",
+                  description: "Please provide your website in the onboarding form before signing up.",
+                  type: "error"
+                });
+                router.replace("/");
+                return;
+              }
+              
+              if (!hasCompetitors && !hasKeywords) {
+                await supabase.auth.signOut();
+                toast.showToast({
+                  title: "Competitors or keywords required",
+                  description: "Please add at least one competitor or keyword in the onboarding form before signing up.",
+                  type: "error"
+                });
+                router.replace("/");
+                return;
+              }
+              
+              // All validations passed - proceed with signup
+            } catch (validationError) {
+              console.error("Predata validation error:", validationError);
+              await supabase.auth.signOut();
+              toast.showToast({
+                title: "Validation error",
+                description: "Please submit the onboarding form before signing up.",
+                type: "error"
+              });
+              router.replace("/");
+              return;
+            }
+            
             // New user - skip paywall and go to checkout
             const checkoutUrl = process.env.NEXT_PUBLIC_LEMONSQUEEZY_CHECKOUT_URL_30 || 'https://copyrank.lemonsqueezy.com/buy/1e25810b-38ba-4de5-a753-c06514cb9e91';
             const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
