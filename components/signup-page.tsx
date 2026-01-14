@@ -506,38 +506,11 @@ export function SignUpPage({
   const toast = useToast();
 
   const handleGoogleSignUp = async () => {
-    // Validate that a pending onboarding submission exists and has required fields
-    try {
-      const pendingRaw = typeof window !== 'undefined' ? localStorage.getItem('pendingOnboarding') : null;
-      if (!pendingRaw) {
-        toast.showToast({ title: 'Submission required', description: 'Please submit the onboarding form first before creating an account.', type: 'info' });
-        return;
-      }
-
-      const pending = JSON.parse(pendingRaw || '{}');
-      const hasWebsite = !!pending.clientDomain;
-      const competitors = Array.isArray(pending.competitors) ? pending.competitors : [];
-      const keywords = Array.isArray(pending.targetKeywords) ? pending.targetKeywords : [];
-
-      if (!hasWebsite) {
-        toast.showToast({ title: 'Website required', description: 'Please provide a website in the onboarding form before signing up.', type: 'info' });
-        return;
-      }
-
-      if ((competitors.length + keywords.length) === 0) {
-        toast.showToast({ title: 'Competitors or keywords required', description: 'Please add at least one competitor or keyword in the onboarding form.', type: 'info' });
-        return;
-      }
-    } catch (e) {
-      // if parsing fails, just prompt to resubmit
-      toast.showToast({ title: 'Submission required', description: 'Please submit the onboarding form before creating an account.', type: 'info' });
-      return;
-    }
-
     setGoogleLoading(true);
     setError("");
     setMessage("");
 
+    // Note: Validation is now done in the auth callback against the predata table
     const { data, error } = await signUpWithGoogle();
     setGoogleLoading(false);
 
@@ -552,9 +525,13 @@ export function SignUpPage({
           type: "error",
         });
       } catch {}
-    } else {
-      setMessage("");
-      if (data?.email) onSignUpSuccess(data.email);
+      return;
+    }
+
+    // OAuth redirects to callback, which will handle predata validation
+    if (data?.session || data?.user) {
+      const email = data.user?.email || data.session?.user?.email || "";
+      if (email) onSignUpSuccess(email);
     }
   };
 
