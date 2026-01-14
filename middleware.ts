@@ -67,7 +67,7 @@ export async function middleware(request: NextRequest) {
     '/auth/reset-password',
     '/iframe',
     '/paywall', // Add paywall to public routes
-    '/dashboard', // Allow dashboard client-side to handle auth (avoid server redirect)
+    // '/dashboard', // Allow dashboard client-side to handle auth (avoid server redirect)
     '/payment/callback', // Payment callback should also be public
     '/payment/fail', // Payment fail page should be public
     '/about-yourself', // Payment fail page should be public
@@ -100,7 +100,7 @@ export async function middleware(request: NextRequest) {
 
   // If user is not authenticated, redirect to login
   if (!user || !user.id) {
-    const loginUrl = new URL('/login', request.url)
+    const loginUrl = new URL('/', request.url)
     // Store the original URL to redirect back after login
     loginUrl.searchParams.set('redirect', path)
     return NextResponse.redirect(loginUrl)
