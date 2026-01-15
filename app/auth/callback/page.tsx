@@ -147,7 +147,32 @@ export default function AuthCallbackPage() {
                 return;
               }
               
-              // All validations passed - proceed with signup
+              // All validations passed - proceed with claiming predata
+              console.log("✅ Validation passed. Claiming predata for processing...");
+              
+              // Claim the predata to trigger onboarding (keyword generation + article creation)
+              try {
+                const claimResponse = await fetch('/api/predata/claim', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    email: email,
+                    userId: userId
+                  })
+                });
+                
+                const claimResult = await claimResponse.json();
+                console.log("Predata claim result:", claimResult);
+                
+                if (!claimResult.success) {
+                  console.warn("Predata claim failed:", claimResult.error);
+                  // Don't fail signup - user can manually add data later
+                }
+              } catch (claimErr) {
+                console.error("Predata claim error:", claimErr);
+                // Don't fail signup - user can manually add data later
+              }
+              
             } catch (validationError) {
               console.error("Predata validation error:", validationError);
               
