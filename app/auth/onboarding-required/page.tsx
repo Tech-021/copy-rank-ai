@@ -156,7 +156,7 @@ export default function OnboardingRequiredPage() {
 
           {/* Actions */}
           <div className="flex flex-col sm:flex-row gap-4">
-            <Link href="/" className="flex-1">
+            <Link href="https://copyrank.ai" className="flex-1">
               <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-6 rounded-lg transition-all shadow-lg hover:shadow-blue-500/25">
                 <ArrowLeft className="mr-2" size={20} />
                 Go to Home & Fill Form
