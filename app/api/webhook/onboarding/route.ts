@@ -29,12 +29,24 @@ export async function POST(req: Request) {
        2️⃣ READ BODY
     ---------------------------------------------------- */
     const rawText = await req.text();
-    const body = rawText ? JSON.parse(rawText) : {};
+
+    // Framer sometimes sends the payload under `_form_data_json` as a string.
+    // Normalize so we always work with a plain object that has `values`.
+    const baseBody = rawText ? JSON.parse(rawText) : {};
+    const formDataJson = baseBody._form_data_json;
+    const parsedFormJson =
+      typeof formDataJson === "string"
+        ? JSON.parse(formDataJson)
+        : typeof formDataJson === "object" && formDataJson !== null
+          ? formDataJson
+          : null;
+
+    const body = parsedFormJson ? { ...parsedFormJson, ...baseBody } : baseBody;
 
     /* ----------------------------------------------------
        3️⃣ NORMALIZE FRAMER PAYLOAD
     ---------------------------------------------------- */
-    const values = body.values || {};
+    const values = body.values || body.data?.values || {};
 
     const email =
       body.email ||
