@@ -72,6 +72,7 @@ export async function middleware(request: NextRequest) {
     '/payment/fail', // Payment fail page should be public
     '/about-yourself', // Payment fail page should be public
     '/articles',
+    '/auth/onboarding-required',
     
     '/fonts',
     '/fav-icon.ico',
