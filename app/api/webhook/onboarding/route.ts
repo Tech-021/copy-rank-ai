@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { createHmac, timingSafeEqual } from "crypto";
 
 const supabaseAdmin =
   process.env.SUPABASE_SERVICE_ROLE_KEY &&
@@ -10,26 +11,71 @@ const supabaseAdmin =
       )
     : null;
 
-export async function POST(req: Request) {
-  /* ----------------------------------------------------
-     1️⃣ AUTH VIA QUERY PARAM (Framer-safe)
-  ---------------------------------------------------- */
-  const { searchParams } = new URL(req.url);
-  const incomingSecret = searchParams.get("secret");
-
-  if (!incomingSecret || incomingSecret !== process.env.WEBHOOK_SECRET) {
-    return NextResponse.json(
-      { success: false, error: "unauthorized" },
-      { status: 401 }
-    );
+function isWebhookSignatureValid(
+  secret: string,
+  submissionId: string,
+  payloadBuffer: Buffer,
+  signature: string
+): boolean {
+  if (signature.length !== 71 || !signature.startsWith("sha256=")) {
+    return false;
   }
 
+  const hmac = createHmac("sha256", secret);
+  hmac.update(payloadBuffer);
+  hmac.update(submissionId);
+
+  const expectedSignature = "sha256=" + hmac.digest("hex");
+  
+  try {
+    return timingSafeEqual(
+      Buffer.from(signature),
+      Buffer.from(expectedSignature)
+    );
+  } catch {
+    return false;
+  }
+}
+
+export async function POST(req: Request) {
   try {
     /* ----------------------------------------------------
-       2️⃣ READ BODY
+       1️⃣ READ BODY FIRST (needed for signature verification)
     ---------------------------------------------------- */
     const rawText = await req.text();
+    const payloadBuffer = Buffer.from(rawText, "utf-8");
 
+    /* ----------------------------------------------------
+       2️⃣ VERIFY FRAMER SIGNATURE (required)
+    ---------------------------------------------------- */
+    const signature = req.headers.get("framer-signature");
+    const submissionId = req.headers.get("framer-webhook-submission-id");
+    const webhookSecret = process.env.WEBHOOK_SECRET;
+
+    if (!webhookSecret) {
+      return NextResponse.json(
+        { success: false, error: "Webhook secret not configured" },
+        { status: 500 }
+      );
+    }
+
+    if (!signature || !submissionId) {
+      return NextResponse.json(
+        { success: false, error: "Missing Framer signature headers" },
+        { status: 401 }
+      );
+    }
+
+    if (!isWebhookSignatureValid(webhookSecret, submissionId, payloadBuffer, signature)) {
+      return NextResponse.json(
+        { success: false, error: "Invalid webhook signature" },
+        { status: 401 }
+      );
+    }
+
+    /* ----------------------------------------------------
+       3️⃣ PARSE PAYLOAD
+    ---------------------------------------------------- */
     // Framer sometimes sends the payload under `_form_data_json` as a string.
     // Normalize so we always work with a plain object that has `values`.
     const baseBody = rawText ? JSON.parse(rawText) : {};
@@ -44,7 +90,7 @@ export async function POST(req: Request) {
     const body = parsedFormJson ? { ...parsedFormJson, ...baseBody } : baseBody;
 
     /* ----------------------------------------------------
-       3️⃣ NORMALIZE FRAMER PAYLOAD
+       4️⃣ NORMALIZE FRAMER PAYLOAD
     ---------------------------------------------------- */
     const values = body.values || body.data?.values || {};
 
@@ -78,7 +124,7 @@ export async function POST(req: Request) {
     );
 
     /* ----------------------------------------------------
-       4️⃣ VALIDATION
+       5️⃣ VALIDATION
     ---------------------------------------------------- */
     if (!email || !website) {
       return NextResponse.json(
@@ -88,7 +134,7 @@ export async function POST(req: Request) {
     }
 
     /* ----------------------------------------------------
-       5️⃣ PREPARE DB ROW
+       6️⃣ PREPARE DB ROW
     ---------------------------------------------------- */
     const row = {
       email,
@@ -99,7 +145,7 @@ export async function POST(req: Request) {
     };
 
     /* ----------------------------------------------------
-       6️⃣ INSERT INTO SUPABASE
+       7️⃣ INSERT INTO SUPABASE
     ---------------------------------------------------- */
     if (!supabaseAdmin) {
       return NextResponse.json(
@@ -122,7 +168,7 @@ export async function POST(req: Request) {
     }
 
     /* ----------------------------------------------------
-       7️⃣ SUCCESS RESPONSE
+       8️⃣ SUCCESS RESPONSE
     ---------------------------------------------------- */
     return NextResponse.json(
       { success: true, data },
