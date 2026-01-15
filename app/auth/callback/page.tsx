@@ -84,14 +84,22 @@ export default function AuthCallbackPage() {
               
               // Check if email exists in predata
               if (!predataResult.success || !predataResult.rows || predataResult.rows.length === 0) {
-                // Email not found in predata
-                await supabase.auth.signOut(); // Sign out the user
-                toast.showToast({
-                  title: "Submit form first",
-                  description: `Please submit the onboarding form with the email ${email} before signing up.`,
-                  type: "error"
-                });
-                router.replace("/");
+                // Email not found in predata - DELETE USER AND SIGN OUT
+                console.log("Validation failed: Email not in predata. Deleting user:", userId);
+                
+                // Delete the user account via admin API
+                try {
+                  await fetch('/api/admin/delete-user', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId })
+                  });
+                } catch (deleteErr) {
+                  console.error("Failed to delete user:", deleteErr);
+                }
+                
+                await supabase.auth.signOut();
+                router.replace(`/auth/onboarding-required?error=no_email&email=${encodeURIComponent(email)}`);
                 return;
               }
               
@@ -104,37 +112,57 @@ export default function AuthCallbackPage() {
               const hasKeywords = Array.isArray(predata.keywords) && predata.keywords.length > 0;
               
               if (!hasWebsite) {
+                console.log("Validation failed: No website. Deleting user:", userId);
+                
+                try {
+                  await fetch('/api/admin/delete-user', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId })
+                  });
+                } catch (deleteErr) {
+                  console.error("Failed to delete user:", deleteErr);
+                }
+                
                 await supabase.auth.signOut();
-                toast.showToast({
-                  title: "Website required",
-                  description: "Please provide your website in the onboarding form before signing up.",
-                  type: "error"
-                });
-                router.replace("/");
+                router.replace(`/auth/onboarding-required?error=no_website&email=${encodeURIComponent(email)}`);
                 return;
               }
               
               if (!hasCompetitors && !hasKeywords) {
+                console.log("Validation failed: No competitors/keywords. Deleting user:", userId);
+                
+                try {
+                  await fetch('/api/admin/delete-user', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId })
+                  });
+                } catch (deleteErr) {
+                  console.error("Failed to delete user:", deleteErr);
+                }
+                
                 await supabase.auth.signOut();
-                toast.showToast({
-                  title: "Competitors or keywords required",
-                  description: "Please add at least one competitor or keyword in the onboarding form before signing up.",
-                  type: "error"
-                });
-                router.replace("/");
+                router.replace(`/auth/onboarding-required?error=no_data&email=${encodeURIComponent(email)}`);
                 return;
               }
               
               // All validations passed - proceed with signup
             } catch (validationError) {
               console.error("Predata validation error:", validationError);
+              
+              try {
+                await fetch('/api/admin/delete-user', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ userId })
+                });
+              } catch (deleteErr) {
+                console.error("Failed to delete user:", deleteErr);
+              }
+              
               await supabase.auth.signOut();
-              toast.showToast({
-                title: "Validation error",
-                description: "Please submit the onboarding form before signing up.",
-                type: "error"
-              });
-              router.replace("/");
+              router.replace(`/auth/onboarding-required?error=general&email=${encodeURIComponent(email)}`);
               return;
             }
             
