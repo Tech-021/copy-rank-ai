@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { AlertCircle, ArrowLeft } from "lucide-react"
 import Link from "next/link"
+import Image from "next/image"
 
 export default function OnboardingRequiredPage() {
   const searchParams = useSearchParams()
@@ -50,14 +51,16 @@ export default function OnboardingRequiredPage() {
   const errorInfo = getErrorMessage()
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 px-4">
-      <div className="max-w-2xl w-full">
+    <div className="min-h-screen bg-black">
+      
+
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
         {/* Card */}
-        <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-8 md:p-12 shadow-2xl">
+        <div className="bg-[#07120b]/80 backdrop-blur-sm border border-[#06321b]/40 rounded-2xl p-8 md:p-12 shadow-2xl">
           {/* Icon */}
           <div className="flex justify-center mb-6">
-            <div className="w-20 h-20 rounded-full bg-yellow-500/10 border-2 border-yellow-500/30 flex items-center justify-center">
-              <AlertCircle className="w-10 h-10 text-yellow-500" />
+            <div className="w-20 h-20 rounded-full bg-[#0CE06B]/10 flex items-center justify-center mb-2 border border-[#0CE06B]/20">
+              <AlertCircle className="w-10 h-10 text-[#0CE06B]" />
             </div>
           </div>
 
@@ -67,45 +70,33 @@ export default function OnboardingRequiredPage() {
           </h1>
 
           {/* Description */}
-          <p className="text-xl text-slate-300 text-center mb-6">
+          <p className="text-lg text-slate-300 text-center mb-6">
             {errorInfo.description}
           </p>
 
           {/* Detail */}
-          <div className="bg-slate-900/50 border border-slate-700/50 rounded-lg p-6 mb-8">
-            <p className="text-slate-400 text-center leading-relaxed">
+          <div className="bg-black/40 border border-[#083015]/30 rounded-lg p-6 mb-8">
+            <p className="text-slate-300 text-center leading-relaxed">
               {errorInfo.detail}
             </p>
           </div>
 
           {/* Email display if available */}
           {email && errorType === "no_email" && (
-            <div className="bg-red-500/10 border-2 border-red-500/50 rounded-lg p-6 mb-8">
-              <p className="text-red-300 font-bold text-center text-lg mb-3">
-                ⚠️ Email Mismatch
-              </p>
-              <div className="bg-red-900/30 rounded-lg p-4 mb-3">
-                <p className="text-red-200 text-sm text-center">
-                  <span className="font-semibold">You tried to sign up with:</span>
-                </p>
-                <p className="text-white font-mono text-center text-base mt-1">
-                  {email}
-                </p>
+            <div className="bg-[#3a1a12]/40 border-2 border-[#7a2b1f]/30 rounded-lg p-6 mb-8">
+              <p className="text-red-300 font-bold text-center text-lg mb-3">⚠️ Email Mismatch</p>
+              <div className="bg-[#2a0f0b]/40 rounded-lg p-4 mb-3">
+                <p className="text-red-200 text-sm text-center"><span className="font-semibold">You tried to sign up with:</span></p>
+                <p className="text-white font-mono text-center text-base mt-1">{email}</p>
               </div>
-              <p className="text-red-300 text-sm text-center leading-relaxed">
-                This email is <span className="font-bold">NOT</span> in our onboarding database. You must fill out the onboarding form using <span className="font-bold underline">this exact email address</span> before you can sign up.
-              </p>
+              <p className="text-red-300 text-sm text-center leading-relaxed">This email is <span className="font-bold">NOT</span> in our onboarding database. Fill out the onboarding form using <span className="font-bold underline">this exact email</span>.</p>
             </div>
           )}
-          
+
           {email && errorType !== "no_email" && (
-            <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 mb-8">
-              <p className="text-blue-300 text-sm text-center">
-                <span className="font-semibold">Your email:</span> {email}
-              </p>
-              <p className="text-blue-400 text-xs text-center mt-2">
-                Make sure to use this email when filling out the onboarding form
-              </p>
+            <div className="bg-[#06180f]/50 border border-[#0b3f2a]/30 rounded-lg p-4 mb-8">
+              <p className="text-[#9befb8] text-sm text-center"><span className="font-semibold">Your email:</span> {email}</p>
+              <p className="text-slate-400 text-xs text-center mt-2">Make sure to use this email when filling out the onboarding form</p>
             </div>
           )}
 
@@ -157,20 +148,15 @@ export default function OnboardingRequiredPage() {
           {/* Actions */}
           <div className="flex flex-col sm:flex-row gap-4">
             <Link href="https://copyrank.ai" className="flex-1">
-              <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-6 rounded-lg transition-all shadow-lg hover:shadow-blue-500/25">
-                <ArrowLeft className="mr-2" size={20} />
+              <Button className="w-full bg-[#0CE06B] hover:bg-[#07c85a] text-black gap-2 rounded-full py-4 shadow-[0_6px_18px_rgba(12,224,107,0.12)]">
+                <ArrowLeft className="mr-2" size={18} />
                 Go to Home & Fill Form
               </Button>
             </Link>
           </div>
 
           {/* Help text */}
-          <p className="text-slate-500 text-xs text-center mt-6">
-            Need help? Contact us at{" "}
-            <a href="mailto:support@copyrank.ai" className="text-blue-400 hover:text-blue-300 underline">
-              support@copyrank.ai
-            </a>
-          </p>
+          <p className="text-slate-400 text-xs text-center mt-6">Need help? Contact us at <a href="mailto:support@copyrank.ai" className="text-[#9befb8] hover:text-[#83e8a6] underline">support@copyrank.ai</a></p>
         </div>
       </div>
     </div>

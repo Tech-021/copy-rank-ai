@@ -1,7 +1,85 @@
 // ...existing code...
 import { NextResponse } from "next/server";
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
+import { createClient } from "@supabase/supabase-js";
+
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 export async function POST(req: Request) {
+  // Check authentication using JWT token from Authorization header
+  const authHeader = req.headers.get('authorization');
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return NextResponse.json(
+      { error: "Authentication required" },
+      { status: 401 }
+    );
+  }
+
+  const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      global: {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    }
+  );
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user || !user.id) {
+    return NextResponse.json(
+      { error: "Authentication required" },
+      { status: 401 }
+    );
+  }
+
+  // Check if user needs onboarding
+  const { data: predata } = await supabaseAdmin
+    .from('pre_data')
+    .select('*')
+    .eq('email', user.email)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const needsOnboarding = !predata || (() => {
+    const hasWebsite = predata.website && predata.website.trim() !== '';
+    const hasCompetitors = Array.isArray(predata.competitors) && predata.competitors.length > 0;
+    const hasKeywords = Array.isArray(predata.keywords) && predata.keywords.length > 0;
+    return !hasWebsite || (!hasCompetitors && !hasKeywords);
+  })();
+
+  if (needsOnboarding) {
+    return NextResponse.json(
+      { error: "Onboarding required" },
+      { status: 403 }
+    );
+  }
+
+  // Check subscription status
+  const { data: userData } = await supabaseAdmin
+    .from('users')
+    .select('subscribe')
+    .eq('id', user.id)
+    .single();
+
+  if (!userData?.subscribe) {
+    return NextResponse.json(
+      { error: "Subscription required" },
+      { status: 403 }
+    );
+  }
   try {
     const body = await req.json();
     console.log("DEBUG: /api/image-generation incoming body:", JSON.stringify(body).slice(0, 1000));
