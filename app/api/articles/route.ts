@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-const supabase = createClient(
+const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
@@ -67,17 +67,107 @@ async function pingIndexNow(urlList: string[], siteUrl: string) {
 
 export async function GET(request: Request) {
   try {
+    console.log('Articles API: Starting request');
+
+    // Check authentication using JWT token from Authorization header
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.log('Articles API: No authorization header');
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+
+    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        global: {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      }
+    );
+
+    const {
+      data: { user },
+      error: authError
+    } = await supabase.auth.getUser();
+
+    console.log('Articles API: Auth check - user:', user?.id, 'error:', authError);
+
+    if (!user || !user.id) {
+      console.log('Articles API: Authentication failed');
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+
+    // Check if user needs onboarding
+    console.log('Articles API: Checking pre_data for email:', user.email);
+    const { data: predata, error: predataError } = await supabaseAdmin
+      .from('pre_data')
+      .select('*')
+      .eq('email', user.email)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    console.log('Articles API: predata result:', predata, 'error:', predataError);
+
+    const needsOnboarding = !predata || (() => {
+      const hasWebsite = predata.website && predata.website.trim() !== '';
+      const hasCompetitors = Array.isArray(predata.competitors) && predata.competitors.length > 0;
+      const hasKeywords = Array.isArray(predata.keywords) && predata.keywords.length > 0;
+      console.log('Articles API: hasWebsite:', hasWebsite, 'hasCompetitors:', hasCompetitors, 'hasKeywords:', hasKeywords);
+      return !hasWebsite || (!hasCompetitors && !hasKeywords);
+    })();
+
+    console.log('Articles API: needsOnboarding:', needsOnboarding);
+
+    if (needsOnboarding) {
+      console.log('Articles API: Onboarding required - rejecting request');
+      return NextResponse.json(
+        { error: "Onboarding required" },
+        { status: 403 }
+      );
+    }
+
+    // Check subscription status
+    console.log('Articles API: Checking subscription for user:', user.id);
+    const { data: userData, error: subError } = await supabaseAdmin
+      .from('users')
+      .select('subscribe')
+      .eq('id', user.id)
+      .single();
+
+    console.log('Articles API: subscription result:', userData, 'error:', subError);
+
+    if (!userData?.subscribe) {
+      console.log('Articles API: Subscription required - rejecting request');
+      return NextResponse.json(
+        { error: "Subscription required" },
+        { status: 403 }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const websiteId = searchParams.get("websiteId");
     const userId = searchParams.get("userId");
 
-    console.log("API Request - userId:", userId, "websiteId:", websiteId);
+    console.log("API Request - requested userId:", userId, "authenticated userId:", user.id);
 
-    if (!userId) {
-      console.log("No userId provided");
+    // Verify that the requested userId matches the authenticated user
+    if (!userId || userId !== user.id) {
+      console.log('Articles API: User ID mismatch - rejecting request');
       return NextResponse.json(
-        { error: "User ID is required" },
-        { status: 400 }
+        { error: "Unauthorized access" },
+        { status: 403 }
       );
     }
 

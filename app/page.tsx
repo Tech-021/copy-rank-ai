@@ -43,32 +43,37 @@ export default function Home() {
           console.log("Avatar:", avatar)
           console.log("User metadata:", user.user_metadata)
           console.log("Identities:", user.identities)
-          
-          // Check subscription status
-          const { data: userData, error: dbError } = await supabase
-            .from('users')
-            .select('subscribe')
-            .eq('id', user.id)
-            .single()
 
-          if (dbError) {
-            console.error('Error checking subscription:', dbError)
-            // If error checking subscription, redirect to paywall to be safe
+          // FIRST: Check if user needs onboarding (pre_data check)
+          const { data: predataResult } = await supabase
+            .from('pre_data')
+            .select('*')
+            .eq('email', user.email)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+
+          // Determine if user needs onboarding
+          const needsOnboarding = !predataResult || (() => {
+            const predata = predataResult
+            const hasWebsite = predata.website && predata.website.trim() !== ''
+            const hasCompetitors = Array.isArray(predata.competitors) && predata.competitors.length > 0
+            const hasKeywords = Array.isArray(predata.keywords) && predata.keywords.length > 0
+            return !hasWebsite || (!hasCompetitors && !hasKeywords)
+          })()
+
+          if (needsOnboarding) {
+            console.log('User needs onboarding, redirecting to onboarding-required')
             if (mounted) {
-              router.push('/paywall')
+              router.push('/auth/onboarding-required')
             }
             return
           }
 
-          // Check if user is subscribed
+          // Allow access to dashboard regardless of subscription status
+          // Subscription checks will be handled within the app for specific features
           if (mounted) {
-            if (userData?.subscribe === true) {
-              // User is subscribed, show dashboard
-              setAuthState("dashboard")
-            } else {
-              // User is not subscribed, redirect to paywall
-              router.push('/paywall')
-            }
+            setAuthState("dashboard")
           }
         } else {
           // No user logged in, default to signup page

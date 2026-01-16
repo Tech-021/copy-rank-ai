@@ -84,21 +84,10 @@ export default function AuthCallbackPage() {
               
               // Check if email exists in predata
               if (!predataResult.success || !predataResult.rows || predataResult.rows.length === 0) {
-                // Email not found in predata - DELETE USER AND SIGN OUT
-                console.log("Validation failed: Email not in predata. Deleting user:", userId);
-                
-                // Delete the user account via admin API
-                try {
-                  await fetch('/api/admin/delete-user', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ userId })
-                  });
-                } catch (deleteErr) {
-                  console.error("Failed to delete user:", deleteErr);
-                }
-                
-                await supabase.auth.signOut();
+                // Email not found in predata - redirect to onboarding page
+                console.log("Validation failed: Email not in predata. Redirecting to onboarding:", userId);
+
+                // Keep user signed in but redirect to onboarding page
                 router.replace(`/auth/onboarding-required?error=no_email&email=${encodeURIComponent(email)}`);
                 return;
               }
@@ -112,44 +101,24 @@ export default function AuthCallbackPage() {
               const hasKeywords = Array.isArray(predata.keywords) && predata.keywords.length > 0;
               
               if (!hasWebsite) {
-                console.log("Validation failed: No website. Deleting user:", userId);
-                
-                try {
-                  await fetch('/api/admin/delete-user', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ userId })
-                  });
-                } catch (deleteErr) {
-                  console.error("Failed to delete user:", deleteErr);
-                }
-                
-                await supabase.auth.signOut();
+                console.log("Validation failed: No website. Redirecting to onboarding:", userId);
+
+                // Keep user signed in but redirect to onboarding page
                 router.replace(`/auth/onboarding-required?error=no_website&email=${encodeURIComponent(email)}`);
                 return;
               }
               
               if (!hasCompetitors && !hasKeywords) {
-                console.log("Validation failed: No competitors/keywords. Deleting user:", userId);
-                
-                try {
-                  await fetch('/api/admin/delete-user', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ userId })
-                  });
-                } catch (deleteErr) {
-                  console.error("Failed to delete user:", deleteErr);
-                }
-                
-                await supabase.auth.signOut();
+                console.log("Validation failed: No competitors/keywords. Redirecting to onboarding:", userId);
+
+                // Keep user signed in but redirect to onboarding page
                 router.replace(`/auth/onboarding-required?error=no_data&email=${encodeURIComponent(email)}`);
                 return;
               }
               
               // All validations passed - proceed with claiming predata
               console.log("✅ Validation passed. Claiming predata for processing...");
-              
+
               // Claim the predata to trigger onboarding (keyword generation + article creation)
               try {
                 const claimResponse = await fetch('/api/predata/claim', {
@@ -160,10 +129,10 @@ export default function AuthCallbackPage() {
                     userId: userId
                   })
                 });
-                
+
                 const claimResult = await claimResponse.json();
                 console.log("Predata claim result:", claimResult);
-                
+
                 if (!claimResult.success) {
                   console.warn("Predata claim failed:", claimResult.error);
                   // Don't fail signup - user can manually add data later
@@ -175,18 +144,8 @@ export default function AuthCallbackPage() {
               
             } catch (validationError) {
               console.error("Predata validation error:", validationError);
-              
-              try {
-                await fetch('/api/admin/delete-user', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ userId })
-                });
-              } catch (deleteErr) {
-                console.error("Failed to delete user:", deleteErr);
-              }
-              
-              await supabase.auth.signOut();
+
+              // Keep user signed in but redirect to onboarding page
               router.replace(`/auth/onboarding-required?error=general&email=${encodeURIComponent(email)}`);
               return;
             }

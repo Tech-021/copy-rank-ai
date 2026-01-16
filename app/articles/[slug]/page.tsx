@@ -1,6 +1,7 @@
 import React from "react";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { supabase } from "@/lib/client";
+import { getUser } from "@/lib/auth";
 
 interface Article {
   id: string;
@@ -128,6 +129,45 @@ export default async function ArticlePage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
+
+  // Check authentication
+  const { data: user } = await getUser();
+  if (!user?.id) {
+    redirect('/login');
+  }
+
+  // Check if user needs onboarding
+  const supabaseAdmin = supabase; // Using same client for now, should use admin client
+  const { data: predata } = await supabaseAdmin
+    .from('pre_data')
+    .select('*')
+    .eq('email', user.email)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const needsOnboarding = !predata || (() => {
+    const hasWebsite = predata.website && predata.website.trim() !== '';
+    const hasCompetitors = Array.isArray(predata.competitors) && predata.competitors.length > 0;
+    const hasKeywords = Array.isArray(predata.keywords) && predata.keywords.length > 0;
+    return !hasWebsite || (!hasCompetitors && !hasKeywords);
+  })();
+
+  if (needsOnboarding) {
+    redirect('/auth/onboarding-required');
+  }
+
+  // Check subscription status
+  const { data: userData } = await supabaseAdmin
+    .from('users')
+    .select('subscribe')
+    .eq('id', user.id)
+    .single();
+
+  if (!userData?.subscribe) {
+    redirect('/paywall');
+  }
+
   const article = await getArticle(slug);
 
   if (!article) {

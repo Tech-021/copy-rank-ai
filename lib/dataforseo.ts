@@ -291,6 +291,13 @@ function parseApiResponse(data: any, endpointName: string): any[] {
 }
 
 function transformItems(items: any[], topic: string): KeywordData[] {
+  const topicLower = topic.toLowerCase();
+  const topicWords = topicLower
+    .split(/\s+/)
+    .filter((w) => w.length > 2); // Keywords longer than 2 chars
+
+  console.log(`🔍 Relevance filter: topic="${topic}", words=[${topicWords.join(", ")}]`);
+
   return items
     .map((item) => {
       if (typeof item === 'string') {
@@ -329,10 +336,33 @@ function transformItems(items: any[], topic: string): KeywordData[] {
         high_top_vol: item.high_top_vol,
       };
     })
-    .filter(
-      (kw) =>
-        kw.search_volume > 0 && kw.keyword.toLowerCase() !== topic.toLowerCase()
-    );
+    .filter((kw) => {
+      const kwLower = kw.keyword.toLowerCase();
+
+      // Remove the topic itself
+      if (kwLower === topicLower) {
+        return false;
+      }
+
+      // Remove keywords with zero or very low search volume
+      if (kw.search_volume <= 0) {
+        return false;
+      }
+
+      // RELEVANCE CHECK: At least one topic word must appear in the keyword
+      // This prevents completely random keywords like "surgical technician" for "digital marketing"
+      const hasRelevantWord = topicWords.some((word) => kwLower.includes(word));
+
+      if (!hasRelevantWord) {
+        console.log(
+          `   ⚠️  Filtered out irrelevant: "${kw.keyword}" (no match for "${topic}" words)`
+        );
+        return false;
+      }
+
+      console.log(`   ✅ Kept relevant keyword: "${kw.keyword}"`);
+      return true;
+    });
 }
 
 export function filterKeywords(
