@@ -2,7 +2,8 @@ import axios from "axios";
 import type { ScrapeResult } from "./types";
 
 export interface NicheAnalysis {
-  niche: string;
+  word: string; // Broad category like "technology", "clothing", "fitness"
+  intentPhrase: string; // Specific intent like "men denim jeans", "AI chatbot tools"
   confidence?: number | null;
   raw?: any;
 }
@@ -25,21 +26,17 @@ export async function analyzeWithQwen(
   const mainText = (scrape.mainText || "").slice(0, 4000);
   const schemaSnippet = JSON.stringify(scrape.schemaData || []).slice(0, 1000);
 
-  // CORRECTED PROMPT - Always DataForSEO compatible
-  const prompt = `Classify this website into EXACTLY ONE category from this list:
-"technology", "marketing", "business", "health", "fitness", "education", "finance", "web development", "software", "programming", "digital marketing", "ecommerce", "lifestyle", "travel", "cooking", "gaming"
+  // Updated prompt to extract both broad category and specific intent phrase
+  const prompt = `Analyze this website and return TWO things:
+1. A broad category (word) - ONE word from this list: "technology", "marketing", "business", "health", "fitness", "education", "finance", "web-development", "software", "programming", "digital-marketing", "ecommerce", "lifestyle", "travel", "cooking", "gaming", "clothing", "fashion", "automotive", "real-estate"
 
-RULES:
-- Developers/Programmers/Engineers → "web development"
-- Designers → "technology"
-- Marketers/Agencies → "digital marketing"
-- Business/Startups/Entrepreneurs → "business"
-- Health/Fitness/Nutrition → "health" or "fitness"
-- Education/Teachers/Courses → "education"
-- Food/Recipes/Restaurants → "cooking"
-- Travel/Bloggers → "travel"
-- Games/Gaming → "gaming"
-- Everything else → "technology"
+2. A specific intent phrase (2-4 words) that captures what users would search for related to this site's main offering or content focus.
+
+EXAMPLES:
+- E-commerce men's jeans → word: "clothing", intentPhrase: "men denim jeans"
+- AI chatbot platform → word: "technology", intentPhrase: "AI chatbot tools"
+- Fitness coaching → word: "fitness", intentPhrase: "personal training program"
+- Digital marketing agency → word: "marketing", intentPhrase: "digital marketing services"
 
 CONTENT:
 Title: ${scrape.title || ""}
@@ -47,7 +44,7 @@ Meta: ${scrape.metaDescription || ""}
 Headings: ${scrape.headings || ""}
 MainText: ${mainText}
 
-Return JSON: { "niche": "exact category from list", "confidence": 0.9 }`;
+Return JSON: { "word": "category from list", "intentPhrase": "specific 2-4 word phrase", "confidence": 0.9 }`;
 
   // CORRECTED SYSTEM PROMPT - More strict
   const messages = [
@@ -70,7 +67,7 @@ NEVER use any other categories. Always return valid JSON.`,
   };
 
   try {
-    console.log("🔍 Analyzing niche with strict DataForSEO categories...");
+    console.log("🔍 Analyzing niche with word + intent phrase...");
     const resp = await axios.post(apiUrl, payload, {
       headers: {
         Authorization: `Bearer ${apiKey}`,
@@ -88,28 +85,38 @@ NEVER use any other categories. Always return valid JSON.`,
         null) as string | null;
     }
 
-    let niche = "technology"; // Default to technology (always works with DataForSEO)
+    let word = "technology"; // Default broad category
+    let intentPhrase = "technology solutions"; // Default intent phrase
     let confidence: number | null = 0.9;
 
     if (rawText) {
       try {
         const parsed = JSON.parse(rawText);
-        const extractedNiche = parsed.niche?.toLowerCase().trim();
+        const extractedWord = parsed.word?.toLowerCase().trim();
+        const extractedIntent = parsed.intentPhrase?.toLowerCase().trim();
         
-        // VALIDATE the niche is from our approved list
-        const validNiches = [
+        // VALIDATE the word is from our approved list
+        const validWords = [
           "technology", "marketing", "business", "health", "fitness", 
-          "education", "finance", "web development", "software", 
-          "programming", "digital marketing", "ecommerce", "lifestyle", 
-          "travel", "cooking", "gaming"
+          "education", "finance", "web-development", "software", 
+          "programming", "digital-marketing", "ecommerce", "lifestyle", 
+          "travel", "cooking", "gaming", "clothing", "fashion", "automotive", "real-estate"
         ];
         
-        if (extractedNiche && validNiches.includes(extractedNiche)) {
-          niche = extractedNiche;
-          console.log(`✅ Valid niche: ${niche}`);
+        if (extractedWord && validWords.includes(extractedWord)) {
+          word = extractedWord;
+          console.log(`✅ Valid word: ${word}`);
         } else {
-          console.log(`⚠️ Invalid niche "${extractedNiche}", defaulting to "technology"`);
-          niche = "technology";
+          console.log(`⚠️ Invalid word "${extractedWord}", defaulting to "technology"`);
+          word = "technology";
+        }
+        
+        if (extractedIntent && extractedIntent.length > 0) {
+          intentPhrase = extractedIntent;
+          console.log(`✅ Intent phrase: ${intentPhrase}`);
+        } else {
+          console.log(`⚠️ No intent phrase, using default`);
+          intentPhrase = `${word} solutions`;
         }
         
         confidence =
@@ -117,17 +124,14 @@ NEVER use any other categories. Always return valid JSON.`,
             ? parsed.confidence
             : confidence;
       } catch {
-        console.log(`❌ Failed to parse response, defaulting to "technology"`);
-        niche = "technology";
+        console.log(`❌ Failed to parse response, using defaults`);
+        word = "technology";
+        intentPhrase = "technology solutions";
       }
-    } else if (body?.niche) {
-      niche = String(body.niche);
-      confidence =
-        typeof body.confidence === "number" ? body.confidence : confidence;
     }
 
-    console.log(`🎯 Final niche for DataForSEO: "${niche}"`);
-    return { niche, confidence, raw: body };
+    console.log(`🎯 Final analysis - Word: "${word}", Intent: "${intentPhrase}"`);
+    return { word, intentPhrase, confidence, raw: body };
   } catch (err) {
     const anyErr = err as any;
     if (anyErr?.response) {
