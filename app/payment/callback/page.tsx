@@ -54,15 +54,41 @@ export default function PaymentCallbackPage() {
           try {
             const email = (user.email || "").trim().toLowerCase();
             if (email) {
+              // Get JWT token for authenticated API calls
+              const { data: { session } } = await supabase.auth.getSession();
+              const token = session?.access_token;
+
+              if (!token) {
+                console.error("No auth token available for API calls");
+                return;
+              }
+
               await fetch("/api/predata/claim", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: {
+                  "Content-Type": "application/json",
+                  'Authorization': `Bearer ${token}`,
+                },
                 body: JSON.stringify({ email, userId: user.id }),
               }).catch(e => console.error("Claim pre_data failed:", e));
             }
 
             // Trigger immediate processing and show a toast so the user sees background work started
-            fetch("/api/article-jobs/trigger", { method: "POST" })
+            // Get JWT token for authenticated API call
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+
+            if (!token) {
+              console.error("No auth token available for article-jobs/trigger");
+              return;
+            }
+
+            fetch("/api/article-jobs/trigger", {
+              method: "POST",
+              headers: {
+                'Authorization': `Bearer ${token}`,
+              },
+            })
               .then(async (res) => {
                 if (res.ok) {
                   toast.showToast({
