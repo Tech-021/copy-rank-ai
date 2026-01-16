@@ -256,8 +256,8 @@ export async function POST(request: Request) {
       const clientScrape = await hybridScraper(normalizedClientDomain);
       if (clientScrape) {
         const clientAnalysis = await analyzeWithQwen(clientScrape);
-        clientTopic = clientAnalysis.niche || "General";
-        console.log(`✅ Client topic detected: ${clientTopic}`);
+        clientTopic = `${clientAnalysis.word} - ${clientAnalysis.intentPhrase}` || "General";
+        console.log(`✅ Client analysis - Word: ${clientAnalysis.word}, Intent: ${clientAnalysis.intentPhrase}`);
       } else {
         console.warn("⚠️ Failed to scrape client domain, using default topic");
       }
@@ -294,12 +294,12 @@ export async function POST(request: Request) {
 
           // 2b. Find topic for competitor
           const competitorAnalysis = await analyzeWithQwen(competitorScrape);
-          const competitorTopic = competitorAnalysis.niche || "General";
-          console.log(`✅ Competitor ${i + 1} topic: ${competitorTopic}`);
+          const competitorTopic = `${competitorAnalysis.word} - ${competitorAnalysis.intentPhrase}`;
+          console.log(`✅ Competitor ${i + 1} - Word: ${competitorAnalysis.word}, Intent: ${competitorAnalysis.intentPhrase}`);
 
-          // 2c. Fetch keywords for competitor topic
-          console.log(`🔍 Fetching keywords for topic: ${competitorTopic}`);
-          const rawKeywords = await fetchKeywordsFromDataForSEO(competitorTopic);
+          // 2c. Fetch keywords using the intent phrase (more specific)
+          console.log(`🔍 Fetching keywords for intent phrase: ${competitorAnalysis.intentPhrase}`);
+          const rawKeywords = await fetchKeywordsFromDataForSEO(competitorAnalysis.intentPhrase);
           console.log(`   📊 Raw keywords found: ${rawKeywords.length}`);
 
           // Apply filters: 100-10000 volume, competition ≤0.3
