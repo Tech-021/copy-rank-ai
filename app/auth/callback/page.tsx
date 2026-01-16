@@ -121,9 +121,21 @@ export default function AuthCallbackPage() {
 
               // Claim the predata to trigger onboarding (keyword generation + article creation)
               try {
+                // Get JWT token for authenticated API calls
+                const { data: { session } } = await supabase.auth.getSession();
+                const token = session?.access_token;
+
+                if (!token) {
+                  console.error("❌ No auth token available for predata/claim API call");
+                  throw new Error("No authentication token available");
+                }
+
                 const claimResponse = await fetch('/api/predata/claim', {
                   method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
+                  headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                  },
                   body: JSON.stringify({
                     email: email,
                     userId: userId
