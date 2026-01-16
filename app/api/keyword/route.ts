@@ -26,11 +26,19 @@ async function fetchCompetitors(domain: string, limit: number = 10) {
   try {
     console.log(`🔍 [COMPETITOR] Fetching competitors for domain: ${domain}`);
     
+    // Get the authentication token from the request
+    const authHeader = request.headers.get('authorization');
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+
+    if (authHeader) {
+      headers['Authorization'] = authHeader;
+    }
+
     const response = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/competitors`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify({
         domain: domain,
         engine: "google",
