@@ -43,8 +43,34 @@ export default function Home() {
           console.log("Avatar:", avatar)
           console.log("User metadata:", user.user_metadata)
           console.log("Identities:", user.identities)
-          
-          // Check subscription status
+
+          // FIRST: Check if user needs onboarding (pre_data check)
+          const { data: predataResult } = await supabase
+            .from('pre_data')
+            .select('*')
+            .eq('email', user.email)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+
+          // Determine if user needs onboarding
+          const needsOnboarding = !predataResult || (() => {
+            const predata = predataResult
+            const hasWebsite = predata.website && predata.website.trim() !== ''
+            const hasCompetitors = Array.isArray(predata.competitors) && predata.competitors.length > 0
+            const hasKeywords = Array.isArray(predata.keywords) && predata.keywords.length > 0
+            return !hasWebsite || (!hasCompetitors && !hasKeywords)
+          })()
+
+          if (needsOnboarding) {
+            console.log('User needs onboarding, redirecting to onboarding-required')
+            if (mounted) {
+              router.push('/auth/onboarding-required')
+            }
+            return
+          }
+
+          // SECOND: Check subscription status (only if user doesn't need onboarding)
           const { data: userData, error: dbError } = await supabase
             .from('users')
             .select('subscribe')
