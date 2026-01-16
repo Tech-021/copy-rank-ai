@@ -300,6 +300,7 @@ export async function POST(request: Request) {
           // 2c. Fetch keywords for competitor topic
           console.log(`🔍 Fetching keywords for topic: ${competitorTopic}`);
           const rawKeywords = await fetchKeywordsFromDataForSEO(competitorTopic);
+          console.log(`   📊 Raw keywords found: ${rawKeywords.length}`);
 
           // Apply filters: 100-10000 volume, competition ≤0.3
           const filteredKeywords = filterKeywords(
@@ -311,8 +312,14 @@ export async function POST(request: Request) {
           );
 
           console.log(
-            `✅ Found ${filteredKeywords.length} keywords for competitor ${i + 1}`
+            `✅ Found ${filteredKeywords.length} keywords for competitor ${i + 1} (after filtering)`
           );
+          
+          if (filteredKeywords.length > 0) {
+            console.log(
+              `   📋 Sample: ${filteredKeywords.slice(0, 3).map((k) => `"${k.keyword}"`).join(", ")}`
+            );
+          }
 
           // Add to merged keywords array
           allKeywords.push(...filteredKeywords);

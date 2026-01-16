@@ -155,6 +155,7 @@ export async function POST(request: Request) {
     console.log("🔍 Fetching REAL keywords from DataForSEO for topic:", topic);
     console.log("🌐 Website URL for competitors:", websiteUrl);
     console.log("📊 Include competitors:", includeCompetitors);
+    console.log("🎯 Keyword filters - minVolume:", minVolume, "maxVolume:", maxVolume, "maxDifficulty:", maxDifficulty, "maxCompetition:", maxCompetition);
 
     // Extract domain from websiteUrl if provided
     let domain: string | null = null;
@@ -171,7 +172,16 @@ export async function POST(request: Request) {
     
     console.log(`📊 Raw keywords from DataForSEO: ${rawKeywords.length}`);
     
+    if (rawKeywords.length > 0) {
+      console.log(`📋 Sample raw keywords (first 5):`, rawKeywords.slice(0, 5).map((k) => `"${k.keyword}" (vol: ${k.search_volume})`).join(", "));
+    }
+    
     const keywords = filterKeywords(rawKeywords, maxDifficulty, minVolume, maxVolume, maxCompetition).slice(0, limit);
+    
+    console.log(`✅ After filtering: ${keywords.length} keywords remain`);
+    if (keywords.length > 0) {
+      console.log(`📋 Filtered keywords (first 5):`, keywords.slice(0, 5).map((k) => `"${k.keyword}" (vol: ${k.search_volume}, diff: ${k.difficulty})`).join(", "));
+    }
     
     console.log(`✅ DataForSEO Success: ${keywords.length} real keywords, ${competitors.length} competitors`);
     
