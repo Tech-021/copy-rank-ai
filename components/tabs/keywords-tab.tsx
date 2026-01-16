@@ -605,9 +605,19 @@ export function KeywordsTab({
         }
 
         // 2) DB is empty (or forced): call slow API once, then persist into DB
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+
+        if (!token) {
+          throw new Error("No auth token available");
+        }
+
         const response = await fetch(`/api/keyword`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            'Authorization': `Bearer ${token}`,
+          },
           body: JSON.stringify({
             topic: singleSite.topic || "General",
             websiteUrl: singleSite.url || "",
