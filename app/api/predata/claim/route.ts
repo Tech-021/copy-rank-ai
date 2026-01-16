@@ -11,6 +11,9 @@ const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 // body: { email?: string, ids?: string[], userId: string }
 export async function POST(req: Request) {
   try {
+    // Get authentication token to pass to onboarding API
+    const authHeader = req.headers.get('authorization');
+
     const body = await req.json();
     const email = (body.email || "").trim().toLowerCase();
     const ids: string[] | undefined = body.ids;
@@ -46,10 +49,18 @@ export async function POST(req: Request) {
           userId: userId || null,
         };
 
-        // Call onboarding endpoint
+        // Call onboarding endpoint with authentication
+        const onboardingHeaders: Record<string, string> = {
+          "Content-Type": "application/json"
+        };
+
+        if (authHeader) {
+          onboardingHeaders['Authorization'] = authHeader;
+        }
+
         const onboardingResp = await fetch(`${BASE_URL}/api/onboarding`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: onboardingHeaders,
           body: JSON.stringify(onboardingPayload),
         }).catch(e => ({ ok: false, error: String(e) }));
 
