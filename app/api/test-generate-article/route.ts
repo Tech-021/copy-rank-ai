@@ -214,7 +214,7 @@ export async function POST(request: Request) {
 
     const body: ArticleRequest = await request.json();
 
-    let user = { id: body.userId } as { id: string } | null;
+    let user: { id: string; email?: string } | null = null;
 
     if (!isInternalCall) {
       // Check authentication using JWT token from Authorization header
@@ -268,43 +268,48 @@ export async function POST(request: Request) {
           { status: 400 }
         );
       }
+      user = { id: body.userId };
+      // Internal calls skip onboarding/subscription checks since validation already happened during job enqueue
     }
 
-    // Check if user needs onboarding
-    const { data: predata } = await supabase
-      .from('pre_data')
-      .select('*')
-      .eq('email', user.email)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    // For external calls, verify onboarding and subscription
+    if (!isInternalCall) {
+      // Check if user needs onboarding
+      const { data: predata } = await supabase
+        .from('pre_data')
+        .select('*')
+        .eq('email', user.email)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
-    const needsOnboarding = !predata || (() => {
-      const hasWebsite = predata.website && predata.website.trim() !== '';
-      const hasCompetitors = Array.isArray(predata.competitors) && predata.competitors.length > 0;
-      const hasKeywords = Array.isArray(predata.keywords) && predata.keywords.length > 0;
-      return !hasWebsite || (!hasCompetitors && !hasKeywords);
-    })();
+      const needsOnboarding = !predata || (() => {
+        const hasWebsite = predata.website && predata.website.trim() !== '';
+        const hasCompetitors = Array.isArray(predata.competitors) && predata.competitors.length > 0;
+        const hasKeywords = Array.isArray(predata.keywords) && predata.keywords.length > 0;
+        return !hasWebsite || (!hasCompetitors && !hasKeywords);
+      })();
 
-    if (needsOnboarding) {
-      return NextResponse.json(
-        { error: "Onboarding required" },
-        { status: 403 }
-      );
-    }
+      if (needsOnboarding) {
+        return NextResponse.json(
+          { error: "Onboarding required" },
+          { status: 403 }
+        );
+      }
 
-    // Check subscription status
-    const { data: userData } = await supabase
-      .from('users')
-      .select('subscribe')
-      .eq('id', user.id)
-      .single();
+      // Check subscription status
+      const { data: userData } = await supabase
+        .from('users')
+        .select('subscribe')
+        .eq('id', user.id)
+        .single();
 
-    if (!userData?.subscribe) {
-      return NextResponse.json(
-        { error: "Subscription required" },
-        { status: 403 }
-      );
+      if (!userData?.subscribe) {
+        return NextResponse.json(
+          { error: "Subscription required" },
+          { status: 403 }
+        );
+      }
     }
 
     // ========== COMPREHENSIVE DEBUGGING ==========
