@@ -77,8 +77,28 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           return
         }
 
-        // Allow access to dashboard regardless of subscription status
-        // Subscription checks will be handled within the app for specific premium features
+        // Check subscription status - redirect to LemonSqueezy if not subscribed
+        console.log('Dashboard layout: Checking subscription for user:', user.id);
+        const { data: userData, error: subError } = await supabase
+          .from('users')
+          .select('subscribe')
+          .eq('id', user.id)
+          .single();
+
+        console.log('Dashboard layout: subscription result:', userData, 'error:', subError);
+
+        if (!userData?.subscribe) {
+          console.log('Dashboard layout: User not subscribed, redirecting to LemonSqueezy');
+          if (mounted) {
+            setCheckingAuth(false)
+            const checkoutUrl = process.env.NEXT_PUBLIC_LEMONSQUEEZY_CHECKOUT_URL_30 || 'https://copyrank.lemonsqueezy.com/buy/1e25810b-38ba-4de5-a753-c06514cb9e91';
+            const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
+            const successUrl = `${baseUrl}/payment/callback?next=/dashboard`;
+            const fullCheckoutUrl = `${checkoutUrl}?checkout[email]=${encodeURIComponent(user.email)}&checkout[custom][user_id]=${encodeURIComponent(user.id)}&checkout[product_options][redirect_url]=${encodeURIComponent(successUrl)}`;
+            window.location.href = fullCheckoutUrl;
+          }
+          return
+        }
 
         setUserEmail(user.email || "")
         const avatar =
