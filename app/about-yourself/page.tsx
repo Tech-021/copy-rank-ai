@@ -78,8 +78,13 @@ export default function OnboardingPage() {
         }
       } catch (error) {
         console.error('Error checking subscription:', error);
-        if (mounted) {
-          router.push('/paywall');
+        // On error, redirect to LemonSqueezy checkout
+        if (mounted && user) {
+          const checkoutUrl = process.env.NEXT_PUBLIC_LEMONSQUEEZY_CHECKOUT_URL_30 || 'https://copyrank.lemonsqueezy.com/buy/1e25810b-38ba-4de5-a753-c06514cb9e91';
+          const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
+          const successUrl = `${baseUrl}/payment/callback?next=/dashboard`;
+          const fullCheckoutUrl = `${checkoutUrl}?checkout[email]=${encodeURIComponent(user.email)}&checkout[custom][user_id]=${encodeURIComponent(user.id)}&checkout[product_options][redirect_url]=${encodeURIComponent(successUrl)}`;
+          window.location.href = fullCheckoutUrl;
         }
       } finally {
         if (mounted) {
