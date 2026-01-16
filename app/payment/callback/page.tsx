@@ -49,20 +49,25 @@ export default function PaymentCallbackPage() {
 
         // Redirect based on subscription status
         if (userData?.subscribe === true) {
-          // Claim any pre_data for this user (triggers onboarding)
+          // Get JWT token once for all API calls
+          const { data: { session } } = await supabase.auth.getSession();
+          const token = session?.access_token;
+
+          if (!token) {
+            console.error("❌ No auth token available - user may need to re-login");
+            toast.showToast({
+              title: "Session expired",
+              description: "Please try logging in again",
+              type: "warning",
+            });
+            router.push('/login');
+            return;
+          }
+
           // Claim any pre_data for this user (triggers onboarding)
           try {
             const email = (user.email || "").trim().toLowerCase();
             if (email) {
-              // Get JWT token for authenticated API calls
-              const { data: { session } } = await supabase.auth.getSession();
-              const token = session?.access_token;
-
-              if (!token) {
-                console.error("No auth token available for API calls");
-                return;
-              }
-
               await fetch("/api/predata/claim", {
                 method: "POST",
                 headers: {
@@ -74,14 +79,6 @@ export default function PaymentCallbackPage() {
             }
 
             // Trigger immediate processing and show a toast so the user sees background work started
-            // Get JWT token for authenticated API call
-            const { data: { session } } = await supabase.auth.getSession();
-            const token = session?.access_token;
-
-            if (!token) {
-              console.error("No auth token available for article-jobs/trigger");
-              return;
-            }
 
             fetch("/api/article-jobs/trigger", {
               method: "POST",
