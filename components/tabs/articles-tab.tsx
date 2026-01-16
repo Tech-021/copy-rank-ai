@@ -338,25 +338,38 @@ export function ArticlesTab({
         type: "success",
       });
 
-      setTimeout(() => {
+      setTimeout(async () => {
         setPublishSuccess(false);
         // Fetch updated article data from backend to get the correct slug
-        fetch(`/api/articles?userId=${currentUser?.id}`)
-          .then((res) => res.json())
-          .then((data) => {
-              if (data.success && data.articles) {
-                const updatedArticle = data.articles.find(
-                  (a: Article) => a.id === selectedArticle?.id
-                );
-                if (updatedArticle) {
-                  setSelectedArticleId(updatedArticle.id);
-                  setArticles(data.articles);
-                }
-              }
-          })
-          .catch((err) =>
-            console.error("Error fetching updated article:", err)
-          );
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          const token = session?.access_token;
+
+          if (!token) {
+            console.error('No auth token available');
+            return;
+          }
+
+          const response = await fetch(`/api/articles?userId=${currentUser?.id}`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          });
+
+          const data = await response.json();
+          if (data.success && data.articles) {
+            const updatedArticle = data.articles.find(
+              (a: Article) => a.id === selectedArticle?.id
+            );
+            if (updatedArticle) {
+              setSelectedArticleId(updatedArticle.id);
+              setArticles(data.articles);
+            }
+          }
+        } catch (err) {
+          console.error("Error fetching updated article:", err);
+        }
       }, 1200);
     } catch (error) {
       toast.showToast({
@@ -544,7 +557,25 @@ export function ArticlesTab({
 
       console.log("📡 Fetching articles from:", url);
 
-      const response = await fetch(url);
+      // Get auth token for API call
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      console.log('Articles tab fetchArticles: Session data:', session, 'Error:', sessionError);
+      const token = session?.access_token;
+      console.log('Articles tab fetchArticles: Token available:', !!token, 'Token length:', token?.length);
+
+      if (!token) {
+        console.error('Articles tab fetchArticles: No auth token available');
+        setLoading(false);
+        isFetchingRef.current = false;
+        return;
+      }
+
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(
@@ -719,9 +750,24 @@ export function ArticlesTab({
 
       console.log("🔄 Sending API request with:", requestBody);
 
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      console.log('Articles tab: Session data:', session, 'Error:', sessionError);
+      const token = session?.access_token;
+      console.log('Articles tab: Token available:', !!token, 'Token length:', token?.length);
+
+      if (!token) {
+        console.error('Articles tab: No auth token available');
+        return;
+      }
+
+      console.log('Articles tab: Making API call with token');
+
       const response = await fetch("/api/test-generate-article", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          'Authorization': `Bearer ${token}`,
+        },
         body: JSON.stringify(requestBody),
       });
 
@@ -776,9 +822,22 @@ export function ArticlesTab({
     )
       return;
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+
+      if (!token) {
+        console.error('No auth token available for delete');
+        return;
+      }
+
       const response = await fetch(
         `/api/articles?id=${id}&userId=${currentUser.id}`,
-        { method: "DELETE" }
+        {
+          method: "DELETE",
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        }
       );
       if (response.ok) {
         setArticles((prev) => prev.filter((article) => article.id !== id));
@@ -803,9 +862,20 @@ export function ArticlesTab({
     setUpdatingStatus(id);
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+
+      if (!token) {
+        console.error('No auth token available');
+        return;
+      }
+
       const response = await fetch(`/api/articles?id=${id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          'Authorization': `Bearer ${token}`,
+        },
         body: JSON.stringify({
           status: newStatus,
           userId: currentUser.id,
@@ -861,9 +931,20 @@ export function ArticlesTab({
     setIsSavingEdit(true);
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+
+      if (!token) {
+        console.error('No auth token available');
+        return;
+      }
+
       const response = await fetch(`/api/articles?id=${selectedArticle.id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          'Authorization': `Bearer ${token}`,
+        },
         body: JSON.stringify({
           userId: currentUser.id,
           title: editForm.title,
@@ -1001,9 +1082,20 @@ export function ArticlesTab({
                             setSelectedArticleId(null);
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+
+      if (!token) {
+        console.error('No auth token available');
+        return;
+      }
+
       const response = await fetch("/api/articles/index-now", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          'Authorization': `Bearer ${token}`,
+        },
         body: JSON.stringify({ articleId, slug }),
       });
 

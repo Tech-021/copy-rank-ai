@@ -19,7 +19,7 @@ export default function OnboardingPage() {
         
         // Check if user is logged in
         const { data: user, error: userError } = await getUser();
-        
+
         if (!user || userError || !user.id) {
           // User not logged in, redirect to login
           if (mounted) {
@@ -28,7 +28,33 @@ export default function OnboardingPage() {
           return;
         }
 
-        // Check subscription status from the users table
+        // FIRST: Check if user needs onboarding (pre_data check)
+        const { data: predataResult } = await supabase
+          .from('pre_data')
+          .select('*')
+          .eq('email', user.email)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+
+        // Determine if user needs onboarding
+        const needsOnboarding = !predataResult || (() => {
+          const predata = predataResult
+          const hasWebsite = predata.website && predata.website.trim() !== ''
+          const hasCompetitors = Array.isArray(predata.competitors) && predata.competitors.length > 0
+          const hasKeywords = Array.isArray(predata.keywords) && predata.keywords.length > 0
+          return !hasWebsite || (!hasCompetitors && !hasKeywords)
+        })()
+
+        if (needsOnboarding) {
+          console.log('User needs onboarding, redirecting to onboarding-required')
+          if (mounted) {
+            router.push('/auth/onboarding-required')
+          }
+          return
+        }
+
+        // SECOND: Check subscription status from the users table
         const { data: userData, error: dbError } = await supabase
           .from('users')
           .select('subscribe')
@@ -44,15 +70,10 @@ export default function OnboardingPage() {
           return;
         }
 
-        // Check if user is subscribed
+        // Allow access to dialog regardless of subscription status
+        // Subscription checks will be handled within the dialog for specific features
         if (mounted) {
-          if (userData?.subscribe === true) {
-            // User is subscribed, show the dialog
-            setIsOpen(true);
-          } else {
-            // User is not subscribed, redirect to paywall
-            router.push('/paywall');
-          }
+          setIsOpen(true);
         }
       } catch (error) {
         console.error('Error checking subscription:', error);

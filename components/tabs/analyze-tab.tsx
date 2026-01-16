@@ -708,9 +708,21 @@ export function AnalyzeTab({
   const handleTriggerArticleProcessing = async () => {
     try {
       setIsLoading(true);
+
+      // Get auth token for API call
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+
+      if (!token) {
+        throw new Error("No auth token available");
+      }
+
       const response = await fetch("/api/article-jobs/trigger", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          'Authorization': `Bearer ${token}`,
+        },
       });
 
       const data = await response.json();
@@ -759,12 +771,29 @@ export function AnalyzeTab({
       } = await supabase.auth.getUser();
       if (!user) return;
 
+      // Get auth token for API call
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      console.log('Analyze tab fetchArticles: Session data:', session, 'Error:', sessionError);
+      const token = session?.access_token;
+      console.log('Analyze tab fetchArticles: Token available:', !!token);
+
+      if (!token) {
+        console.error('Analyze tab fetchArticles: No auth token available');
+        setLoadingArticles(false);
+        return;
+      }
+
       const siteId = selectedWebsiteId || undefined;
       const url = siteId
         ? `/api/articles?websiteId=${siteId}&userId=${user.id}`
         : `/api/articles?userId=${user.id}`;
 
-      const res = await fetch(url);
+      const res = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
       if (!res.ok) throw new Error("Failed to fetch articles");
       const data = await res.json();
 
@@ -1628,9 +1657,20 @@ export function AnalyzeTab({
                     throw new Error("User not authenticated");
                   }
 
+                  // Get auth token for API call
+                  const { data: { session } } = await supabase.auth.getSession();
+                  const token = session?.access_token;
+
+                  if (!token) {
+                    throw new Error("No auth token available");
+                  }
+
                   const response = await fetch(`/api/articles?id=${selectedArticle.id}`, {
                     method: "PATCH",
-                    headers: { "Content-Type": "application/json" },
+                    headers: {
+                      "Content-Type": "application/json",
+                      'Authorization': `Bearer ${token}`,
+                    },
                     body: JSON.stringify({
                       userId: user.id,
                       title: editForm.title,
