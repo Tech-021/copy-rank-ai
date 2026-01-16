@@ -14,6 +14,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [userAvatar, setUserAvatar] = useState<string | null>(null)
 
   const [checkingAuth, setCheckingAuth] = useState(true)
+  const [authPassed, setAuthPassed] = useState(false)
 
   useEffect(() => {
     let mounted = true
@@ -42,6 +43,67 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         }
 
         if (!mounted) return
+
+        // FIRST: Check if user needs onboarding (pre_data check)
+        console.log('Dashboard layout: Checking pre_data for user:', user.email)
+        const { data: predataResult } = await supabase
+          .from('pre_data')
+          .select('*')
+          .eq('email', user.email)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+
+        console.log('Dashboard layout: predataResult:', predataResult)
+
+        // Determine if user needs onboarding
+        const needsOnboarding = !predataResult || (() => {
+          const predata = predataResult
+          const hasWebsite = predata.website && predata.website.trim() !== ''
+          const hasCompetitors = Array.isArray(predata.competitors) && predata.competitors.length > 0
+          const hasKeywords = Array.isArray(predata.keywords) && predata.keywords.length > 0
+          console.log('Dashboard layout: hasWebsite:', hasWebsite, 'hasCompetitors:', hasCompetitors, 'hasKeywords:', hasKeywords)
+          return !hasWebsite || (!hasCompetitors && !hasKeywords)
+        })()
+
+        console.log('Dashboard layout: needsOnboarding:', needsOnboarding)
+
+        if (needsOnboarding) {
+          console.log('Dashboard layout: User needs onboarding, redirecting from dashboard')
+          if (mounted) {
+            setCheckingAuth(false)
+            router.replace('/auth/onboarding-required')
+          }
+          return
+        }
+
+        // SECOND: Check subscription status
+        const { data: userData, error: dbError } = await supabase
+          .from('users')
+          .select('subscribe')
+          .eq('id', user.id)
+          .single()
+
+        if (dbError) {
+          console.error('Error checking subscription:', dbError)
+          // If error checking subscription, redirect to paywall to be safe
+          if (mounted) {
+            setCheckingAuth(false)
+            router.replace('/paywall')
+          }
+          return
+        }
+
+        // Check if user is subscribed
+        if (userData?.subscribe !== true) {
+          console.log('User not subscribed, redirecting to paywall from dashboard')
+          if (mounted) {
+            setCheckingAuth(false)
+            router.replace('/paywall')
+          }
+          return
+        }
+
         setUserEmail(user.email || "")
         const avatar =
           user.user_metadata?.avatar_url ||
@@ -51,6 +113,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           null
         setUserAvatar(avatar)
         setCheckingAuth(false)
+        setAuthPassed(true)
       } catch (err) {
         console.error("checkAuth error:", err)
         if (mounted) {
@@ -79,7 +142,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   }
 
-  if (checkingAuth) return null
+  if (checkingAuth || !authPassed) return null
 
   return (
     <Dashboard onLogout={handleLogout} userEmail={userEmail} userAvatar={userAvatar}>

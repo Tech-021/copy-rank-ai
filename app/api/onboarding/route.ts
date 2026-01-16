@@ -5,6 +5,8 @@ export const maxRetries = 0;
 
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
 import { hybridScraper } from "@/app/api/scraper/route";
 import { analyzeWithQwen } from "@/lib/qwen";
 import {
@@ -134,9 +136,51 @@ async function generateArticlesAutomatically(
 
 export async function POST(request: Request) {
   try {
+    // Check authentication using JWT token from Authorization header
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+
+    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+
+    const supabaseAuth = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        global: {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      }
+    );
+
+    const {
+      data: { user },
+    } = await supabaseAuth.auth.getUser();
+
+    if (!user || !user.id) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+
     const body: OnboardingRequest = await request.json();
 
     const { clientDomain, competitors, targetKeywords, userId, isQuickAdd } = body;
+
+    // Verify that the userId matches the authenticated user
+    if (userId !== user.id) {
+      return NextResponse.json(
+        { error: "Unauthorized access" },
+        { status: 403 }
+      );
+    }
 
     // Normalize competitor input to an array early for consistent length checks
     const competitorList: string[] = Array.isArray(competitors)
