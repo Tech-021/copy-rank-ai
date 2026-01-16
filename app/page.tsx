@@ -70,31 +70,10 @@ export default function Home() {
             return
           }
 
-          // SECOND: Check subscription status (only if user doesn't need onboarding)
-          const { data: userData, error: dbError } = await supabase
-            .from('users')
-            .select('subscribe')
-            .eq('id', user.id)
-            .single()
-
-          if (dbError) {
-            console.error('Error checking subscription:', dbError)
-            // If error checking subscription, redirect to paywall to be safe
-            if (mounted) {
-              router.push('/paywall')
-            }
-            return
-          }
-
-          // Check if user is subscribed
+          // Allow access to dashboard regardless of subscription status
+          // Subscription checks will be handled within the app for specific features
           if (mounted) {
-            if (userData?.subscribe === true) {
-              // User is subscribed, show dashboard
-              setAuthState("dashboard")
-            } else {
-              // User is not subscribed, redirect to paywall
-              router.push('/paywall')
-            }
+            setAuthState("dashboard")
           }
         } else {
           // No user logged in, default to signup page

@@ -77,32 +77,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           return
         }
 
-        // SECOND: Check subscription status
-        const { data: userData, error: dbError } = await supabase
-          .from('users')
-          .select('subscribe')
-          .eq('id', user.id)
-          .single()
-
-        if (dbError) {
-          console.error('Error checking subscription:', dbError)
-          // If error checking subscription, redirect to paywall to be safe
-          if (mounted) {
-            setCheckingAuth(false)
-            router.replace('/paywall')
-          }
-          return
-        }
-
-        // Check if user is subscribed
-        if (userData?.subscribe !== true) {
-          console.log('User not subscribed, redirecting to paywall from dashboard')
-          if (mounted) {
-            setCheckingAuth(false)
-            router.replace('/paywall')
-          }
-          return
-        }
+        // Allow access to dashboard regardless of subscription status
+        // Subscription checks will be handled within the app for specific premium features
 
         setUserEmail(user.email || "")
         const avatar =
@@ -113,6 +89,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           null
         setUserAvatar(avatar)
         setCheckingAuth(false)
+        setAuthPassed(true)
         setAuthPassed(true)
       } catch (err) {
         console.error("checkAuth error:", err)

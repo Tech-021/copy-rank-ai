@@ -71,15 +71,10 @@ export default function OnboardingPage() {
           return;
         }
 
-        // Check if user is subscribed
+        // Allow access to about-yourself regardless of subscription status
+        // Subscription checks will be handled within the dialog for specific features
         if (mounted) {
-          if (userData?.subscribe === true) {
-            // User is subscribed, allow access - open dialog
-            setIsOpen(true);
-          } else {
-            // User is not subscribed, redirect to paywall
-            router.push('/paywall');
-          }
+          setIsOpen(true);
         }
       } catch (error) {
         console.error('Error checking subscription:', error);
