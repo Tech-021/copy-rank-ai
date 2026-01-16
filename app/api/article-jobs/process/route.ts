@@ -142,6 +142,9 @@ async function processJobs() {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            ...(process.env.ARTICLE_PROCESS_SECRET
+              ? { "x-internal-api-key": process.env.ARTICLE_PROCESS_SECRET }
+              : {}),
           },
           body: JSON.stringify(requestBody),
         }

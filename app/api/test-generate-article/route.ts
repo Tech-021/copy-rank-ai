@@ -207,48 +207,67 @@ export async function POST(request: Request) {
   let jobId: string | undefined;
 
   try {
-    // Check authentication using JWT token from Authorization header
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: "Authentication required" },
-        { status: 401 }
-      );
-    }
-
-    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
-
-    const supabaseAuth = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        global: {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      }
-    );
-
-    const {
-      data: { user },
-    } = await supabaseAuth.auth.getUser();
-
-    if (!user || !user.id) {
-      return NextResponse.json(
-        { error: "Authentication required" },
-        { status: 401 }
-      );
-    }
+    // Allow internal server-to-server calls with a shared secret while keeping user-bound auth for others
+    const internalKey = request.headers.get('x-internal-api-key');
+    const isInternalCall =
+      internalKey && internalKey === process.env.ARTICLE_PROCESS_SECRET;
 
     const body: ArticleRequest = await request.json();
 
-    // Verify that the userId matches the authenticated user
-    if (body.userId !== user.id) {
-      return NextResponse.json(
-        { error: "Unauthorized access" },
-        { status: 403 }
+    let user = { id: body.userId } as { id: string } | null;
+
+    if (!isInternalCall) {
+      // Check authentication using JWT token from Authorization header
+      const authHeader = request.headers.get('authorization');
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return NextResponse.json(
+          { error: "Authentication required" },
+          { status: 401 }
+        );
+      }
+
+      const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+
+      const supabaseAuth = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+          global: {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          },
+        }
       );
+
+      const {
+        data: { user: authedUser },
+      } = await supabaseAuth.auth.getUser();
+
+      user = authedUser ?? null;
+
+      if (!user || !user.id) {
+        return NextResponse.json(
+          { error: "Authentication required" },
+          { status: 401 }
+        );
+      }
+
+      // Verify that the userId matches the authenticated user
+      if (body.userId !== user.id) {
+        return NextResponse.json(
+          { error: "Unauthorized access" },
+          { status: 403 }
+        );
+      }
+    } else {
+      // Internal calls rely on the job payload; ensure userId exists
+      if (!body.userId) {
+        return NextResponse.json(
+          { error: "Missing userId for internal request" },
+          { status: 400 }
+        );
+      }
     }
 
     // Check if user needs onboarding
