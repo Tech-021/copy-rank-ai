@@ -3,7 +3,7 @@ import type { ScrapeResult } from "./types";
 
 export interface NicheAnalysis {
   word: string; // Broad category like "technology", "clothing", "fitness"
-  intentPhrase: string; // Specific intent like "men denim jeans", "AI chatbot tools"
+  intentPhrase: string; // Broader searchable phrase like "denim jeans", "AI chatbot", "fitness training"
   confidence?: number | null;
   raw?: any;
 }
@@ -26,17 +26,23 @@ export async function analyzeWithQwen(
   const mainText = (scrape.mainText || "").slice(0, 4000);
   const schemaSnippet = JSON.stringify(scrape.schemaData || []).slice(0, 1000);
 
-  // Updated prompt to extract both broad category and specific intent phrase
+  // Updated prompt to extract broader, more searchable intent phrases
   const prompt = `Analyze this website and return TWO things:
 1. A broad category (word) - ONE word from this list: "technology", "marketing", "business", "health", "fitness", "education", "finance", "web-development", "software", "programming", "digital-marketing", "ecommerce", "lifestyle", "travel", "cooking", "gaming", "clothing", "fashion", "automotive", "real-estate"
 
-2. A specific intent phrase (2-4 words) that captures what users would search for related to this site's main offering or content focus.
+2. A broader searchable intent phrase (2-3 words) that is GENERAL enough to find many related keywords. Avoid overly specific phrases.
 
 EXAMPLES:
-- E-commerce men's jeans → word: "clothing", intentPhrase: "men denim jeans"
-- AI chatbot platform → word: "technology", intentPhrase: "AI chatbot tools"
-- Fitness coaching → word: "fitness", intentPhrase: "personal training program"
-- Digital marketing agency → word: "marketing", intentPhrase: "digital marketing services"
+- E-commerce men's jeans → word: "clothing", intentPhrase: "denim jeans"
+- AI chatbot platform → word: "technology", intentPhrase: "AI chatbot"
+- Personal fitness coaching → word: "fitness", intentPhrase: "fitness training"
+- Digital marketing agency → word: "marketing", intentPhrase: "digital marketing"
+- Men's athletic shoes → word: "fashion", intentPhrase: "athletic shoes"
+- WordPress hosting → word: "technology", intentPhrase: "web hosting"
+
+IMPORTANT: The intentPhrase should be broad enough to capture many keywords, not ultra-specific.
+- GOOD: "denim jeans", "AI chatbot", "fitness training", "web hosting"
+- BAD: "men denim jeans size 32", "AI chatbot for customer service", "personal training program for beginners"
 
 CONTENT:
 Title: ${scrape.title || ""}
@@ -44,7 +50,7 @@ Meta: ${scrape.metaDescription || ""}
 Headings: ${scrape.headings || ""}
 MainText: ${mainText}
 
-Return JSON: { "word": "category from list", "intentPhrase": "specific 2-4 word phrase", "confidence": 0.9 }`;
+Return JSON: { "word": "category from list", "intentPhrase": "2-3 word broad phrase", "confidence": 0.9 }`;
 
   // CORRECTED SYSTEM PROMPT - More strict
   const messages = [
@@ -52,8 +58,9 @@ Return JSON: { "word": "category from list", "intentPhrase": "specific 2-4 word 
       role: "system",
       content: `You are a strict classifier. ALWAYS return a category from this exact list: 
 technology, marketing, business, health, fitness, education, finance, web development, 
-software, programming, digital marketing, ecommerce, lifestyle, travel, cooking, gaming.
-NEVER use any other categories. Always return valid JSON.`,
+software, programming, digital marketing, ecommerce, lifestyle, travel, cooking, gaming, clothing, fashion, automotive, real-estate.
+NEVER use any other categories. Always return valid JSON.
+For intentPhrase, keep it BROAD and GENERAL (2-3 words maximum) to maximize keyword discovery.`,
     },
     { role: "user", content: prompt },
   ];
@@ -67,7 +74,7 @@ NEVER use any other categories. Always return valid JSON.`,
   };
 
   try {
-    console.log("🔍 Analyzing niche with word + intent phrase...");
+    console.log("🔍 Analyzing niche with word + broader intent phrase...");
     const resp = await axios.post(apiUrl, payload, {
       headers: {
         Authorization: `Bearer ${apiKey}`,
