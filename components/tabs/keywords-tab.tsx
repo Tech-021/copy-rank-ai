@@ -69,7 +69,12 @@ interface Keyword {
   selected?: boolean;
   is_target_keyword?: boolean;
   post_status?: "Live" | "Draft" | "No Plan";
-  traffic_potential?: string;
+  trafficPotential?: string;
+  lowTopVol?: number;
+  highTopVol?: number;
+  mainIntent?: string;
+  firstDomainSERP?: string | null;
+  backlinks?: number;
 }
 
 interface Website {
@@ -448,17 +453,22 @@ export function KeywordsTab({
         return {
           id: kw.id || undefined,
           keyword: String(text),
-          search_volume: Number(kw.search_volume ?? 0),
+          search_volume: Number(kw.searchVolume ?? kw.search_volume ?? 0),
           difficulty: Number(kw.difficulty ?? 0),
           cpc: Number(kw.cpc ?? 0),
           competition: Number(kw.competition ?? 0),
           is_target_keyword: !!kw.is_target_keyword,
           post_status: kw.post_status || "No Plan",
-          traffic_potential:
-            kw.traffic_potential ||
+          trafficPotential:
+            kw.trafficPotential ||
             (kw.search_volume
               ? `${Math.round(Number(kw.search_volume) * 0.1)}+/mo`
               : "—"),
+          lowTopVol: Number(kw.lowTopVol ?? 0),
+          highTopVol: Number(kw.highTopVol ?? 0),
+          mainIntent: kw.mainIntent || "unknown",
+          firstDomainSERP: kw.firstDomainSERP || null,
+          backlinks: Number(kw.backlinks ?? 0),
         };
       };
 
@@ -506,64 +516,78 @@ export function KeywordsTab({
         }
 
         // 0.5) Cheap DB version check: if unchanged, don't re-render / don't show spinner
+        // Commented out until migration adds keywords_updated_at column
+        /*
         if (!forceRefresh) {
-          const { data: versionRow, error: versionErr } = await supabase
-            .from("websites")
-            .select("keywords_updated_at")
-            .eq("id", requestWebsiteId)
-            .single();
+          try {
+            const { data: versionRow, error: versionErr } = await supabase
+              .from("websites")
+              .select("keywords_updated_at")
+              .eq("id", requestWebsiteId)
+              .single();
 
-          if (!versionErr) {
-            const dbUpdatedAt: string | null =
-              (versionRow as any)?.keywords_updated_at ?? null;
-            const cachedUpdatedAt: string | null =
-              cached?.keywordsUpdatedAt ?? null;
-            if (
-              cached &&
-              dbUpdatedAt &&
-              cachedUpdatedAt &&
-              dbUpdatedAt === cachedUpdatedAt
-            ) {
-              return;
-            }
+            if (!versionErr && versionRow) {
+              const dbUpdatedAt: string | null =
+                (versionRow as any)?.keywords_updated_at ?? null;
+              const cachedUpdatedAt: string | null =
+                cached?.keywordsUpdatedAt ?? null;
+              if (
+                cached &&
+                dbUpdatedAt &&
+                cachedUpdatedAt &&
+                dbUpdatedAt === cachedUpdatedAt
+              ) {
+                return;
+              }
 
-            // DB changed and we had cache => show spinner for refresh
-            if (cached) {
-              if (isCurrent()) setLoading(true);
+              // DB changed and we had cache => show spinner for refresh
+              if (cached) {
+                if (isCurrent()) setLoading(true);
+              }
             }
+          } catch (err) {
+            // Column doesn't exist yet, proceed with normal loading
           }
         }
+        */
 
         if (isCurrent()) setError(null);
 
         // 1) Load from DB first (fast)
-        // Backward-compatible select: keywords_updated_at may not exist until migration runs
+        // Load basic data first, then try to get keywords_updated_at separately for compatibility
         let singleSite: any = null;
         {
           const { data, error: siteErr } = await supabase
             .from("websites")
-            .select("id, url, topic, keywords, keywords_updated_at")
+            .select("id, url, topic, keywords")
             .eq("id", requestWebsiteId)
-            .single();
+            .maybeSingle();
 
           if (siteErr) {
-            const msg = siteErr.message || "Failed to load website";
-            // If the column doesn't exist yet, retry without it.
-            if (/keywords_updated_at/i.test(msg) && /column/i.test(msg)) {
-              const { data: retryData, error: retryErr } = await supabase
-                .from("websites")
-                .select("id, url, topic, keywords")
-                .eq("id", requestWebsiteId)
-                .single();
-              if (retryErr)
-                throw new Error(retryErr.message || "Failed to load website");
-              singleSite = retryData;
-            } else {
-              throw new Error(msg);
-            }
-          } else {
-            singleSite = data;
+            throw new Error(siteErr.message || "Failed to load website");
           }
+          if (!data) {
+            throw new Error("Website not found");
+          }
+          
+          singleSite = data;
+          
+          // Try to get keywords_updated_at if the column exists
+          // Commented out until migration adds the column
+          /*
+          try {
+            const { data: versionData } = await supabase
+              .from("websites")
+              .select("keywords_updated_at")
+              .eq("id", requestWebsiteId)
+              .single();
+            if (versionData) {
+              singleSite.keywords_updated_at = (versionData as any).keywords_updated_at;
+            }
+          } catch (err) {
+            // Column doesn't exist yet, ignore
+          }
+          */
         }
         if (!singleSite) throw new Error("Website not found");
 
@@ -702,8 +726,10 @@ export function KeywordsTab({
         }
 
         // Re-read keywords_updated_at so cache has the correct DB version after update
+        // Commented out until migration adds the column
         let afterUpdatedAt: string | null = null;
-        {
+        /*
+        try {
           const { data: afterVersionRow, error: afterVersionErr } =
             await supabase
               .from("websites")
@@ -711,11 +737,14 @@ export function KeywordsTab({
               .eq("id", requestWebsiteId)
               .single();
 
-          if (!afterVersionErr) {
+          if (!afterVersionErr && afterVersionRow) {
             afterUpdatedAt =
               (afterVersionRow as any)?.keywords_updated_at ?? null;
           }
+        } catch (err) {
+          // Column doesn't exist yet, ignore
         }
+        */
 
         writeKeywordsCache(requestWebsiteId, {
           website: nextWebsite,
@@ -1484,7 +1513,7 @@ export function KeywordsTab({
       <div className="flex lg:flex-row flex-col items-start gap-4 lg:gap-0 lg:items-center justify-between">
         <div>
           <h2 className="text-2xl text-white font-medium">Keywords</h2>
-          <p className="text-sm text-[#ffffff3b] mt-1">
+          <p className="text-sm text-[#ffffffb3] mt-1">
             Track the keywords driving your traffic
           </p>
         </div>
@@ -1773,7 +1802,7 @@ export function KeywordsTab({
                 const difficultyColor = getDifficultyColor(kw.difficulty);
                 const competitionText = getCompetitionText(kw.competition);
                 const competitionColor = getCompetitionColor(kw.competition);
-                const trafficText = kw.traffic_potential || "—";
+                const trafficText = kw.trafficPotential || "—";
                 return (
                   <tr
                     key={`${kw.keyword}-${index}`}

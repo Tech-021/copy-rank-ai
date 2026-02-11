@@ -88,7 +88,7 @@ export default function AuthCallbackPage() {
                 console.log("Validation failed: Email not in predata. Redirecting to onboarding:", userId);
 
                 // Keep user signed in but redirect to onboarding page
-                router.replace(`/auth/onboarding-required?error=no_email&email=${encodeURIComponent(email)}`);
+                router.replace(`/onboarding?error=no_email&email=${encodeURIComponent(email)}`);
                 return;
               }
               
@@ -104,15 +104,15 @@ export default function AuthCallbackPage() {
                 console.log("Validation failed: No website. Redirecting to onboarding:", userId);
 
                 // Keep user signed in but redirect to onboarding page
-                router.replace(`/auth/onboarding-required?error=no_website&email=${encodeURIComponent(email)}`);
+                router.replace(`/onboarding?error=no_website&email=${encodeURIComponent(email)}`);
                 return;
               }
               
-              if (!hasCompetitors && !hasKeywords) {
+              if (!hasCompetitors) {
                 console.log("Validation failed: No competitors/keywords. Redirecting to onboarding:", userId);
 
                 // Keep user signed in but redirect to onboarding page
-                router.replace(`/auth/onboarding-required?error=no_data&email=${encodeURIComponent(email)}`);
+                router.replace(`/onboarding?error=no_data&email=${encodeURIComponent(email)}`);
                 return;
               }
               
@@ -158,7 +158,7 @@ export default function AuthCallbackPage() {
               console.error("Predata validation error:", validationError);
 
               // Keep user signed in but redirect to onboarding page
-              router.replace(`/auth/onboarding-required?error=general&email=${encodeURIComponent(email)}`);
+              router.replace(`/onboarding?error=general&email=${encodeURIComponent(email)}`);
               return;
             }
             
@@ -181,7 +181,7 @@ export default function AuthCallbackPage() {
           toast.showToast({ 
             title: "Authentication incomplete", 
             description: "Please try signing in again", 
-            type: "warning" 
+            type:"warning" 
           })
           router.replace("/auth/signin")
         }

@@ -31,7 +31,7 @@ export function LandingPage({ onSignIn, onSignUp }: LandingPageProps) {
               <Image src="/topicanalyzer-logo.png" alt="" width={120} height={30} />
             </Link>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3" id="googleSignInBtn">
             <Button
               onClick={onSignIn}
               className="cursor-pointer bg-[#5AFF78] border border-[#dbdadd] hover:bg-white hover:text-[#838383] text-black text-sm rounded-full shadow-[inset_0_0_4px_2px_rgba(255,255,255,0.3),0_0_10px_2px_rgba(0,0,0,0.1)] transition"

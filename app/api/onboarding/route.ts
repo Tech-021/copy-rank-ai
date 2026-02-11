@@ -9,11 +9,8 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { hybridScraper } from "@/app/api/scraper/route";
 import { analyzeWithQwen } from "@/lib/qwen";
-import {
-  fetchKeywordsFromDataForSEO,
-  filterKeywords,
-  fetchKeywordOverview,
-} from "@/lib/dataforseo";
+import { fetchKeywordOverview } from "@/lib/dataforseo";
+import { fetchKeywordGap } from "@/lib/fetchKeywordGap";
 import { getUserArticleLimit } from '@/lib/articleLimits';
 
 // Initialize Supabase client
@@ -271,63 +268,35 @@ export async function POST(request: Request) {
     const competitorResults: CompetitorResult[] = [];
     const allKeywords: any[] = [];
 
+    // Prepare filter for target keywords if provided
+    let keywordFilter: string[] = [];
+    if (targetKeywords && Array.isArray(targetKeywords)) {
+      keywordFilter = targetKeywords.filter((kw) => kw && kw.trim() !== "");
+    }
+
     if (normalizedCompetitors.length > 0) {
+      const clientDomain = normalizedClientDomain.replace(/^https?:\/\//, '').replace(/\/$/, '');
       for (let i = 0; i < normalizedCompetitors.length; i++) {
         const competitorUrl = normalizedCompetitors[i];
+        const competitorDomain = competitorUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
         console.log(`\n📊 Processing competitor ${i + 1}/${normalizedCompetitors.length}: ${competitorUrl}`);
-
         try {
-          // 2a. Scrape competitor domain
-          const competitorScrape = await hybridScraper(competitorUrl);
-
-          if (!competitorScrape) {
-            console.warn(`⚠️ Failed to scrape competitor ${i + 1}`);
-            competitorResults.push({
-              domain: competitorUrl,
-              topic: "Unknown",
-              keywords: [],
-              success: false,
-              error: "Failed to scrape domain",
-            });
-            continue;
+          // Use DataForSEO Domain Intersection API for keyword gap, with filter if targetKeywords present
+          let gapKeywords;
+          if (keywordFilter.length > 0) {
+            gapKeywords = await fetchKeywordGap(clientDomain, competitorDomain, 100, keywordFilter);
+          } else {
+            gapKeywords = await fetchKeywordGap(clientDomain, competitorDomain, 100);
           }
-
-          // 2b. Find topic for competitor
-          const competitorAnalysis = await analyzeWithQwen(competitorScrape);
-          const competitorTopic = `${competitorAnalysis.word} - ${competitorAnalysis.intentPhrase}`;
-          console.log(`✅ Competitor ${i + 1} - Word: ${competitorAnalysis.word}, Intent: ${competitorAnalysis.intentPhrase}`);
-
-          // 2c. Fetch keywords using the intent phrase (more specific)
-          console.log(`🔍 Fetching keywords for intent phrase: ${competitorAnalysis.intentPhrase}`);
-          const rawKeywords = await fetchKeywordsFromDataForSEO(competitorAnalysis.intentPhrase);
-          console.log(`   📊 Raw keywords found: ${rawKeywords.length}`);
-
-          // Apply filters: 100-10000 volume, competition ≤0.3
-          const filteredKeywords = filterKeywords(
-            rawKeywords,
-            70, // maxDifficulty
-            100, // minVolume
-            10000, // maxVolume (increased from 500)
-            0.3 // maxCompetition (low competition)
-          );
-
-          console.log(
-            `✅ Found ${filteredKeywords.length} keywords for competitor ${i + 1} (after filtering)`
-          );
-          
-          if (filteredKeywords.length > 0) {
-            console.log(
-              `   📋 Sample: ${filteredKeywords.slice(0, 3).map((k) => `"${k.keyword}"`).join(", ")}`
-            );
-          }
-
-          // Add to merged keywords array
-          allKeywords.push(...filteredKeywords);
-
+          console.log(`   📊 Keyword gap found: ${gapKeywords.length}`);
+          allKeywords.push(...gapKeywords);
           competitorResults.push({
             domain: competitorUrl,
-            topic: competitorTopic,
-            keywords: filteredKeywords,
+            topic: "Keyword Gap",
+            keywords: gapKeywords.map((kw) => ({
+              ...kw,
+              trafficPotential: kw.trafficPotential,
+            })),
             success: true,
           });
         } catch (error) {
@@ -343,70 +312,37 @@ export async function POST(request: Request) {
       }
     } else {
       console.log("ℹ️ No competitors provided (quick add mode)");
-      // In quick add mode, fetch keywords from client topic instead
+      // In quick add mode, fetch keyword gap for client domain vs google.com (or another generic domain)
       if (clientTopic !== "General") {
         try {
-          console.log(`🔍 Fetching keywords for client topic: ${clientTopic}`);
-          const rawKeywords = await fetchKeywordsFromDataForSEO(clientTopic);
-
-          // Apply filters: 100-10000 volume, competition ≤0.3
-          const filteredKeywords = filterKeywords(
-            rawKeywords,
-            70, // maxDifficulty
-            100, // minVolume
-            10000, // maxVolume
-            0.3 // maxCompetition (low competition)
-          );
-
-          console.log(
-            `✅ Found ${filteredKeywords.length} keywords for client topic: ${clientTopic}`
-          );
-          allKeywords.push(...filteredKeywords);
+          const clientDomainOnly = normalizedClientDomain.replace(/^https?:\/\//, '').replace(/\/$/, '');
+          const genericCompetitor = "google.com"; // You can change this to another broad domain if desired
+          console.log(`🔍 Fetching keyword gap for quick add: ${clientDomainOnly} vs ${genericCompetitor}`);
+          const gapKeywords = await fetchKeywordGap(clientDomainOnly, genericCompetitor, 100);
+          console.log(`✅ Found ${gapKeywords.length} keywords for client domain (quick add mode)`);
+          allKeywords.push(...gapKeywords);
         } catch (error) {
-          console.error("❌ Error fetching keywords from client topic:", error);
+          console.error("❌ Error fetching keyword gap for client domain (quick add):", error);
           console.warn("⚠️ Continuing with empty keywords - will add default keywords");
         }
       }
     }
 
-    // STEP 2.5: Process target keywords (NO filtering - explicit keywords)
-    console.log("\n🔍 Step 2.5: Processing target keywords...");
+    // STEP 2.5: (REMOVED) Target keywords are now included as filter in competitor API call above
+    // If no competitors, fallback to overview for target keywords
     let targetKeywordData: any[] = [];
-
-    if (targetKeywords && targetKeywords.length > 0) {
-      // Filter out empty keywords
-      const validTargetKeywords = targetKeywords.filter(
-        (kw) => kw && kw.trim() !== ""
-      );
-
-      if (validTargetKeywords.length > 0) {
-        try {
-          console.log(
-            `📋 Processing ${validTargetKeywords.length} target keywords:`,
-            validTargetKeywords
-          );
-
-          // Call keyword overview API (processes keywords one by one internally)
-          const overviewResults = await fetchKeywordOverview(
-            validTargetKeywords
-          );
-
-          // NO filtering - use whatever data we get (explicit keywords)
-          targetKeywordData = overviewResults.map((kw) => ({
-            ...kw,
-            is_target_keyword: true, // Flag to identify target keywords
-          }));
-
-          console.log(
-            `✅ Retrieved data for ${targetKeywordData.length} target keywords`
-          );
-        } catch (error) {
-          console.error("❌ Error processing target keywords:", error);
-          // Continue even if target keywords fail
-        }
+    if (keywordFilter.length > 0 && normalizedCompetitors.length === 0) {
+      try {
+        let overviewResults: any[] = [];
+        overviewResults = await fetchKeywordOverview(keywordFilter);
+        overviewResults = overviewResults.map((kw) => ({ ...kw, is_target_keyword: true, source: 'overview' }));
+        targetKeywordData = overviewResults;
+        console.log(
+          `✅ Retrieved data for ${targetKeywordData.length} target keywords (overview)`
+        );
+      } catch (error) {
+        console.error("❌ Error processing target keywords (overview):", error);
       }
-    } else {
-      console.log("ℹ️ No target keywords provided");
     }
 
     // STEP 3: Merge competitor keywords + target keywords, then remove duplicates
@@ -420,17 +356,16 @@ export async function POST(request: Request) {
 
     // If no keywords found, add default keywords for the topic
     if (allMergedKeywords.length === 0 && clientTopic !== "General") {
-      console.warn("⚠️ No keywords found from APIs, adding default keywords for topic");
+      console.warn("⚠️ No keywords found from APIs. This could mean:");
+      console.warn("   - Domain is too new or has low SEO presence");
+      console.warn("   - Competitor domain is too similar");
+      console.warn("   - DataForSEO API credentials issue");
+      console.warn("⚠️ Adding minimal default keywords as fallback");
       const defaultKeywords = [
-        { keyword: `${clientTopic}`, search_volume: 1000, difficulty: 30, cpc: 0.5, competition: 0.3 },
-        { keyword: `${clientTopic} tips`, search_volume: 500, difficulty: 25, cpc: 0.4, competition: 0.2 },
-        { keyword: `best ${clientTopic}`, search_volume: 450, difficulty: 35, cpc: 0.6, competition: 0.4 },
-        { keyword: `${clientTopic} guide`, search_volume: 400, difficulty: 28, cpc: 0.5, competition: 0.3 },
-        { keyword: `${clientTopic} tutorial`, search_volume: 350, difficulty: 27, cpc: 0.45, competition: 0.25 },
-        { keyword: `learn ${clientTopic}`, search_volume: 300, difficulty: 26, cpc: 0.4, competition: 0.2 },
+        { keyword: `${clientTopic}`, search_volume: 100, difficulty: 30, cpc: 0.5, competition: 0.3 },
       ];
       allMergedKeywords.push(...defaultKeywords);
-      console.log(`✅ Added ${defaultKeywords.length} default keywords`);
+      console.log(`✅ Added ${defaultKeywords.length} default keyword(s)`);
     }
 
     // Remove duplicate keywords (by keyword text, case-insensitive)
@@ -476,6 +411,7 @@ export async function POST(request: Request) {
     }));
 
     const insertData = {
+      name: clientDomain.trim() || normalizedClientDomain,
       url: normalizedClientDomain, // Use normalized URL
       topic: clientTopic,
       keywords: {
@@ -497,9 +433,8 @@ export async function POST(request: Request) {
           },
         },
       },
-      // Add top-level competitors column if your schema has it
-      competitors: competitorsData, // Save to top-level competitors column (jsonb)
-      total_competitors: competitorResults.length, // Save to total_competitors column (int4)
+      competitors: competitorsData,
+      total_competitors: competitorResults.length,
       user_id: userId,
     };
 

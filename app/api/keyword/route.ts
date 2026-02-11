@@ -2,7 +2,8 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import { fetchKeywordsFromDataForSEO, filterKeywords, KeywordData } from "@/lib/dataforseo";
+import { filterKeywords, KeywordData } from "@/lib/dataforseo";
+import { fetchKeywordGap } from "@/lib/fetchKeywordGap";
 import { createClient } from "@supabase/supabase-js";
 
 const supabaseAdmin = createClient(
@@ -22,20 +23,17 @@ interface KeywordRequest {
 }
 
 // Internal function to call your competitor API
-async function fetchCompetitors(domain: string, limit: number = 10) {
+async function fetchCompetitors(request: Request, domain: string, limit: number = 10) {
   try {
     console.log(`🔍 [COMPETITOR] Fetching competitors for domain: ${domain}`);
-    
     // Get the authentication token from the request
     const authHeader = request.headers.get('authorization');
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
-
     if (authHeader) {
       headers['Authorization'] = authHeader;
     }
-
     const response = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/competitors`, {
       method: 'POST',
       headers,
@@ -45,14 +43,11 @@ async function fetchCompetitors(domain: string, limit: number = 10) {
         limit: limit
       }),
     });
-
     if (!response.ok) {
       console.log(`❌ [COMPETITOR] API failed: ${response.status}`);
       return [];
     }
-
     const data = await response.json();
-    
     if (data.competitors && data.competitors.length > 0) {
       console.log(`✅ [COMPETITOR] Found ${data.competitors.length} competitors`);
       return data.competitors;
@@ -60,7 +55,6 @@ async function fetchCompetitors(domain: string, limit: number = 10) {
       console.log('❌ [COMPETITOR] No competitors found in response');
       return [];
     }
-    
   } catch (error) {
     console.error('❌ [COMPETITOR] Failed to fetch competitors:', error);
     return [];
@@ -103,7 +97,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check if user needs onboarding
+    // Check if user needs onboarding (handled by middleware, so just log for debug)
     const { data: predata } = await supabaseAdmin
       .from('pre_data')
       .select('*')
@@ -112,18 +106,15 @@ export async function POST(request: Request) {
       .limit(1)
       .maybeSingle();
 
-    const needsOnboarding = !predata || (() => {
-      const hasWebsite = predata.website && predata.website.trim() !== '';
-      const hasCompetitors = Array.isArray(predata.competitors) && predata.competitors.length > 0;
-      const hasKeywords = Array.isArray(predata.keywords) && predata.keywords.length > 0;
-      return !hasWebsite || (!hasCompetitors && !hasKeywords);
+    // Only log onboarding status for debugging; do not block API
+    const onboardingIncomplete = !predata || (() => {
+      const hasWebsite = predata?.website && predata.website.trim() !== '';
+      const hasCompetitors = Array.isArray(predata?.competitors) && predata.competitors.length > 0;
+      const hasKeywords = Array.isArray(predata?.keywords) && predata.keywords.length > 0;
+      return !hasWebsite || !hasCompetitors;
     })();
-
-    if (needsOnboarding) {
-      return NextResponse.json(
-        { error: "Onboarding required" },
-        { status: 403 }
-      );
+    if (onboardingIncomplete) {
+      console.warn('[API/keyword] User onboarding incomplete, but not blocking due to middleware enforcement.');
     }
 
     // Check subscription status
@@ -172,53 +163,69 @@ export async function POST(request: Request) {
       console.log(`🔧 Extracted domain: ${domain}`);
     }
 
-    // Fetch keywords and competitors in parallel if requested
-    const [rawKeywords, competitors] = await Promise.all([
-      fetchKeywordsFromDataForSEO(topic),
-      (includeCompetitors && domain) ? fetchCompetitors(domain, 8) : Promise.resolve([])
-    ]);
-    
-    console.log(`📊 Raw keywords from DataForSEO: ${rawKeywords.length}`);
-    
-    if (rawKeywords.length > 0) {
-      console.log(`📋 Sample raw keywords (first 5):`, rawKeywords.slice(0, 5).map((k) => `"${k.keyword}" (vol: ${k.search_volume})`).join(", "));
-    }
-    
-    const keywords = filterKeywords(rawKeywords, maxDifficulty, minVolume, maxVolume, maxCompetition).slice(0, limit);
-    
-    console.log(`✅ After filtering: ${keywords.length} keywords remain`);
-    if (keywords.length > 0) {
-      console.log(`📋 Filtered keywords (first 5):`, keywords.slice(0, 5).map((k) => `"${k.keyword}" (vol: ${k.search_volume}, diff: ${k.difficulty})`).join(", "));
-    }
-    
-    console.log(`✅ DataForSEO Success: ${keywords.length} real keywords, ${competitors.length} competitors`);
-    
-    // If no keywords were found after filtering, add fallback keywords and flag it
-    let finalKeywords = keywords;
+    let keywords: KeywordData[] = [];
+    let competitors: string[] = [];
     let fallbackUsed = false;
-    if (finalKeywords.length === 0) {
+    let isRealData = false;
+
+    if (domain) {
+      if (includeCompetitors) {
+        // Use Domain Intersection API for keyword gap with competitors
+        competitors = await fetchCompetitors(request, domain, 8);
+        let allGapKeywords: KeywordData[] = [];
+        for (const competitor of competitors) {
+          try {
+            const gap = await fetchKeywordGap(domain, competitor, limit, [topic]);
+            allGapKeywords = allGapKeywords.concat(gap);
+          } catch (e) {
+            console.warn(`⚠️ Failed to fetch keyword gap for competitor: ${competitor}`);
+          }
+        }
+        keywords = filterKeywords(allGapKeywords, maxDifficulty, minVolume, maxVolume, maxCompetition).slice(0, limit);
+      } else {
+        // Use Domain Intersection API with a generic competitor
+        const genericCompetitor = "google.com";
+        try {
+          const gap = await fetchKeywordGap(domain, genericCompetitor, limit, [topic]);
+          keywords = filterKeywords(gap, maxDifficulty, minVolume, maxVolume, maxCompetition).map((kw) => ({
+            ...kw,
+            trafficPotential: kw.trafficPotential,
+          })).slice(0, limit);
+        } catch (e) {
+          console.warn(`⚠️ Failed to fetch keyword gap for generic competitor: ${genericCompetitor}`);
+          keywords = [];
+        }
+      }
+      isRealData = keywords.length > 0;
+      if (!isRealData) {
+        fallbackUsed = true;
+        keywords = [
+          { keyword: `${topic}`, search_volume: 1000, difficulty: 30, cpc: 0.5, competition: 0.3 },
+          { keyword: `${topic} tips`, search_volume: 500, difficulty: 25, cpc: 0.4, competition: 0.2 },
+          { keyword: `best ${topic}`, search_volume: 450, difficulty: 35, cpc: 0.6, competition: 0.4 },
+          { keyword: `${topic} guide`, search_volume: 400, difficulty: 28, cpc: 0.5, competition: 0.3 },
+          { keyword: `${topic} tutorial`, search_volume: 350, difficulty: 27, cpc: 0.45, competition: 0.25 },
+        ];
+      }
+    } else {
+      // No domain provided, fallback to default
       fallbackUsed = true;
-      console.warn("⚠️ No keywords passed the filter, adding fallback keywords");
-      const fallbackKeywords: KeywordData[] = [
+      keywords = [
         { keyword: `${topic}`, search_volume: 1000, difficulty: 30, cpc: 0.5, competition: 0.3 },
         { keyword: `${topic} tips`, search_volume: 500, difficulty: 25, cpc: 0.4, competition: 0.2 },
         { keyword: `best ${topic}`, search_volume: 450, difficulty: 35, cpc: 0.6, competition: 0.4 },
         { keyword: `${topic} guide`, search_volume: 400, difficulty: 28, cpc: 0.5, competition: 0.3 },
         { keyword: `${topic} tutorial`, search_volume: 350, difficulty: 27, cpc: 0.45, competition: 0.25 },
       ];
-      finalKeywords = fallbackKeywords;
-      console.log(`✅ Using ${fallbackKeywords.length} fallback keywords`);
     }
-
-    const isRealData = !fallbackUsed && keywords.length > 0;
 
     return NextResponse.json({
       success: true,
       topic: topic,
       websiteUrl: websiteUrl || null,
-      keywords: finalKeywords,
+      keywords: keywords,
       competitors: competitors,
-      totalKeywords: finalKeywords.length,
+      totalKeywords: keywords.length,
       totalCompetitors: competitors.length,
       source: isRealData ? "DataForSEO-Real-API" : "fallback",
       is_real_data: isRealData,
