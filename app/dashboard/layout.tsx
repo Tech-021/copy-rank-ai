@@ -108,8 +108,48 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           user.identities?.[0]?.identity_data?.picture ||
           null
         setUserAvatar(avatar)
+        
+        // Call relevant-pages API after signup/redirect to dashboard
+        try {
+          // Get access token for API call
+          const { data: { session: currentSession } } = await supabase.auth.getSession()
+          const token = currentSession?.access_token
+          
+          if (token && predataResult?.competitors && Array.isArray(predataResult.competitors) && predataResult.competitors.length > 0) {
+            // Get first competitor from predata
+            const competitor = predataResult.competitors[0]
+            
+            console.log('📊 Calling relevant-pages API for competitor:', competitor)
+            
+            // Call relevant-pages API
+            const relevantPagesResponse = await fetch('/api/relevant-pages', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify({
+                email: user.email,
+                competitorIndex: 0,
+                limit: 10
+              })
+            })
+            
+            if (relevantPagesResponse.ok) {
+              const relevantPagesData = await relevantPagesResponse.json()
+              console.log('✅ Relevant Pages API Response:', relevantPagesData)
+            } else {
+              const errorData = await relevantPagesResponse.json().catch(() => ({}))
+              console.error('❌ Relevant Pages API Error:', errorData)
+            }
+          } else {
+            console.log('⚠️ Skipping relevant-pages API call - no competitors found in predata')
+          }
+        } catch (apiError) {
+          console.error('❌ Error calling relevant-pages API:', apiError)
+        }
+        
         setCheckingAuth(false)
-        setAuthPassed(true)
         setAuthPassed(true)
       } catch (err) {
         console.error("checkAuth error:", err)

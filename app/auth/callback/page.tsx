@@ -69,6 +69,17 @@ export default function AuthCallbackPage() {
           // For existing users, redirect to dashboard
           const email = session.user?.email || '';
           const userId = session.user?.id || '';
+
+          // Ensure there is a corresponding row in the `users` table for this auth user.
+          // This prevents lookup failures (e.g. payment callback / webhooks) when the row is missing.
+          try {
+            await supabase
+              .from('users')
+              .upsert({ id: userId, email: email, subscribe: false, package: 'free' }, { returning: 'minimal' });
+            console.log('Ensured users row exists for', userId);
+          } catch (err) {
+            console.warn('Could not upsert users row (non-fatal):', err);
+          }
           
           // Check if this is a new user (created_at is very recent)
           const createdAt = new Date(session.user?.created_at || '');
