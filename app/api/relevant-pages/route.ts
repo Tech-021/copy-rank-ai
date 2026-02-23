@@ -396,12 +396,12 @@ export async function POST(request: Request) {
       .eq('id', user.id)
       .single();
 
-    if (!userData?.subscribe) {
-      return NextResponse.json(
-        { error: "Subscription required" },
-        { status: 403 }
-      );
-    }
+    // if (!userData?.subscribe) {
+    //   return NextResponse.json(
+    //     { error: "Subscription required" },
+    //     { status: 403 }
+    //   );
+    // }
 
     // Parse request body
     const body: RelevantPagesRequest = await request.json().catch(() => ({}));
