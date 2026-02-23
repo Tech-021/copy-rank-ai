@@ -5,12 +5,9 @@ export const maxRetries = 0;
 
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
 import { hybridScraper } from "@/app/api/scraper/route";
 import { analyzeWithQwen } from "@/lib/qwen";
 import { fetchKeywordOverview } from "@/lib/dataforseo";
-import { fetchKeywordGap } from "@/lib/fetchKeywordGap";
 import { getUserArticleLimit } from '@/lib/articleLimits';
 
 // Initialize Supabase client
@@ -33,6 +30,150 @@ interface CompetitorResult {
   keywords: any[];
   success: boolean;
   error?: string;
+}
+
+/**
+ * Get the correct base URL for internal API calls
+ * Uses localhost in development, otherwise uses NEXT_PUBLIC_SITE_URL
+ */
+function getInternalBaseUrl(): string {
+  if (process.env.NODE_ENV === "development") {
+    return "http://localhost:3000";
+  }
+  return process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+}
+
+/**
+ * Process a single competitor using the new flow:
+ * 1) Call /api/relevant-pages to get the most important page
+ * 2) Call /api/extract-keywords on that page URL
+ * 3) Map the extracted keywords into the standard keyword shape
+ */
+async function processCompetitorWithRelevantPages(
+  competitorUrl: string,
+  baseUrl: string,
+  token: string,
+  keywordLimit: number
+): Promise<CompetitorResult> {
+  try {
+    console.log(`🔍 [Onboarding] Fetching relevant pages for ${competitorUrl}`);
+
+    const relevantRes = await fetch(`${baseUrl}/api/relevant-pages`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        competitor: competitorUrl,
+        limit: 10,
+      }),
+    });
+
+    if (!relevantRes.ok) {
+      const text = await relevantRes.text().catch(() => "");
+      console.error(
+        `❌ [Onboarding] relevant-pages failed for ${competitorUrl}:`,
+        relevantRes.status,
+        text
+      );
+      return {
+        domain: competitorUrl,
+        topic: "Unknown",
+        keywords: [],
+        success: false,
+        error: `relevant-pages failed with status ${relevantRes.status}`,
+      };
+    }
+
+    const relevantJson: any = await relevantRes.json();
+    const topPage = relevantJson.pages?.[0];
+
+    if (!topPage || (!topPage.url && !topPage.page_address)) {
+      console.warn(`⚠️ [Onboarding] No relevant pages returned for ${competitorUrl}`);
+      return {
+        domain: competitorUrl,
+        topic: "Unknown",
+        keywords: [],
+        success: false,
+        error: "No relevant pages found",
+      };
+    }
+
+    const pageUrl = topPage.url || topPage.page_address;
+    const pageTitle = topPage.title || relevantJson.target || competitorUrl;
+
+    console.log(
+      `🔗 [Onboarding] Using top relevant page for ${competitorUrl}: ${pageUrl}`
+    );
+
+    const extractRes = await fetch(`${baseUrl}/api/extract-keywords`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        url: pageUrl,
+        limit: keywordLimit,
+      }),
+    });
+
+    if (!extractRes.ok) {
+      const text = await extractRes.text().catch(() => "");
+      console.error(
+        `❌ [Onboarding] extract-keywords failed for ${pageUrl}:`,
+        extractRes.status,
+        text
+      );
+      return {
+        domain: competitorUrl,
+        topic: pageTitle,
+        keywords: [],
+        success: false,
+        error: `extract-keywords failed with status ${extractRes.status}`,
+      };
+    }
+
+    const extractJson: any = await extractRes.json();
+    const rawKeywords = Array.isArray(extractJson.keywords)
+      ? extractJson.keywords
+      : [];
+
+    console.log(
+      `✅ [Onboarding] Got ${rawKeywords.length} keywords from extract-keywords for ${competitorUrl}`
+    );
+
+    // Map extract-keywords result into the same shape used by the rest of the app
+    const transformedKeywords = rawKeywords
+      .map((k: any) => ({
+        keyword: String(k.keyword || "").trim(),
+        search_volume: k.frequency || 0, // use frequency as "volume" surrogate
+        difficulty: null,
+        cpc: null,
+        competition: null,
+        source: "relevant_page",
+      }))
+      .filter((k: any) => k.keyword);
+
+    return {
+      domain: competitorUrl,
+      topic: pageTitle,
+      keywords: transformedKeywords,
+      success: true,
+    };
+  } catch (error) {
+    console.error(
+      `❌ [Onboarding] Error in processCompetitorWithRelevantPages for ${competitorUrl}:`,
+      error
+    );
+    return {
+      domain: competitorUrl,
+      topic: "Unknown",
+      keywords: [],
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
 }
 
 function normalizeUrl(websiteUrl: string): string | null {
@@ -263,69 +404,43 @@ export async function POST(request: Request) {
       // Continue with default topic
     }
 
-    // STEP 2: Process each competitor (find topic + keywords) - skip if quick add
-    console.log("🔍 Step 2: Processing competitors...");
+    // STEP 2: Process each competitor using relevant-pages + extract-keywords
+    console.log("🔍 Step 2: Processing competitors with relevant pages...");
     const competitorResults: CompetitorResult[] = [];
     const allKeywords: any[] = [];
 
-    // Prepare filter for target keywords if provided
-    let keywordFilter: string[] = [];
-    if (targetKeywords && Array.isArray(targetKeywords)) {
-      keywordFilter = targetKeywords.filter((kw) => kw && kw.trim() !== "");
-    }
+    const baseUrl = getInternalBaseUrl();
+    const keywordLimit = 100;
 
     if (normalizedCompetitors.length > 0) {
       const clientDomain = normalizedClientDomain.replace(/^https?:\/\//, '').replace(/\/$/, '');
       for (let i = 0; i < normalizedCompetitors.length; i++) {
         const competitorUrl = normalizedCompetitors[i];
-        const competitorDomain = competitorUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
-        console.log(`\n📊 Processing competitor ${i + 1}/${normalizedCompetitors.length}: ${competitorUrl}`);
-        try {
-          // Use DataForSEO Domain Intersection API for keyword gap, with filter if targetKeywords present
-          let gapKeywords;
-          if (keywordFilter.length > 0) {
-            gapKeywords = await fetchKeywordGap(clientDomain, competitorDomain, 100, keywordFilter);
-          } else {
-            gapKeywords = await fetchKeywordGap(clientDomain, competitorDomain, 100);
-          }
-          console.log(`   📊 Keyword gap found: ${gapKeywords.length}`);
-          allKeywords.push(...gapKeywords);
-          competitorResults.push({
-            domain: competitorUrl,
-            topic: "Keyword Gap",
-            keywords: gapKeywords.map((kw) => ({
-              ...kw,
-              trafficPotential: kw.trafficPotential,
-            })),
-            success: true,
-          });
-        } catch (error) {
-          console.error(`❌ Error processing competitor ${i + 1}:`, error);
-          competitorResults.push({
-            domain: competitorUrl,
-            topic: "Unknown",
-            keywords: [],
-            success: false,
-            error: error instanceof Error ? error.message : "Unknown error",
-          });
+        console.log(
+          `\n📊 Processing competitor ${i + 1}/${normalizedCompetitors.length}: ${competitorUrl}`
+        );
+
+        const result = await processCompetitorWithRelevantPages(
+          competitorUrl,
+          baseUrl,
+          token,
+          keywordLimit
+        );
+
+        competitorResults.push(result);
+
+        if (
+          result.success &&
+          Array.isArray(result.keywords) &&
+          result.keywords.length > 0
+        ) {
+          allKeywords.push(...result.keywords);
         }
       }
     } else {
-      console.log("ℹ️ No competitors provided (quick add mode)");
-      // In quick add mode, fetch keyword gap for client domain vs google.com (or another generic domain)
-      if (clientTopic !== "General") {
-        try {
-          const clientDomainOnly = normalizedClientDomain.replace(/^https?:\/\//, '').replace(/\/$/, '');
-          const genericCompetitor = "google.com"; // You can change this to another broad domain if desired
-          console.log(`🔍 Fetching keyword gap for quick add: ${clientDomainOnly} vs ${genericCompetitor}`);
-          const gapKeywords = await fetchKeywordGap(clientDomainOnly, genericCompetitor, 100);
-          console.log(`✅ Found ${gapKeywords.length} keywords for client domain (quick add mode)`);
-          allKeywords.push(...gapKeywords);
-        } catch (error) {
-          console.error("❌ Error fetching keyword gap for client domain (quick add):", error);
-          console.warn("⚠️ Continuing with empty keywords - will add default keywords");
-        }
-      }
+      console.log(
+        "ℹ️ No competitors provided - skipping automatic competitor keyword generation"
+      );
     }
 
     // STEP 2.5: (REMOVED) Target keywords are now included as filter in competitor API call above
@@ -474,7 +589,7 @@ export async function POST(request: Request) {
     // STEP 6: Enqueue articles for generation
     console.log("\n🚀 Step 6: Enqueueing articles for generation...");
 
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+    const jobBaseUrl = getInternalBaseUrl();
 
     // Enqueue all articles as jobs - wait for response to ensure jobs are created
     // The enqueue endpoint will enforce package limits automatically
@@ -482,7 +597,7 @@ export async function POST(request: Request) {
       // Get user's package limit to pass to enqueue
       const userLimit = await getUserArticleLimit(userId);
       
-      const enqueueResponse = await fetch(`${baseUrl}/api/article-jobs/enqueue`, {
+      const enqueueResponse = await fetch(`${jobBaseUrl}/api/article-jobs/enqueue`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

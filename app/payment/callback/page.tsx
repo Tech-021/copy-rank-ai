@@ -10,7 +10,7 @@ export default function PaymentCallbackPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [attempts, setAttempts] = useState(0);
-  const MAX_ATTEMPTS = 10; // Poll for up to 10 seconds
+  const MAX_ATTEMPTS = 30; // Poll for up to 30 seconds (increased to allow webhook delivery)
   const nextPath = searchParams.get('next') || '/about-yourself';
   const toast = useToast();
 
@@ -27,22 +27,46 @@ export default function PaymentCallbackPage() {
         }
 
         // Check subscription status from the users table
+        // Use maybeSingle() so missing rows don't throw an exception
         const { data: userData, error: dbError } = await supabase
           .from('users')
-          .select('subscribe')
+          .select('subscribe, email')
           .eq('id', user.id)
-          .single();
+          .maybeSingle();
 
         if (dbError) {
-          console.error('Error checking subscription:', dbError);
-          
+          console.error('Error checking subscription (db):', dbError);
+
           // If we've tried enough times, give up and redirect to fail page
           if (attempts >= MAX_ATTEMPTS) {
             router.push('/payment/fail');
             return;
           }
-          
-          // Otherwise, try again in 1 second
+
+          // Otherwise, wait a bit and retry
+          setTimeout(() => setAttempts(prev => prev + 1), 1000);
+          return;
+        }
+
+        if (!userData) {
+          console.warn('No users row found for authenticated user (id=' + user.id + '). Attempting best-effort upsert then retrying.');
+
+          // Best-effort: try to create a users row for this auth user (so webhook can match it).
+          // This may fail under strict RLS rules and that's OK.
+          try {
+            await supabase
+              .from('users')
+              .upsert({ id: user.id, email: user.email, subscribe: false, package: 'free' }, { returning: 'minimal' });
+            console.log('Client-side upsert attempted for users row (id=' + user.id + ')');
+          } catch (upsertErr) {
+            console.warn('Client-side upsert for users row failed:', upsertErr);
+          }
+
+          if (attempts >= MAX_ATTEMPTS) {
+            router.push('/payment/fail');
+            return;
+          }
+
           setTimeout(() => setAttempts(prev => prev + 1), 1000);
           return;
         }

@@ -103,17 +103,17 @@ export async function POST(req: Request) {
       );
     }
 
-    // Trial start: set subscribe to true and package to free
+    // Trial start: set subscribe to true and package to free — use upsert so the users row is created if missing
+    const payloadCreated = userId
+      ? { id: userId, ...(userEmail ? { email: userEmail } : {}), subscribe: true, package: 'free' }
+      : { email: userEmail, subscribe: true, package: 'free' };
+
     const { error } = await supabase
       .from("users")
-      .update({ 
-        subscribe: true,
-        package: 'free' 
-      })
-      .eq(userId ? "id" : "email", userId || userEmail);
+      .upsert(payloadCreated, { onConflict: userId ? 'id' : 'email', returning: 'minimal' });
 
     if (error) {
-      console.log("Error updating subscription status:", error);
+      console.log("Error upserting subscription status:", error);
       return NextResponse.json(
         { error: "Error updating subscription status" },
         { status: 500 }
@@ -166,16 +166,17 @@ export async function POST(req: Request) {
     const packageType = determinePackage(event);
     console.log("Renewal payment received - Determined package type:", packageType);
 
-    // Only update package, keep subscribe as true (don't touch subscribe)
+    // Upsert package + ensure subscribe = true so the row is created if missing
+    const payloadPayment = userId
+      ? { id: userId, ...(userEmail ? { email: userEmail } : {}), package: packageType, subscribe: true }
+      : { email: userEmail, package: packageType, subscribe: true };
+
     const { error } = await supabase
       .from("users")
-      .update({ 
-        package: packageType 
-      })
-      .eq(userId ? "id" : "email", userId || userEmail);
+      .upsert(payloadPayment, { onConflict: userId ? 'id' : 'email', returning: 'minimal' });
 
     if (error) {
-      console.log("Error updating package:", error);
+      console.log("Error upserting package:", error);
       return NextResponse.json(
         { error: "Error updating package" },
         { status: 500 }
@@ -215,17 +216,17 @@ export async function POST(req: Request) {
       );
     }
 
-    // Update subscribe status to false and reset package to free
+    // Upsert to ensure the users row exists, then mark subscribe = false and reset package
+    const payloadCancel = userId
+      ? { id: userId, ...(userEmail ? { email: userEmail } : {}), subscribe: false, package: 'free' }
+      : { email: userEmail, subscribe: false, package: 'free' };
+
     const { error } = await supabase
       .from("users")
-      .update({ 
-        subscribe: false,
-        package: 'free' 
-      })
-      .eq(userId ? "id" : "email", userId || userEmail);
+      .upsert(payloadCancel, { onConflict: userId ? 'id' : 'email', returning: 'minimal' });
 
     if (error) {
-      console.log("Error updating subscription status:", error);
+      console.log("Error upserting subscription cancellation:", error);
       return NextResponse.json(
         { error: "Error updating subscription status" },
         { status: 500 }
