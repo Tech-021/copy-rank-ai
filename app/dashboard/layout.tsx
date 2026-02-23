@@ -210,6 +210,89 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   console.log(`  ${index + 1}. "${kw.keyword}" - Frequency: ${kw.frequency}`)
                 })
               }
+              
+              // STEP 3: Save keywords to database
+              if (keywordsData.keywords && keywordsData.keywords.length > 0) {
+                console.log('💾 [Background] Step 3: Saving keywords to database...')
+                
+                try {
+                  // Get user's website from database
+                  const { data: websites, error: websitesError } = await supabase
+                    .from('websites')
+                    .select('id, keywords')
+                    .eq('user_id', user.id)
+                    .order('created_at', { ascending: false })
+                    .limit(1)
+                    .maybeSingle()
+                  
+                  if (websitesError) {
+                    console.error('❌ [Background] Error fetching website:', websitesError)
+                    return
+                  }
+                  
+                  if (!websites?.id) {
+                    console.error('❌ [Background] No website found for user')
+                    return
+                  }
+                  
+                  // Get existing keywords structure
+                  const existingPayload = websites.keywords || {}
+                  const existingList: any[] = Array.isArray(existingPayload?.keywords)
+                    ? existingPayload.keywords
+                    : []
+                  
+                  // Merge & dedupe by keyword text (case-insensitive)
+                  const keywordMap = new Map<string, any>()
+                  
+                  // Add existing keywords
+                  existingList.forEach((k) => {
+                    const key = String(k.keyword || k || "").toLowerCase()
+                    if (key) keywordMap.set(key, k)
+                  })
+                  
+                  // Add/update new keywords
+                  keywordsData.keywords.forEach((kw: any) => {
+                    const key = String(kw.keyword || "").toLowerCase()
+                    if (key) {
+                      const existing = keywordMap.get(key) || {}
+                      keywordMap.set(key, {
+                        ...existing,
+                        keyword: kw.keyword,
+                        frequency: kw.frequency,
+                        is_target_keyword: true,
+                        post_status: existing.post_status || "No Plan",
+                      })
+                    }
+                  })
+                  
+                  const mergedList = Array.from(keywordMap.values())
+                  const newPayload = {
+                    ...existingPayload,
+                    keywords: mergedList,
+                    analysis_metadata: {
+                      ...existingPayload.analysis_metadata,
+                      total_keywords: mergedList.length,
+                      analyzed_at: new Date().toISOString(),
+                    },
+                  }
+                  
+                  // Update in Supabase
+                  const { error: updateErr } = await supabase
+                    .from('websites')
+                    .update({ keywords: newPayload })
+                    .eq('id', websites.id)
+                  
+                  if (updateErr) {
+                    console.error('❌ [Background] Failed to save keywords to database:', updateErr)
+                  } else {
+                    console.log(`✅ [Background] Step 3 Complete: Saved ${mergedList.length} keywords to database`)
+                    console.log(`   - New keywords added: ${keywordsData.keywords.length}`)
+                    console.log(`   - Total keywords in DB: ${mergedList.length}`)
+                  }
+                } catch (saveError) {
+                  console.error('❌ [Background] Error saving keywords:', saveError)
+                }
+              }
             } catch (apiError) {
               console.error('❌ [Background] Error in keywords flow:', apiError)
             }
