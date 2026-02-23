@@ -30,8 +30,11 @@ import { Copy, Check, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { getUser, updatePassword } from "@/lib/auth";
 import Image from "next/image";
 import { useToast } from "@/components/ui/toast";
+import { useRouter } from "next/navigation";
+import { WordPressConnectButton } from "@/components/wordpress-connect-button";
 
 export function SettingsTab() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState("publishing");
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [userPackage, setUserPackage] = useState<
@@ -194,7 +197,288 @@ export function SettingsTab() {
   useEffect(() => {
     if (!currentUser?.id) return;
     loadConnectedWebsites(currentUser.id);
+    // load Framer connections
+    loadFramerConnections(currentUser.id);
+    // load Webflow connections
+    loadWebflowConnections(currentUser.id);
   }, [currentUser?.id]);
+
+  // Framer connections state & handlers
+  const [framerConnections, setFramerConnections] = useState<any[]>([]);
+  const [framerLoading, setFramerLoading] = useState(false);
+  const [isAddFramerOpen, setIsAddFramerOpen] = useState(false);
+  const [framerProjectUrl, setFramerProjectUrl] = useState('');
+  const [framerApiKey, setFramerApiKey] = useState('');
+  const [framerMakeDefault, setFramerMakeDefault] = useState(false);
+
+  const loadFramerConnections = async (userId?: string) => {
+    setFramerLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token || !userId) return setFramerConnections([]);
+
+      const res = await fetch('/api/framer/connections', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        setFramerConnections(json.connections || []);
+      } else {
+        setFramerConnections([]);
+      }
+    } catch (err) {
+      console.warn('Failed to load Framer connections', err);
+      setFramerConnections([]);
+    } finally {
+      setFramerLoading(false);
+    }
+  };
+
+  const handleAddConnection = async () => {
+    if (!currentUser) return;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) return alert('Please sign in');
+
+      const res = await fetch('/api/framer/connections', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ projectUrl: framerProjectUrl, apiKey: framerApiKey, isDefault: framerMakeDefault }),
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        setIsAddFramerOpen(false);
+        setFramerProjectUrl('');
+        setFramerApiKey('');
+        setFramerMakeDefault(false);
+        toast.showToast({ title: 'Framer connection added', description: 'Connection saved successfully', type: 'success' });
+        loadFramerConnections(currentUser.id);
+      } else {
+        throw new Error(json.error || 'Failed to add connection');
+      }
+    } catch (err: any) {
+      console.error('Add Framer connection failed', err);
+      toast.showToast({ title: 'Error', description: err?.message || 'Failed to add connection', type: 'error' });
+    }
+  };
+
+  const handleTestConnection = async (id: string) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) return alert('Please sign in');
+
+      const res = await fetch(`/api/framer/connections/${id}/test`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        toast.showToast({ title: 'Connection OK', description: 'Framer connection is valid', type: 'success' });
+      } else {
+        throw new Error(json.error || 'Connection test failed');
+      }
+    } catch (err: any) {
+      console.error('Test Framer connection failed', err);
+      toast.showToast({ title: 'Connection Failed', description: err?.message || 'Failed to validate connection', type: 'error' });
+    }
+  };
+
+  const handleMakeDefault = async (id: string) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) return alert('Please sign in');
+
+      const res = await fetch(`/api/framer/connections/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ is_default: true }),
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        toast.showToast({ title: 'Default set', description: 'This connection is now the default', type: 'success' });
+        loadFramerConnections(currentUser.id);
+      } else {
+        throw new Error(json.error || 'Failed to set default');
+      }
+    } catch (err: any) {
+      console.error('Make default failed', err);
+      toast.showToast({ title: 'Error', description: err?.message || 'Failed to set default', type: 'error' });
+    }
+  };
+
+  const handleDeleteConnection = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this Framer connection?')) return;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) return alert('Please sign in');
+
+      const res = await fetch(`/api/framer/connections/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        toast.showToast({ title: 'Deleted', description: 'Connection removed', type: 'success' });
+        loadFramerConnections(currentUser.id);
+      } else {
+        throw new Error(json.error || 'Failed to delete');
+      }
+    } catch (err: any) {
+      console.error('Delete connection failed', err);
+      toast.showToast({ title: 'Error', description: err?.message || 'Failed to delete connection', type: 'error' });
+    }
+  };
+
+  // Webflow connections state & handlers
+  const [webflowConnections, setWebflowConnections] = useState<any[]>([]);
+  const [webflowLoading, setWebflowLoading] = useState(false);
+  const [isAddWebflowOpen, setIsAddWebflowOpen] = useState(false);
+  const [webflowSiteId, setWebflowSiteId] = useState('');
+  const [webflowCollectionId, setWebflowCollectionId] = useState('');
+  const [webflowApiKey, setWebflowApiKey] = useState('');
+  const [webflowMakeDefault, setWebflowMakeDefault] = useState(false);
+  const [webflowAddError, setWebflowAddError] = useState<string | null>(null);
+
+  const loadWebflowConnections = async (userId?: string) => {
+    setWebflowLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token || !userId) return setWebflowConnections([]);
+
+      const res = await fetch('/api/webflow/connections', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        setWebflowConnections(json.connections || []);
+      } else {
+        setWebflowConnections([]);
+      }
+    } catch (err) {
+      console.warn('Failed to load Webflow connections', err);
+      setWebflowConnections([]);
+    } finally {
+      setWebflowLoading(false);
+    }
+  };
+
+  const handleAddWebflowConnection = async () => {
+    if (!currentUser) return;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) return alert('Please sign in');
+
+      setWebflowAddError(null);
+      const body = { siteId: webflowSiteId, collectionId: webflowCollectionId || undefined, apiKey: webflowApiKey, isDefault: webflowMakeDefault };
+      const res = await fetch('/api/webflow/connections', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(body),
+      });
+      const json = await res.json();
+
+      if (res.ok && json.success) {
+        setIsAddWebflowOpen(false);
+        setWebflowSiteId('');
+        setWebflowCollectionId('');
+        setWebflowApiKey('');
+        setWebflowMakeDefault(false);
+        setWebflowAddError(null);
+        toast.showToast({ title: 'Webflow connection added', description: 'Connection saved successfully', type: 'success' });
+        loadWebflowConnections(currentUser.id);
+        return;
+      }
+
+      // Handle error with structured details where available
+      const details = json?.details;
+      const hint = details?.hint || details?.suggestion || null;
+      let bodyMsg: string | null = null;
+      try { bodyMsg = details?.body ? (typeof details.body === 'object' ? JSON.stringify(details.body) : String(details.body)) : null; } catch { bodyMsg = null; }
+      const errMsg = hint ? `${hint}${bodyMsg ? ` — ${bodyMsg}` : ''}` : (json?.error || 'Failed to add connection');
+      setWebflowAddError(errMsg);
+      toast.showToast({ title: 'Error', description: errMsg, type: 'error' });
+    } catch (err: any) {
+      console.error('Add Webflow connection failed', err);
+      toast.showToast({ title: 'Error', description: err?.message || 'Failed to add connection', type: 'error' });
+    }
+  };
+
+  const handleTestWebflowConnection = async (id: string) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) return alert('Please sign in');
+
+      const res = await fetch(`/api/webflow/connections/${id}/test`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        toast.showToast({ title: 'Connection OK', description: 'Webflow connection is valid', type: 'success' });
+      } else {
+        throw new Error(json.error || 'Connection test failed');
+      }
+    } catch (err: any) {
+      console.error('Test Webflow connection failed', err);
+      toast.showToast({ title: 'Connection Failed', description: err?.message || 'Failed to validate connection', type: 'error' });
+    }
+  };
+
+  const handleMakeDefaultWebflow = async (id: string) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) return alert('Please sign in');
+
+      const res = await fetch(`/api/webflow/connections/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ is_default: true }),
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        toast.showToast({ title: 'Default set', description: 'This connection is now the default', type: 'success' });
+        loadWebflowConnections(currentUser.id);
+      } else {
+        throw new Error(json.error || 'Failed to set default');
+      }
+    } catch (err: any) {
+      console.error('Make default failed', err);
+      toast.showToast({ title: 'Error', description: err?.message || 'Failed to set default', type: 'error' });
+    }
+  };
+
+  const handleDeleteWebflowConnection = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this Webflow connection?')) return;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) return alert('Please sign in');
+
+      const res = await fetch(`/api/webflow/connections/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        toast.showToast({ title: 'Deleted', description: 'Connection removed', type: 'success' });
+        loadWebflowConnections(currentUser.id);
+      } else {
+        throw new Error(json.error || 'Failed to delete');
+      }
+    } catch (err: any) {
+      console.error('Delete Webflow connection failed', err);
+      toast.showToast({ title: 'Error', description: err?.message || 'Failed to delete', type: 'error' });
+    }
+  };
 
   // Fetch usage metrics
   useEffect(() => {
@@ -441,6 +725,9 @@ export function SettingsTab() {
   const tabs = [
     { id: "publishing", label: "Publishing" },
     { id: "connections", label: "Connections" },
+    { id: "wordpress", label: "WordPress" },
+    { id: "framer", label: "Framer" },
+    { id: "webflow", label: "Webflow" },
     { id: "account", label: "Account" },
     { id: "billing", label: "Billing & Plan" },
   ];
@@ -621,65 +908,18 @@ export function SettingsTab() {
         {/* Notifications Tab */}
 
         {/* Account Tab */}
-
-        {/* Billing Tab */}
-        {activeTab === "connections" && (
-          <div className="border border-gray-800 rounded-lg p-4 sm:p-6 space-y-4 sm:space-y-6">
-            <div>
-              <h3 className="text-sm sm:text-base font-medium text-white mb-1">
-                Connections
-              </h3>
-              <p className="text-xs sm:text-sm text-gray-500">
-                Choose where your posts should be published
-              </p>
-            </div>
-
-            <div className="border border-gray-800 w-full sm:max-w-[654px] p-3 sm:p-4 rounded-[10px]">
-              <h4 className="text-xs sm:text-sm font-medium text-white mb-3">
-                Connected Websites
-              </h4>
-              <div className="space-y-2">
-              {connectedWebsitesLoading ? (
-                <div className="flex items-center justify-center py-6">
-                  <LoaderChevron />
-                </div>
-              ) : connectedWebsites.length === 0 ? (
-                <div className="px-3 py-2 text-xs text-gray-500">
-                  No websites connected yet.
-                </div>
-              ) : (
-                connectedWebsites.map((site) => (
-                  <div
-                    key={site.id}
-                    className="flex items-center justify-between gap-2 p-2 sm:p-3 bg-transparent rounded"
-                  >
-                    <span className="text-xs sm:text-sm text-gray-500">
-                      {site.domain}
-                    </span>
-                    <span
-                      className={`text-xs font-medium ${
-                        site.status === "Active" ? "text-green-600" : "text-gray-500"
-                      }`}
-                    >
-                      {site.status}
-                    </span>
-                  </div>
-                ))
-              )}
-            </div>
-              <Button
-                className="mt-4 h-9 text-[#5baf57] border-[#d0d0d0] bg-[#53f8701a] cursor-pointer hover:bg-[#53f8701a]"
-              >
-                <Plus />
-              </Button>
-              <span className="ml-3 text-[#ffffffb3]">Connect Website</span>
-            </div>
-          </div>
-        )}
-
-        {/* Account Tab */}
         {activeTab === "account" && (
           <div className="border border-gray-800 rounded-lg p-4 sm:p-6">
+            <div className="flex justify-end mb-4">
+              <Button
+                variant="outline"
+                className="text-xs sm:text-sm border-[#53f870] bg-[#53f8701a] text-[#53f870] hover:bg-[#53f87033] hover:text-[#53f870] cursor-pointer transition-colors"
+                onClick={() => router.push("/about-yourself?force=true")}
+              >
+                Run Onboarding Again
+              </Button>
+            </div>
+
             <div className="mb-4 sm:mb-6">
               <h3 className="text-sm sm:text-base font-medium text-white mb-1">Account</h3>
               <p className="text-xs sm:text-sm text-gray-500">
@@ -822,6 +1062,215 @@ export function SettingsTab() {
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* WordPress Integration Tab */}
+        {activeTab === "wordpress" && (
+          <div className="border border-gray-800 rounded-lg p-4 sm:p-6">
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-sm sm:text-base font-medium text-white mb-1">
+                  WordPress Integration
+                </h3>
+                <p className="text-xs sm:text-sm text-gray-400">
+                  Connect your WordPress site to publish articles directly from this platform
+                </p>
+              </div>
+              <WordPressConnectButton />
+              <div className="border-t border-gray-800 pt-4 mt-4">
+                <h4 className="text-xs sm:text-sm font-medium text-white mb-2">How it works</h4>
+                <ul className="text-xs text-gray-400 space-y-2 list-disc list-inside">
+                  <li>Connect your WordPress.com site using OAuth authentication</li>
+                  <li>Publish articles directly from the Articles tab with one click</li>
+                  <li>Choose to publish immediately or save as draft</li>
+                  <li>Featured images are automatically uploaded from your generated images</li>
+                  <li>All credentials are encrypted and stored securely</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Framer Integration Tab */}
+        {activeTab === "framer" && (
+          <div className="border border-gray-800 rounded-lg p-4 sm:p-6">
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-sm sm:text-base font-medium text-white mb-1">Framer Integration</h3>
+                <p className="text-xs sm:text-sm text-gray-400">Connect your Framer projects to publish articles as pages. Store per-user connections (encrypted) and choose a default connection.</p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  className="bg-[#9162ff] text-white h-9"
+                  onClick={() => setIsAddFramerOpen(true)}
+                >
+                  <Plus className="mr-2 h-4 w-4" /> Add connection
+                </Button>
+              </div>
+
+              <div className="space-y-3">
+                {framerLoading ? (
+                  <div className="text-sm text-gray-400">Loading connections...</div>
+                ) : framerConnections.length === 0 ? (
+                  <div className="text-sm text-gray-400">No Framer connections yet. Add one to enable per-user publishing.</div>
+                ) : (
+                  <div className="space-y-2">
+                    {framerConnections.map((c: any) => (
+                      <div key={c.id} className="flex items-center justify-between p-3 bg-[#0b0b0b] border border-gray-800 rounded">
+                        <div>
+                          <div className="text-sm text-white">{c.project_url}</div>
+                          <div className="text-xs text-gray-400">{c.is_default ? 'Default' : c.is_active ? 'Active' : 'Inactive'}</div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button variant="outline" size="sm" onClick={() => handleTestConnection(c.id)}>Test</Button>
+                          {!c.is_default && <Button size="sm" onClick={() => handleMakeDefault(c.id)}>Make default</Button>}
+                          <Button size="sm" className="bg-red-600" onClick={() => handleDeleteConnection(c.id)}>Delete</Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="border-t border-gray-800 pt-4 mt-4">
+                <h4 className="text-xs sm:text-sm font-medium text-white mb-2">How it works</h4>
+                <ul className="text-xs text-gray-400 space-y-2 list-disc list-inside">
+                  <li>Add one or more Framer project connections (project URL + server API key)</li>
+                  <li>Mark one connection as <strong>Default</strong> — it will be used automatically when publishing</li>
+                  <li>Keys are encrypted with <code>FRAMER_ENCRYPTION_KEY</code> on the server and never exposed to the browser</li>
+                  <li>Test a connection to verify project access</li>
+                </ul>
+              </div>
+
+              {/* Add connection dialog */}
+              <Dialog open={isAddFramerOpen} onOpenChange={setIsAddFramerOpen}>
+                <DialogContent className="bg-zinc-900 border-zinc-800 text-white">
+                  <DialogHeader>
+                    <DialogTitle>Add Framer Connection</DialogTitle>
+                    <div className="text-gray-400 text-sm">Provide your Framer project URL and a project-scoped Server API key</div>
+                  </DialogHeader>
+
+                  <div className="py-4 space-y-3">
+                    <div>
+                      <label className="text-xs text-gray-300">Project URL</label>
+                      <Input value={framerProjectUrl} onChange={(e) => setFramerProjectUrl(e.target.value)} className="mt-1" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-300">Server API Key</label>
+                      <Input value={framerApiKey} onChange={(e) => setFramerApiKey(e.target.value)} className="mt-1" />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input type="checkbox" checked={framerMakeDefault} onChange={(e) => setFramerMakeDefault(e.target.checked)} />
+                      <label className="text-xs text-gray-300">Make default</label>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-2">
+                    <Button variant="outline" onClick={() => setIsAddFramerOpen(false)}>Cancel</Button>
+                    <Button onClick={() => handleAddConnection()} className="bg-[#9162ff]">Add</Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+
+            </div>
+          </div>
+        )}
+
+        {/* Webflow Integration Tab */}
+        {activeTab === "webflow" && (
+          <div className="border border-gray-800 rounded-lg p-4 sm:p-6">
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-sm sm:text-base font-medium text-white mb-1">Webflow Integration</h3>
+                <p className="text-xs sm:text-sm text-gray-400">Connect your Webflow sites to publish articles into a CMS collection named <strong>Articles</strong>. Store per-user connections (encrypted) and choose a default connection.</p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  className="bg-[#00b4ff] text-white h-9"
+                  onClick={() => setIsAddWebflowOpen(true)}
+                >
+                  <Plus className="mr-2 h-4 w-4" /> Add connection
+                </Button>
+              </div>
+
+              <div className="space-y-3">
+                {webflowLoading ? (
+                  <div className="text-sm text-gray-400">Loading connections...</div>
+                ) : webflowConnections.length === 0 ? (
+                  <div className="text-sm text-gray-400">No Webflow connections yet. Add one to enable per-user publishing.</div>
+                ) : (
+                  <div className="space-y-2">
+                    {webflowConnections.map((c: any) => (
+                      <div key={c.id} className="flex items-center justify-between p-3 bg-[#0b0b0b] border border-gray-800 rounded">
+                        <div>
+                          <div className="text-sm text-white">{c.site_name || c.site_id}</div>
+                          <div className="text-xs text-gray-400">{c.is_default ? 'Default' : c.is_active ? 'Active' : 'Inactive'}</div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button variant="outline" size="sm" onClick={() => handleTestWebflowConnection(c.id)}>Test</Button>
+                          {!c.is_default && <Button size="sm" onClick={() => handleMakeDefaultWebflow(c.id)}>Make default</Button>}
+                          <Button size="sm" className="bg-red-600" onClick={() => handleDeleteWebflowConnection(c.id)}>Delete</Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="border-t border-gray-800 pt-4 mt-4">
+                <h4 className="text-xs sm:text-sm font-medium text-white mb-2">How it works</h4>
+                <ul className="text-xs text-gray-400 space-y-2 list-disc list-inside">
+                  <li>Add one or more Webflow site connections (site ID + API token). Optionally specify a collection id to force a collection.</li>
+                  <li>Mark one connection as <strong>Default</strong> — it will be used automatically when publishing</li>
+                  <li>API tokens are encrypted with <code>WEBFLOW_ENCRYPTION_KEY</code> on the server and never exposed to the browser</li>
+                  <li>Test a connection to verify site and collection access</li>
+                </ul>
+              </div>
+
+              {/* Add connection dialog */}
+              <Dialog open={isAddWebflowOpen} onOpenChange={setIsAddWebflowOpen}>
+                <DialogContent className="bg-zinc-900 border-zinc-800 text-white">
+                  <DialogHeader>
+                    <DialogTitle>Add Webflow Connection</DialogTitle>
+                    <div className="text-gray-400 text-sm">Provide your Webflow Site ID and a Site-specific API token. You can optionally provide a collection id to target.</div>
+                  </DialogHeader>
+
+                  <div className="py-4 space-y-3">
+                    <div>
+                      <label className="text-xs text-gray-300">Site ID</label>
+                      <Input value={webflowSiteId} onChange={(e) => setWebflowSiteId(e.target.value)} className="mt-1" placeholder="Webflow Site ID (required)" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-300">API Token</label>
+                      <Input value={webflowApiKey} onChange={(e) => setWebflowApiKey(e.target.value)} className="mt-1" placeholder="Personal Access Token (recommended)" />
+                      <div className="text-xs text-gray-500 mt-1">Use a Personal Access Token with site-level scopes (sites:read, collections:read). <strong>Do not use the site slug or domain here.</strong> Provide the Site ID from Webflow Project Settings → General → <code>Site ID</code> (it typically looks like a 24-character hex string, e.g. <code>6464c7393abcd7023ad2a80a</code>).</div>
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-300">Collection ID (optional)</label>
+                      <Input value={webflowCollectionId} onChange={(e) => setWebflowCollectionId(e.target.value)} className="mt-1" />
+                    </div>
+
+                    {webflowAddError && (
+                      <div className="text-xs text-red-400">{webflowAddError}</div>
+                    )}
+
+                    <div className="flex items-center gap-2">
+                      <input type="checkbox" checked={webflowMakeDefault} onChange={(e) => setWebflowMakeDefault(e.target.checked)} />
+                      <label className="text-xs text-gray-300">Make default</label>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-2">
+                    <Button variant="outline" onClick={() => setIsAddWebflowOpen(false)}>Cancel</Button>
+                    <Button onClick={() => handleAddWebflowConnection()} className="bg-[#00b4ff]">Add</Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+
             </div>
           </div>
         )}

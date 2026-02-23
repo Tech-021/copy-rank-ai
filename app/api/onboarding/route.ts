@@ -413,6 +413,7 @@ export async function POST(request: Request) {
     const keywordLimit = 100;
 
     if (normalizedCompetitors.length > 0) {
+      const clientDomain = normalizedClientDomain.replace(/^https?:\/\//, '').replace(/\/$/, '');
       for (let i = 0; i < normalizedCompetitors.length; i++) {
         const competitorUrl = normalizedCompetitors[i];
         console.log(
@@ -442,44 +443,21 @@ export async function POST(request: Request) {
       );
     }
 
-    // STEP 2.5: Process target keywords (NO filtering - explicit keywords)
-    console.log("\n🔍 Step 2.5: Processing target keywords...");
+    // STEP 2.5: (REMOVED) Target keywords are now included as filter in competitor API call above
+    // If no competitors, fallback to overview for target keywords
     let targetKeywordData: any[] = [];
-
-    if (targetKeywords && targetKeywords.length > 0) {
-      // Filter out empty keywords
-      const validTargetKeywords = targetKeywords.filter(
-        (kw) => kw && kw.trim() !== ""
-      );
-
-      if (validTargetKeywords.length > 0) {
-        try {
-          console.log(
-            `📋 Processing ${validTargetKeywords.length} target keywords:`,
-            validTargetKeywords
-          );
-
-          // Call keyword overview API (processes keywords one by one internally)
-          const overviewResults = await fetchKeywordOverview(
-            validTargetKeywords
-          );
-
-          // NO filtering - use whatever data we get (explicit keywords)
-          targetKeywordData = overviewResults.map((kw) => ({
-            ...kw,
-            is_target_keyword: true, // Flag to identify target keywords
-          }));
-
-          console.log(
-            `✅ Retrieved data for ${targetKeywordData.length} target keywords`
-          );
-        } catch (error) {
-          console.error("❌ Error processing target keywords:", error);
-          // Continue even if target keywords fail
-        }
+    if (keywordFilter.length > 0 && normalizedCompetitors.length === 0) {
+      try {
+        let overviewResults: any[] = [];
+        overviewResults = await fetchKeywordOverview(keywordFilter);
+        overviewResults = overviewResults.map((kw) => ({ ...kw, is_target_keyword: true, source: 'overview' }));
+        targetKeywordData = overviewResults;
+        console.log(
+          `✅ Retrieved data for ${targetKeywordData.length} target keywords (overview)`
+        );
+      } catch (error) {
+        console.error("❌ Error processing target keywords (overview):", error);
       }
-    } else {
-      console.log("ℹ️ No target keywords provided");
     }
 
     // STEP 3: Merge competitor keywords + target keywords, then remove duplicates
@@ -493,17 +471,16 @@ export async function POST(request: Request) {
 
     // If no keywords found, add default keywords for the topic
     if (allMergedKeywords.length === 0 && clientTopic !== "General") {
-      console.warn("⚠️ No keywords found from APIs, adding default keywords for topic");
+      console.warn("⚠️ No keywords found from APIs. This could mean:");
+      console.warn("   - Domain is too new or has low SEO presence");
+      console.warn("   - Competitor domain is too similar");
+      console.warn("   - DataForSEO API credentials issue");
+      console.warn("⚠️ Adding minimal default keywords as fallback");
       const defaultKeywords = [
-        { keyword: `${clientTopic}`, search_volume: 1000, difficulty: 30, cpc: 0.5, competition: 0.3 },
-        { keyword: `${clientTopic} tips`, search_volume: 500, difficulty: 25, cpc: 0.4, competition: 0.2 },
-        { keyword: `best ${clientTopic}`, search_volume: 450, difficulty: 35, cpc: 0.6, competition: 0.4 },
-        { keyword: `${clientTopic} guide`, search_volume: 400, difficulty: 28, cpc: 0.5, competition: 0.3 },
-        { keyword: `${clientTopic} tutorial`, search_volume: 350, difficulty: 27, cpc: 0.45, competition: 0.25 },
-        { keyword: `learn ${clientTopic}`, search_volume: 300, difficulty: 26, cpc: 0.4, competition: 0.2 },
+        { keyword: `${clientTopic}`, search_volume: 100, difficulty: 30, cpc: 0.5, competition: 0.3 },
       ];
       allMergedKeywords.push(...defaultKeywords);
-      console.log(`✅ Added ${defaultKeywords.length} default keywords`);
+      console.log(`✅ Added ${defaultKeywords.length} default keyword(s)`);
     }
 
     // Remove duplicate keywords (by keyword text, case-insensitive)
@@ -549,6 +526,7 @@ export async function POST(request: Request) {
     }));
 
     const insertData = {
+      name: clientDomain.trim() || normalizedClientDomain,
       url: normalizedClientDomain, // Use normalized URL
       topic: clientTopic,
       keywords: {
@@ -570,9 +548,8 @@ export async function POST(request: Request) {
           },
         },
       },
-      // Add top-level competitors column if your schema has it
-      competitors: competitorsData, // Save to top-level competitors column (jsonb)
-      total_competitors: competitorResults.length, // Save to total_competitors column (int4)
+      competitors: competitorsData,
+      total_competitors: competitorResults.length,
       user_id: userId,
     };
 

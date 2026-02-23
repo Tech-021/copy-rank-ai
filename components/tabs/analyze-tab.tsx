@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { LoaderChevron } from "@/components/ui/LoaderChevron";
 import {
@@ -148,6 +148,7 @@ export function AnalyzeTab({
   const [isLoading, setIsLoading] = useState(false);
   const [showSkeletons, setShowSkeletons] = useState(false);
   const toast = useToast();
+  const lastArticlesErrorRef = useRef<string | null>(null);
   const [filterStatus, setFilterStatus] = useState("all");
   const [isContentExpanded, setIsContentExpanded] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -619,7 +620,7 @@ export function AnalyzeTab({
           competitor2.trim(),
           competitor3.trim(),
         ],
-        targetKeywords: [keyword1.trim(), keyword2.trim(), keyword3.trim()],
+        targetKeywords: [keyword1.trim(), keyword2.trim(), keyword3.trim()].filter(Boolean),
         userId: user.id,
       };
 
@@ -665,10 +666,7 @@ export function AnalyzeTab({
     websiteName.trim() &&
     competitor1.trim() &&
     competitor2.trim() &&
-    competitor3.trim() &&
-    keyword1.trim() &&
-    keyword2.trim() &&
-    keyword3.trim();
+    competitor3.trim();
 
   const getReadingTime = (wordCount?: number) => {
     if (!wordCount) return "—";
@@ -794,10 +792,27 @@ export function AnalyzeTab({
           'Content-Type': 'application/json',
         },
       });
-      if (!res.ok) throw new Error("Failed to fetch articles");
+      if (!res.ok) {
+        const errorPayload = await res.json().catch(() => null);
+        const message = errorPayload?.error || "Failed to fetch articles";
+        if (res.status === 403) {
+          if (lastArticlesErrorRef.current !== message) {
+            toast.showToast({
+              title: "Articles unavailable",
+              description: message,
+              type: "error",
+            });
+            lastArticlesErrorRef.current = message;
+          }
+          setLoadingArticles(false);
+          return;
+        }
+        throw new Error(message);
+      }
       const data = await res.json();
 
       if (data.success) {
+        lastArticlesErrorRef.current = null;
         const normalizedArticles = (data.articles || []).map((a: any) => {
           const rawImages =
             a.generatedImages ??
@@ -1374,7 +1389,7 @@ export function AnalyzeTab({
               }`}
             >
               <img
-                src={article.generatedImages?.[0] || "/article-image.jpg"}
+                src={article.generatedImages?.[0] || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300'%3E%3Crect width='400' height='300' fill='%23e5e7eb'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='18' fill='%239ca3af'%3ENo Image%3C/text%3E%3C/svg%3E"}
                 alt={article.title}
                 className="w-20 h-20 rounded object-cover shrink-0"
               />

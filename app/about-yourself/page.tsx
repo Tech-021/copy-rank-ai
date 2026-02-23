@@ -1,12 +1,14 @@
 "use client";
 import { supabase } from "@/lib/client";
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { getUser } from "@/lib/auth";
 import { useToast } from "@/components/ui/toast";
+import Form from "@/components/form";
 
 export default function OnboardingPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isOpen, setIsOpen] = useState(false);
   const [isCheckingSubscription, setIsCheckingSubscription] = useState(true);
 
@@ -15,6 +17,7 @@ export default function OnboardingPage() {
     let mounted = true;
     
     async function checkSubscription() {
+      const force = searchParams?.get("force") === "true";
       try {
         setIsCheckingSubscription(true);
         
@@ -30,29 +33,31 @@ export default function OnboardingPage() {
         }
 
         // FIRST: Check if user needs onboarding (pre_data check)
-        const { data: predataResult } = await supabase
-          .from('pre_data')
-          .select('*')
-          .eq('email', user.email)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle()
+        if (!force) {
+          const { data: predataResult } = await supabase
+            .from('pre_data')
+            .select('*')
+            .eq('email', user.email)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle()
 
-        // Determine if user needs onboarding
-        const needsOnboarding = !predataResult || (() => {
-          const predata = predataResult
-          const hasWebsite = predata.website && predata.website.trim() !== ''
-          const hasCompetitors = Array.isArray(predata.competitors) && predata.competitors.length > 0
-          const hasKeywords = Array.isArray(predata.keywords) && predata.keywords.length > 0
-          return !hasWebsite || (!hasCompetitors && !hasKeywords)
-        })()
+          // Determine if user needs onboarding
+          const needsOnboarding = !predataResult || (() => {
+            const predata = predataResult
+            const hasWebsite = predata.website && predata.website.trim() !== ''
+            const hasCompetitors = Array.isArray(predata.competitors) && predata.competitors.length > 0
+            const hasKeywords = Array.isArray(predata.keywords) && predata.keywords.length > 0
+            return !hasWebsite || !hasCompetitors
+          })()
 
-        if (needsOnboarding) {
-          console.log('User needs onboarding, redirecting to onboarding-required')
-          if (mounted) {
-            router.push('/auth/onboarding-required')
+          if (needsOnboarding) {
+            console.log('User needs onboarding, redirecting to onboarding-required')
+            if (mounted) {
+              router.push('/onboarding')
+            }
+            return
           }
-          return
         }
 
         // SECOND: Check subscription status from the users table
@@ -112,9 +117,20 @@ export default function OnboardingPage() {
     );
   }
 
-  return (
-    router.push('/dashboard')
-  );
+  // If force is true or onboarding is needed, show the onboarding form/dialog
+  if (isOpen) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="bg-white p-8 rounded shadow text-center">
+          <Form />
+        </div>
+      </div>
+    );
+  }
+
+  // Default: redirect to dashboard
+  router.push('/dashboard');
+  return null;
 }
 
 
