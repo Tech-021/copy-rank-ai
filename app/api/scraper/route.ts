@@ -29,12 +29,14 @@ export async function hybridScraper(url: string): Promise<ScrapeResult | null> {
   let result = await scrapeWithCheerio(url);
   console.log("🧩 Cheerio scrape result:", result ? "OK" : "NULL");
 
-  if (!result || result.wordCount < 50) {
-    console.log("⚠️ Low content (<50 words), switching to Puppeteer...");
+  // Optimized: Only use Puppeteer if Cheerio completely fails or has very low content
+  // Reduced threshold from 50 to 30 words to prefer faster Cheerio scraping
+  if (!result || result.wordCount < 30) {
+    console.log("⚠️ Low content (<30 words) or failed, switching to Puppeteer...");
     const scrapeWithPuppeteer = await loadPuppeteerScraper();
     result = await scrapeWithPuppeteer(url);
   } else {
-    console.log("✅ Cheerio scrape successful, skipping Puppeteer.");
+    console.log(`✅ Cheerio scrape successful (${result.wordCount} words), skipping Puppeteer for speed.`);
   }
 
   console.log("📦 Final scrape result:", !!result ? "Success" : "Failed");

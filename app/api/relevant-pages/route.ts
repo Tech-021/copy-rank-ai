@@ -138,9 +138,9 @@ async function getCompetitorsFromPredata(email: string): Promise<string[]> {
 }
 
 /**
- * Call DataForSEO relevant_pages API
+ * Internal function to call DataForSEO relevant_pages API (not cached)
  */
-async function fetchRelevantPages(
+async function _fetchRelevantPagesUncached(
   target: string,
   locationCode: number,
   languageCode: string,
@@ -160,6 +160,8 @@ async function fetchRelevantPages(
     ? 'https://api.dataforseo.com/v3/dataforseo_labs/bing/relevant_pages/live'
     : 'https://api.dataforseo.com/v3/dataforseo_labs/google/relevant_pages/live';
 
+  console.log(`📡 [Cache Miss] Fetching from DataForSEO: ${target} (${engine})`);
+  
   const response = await fetch(endpoint, {
     method: 'POST',
     headers: {
@@ -189,6 +191,52 @@ async function fetchRelevantPages(
     );
   }
 
+  return data;
+}
+
+// In-memory cache for API responses
+const cache = new Map<string, { data: DataForSEOResponse; timestamp: number }>();
+const CACHE_TTL = 3600 * 1000; // 1 hour in milliseconds
+
+/**
+ * Call DataForSEO relevant_pages API with caching
+ * Cache duration: 1 hour
+ */
+async function fetchRelevantPages(
+  target: string,
+  locationCode: number,
+  languageCode: string,
+  limit: number,
+  engine: "google" | "bing"
+): Promise<DataForSEOResponse> {
+  // Create cache key from parameters
+  const cacheKey = `relevant-pages-${target}-${locationCode}-${languageCode}-${limit}-${engine}`;
+  
+  // Check cache
+  const cached = cache.get(cacheKey);
+  const now = Date.now();
+  
+  if (cached && (now - cached.timestamp) < CACHE_TTL) {
+    console.log(`✅ [Cache Hit] Using cached data for: ${target} (${engine})`);
+    return cached.data;
+  }
+  
+  // Cache miss or expired - fetch fresh data
+  console.log(`📡 [Cache Miss] Fetching from DataForSEO: ${target} (${engine})`);
+  const data = await _fetchRelevantPagesUncached(target, locationCode, languageCode, limit, engine);
+  
+  // Store in cache
+  cache.set(cacheKey, { data, timestamp: now });
+  
+  // Clean up old cache entries (keep cache size manageable)
+  if (cache.size > 100) {
+    const oldestKey = Array.from(cache.entries())
+      .sort((a, b) => a[1].timestamp - b[1].timestamp)[0]?.[0];
+    if (oldestKey) {
+      cache.delete(oldestKey);
+    }
+  }
+  
   return data;
 }
 

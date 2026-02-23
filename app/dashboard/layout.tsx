@@ -109,48 +109,114 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           null
         setUserAvatar(avatar)
         
-        // Call relevant-pages API after signup/redirect to dashboard
-        try {
-          // Get access token for API call
-          const { data: { session: currentSession } } = await supabase.auth.getSession()
-          const token = currentSession?.access_token
-          
-          if (token && predataResult?.competitors && Array.isArray(predataResult.competitors) && predataResult.competitors.length > 0) {
-            // Get first competitor from predata
-            const competitor = predataResult.competitors[0]
-            
-            console.log('📊 Calling relevant-pages API for competitor:', competitor)
-            
-            // Call relevant-pages API
-            const relevantPagesResponse = await fetch('/api/relevant-pages', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-              },
-              body: JSON.stringify({
-                email: user.email,
-                competitorIndex: 0,
-                limit: 10
-              })
-            })
-            
-            if (relevantPagesResponse.ok) {
-              const relevantPagesData = await relevantPagesResponse.json()
-              console.log('✅ Relevant Pages API Response:', relevantPagesData)
-            } else {
-              const errorData = await relevantPagesResponse.json().catch(() => ({}))
-              console.error('❌ Relevant Pages API Error:', errorData)
-            }
-          } else {
-            console.log('⚠️ Skipping relevant-pages API call - no competitors found in predata')
-          }
-        } catch (apiError) {
-          console.error('❌ Error calling relevant-pages API:', apiError)
-        }
-        
+        // Allow page to render first (non-blocking)
         setCheckingAuth(false)
         setAuthPassed(true)
+        
+        // Load keywords directly from API (non-blocking)
+        if (predataResult?.competitors && Array.isArray(predataResult.competitors) && predataResult.competitors.length > 0) {
+          // Fire and forget - don't await, let it run in background
+          (async () => {
+            try {
+              // Get access token for API call
+              const { data: { session: currentSession } } = await supabase.auth.getSession()
+              const token = currentSession?.access_token
+              
+              if (!token) {
+                console.log('⚠️ No auth token available for API calls')
+                return
+              }
+              
+              // Get first competitor from predata
+              const competitor = predataResult.competitors[0]
+              const competitorDomain = competitor.replace(/^(https?:\/\/)?(www\.)?/, '').split('/')[0]
+              
+              console.log('📊 [Background] Step 1: Fetching relevant pages for competitor:', competitorDomain)
+              
+              // STEP 1: Call relevant-pages API
+              const relevantPagesResponse = await fetch('/api/relevant-pages', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                  competitor: competitorDomain,
+                  location_code: 2840,
+                  language_code: 'en',
+                  limit: 10
+                })
+              })
+              
+              if (!relevantPagesResponse.ok) {
+                const errorData = await relevantPagesResponse.json().catch(() => ({}))
+                console.error('❌ [Background] Relevant Pages API Error:', errorData)
+                return
+              }
+              
+              const relevantPagesData = await relevantPagesResponse.json()
+              
+              if (!relevantPagesData.success || !relevantPagesData.pages || relevantPagesData.pages.length === 0) {
+                console.error('❌ [Background] No relevant pages found')
+                return
+              }
+              
+              // Get first page (highest traffic - already sorted)
+              const firstPage = relevantPagesData.pages[0]
+              const mostVisitedPageUrl = firstPage.page_address || firstPage.url || firstPage.page
+              
+              if (!mostVisitedPageUrl) {
+                console.error('❌ [Background] No page URL found in relevant pages response')
+                return
+              }
+              
+              console.log(`✅ [Background] Step 1 Complete: Found most visited page: ${mostVisitedPageUrl}`)
+              console.log(`   Traffic ETV: ${firstPage.metrics?.organic?.etv || 'N/A'}`)
+              
+              // STEP 2: Call extract-keywords API
+              console.log('📊 [Background] Step 2: Extracting keywords from most visited page...')
+              
+              const keywordsResponse = await fetch('/api/extract-keywords', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                  url: mostVisitedPageUrl,
+                  limit: 100
+                })
+              })
+              
+              if (!keywordsResponse.ok) {
+                const errorData = await keywordsResponse.json().catch(() => ({}))
+                console.error('❌ [Background] Extract Keywords API Error:', errorData)
+                return
+              }
+              
+              const keywordsData = await keywordsResponse.json()
+              
+              console.log('✅ [Background] Step 2 Complete: Extracted keywords')
+              console.log('📄 Most Visited Page:', {
+                url: mostVisitedPageUrl,
+                title: keywordsData.title,
+                traffic_etv: firstPage.metrics?.organic?.etv
+              })
+              console.log('🔑 Keywords Extracted:', keywordsData.keywords?.length || 0)
+              
+              // Log keywords
+              if (keywordsData.keywords && Array.isArray(keywordsData.keywords)) {
+                console.log('📋 Keywords List:')
+                keywordsData.keywords.forEach((kw: any, index: number) => {
+                  console.log(`  ${index + 1}. "${kw.keyword}" - Frequency: ${kw.frequency}`)
+                })
+              }
+            } catch (apiError) {
+              console.error('❌ [Background] Error in keywords flow:', apiError)
+            }
+          })()
+        } else {
+          console.log('⚠️ Skipping keywords fetch - no competitors found in predata')
+        }
       } catch (err) {
         console.error("checkAuth error:", err)
         if (mounted) {
