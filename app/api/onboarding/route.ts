@@ -612,7 +612,7 @@ export async function POST(request: Request) {
     // STEP 6: Enqueue articles for generation
     console.log("\n🚀 Step 6: Enqueueing articles for generation...");
 
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+    const jobBaseUrl = getInternalBaseUrl();
 
     // Enqueue all articles as jobs - wait for response to ensure jobs are created
     // The enqueue endpoint will enforce package limits automatically
@@ -620,7 +620,7 @@ export async function POST(request: Request) {
       // Get user's package limit to pass to enqueue
       const userLimit = await getUserArticleLimit(userId);
       
-      const enqueueResponse = await fetch(`${baseUrl}/api/article-jobs/enqueue`, {
+      const enqueueResponse = await fetch(`${jobBaseUrl}/api/article-jobs/enqueue`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
