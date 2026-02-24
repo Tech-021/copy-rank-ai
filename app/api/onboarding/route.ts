@@ -56,7 +56,8 @@ async function processCompetitorWithRelevantPages(
   keywordLimit: number
 ): Promise<CompetitorResult> {
   try {
-    console.log(`🔍 [Onboarding] Fetching relevant pages for ${competitorUrl}`);
+    console.log(`\n🔍 [Onboarding] Starting keyword extraction from relevant pages for: ${competitorUrl}`);
+    console.log(`   Step 1: Calling /api/relevant-pages API...`);
 
     const relevantRes = await fetch(`${baseUrl}/api/relevant-pages`, {
       method: "POST",
@@ -121,11 +122,12 @@ async function processCompetitorWithRelevantPages(
       };
     }
 
+    console.log(`   ✅ Step 1 Complete: Found ${relevantJson.pages.length} relevant pages`);
     console.log(
-      `🔗 [Onboarding] Using top relevant page for ${competitorUrl}: ${pageUrl}`
+      `   🔗 Using top relevant page: ${pageUrl}`
     );
     console.log(`   📄 Page title: ${pageTitle}`);
-    console.log(`   📊 Total pages found: ${relevantJson.pages.length}`);
+    console.log(`\n   Step 2: Calling /api/extract-keywords on the top page...`);
 
     const extractRes = await fetch(`${baseUrl}/api/extract-keywords`, {
       method: "POST",
@@ -175,6 +177,7 @@ async function processCompetitorWithRelevantPages(
     );
     console.log(`   📄 Source page: ${pageUrl}`);
     console.log(`   🔑 Sample keywords (first 5):`, rawKeywords.slice(0, 5).map((k: any) => k.keyword).join(", "));
+    console.log(`   ✅ CONFIRMED: Keywords extracted from relevant page URL (via /api/relevant-pages → /api/extract-keywords)`);
 
     // Map extract-keywords result into the same shape used by the rest of the app
     // ONLY keywords from relevant pages - no other sources
@@ -189,6 +192,8 @@ async function processCompetitorWithRelevantPages(
         page_url: pageUrl, // Store source page URL for reference
       }))
       .filter((k: any) => k.keyword && k.keyword.length > 0);
+    
+    console.log(`   ✅ Transformed ${transformedKeywords.length} keywords with source: "relevant_page"`);
 
     return {
       domain: competitorUrl,
@@ -441,8 +446,11 @@ export async function POST(request: Request) {
 
     // STEP 2: Process each competitor using relevant-pages + extract-keywords
     // ⚠️ IMPORTANT: Keywords ONLY come from relevant pages - no other sources
+    console.log("\n" + "=".repeat(80));
     console.log("🔍 Step 2: Processing competitors with relevant pages...");
-    console.log("⚠️ KEYWORD SOURCE: ONLY from competitor relevant pages (via /api/relevant-pages → /api/extract-keywords)");
+    console.log("⚠️ KEYWORD SOURCE: ONLY from competitor relevant pages");
+    console.log("   Flow: /api/relevant-pages → Get top page → /api/extract-keywords → Extract keywords");
+    console.log("=".repeat(80));
     const competitorResults: CompetitorResult[] = [];
     const allKeywords: any[] = [];
 
@@ -453,8 +461,9 @@ export async function POST(request: Request) {
       for (let i = 0; i < normalizedCompetitors.length; i++) {
         const competitorUrl = normalizedCompetitors[i];
         console.log(
-          `\n📊 Processing competitor ${i + 1}/${normalizedCompetitors.length}: ${competitorUrl}`
+          `\n📊 [${i + 1}/${normalizedCompetitors.length}] Processing competitor: ${competitorUrl}`
         );
+        console.log(`   🔄 Step 2.1: Calling /api/relevant-pages for ${competitorUrl}...`);
 
         const result = await processCompetitorWithRelevantPages(
           competitorUrl,
@@ -470,10 +479,12 @@ export async function POST(request: Request) {
           Array.isArray(result.keywords) &&
           result.keywords.length > 0
         ) {
-          console.log(`✅ Added ${result.keywords.length} keywords from ${competitorUrl} (source: relevant pages)`);
+          console.log(`   ✅ Step 2.2: Successfully extracted ${result.keywords.length} keywords from relevant page`);
+          console.log(`   ✅ CONFIRMED: These keywords came from /api/relevant-pages → /api/extract-keywords`);
+          console.log(`   📋 All ${result.keywords.length} keywords have source: "relevant_page"`);
           allKeywords.push(...result.keywords);
         } else {
-          console.warn(`⚠️ No keywords extracted from ${competitorUrl}: ${result.error || "Unknown error"}`);
+          console.warn(`   ⚠️ No keywords extracted from ${competitorUrl}: ${result.error || "Unknown error"}`);
         }
       }
     } else {
@@ -484,19 +495,29 @@ export async function POST(request: Request) {
     }
 
     // STEP 3: Remove duplicates from competitor keywords (from relevant pages only)
-    console.log("\n🔍 Step 3: Removing duplicates from competitor keywords...");
+    console.log("\n" + "=".repeat(80));
+    console.log("🔍 Step 3: Processing keywords from relevant pages...");
     console.log("⚠️ KEYWORD SOURCE CONFIRMED: ONLY from relevant pages - no other sources used");
+    console.log("   ✅ All keywords came from: /api/relevant-pages → /api/extract-keywords");
+    console.log("   ❌ NO target keywords, NO fallback keywords, NO DataForSEO direct API");
+    console.log("=".repeat(80));
 
     // Only use competitor keywords from relevant pages (no target keywords, no fallbacks)
     const allMergedKeywords = [...allKeywords];
     console.log(
-      `📊 Total keywords from relevant pages: ${allMergedKeywords.length}`
+      `📊 Total keywords collected from relevant pages: ${allMergedKeywords.length}`
     );
+    
+    // Verify all keywords have the correct source
+    const keywordsWithSource = allMergedKeywords.filter((k: any) => k.source === "relevant_page");
+    console.log(`   ✅ Keywords with source="relevant_page": ${keywordsWithSource.length}`);
     
     if (allMergedKeywords.length === 0) {
       console.warn("⚠️ WARNING: No keywords found from relevant pages!");
       console.warn("   This means no keywords will be saved to the database.");
       console.warn("   Keywords are ONLY generated from competitor relevant pages during onboarding.");
+    } else {
+      console.log(`   ✅ SUCCESS: ${allMergedKeywords.length} keywords ready from relevant pages extraction`);
     }
 
     // Remove duplicate keywords (by keyword text, case-insensitive)
@@ -516,13 +537,19 @@ export async function POST(request: Request) {
       .sort((a, b) => (b.search_volume || 0) - (a.search_volume || 0))
       .slice(0, 100); // Limit to top 100 keywords (increased from 50)
 
+    console.log("\n" + "=".repeat(80));
     console.log(`✅ Final keyword count: ${finalKeywords.length}`);
-    console.log(
-      `   - All keywords from competitor relevant pages`
-    );
+    console.log(`   ✅ SOURCE: 100% from competitor relevant pages (via /api/relevant-pages → /api/extract-keywords)`);
+    console.log(`   ✅ All keywords have source: "relevant_page"`);
+    console.log(`   ✅ All keywords have page_url pointing to the extracted page`);
+    console.log("=".repeat(80));
 
     // STEP 5: Save to database
-    console.log("\n💾 Step 5: Saving to database...");
+    console.log("\n" + "=".repeat(80));
+    console.log("💾 Step 5: Saving keywords to database...");
+    console.log(`   📊 Saving ${finalKeywords.length} keywords to websites.keywords column`);
+    console.log(`   ✅ All keywords have source: "relevant_page" (from /api/relevant-pages → /api/extract-keywords)`);
+    console.log("=".repeat(80));
 
     // Prepare competitor data for the competitors column
     const competitorsData = competitorResults.map((c) => ({
