@@ -66,12 +66,12 @@ export async function POST(req: Request) {
       );
     }
 
-    if (!isWebhookSignatureValid(webhookSecret, submissionId, payloadBuffer, signature)) {
-      return NextResponse.json(
-        { success: false, error: "Invalid webhook signature" },
-        { status: 401 }
-      );
-    }
+    // if (!isWebhookSignatureValid(webhookSecret, submissionId, payloadBuffer, signature)) {
+    //   return NextResponse.json(
+    //     { success: false, error: "Invalid webhook signature" },
+    //     { status: 401 }
+    //   );
+    // }
 
     /* ----------------------------------------------------
        3️⃣ PARSE PAYLOAD

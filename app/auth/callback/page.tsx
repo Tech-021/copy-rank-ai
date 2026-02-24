@@ -167,18 +167,26 @@ export default function AuthCallbackPage() {
               
             } catch (validationError) {
               console.error("Predata validation error:", validationError);
-
+          
               // Keep user signed in but redirect to onboarding page
               router.replace(`/auth/onboarding-required?error=general&email=${encodeURIComponent(email)}`);
               return;
             }
             
-            // New user - skip paywall and go to checkout
-            const checkoutUrl = process.env.NEXT_PUBLIC_LEMONSQUEEZY_CHECKOUT_URL_30 || 'https://copyrank.lemonsqueezy.com/buy/1e25810b-38ba-4de5-a753-c06514cb9e91';
-            const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
-            const successUrl = `${baseUrl}/payment/callback?next=/dashboard`;
-            const fullCheckoutUrl = `${checkoutUrl}?checkout[email]=${encodeURIComponent(email)}&checkout[custom][user_id]=${encodeURIComponent(userId)}&checkout[product_options][redirect_url]=${encodeURIComponent(successUrl)}`;
-            window.location.href = fullCheckoutUrl;
+            // New user - for now skip payment checkout and go directly to dashboard
+            // If you want to re-enable LemonSqueezy later, restore the code below:
+            //
+            // const checkoutUrl = process.env.NEXT_PUBLIC_LEMONSQUEEZY_CHECKOUT_URL_30 || 'https://copyrank.lemonsqueezy.com/buy/1e25810b-38ba-4de5-a753-c06514cb9e91';
+            // const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
+            // const successUrl = `${baseUrl}/payment/callback?next=/dashboard`;
+            // const fullCheckoutUrl = `${checkoutUrl}?checkout[email]=${encodeURIComponent(email)}&checkout[custom][user_id]=${encodeURIComponent(userId)}&checkout[product_options][redirect_url]=${encodeURIComponent(successUrl)}`;
+            // window.location.href = fullCheckoutUrl;
+            toast.showToast({
+              title: "Successfully signed in!",
+              description: "Welcome to your dashboard.",
+              type: "success",
+            });
+            router.replace("/dashboard");
           } else {
             // Existing user - go to dashboard
             toast.showToast({ 
