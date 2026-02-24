@@ -7,7 +7,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { hybridScraper } from "@/app/api/scraper/route";
 import { analyzeWithQwen } from "@/lib/qwen";
-import { fetchKeywordOverview } from "@/lib/dataforseo";
+// Removed fetchKeywordOverview - keywords now only come from relevant pages
 import { getUserArticleLimit } from '@/lib/articleLimits';
 
 // Initialize Supabase client
@@ -87,25 +87,45 @@ async function processCompetitorWithRelevantPages(
     }
 
     const relevantJson: any = await relevantRes.json();
-    const topPage = relevantJson.pages?.[0];
-
-    if (!topPage || (!topPage.url && !topPage.page_address)) {
-      console.warn(`⚠️ [Onboarding] No relevant pages returned for ${competitorUrl}`);
+    
+    // Verify response structure
+    if (!relevantJson.success || !relevantJson.pages || !Array.isArray(relevantJson.pages) || relevantJson.pages.length === 0) {
+      console.error(`❌ [Onboarding] Invalid relevant-pages response for ${competitorUrl}:`, {
+        success: relevantJson.success,
+        pagesCount: relevantJson.pages?.length || 0,
+        response: relevantJson
+      });
       return {
         domain: competitorUrl,
         topic: "Unknown",
         keywords: [],
         success: false,
-        error: "No relevant pages found",
+        error: "No relevant pages found in response",
       };
     }
 
-    const pageUrl = topPage.url || topPage.page_address;
+    const topPage = relevantJson.pages[0];
+
+    // Get page URL - check multiple possible fields
+    const pageUrl = topPage.page_address || topPage.url || topPage.page;
     const pageTitle = topPage.title || relevantJson.target || competitorUrl;
+
+    if (!pageUrl) {
+      console.error(`❌ [Onboarding] No page URL found in top page for ${competitorUrl}:`, topPage);
+      return {
+        domain: competitorUrl,
+        topic: pageTitle,
+        keywords: [],
+        success: false,
+        error: "No page URL found in relevant pages response",
+      };
+    }
 
     console.log(
       `🔗 [Onboarding] Using top relevant page for ${competitorUrl}: ${pageUrl}`
     );
+    console.log(`   📄 Page title: ${pageTitle}`);
+    console.log(`   📊 Total pages found: ${relevantJson.pages.length}`);
 
     const extractRes = await fetch(`${baseUrl}/api/extract-keywords`, {
       method: "POST",
@@ -135,15 +155,29 @@ async function processCompetitorWithRelevantPages(
     }
 
     const extractJson: any = await extractRes.json();
-    const rawKeywords = Array.isArray(extractJson.keywords)
-      ? extractJson.keywords
-      : [];
+    
+    // Verify extract-keywords response
+    if (!extractJson.success || !Array.isArray(extractJson.keywords)) {
+      console.error(`❌ [Onboarding] Invalid extract-keywords response for ${pageUrl}:`, extractJson);
+      return {
+        domain: competitorUrl,
+        topic: pageTitle,
+        keywords: [],
+        success: false,
+        error: "Invalid extract-keywords response",
+      };
+    }
+
+    const rawKeywords = extractJson.keywords;
 
     console.log(
       `✅ [Onboarding] Got ${rawKeywords.length} keywords from extract-keywords for ${competitorUrl}`
     );
+    console.log(`   📄 Source page: ${pageUrl}`);
+    console.log(`   🔑 Sample keywords (first 5):`, rawKeywords.slice(0, 5).map((k: any) => k.keyword).join(", "));
 
     // Map extract-keywords result into the same shape used by the rest of the app
+    // ONLY keywords from relevant pages - no other sources
     const transformedKeywords = rawKeywords
       .map((k: any) => ({
         keyword: String(k.keyword || "").trim(),
@@ -151,9 +185,10 @@ async function processCompetitorWithRelevantPages(
         difficulty: null,
         cpc: null,
         competition: null,
-        source: "relevant_page",
+        source: "relevant_page", // Mark as coming from relevant pages
+        page_url: pageUrl, // Store source page URL for reference
       }))
-      .filter((k: any) => k.keyword);
+      .filter((k: any) => k.keyword && k.keyword.length > 0);
 
     return {
       domain: competitorUrl,
@@ -405,7 +440,9 @@ export async function POST(request: Request) {
     }
 
     // STEP 2: Process each competitor using relevant-pages + extract-keywords
+    // ⚠️ IMPORTANT: Keywords ONLY come from relevant pages - no other sources
     console.log("🔍 Step 2: Processing competitors with relevant pages...");
+    console.log("⚠️ KEYWORD SOURCE: ONLY from competitor relevant pages (via /api/relevant-pages → /api/extract-keywords)");
     const competitorResults: CompetitorResult[] = [];
     const allKeywords: any[] = [];
 
@@ -433,63 +470,34 @@ export async function POST(request: Request) {
           Array.isArray(result.keywords) &&
           result.keywords.length > 0
         ) {
+          console.log(`✅ Added ${result.keywords.length} keywords from ${competitorUrl} (source: relevant pages)`);
           allKeywords.push(...result.keywords);
+        } else {
+          console.warn(`⚠️ No keywords extracted from ${competitorUrl}: ${result.error || "Unknown error"}`);
         }
       }
     } else {
       console.log(
         "ℹ️ No competitors provided - skipping automatic competitor keyword generation"
       );
+      console.log("⚠️ WARNING: No keywords will be generated without competitors");
     }
 
-    // STEP 2.5: Process target keywords (NO filtering - explicit keywords)
-    console.log("\n🔍 Step 2.5: Processing target keywords...");
-    let targetKeywordData: any[] = [];
+    // STEP 3: Remove duplicates from competitor keywords (from relevant pages only)
+    console.log("\n🔍 Step 3: Removing duplicates from competitor keywords...");
+    console.log("⚠️ KEYWORD SOURCE CONFIRMED: ONLY from relevant pages - no other sources used");
 
-    if (targetKeywords && targetKeywords.length > 0) {
-      // Filter out empty keywords
-      const validTargetKeywords = targetKeywords.filter(
-        (kw) => kw && kw.trim() !== ""
-      );
-
-      if (validTargetKeywords.length > 0) {
-        try {
-          console.log(
-            `📋 Processing ${validTargetKeywords.length} target keywords:`,
-            validTargetKeywords
-          );
-
-          // Call keyword overview API (processes keywords one by one internally)
-          const overviewResults = await fetchKeywordOverview(
-            validTargetKeywords
-          );
-
-          // NO filtering - use whatever data we get (explicit keywords)
-          targetKeywordData = overviewResults.map((kw) => ({
-            ...kw,
-            is_target_keyword: true, // Flag to identify target keywords
-          }));
-
-          console.log(
-            `✅ Retrieved data for ${targetKeywordData.length} target keywords`
-          );
-        } catch (error) {
-          console.error("❌ Error processing target keywords:", error);
-          // Continue even if target keywords fail
-        }
-      }
-    } else {
-      console.log("ℹ️ No target keywords provided");
-    }
-
-    // STEP 3: Merge competitor keywords + target keywords, then remove duplicates
-    console.log("\n🔍 Step 3: Merging all keywords and removing duplicates...");
-
-    // Combine competitor keywords + target keywords
-    const allMergedKeywords = [...allKeywords, ...targetKeywordData];
+    // Only use competitor keywords from relevant pages (no target keywords, no fallbacks)
+    const allMergedKeywords = [...allKeywords];
     console.log(
-      `📊 Total before deduplication: ${allKeywords.length} competitor + ${targetKeywordData.length} target = ${allMergedKeywords.length} total`
+      `📊 Total keywords from relevant pages: ${allMergedKeywords.length}`
     );
+    
+    if (allMergedKeywords.length === 0) {
+      console.warn("⚠️ WARNING: No keywords found from relevant pages!");
+      console.warn("   This means no keywords will be saved to the database.");
+      console.warn("   Keywords are ONLY generated from competitor relevant pages during onboarding.");
+    }
 
     // Remove duplicate keywords (by keyword text, case-insensitive)
     const uniqueKeywords = allMergedKeywords.filter(
@@ -510,14 +518,7 @@ export async function POST(request: Request) {
 
     console.log(`✅ Final keyword count: ${finalKeywords.length}`);
     console.log(
-      `   - Competitor keywords: ${
-        finalKeywords.filter((k) => !k.is_target_keyword).length
-      }`
-    );
-    console.log(
-      `   - Target keywords: ${
-        finalKeywords.filter((k) => k.is_target_keyword).length
-      }`
+      `   - All keywords from competitor relevant pages`
     );
 
     // STEP 5: Save to database

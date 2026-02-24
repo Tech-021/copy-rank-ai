@@ -604,91 +604,11 @@ export function KeywordsTab({
           return;
         }
 
-        // 2) DB is empty (or forced): call slow API once, then persist into DB
-        const { data: { session } } = await supabase.auth.getSession();
-        const token = session?.access_token;
-
-        if (!token) {
-          throw new Error("No auth token available");
-        }
-
-        const response = await fetch(`/api/keyword`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            'Authorization': `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            topic: singleSite.topic || "General",
-            websiteUrl: singleSite.url || "",
-            includeCompetitors: true,
-            maxVolume: 10000,
-            minVolume: 50,
-            maxDifficulty: 100,
-            limit: 100,
-          }),
-        });
-
-        const apiData = await response.json();
-        if (!response.ok || !apiData.success) {
-          throw new Error(
-            apiData.error || "Failed to fetch keywords from DataForSEO"
-          );
-        }
-
-        const primaryKeywords: Keyword[] = Array.isArray(apiData.keywords)
-          ? (apiData.keywords
-              .map(normalizeKeyword)
-              .filter(Boolean) as Keyword[])
-          : [];
-
-        const competitorKeywords: Keyword[] = Array.isArray(apiData.competitors)
-          ? (apiData.competitors
-              .flatMap((comp: any) => comp?.keywords || [])
-              .map(normalizeKeyword)
-              .filter(Boolean) as Keyword[])
-          : [];
-
-        // Keep any stored target keywords (if present)
-        const storedTargets = storedKeywords.filter((k) => k.is_target_keyword);
-
-        const mergedMap = new Map<string, Keyword>();
-        [...primaryKeywords, ...competitorKeywords, ...storedTargets].forEach(
-          (kw) => {
-            const key = String(kw.keyword).toLowerCase();
-            if (!mergedMap.has(key)) mergedMap.set(key, kw);
-          }
-        );
-
-        const merged = Array.from(mergedMap.values());
-
-        const existingPayload =
-          siteKeywords &&
-          typeof siteKeywords === "object" &&
-          !Array.isArray(siteKeywords)
-            ? siteKeywords
-            : {};
-
-        const newPayload = {
-          ...existingPayload,
-          keywords: merged,
-          competitors: apiData.competitors || existingPayload.competitors || [],
-          analysis_metadata: {
-            ...(existingPayload.analysis_metadata || {}),
-            analyzed_at: new Date().toISOString(),
-            total_keywords: merged.length,
-          },
-        };
-
-        const { error: updateErr } = await supabase
-          .from("websites")
-          .update({ keywords: newPayload })
-          .eq("id", requestWebsiteId);
-
-        if (updateErr) {
-          console.error("Failed to persist refreshed keywords:", updateErr);
-        }
-
+        // 2) DB is empty: Keywords are only generated during onboarding
+        // DISABLED: Fallback to /api/keyword removed
+        // Keywords now only come from onboarding relevant pages
+        console.log("ℹ️ No keywords in database - keywords are only generated during onboarding");
+        
         const nextWebsite = {
           id: singleSite.id,
           url: singleSite.url,
@@ -696,8 +616,8 @@ export function KeywordsTab({
         };
 
         if (isCurrent()) {
-          setWebsiteData({ website: nextWebsite, keywords: merged });
-          setKeywords(merged);
+          setWebsiteData({ website: nextWebsite, keywords: [] });
+          setKeywords([]);
           setSelectedKeywords(new Set());
         }
 
