@@ -23,11 +23,11 @@ export default function AuthCallbackPage() {
                              searchParams.has('code') || 
                              searchParams.has('error')
 
-        if (!hasAuthParams) {
-          console.warn('No auth parameters found in URL')
-          router.replace("/paywall")
-          return
-        }
+        // if (!hasAuthParams) {
+        //   console.warn('No auth parameters found in URL')
+        //   router.replace("/paywall")
+        //   return
+        // }
 
         let result: any = null
 

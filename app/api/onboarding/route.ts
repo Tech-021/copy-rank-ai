@@ -584,10 +584,18 @@ export async function POST(request: Request) {
         .select("*")
         .eq("user_id", userId)
         .eq("url", normalizedClientDomain)
-        .single();
+        .maybeSingle(); // allow "no row" without throwing
 
-      if (existing && !existingErr) {
-        console.log("ℹ️ Website already exists for user, reusing existing record", existing.id);
+      if (existingErr) {
+        console.error("❌ Error checking existing website:", existingErr);
+        throw existingErr;
+      }
+
+      if (existing) {
+        console.log(
+          "ℹ️ Website already exists for user, reusing existing record",
+          existing.id
+        );
         savedWebsite = existing;
       } else {
         const { data: inserted, error: dbError } = await supabase
