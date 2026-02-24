@@ -1,13 +1,28 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useSearchParams } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { AlertCircle, ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
+import OnboardingDialog from "@/components/form"
+
+// Utility to get home link safely for SSR/CSR
+function getHomeLink() {
+  if (typeof window !== 'undefined') {
+    // Client-side: use window.location
+    return window.location.origin.includes('localhost') ? '/' : (process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') || 'https://copyrank.ai/');
+  }
+  // Server-side: fallback to env or prod
+  if (process.env.NEXT_PUBLIC_SITE_URL && process.env.NEXT_PUBLIC_SITE_URL.includes('localhost')) {
+    return '/';
+  }
+  return process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') || 'https://copyrank.ai/';
+}
 
 export default function OnboardingRequiredPage() {
+  const router = useRouter()
   const searchParams = useSearchParams()
   const [errorType, setErrorType] = useState<string>("")
   const [email, setEmail] = useState<string>("")
@@ -18,6 +33,11 @@ export default function OnboardingRequiredPage() {
     setErrorType(type)
     setEmail(userEmail)
   }, [searchParams])
+
+  useEffect(() => {
+    const params = searchParams.toString()
+    router.replace(`/onboarding${params ? `?${params}` : ""}`)
+  }, [router, searchParams])
 
   const getErrorMessage = () => {
     switch (errorType) {
@@ -35,9 +55,9 @@ export default function OnboardingRequiredPage() {
         }
       case "no_data":
         return {
-          title: "Competitors or Keywords Required",
-          description: "Please add at least one competitor or keyword in the onboarding form before signing up.",
-          detail: "To provide you with the best SEO insights, we need either competitor domains or target keywords from your onboarding form."
+          title: "Competitors Required",
+          description: "Please add competitors in the onboarding form before signing up.",
+          detail: "To provide you with the best SEO insights, we need competitor domains for your website. Keywords are optional."
         }
       default:
         return {
@@ -123,7 +143,7 @@ export default function OnboardingRequiredPage() {
                 <p className="text-slate-400 text-sm">
                   {errorType === "no_email" 
                     ? `Enter ${email || "your email"} in the form and complete all required fields`
-                    : "Complete all required fields: your website, competitors, and keywords"
+                    : "Complete required fields: your website and competitors (keywords are optional)"
                   }
                 </p>
               </div>
@@ -147,12 +167,17 @@ export default function OnboardingRequiredPage() {
 
           {/* Actions */}
           <div className="flex flex-col sm:flex-row gap-4">
-            <Link href="https://copyrank.ai" className="flex-1">
+            <Link href={getHomeLink()} className="flex-1">
               <Button className="w-full bg-[#0CE06B] hover:bg-[#07c85a] text-black gap-2 rounded-full py-4 shadow-[0_6px_18px_rgba(12,224,107,0.12)]">
                 <ArrowLeft className="mr-2" size={18} />
-                Go to Home & Fill Form
+                Go to Home
               </Button>
             </Link>
+          </div>
+
+          {/* Inline onboarding form */}
+          <div className="mt-10 overflow-x-auto">
+            <OnboardingDialog inline />
           </div>
 
           {/* Help text */}

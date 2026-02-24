@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { publishArticleToFramer, publishArticleIfConfigured as publishFramerIfConfigured } from "@/lib/framerPublisher";
+import { publishArticleToWebflowCreateItems, publishArticleIfConfigured as publishWebflowIfConfigured } from "@/lib/webflowPublisher";
+import { decryptText } from "@/lib/crypto";
+import { ensureAbsoluteUrl } from "@/lib/urlUtils";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -108,36 +112,6 @@ export async function GET(request: Request) {
       );
     }
 
-    // Check if user needs onboarding
-    console.log('Articles API: Checking pre_data for email:', user.email);
-    const { data: predata, error: predataError } = await supabaseAdmin
-      .from('pre_data')
-      .select('*')
-      .eq('email', user.email)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    console.log('Articles API: predata result:', predata, 'error:', predataError);
-
-    const needsOnboarding = !predata || (() => {
-      const hasWebsite = predata.website && predata.website.trim() !== '';
-      const hasCompetitors = Array.isArray(predata.competitors) && predata.competitors.length > 0;
-      const hasKeywords = Array.isArray(predata.keywords) && predata.keywords.length > 0;
-      console.log('Articles API: hasWebsite:', hasWebsite, 'hasCompetitors:', hasCompetitors, 'hasKeywords:', hasKeywords);
-      return !hasWebsite || (!hasCompetitors && !hasKeywords);
-    })();
-
-    console.log('Articles API: needsOnboarding:', needsOnboarding);
-
-    if (needsOnboarding) {
-      console.log('Articles API: Onboarding required - rejecting request');
-      return NextResponse.json(
-        { error: "Onboarding required" },
-        { status: 403 }
-      );
-    }
-
     // Check subscription status
     console.log('Articles API: Checking subscription for user:', user.id);
     const { data: userData, error: subError } = await supabaseAdmin
@@ -171,7 +145,7 @@ export async function GET(request: Request) {
       );
     }
 
-    let query = supabase
+    let query = supabaseAdmin
       .from("articles")
       .select("*")
       .eq("user_id", userId)
@@ -252,6 +226,16 @@ export async function GET(request: Request) {
           websiteId: article.website_id,
           // ✅ expose generatedImages to the frontend
           generatedImages,
+          // Framer publishing state (normalized for frontend)
+          framer_item_id: article.framer_item_id,
+          framer_url: ensureAbsoluteUrl(article.framer_url) || article.framer_url || null,
+          framer_connection_id: article.framer_connection_id,
+          last_synced_to_framer: article.last_synced_to_framer,
+          // WordPress publishing state (normalized)
+          wordpress_post_id: article.wordpress_post_id,
+          wordpress_url: ensureAbsoluteUrl(article.wordpress_url) || article.wordpress_url || null,
+          wordpress_connection_id: article.wordpress_connection_id,
+          last_synced_to_wordpress: article.last_synced_to_wordpress,
         };
       }) || [];
 
@@ -283,7 +267,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from("articles")
       .insert({
         ...articleData,
@@ -407,7 +391,7 @@ export async function PATCH(request: Request) {
     // Add published_at if publishing for the first time
     if (status === "published") {
       // Check current status to see if we're publishing for the first time
-      const { data: currentArticle } = await supabase
+      const { data: currentArticle } = await supabaseAdmin
         .from("articles")
         .select("status, published_at")
         .eq("id", id)
@@ -420,7 +404,7 @@ export async function PATCH(request: Request) {
 
     console.log("Update data:", updateData);
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from("articles")
       .update(updateData)
       .eq("id", id)
@@ -466,6 +450,141 @@ export async function PATCH(request: Request) {
       }
     }
 
+    // Framer: attempt to publish using per-user connection (framer_connection_id or user's default)
+    try {
+      if (data.status === "published") {
+        // Try article-specific connection first
+        let connRow: any = null;
+        if (data.framer_connection_id) {
+          const { data: conn } = await supabaseAdmin
+            .from('framer_connections')
+            .select('*')
+            .eq('id', data.framer_connection_id)
+            .single();
+          connRow = conn;
+        }
+
+        // If no article-specific, get user's default connection
+        if (!connRow) {
+          const { data: defaultConn } = await supabaseAdmin
+            .from('framer_connections')
+            .select('*')
+            .eq('user_id', data.user_id)
+            .eq('is_default', true)
+            .limit(1)
+            .single();
+          connRow = defaultConn;
+        }
+
+        if (connRow && connRow.api_key_encrypted) {
+          const { decryptText } = await import('@/lib/crypto');
+          try {
+            const apiKey = decryptText(connRow.api_key_encrypted);
+            const framerResult = await publishArticleToFramer(data, { projectUrl: connRow.project_url, apiKey });
+            if (framerResult?.framerUrl) {
+              await supabaseAdmin
+                .from('articles')
+                .update({
+                  framer_item_id: framerResult.framerItemId?.toString() || null,
+                  framer_url: framerResult.framerUrl,
+                  framer_connection_id: connRow.id,
+                  last_synced_to_framer: new Date().toISOString(),
+                })
+                .eq('id', data.id);
+            }
+          } catch (err) {
+            console.error('Framer publish failed (connection):', err);
+          }
+        } else {
+          // Fallback to global env if available
+          try {
+            const framerResult = await publishFramerIfConfigured(data);
+            if (framerResult?.framerUrl) {
+              await supabaseAdmin
+                .from('articles')
+                .update({
+                  framer_item_id: framerResult.framerItemId?.toString() || null,
+                  framer_url: framerResult.framerUrl,
+                  last_synced_to_framer: new Date().toISOString(),
+                })
+                .eq('id', data.id);
+            }
+          } catch (err) {
+            console.error('Framer publish failed (global fallback):', err);
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Framer publish failed:", err);
+    }
+
+    // Webflow: attempt to publish using per-user connection (webflow_connection_id or user's default)
+    try {
+      if (data.status === "published") {
+        // Try article-specific connection first
+        let connRow: any = null;
+        if (data.webflow_connection_id) {
+          const { data: conn } = await supabaseAdmin
+            .from('webflow_connections')
+            .select('*')
+            .eq('id', data.webflow_connection_id)
+            .single();
+          connRow = conn;
+        }
+
+        // If no article-specific, get user's default connection
+        if (!connRow) {
+          const { data: defaultConn } = await supabaseAdmin
+            .from('webflow_connections')
+            .select('*')
+            .eq('user_id', data.user_id)
+            .eq('is_default', true)
+            .limit(1)
+            .single();
+          connRow = defaultConn;
+        }
+
+        if (connRow && connRow.api_key_encrypted) {
+          try {
+            const apiKey = decryptText(connRow.api_key_encrypted, process.env.WEBFLOW_ENCRYPTION_KEY);
+            const webflowResult = await publishArticleToWebflowCreateItems(data, { siteId: connRow.site_id, collectionId: connRow.collection_id || undefined, apiKey });
+            if (webflowResult?.webflowUrl) {
+              await supabaseAdmin
+                .from('articles')
+                .update({
+                  webflow_item_id: webflowResult.webflowItemId?.toString() || null,
+                  webflow_url: webflowResult.webflowUrl,
+                  webflow_connection_id: connRow.id,
+                  last_synced_to_webflow: new Date().toISOString(),
+                })
+                .eq('id', data.id);
+            }
+          } catch (err) {
+            console.error('Webflow publish failed (connection):', err);
+          }
+        } else {
+          // Fallback to global env if available
+          try {
+            const webflowResult = await publishWebflowIfConfigured(data);
+            if (webflowResult?.webflowUrl) {
+              await supabaseAdmin
+                .from('articles')
+                .update({
+                  webflow_item_id: webflowResult.webflowItemId?.toString() || null,
+                  webflow_url: webflowResult.webflowUrl,
+                  last_synced_to_webflow: new Date().toISOString(),
+                })
+                .eq('id', data.id);
+            }
+          } catch (err) {
+            console.error('Webflow publish failed (global fallback):', err);
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Webflow publish failed:', err);
+    }
+
     return NextResponse.json({
       success: true,
       article: data,
@@ -505,7 +624,7 @@ export async function DELETE(request: Request) {
       );
     }
 
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
       .from("articles")
       .delete()
       .eq("id", id)

@@ -42,55 +42,36 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check if user needs onboarding
-    const { data: predata } = await supabaseAdmin
-      .from('pre_data')
-      .select('*')
-      .eq('email', user.email)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    const needsOnboarding = !predata || (() => {
-      const hasWebsite = predata.website && predata.website.trim() !== '';
-      const hasCompetitors = Array.isArray(predata.competitors) && predata.competitors.length > 0;
-      const hasKeywords = Array.isArray(predata.keywords) && predata.keywords.length > 0;
-      return !hasWebsite || (!hasCompetitors && !hasKeywords);
-    })();
-
-    if (needsOnboarding) {
-      return NextResponse.json(
-        { error: "Onboarding required" },
-        { status: 403 }
-      );
-    }
-
-    // Check subscription status
+    // Check subscription status (log for debugging but do not block processing here)
     const { data: userData } = await supabaseAdmin
       .from('users')
       .select('subscribe')
       .eq('id', user.id)
       .single();
 
-    if (!userData?.subscribe) {
-      return NextResponse.json(
-        { error: "Subscription required" },
-        { status: 403 }
-      );
-    }
+    console.log(`Trigger called by user ${user.id} - subscribe flag:`, userData?.subscribe);
+
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-    
-    // Trigger processing (fire and forget)
-    fetch(`${baseUrl}/api/article-jobs/process`, {
-      method: 'POST',
-    }).catch(error => {
-      console.error("Error triggering job processing:", error);
-    });
-    
-    return NextResponse.json({ 
-      success: true, 
-      message: "Article processing triggered" 
-    });
+
+    // Trigger processing and return the process response for visibility
+    console.log(`Article-jobs trigger invoked by user ${user.id}, calling ${baseUrl}/api/article-jobs/process`);
+    try {
+      const procRes = await fetch(`${baseUrl}/api/article-jobs/process`, {
+        method: 'POST',
+      });
+      const procJson = await procRes.json().catch(() => null);
+      console.log('Process response:', procRes.status, procJson);
+
+      return NextResponse.json({
+        success: true,
+        message: 'Article processing triggered',
+        processStatus: procRes.status,
+        processResult: procJson,
+      });
+    } catch (err) {
+      console.error('Error triggering job processing:', err);
+      return NextResponse.json({ error: 'Failed to trigger processing' }, { status: 500 });
+    }
   } catch (error) {
     console.error("Error in trigger endpoint:", error);
     return NextResponse.json(

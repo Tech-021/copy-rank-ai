@@ -71,7 +71,7 @@ export async function middleware(request: NextRequest) {
     '/payment/fail', // Payment fail page should be public
     '/about-yourself', // Payment fail page should be public
     '/articles',
-    '/auth/onboarding-required',
+    '/onboarding',
     
     '/fonts',
     '/fav-icon.ico',
@@ -162,20 +162,32 @@ export async function middleware(request: NextRequest) {
     .limit(1)
     .maybeSingle()
 
-  // Determine if user needs onboarding
-  // User needs onboarding if: no pre_data exists OR pre_data exists but is incomplete
-  const needsOnboarding = !predata || (() => {
-    const hasWebsite = predata.website && predata.website.trim() !== ''
-    const hasCompetitors = Array.isArray(predata.competitors) && predata.competitors.length > 0
-    const hasKeywords = Array.isArray(predata.keywords) && predata.keywords.length > 0
-    return !hasWebsite || (!hasCompetitors && !hasKeywords)
-  })()
+  // Improved onboarding check: Only require onboarding if truly incomplete
+  function isOnboardingIncomplete(predata: any): boolean {
+    if (!predata) return true;
+    const hasWebsite = typeof predata.website === 'string' && predata.website.trim() !== '';
+    const hasCompetitors = Array.isArray(predata.competitors) && predata.competitors.length > 0;
+    // Onboarding is complete if website exists AND competitors exist (keywords optional)
+    return !(hasWebsite && hasCompetitors);
+  }
 
-  // If user needs onboarding and is not already on the onboarding page, redirect
-  if (needsOnboarding && path !== '/auth/onboarding-required') {
-    const onboardingUrl = new URL('/auth/onboarding-required', request.url)
+  const needsOnboarding = isOnboardingIncomplete(predata);
+
+  // If user needs onboarding and is not already on the onboarding page, redirect with reason
+  if (needsOnboarding && path !== '/onboarding') {
+    const onboardingUrl = new URL('/onboarding', request.url)
     // Store the original URL to redirect back after onboarding
     onboardingUrl.searchParams.set('redirect', path)
+    // Add a reason for onboarding (for better UX/debugging)
+    if (!predata) {
+      onboardingUrl.searchParams.set('error', 'no_predata')
+    } else if (!predata.website || predata.website.trim() === '') {
+      onboardingUrl.searchParams.set('error', 'no_website')
+    } else if (!(Array.isArray(predata.competitors) && predata.competitors.length > 0)) {
+      onboardingUrl.searchParams.set('error', 'no_data')
+    } else {
+      onboardingUrl.searchParams.set('error', 'general')
+    }
     return NextResponse.redirect(onboardingUrl)
   }
 
