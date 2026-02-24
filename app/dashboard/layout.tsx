@@ -7,6 +7,19 @@ import { getUser, signOut } from "@/lib/auth"
 import { supabase } from "@/lib/client"
 import { useToast } from "@/components/ui/toast"
 
+// Match onboarding's normalizeUrl logic so we can find the correct website row
+function normalizeUrl(websiteUrl: string | null | undefined): string | null {
+  if (!websiteUrl) return null
+
+  const cleanDomain = websiteUrl
+    .trim()
+    .replace(/^(https?:\/\/)?(www\.)?/, "")
+    .split("/")[0]
+
+  if (!cleanDomain) return null
+  return `https://www.${cleanDomain}`
+}
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const toast = useToast()
@@ -48,28 +61,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           .eq('id', user.id)
           .single();
         console.log('Dashboard layout: subscription result:', userData, 'error:', subError);
-        if (!userData?.subscribe) {
-          console.log('Dashboard layout: User not subscribed, redirecting to LemonSqueezy');
-          if (mounted) {
-            setCheckingAuth(false)
-            const checkoutUrl = process.env.NEXT_PUBLIC_LEMONSQUEEZY_CHECKOUT_URL_30 || 'https://copyrank.lemonsqueezy.com/buy/1e25810b-38ba-4de5-a753-c06514cb9e91';
-            const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
-            const successUrl = `${baseUrl}/payment/callback?next=/dashboard`;
-            const fullCheckoutUrl = `${checkoutUrl}?checkout[email]=${encodeURIComponent(user.email)}&checkout[custom][user_id]=${encodeURIComponent(user.id)}&checkout[product_options][redirect_url]=${encodeURIComponent(successUrl)}`;
-            window.location.href = fullCheckoutUrl;
-          }
-          return
-        }
-        // Enforce onboarding when user has no website or no competitors
-        const { data: websites, error: websitesError } = await supabase
-          .from('websites')
-          .select('id, keywords')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false });
 
-        if (websitesError) {
-          console.error('Dashboard layout: Error loading websites:', websitesError)
-        }
+        // if (!userData?.subscribe) {
+        //   console.log('Dashboard layout: User not subscribed, redirecting to LemonSqueezy');
+        //   if (mounted) {
+        //     setCheckingAuth(false)
+        //     const checkoutUrl = process.env.NEXT_PUBLIC_LEMONSQUEEZY_CHECKOUT_URL_30 || 'https://copyrank.lemonsqueezy.com/buy/1e25810b-38ba-4de5-a753-c06514cb9e91';
+        //     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
+        //     const successUrl = `${baseUrl}/payment/callback?next=/dashboard`;
+        //     const fullCheckoutUrl = `${checkoutUrl}?checkout[email]=${encodeURIComponent(user.email)}&checkout[custom][user_id]=${encodeURIComponent(user.id)}&checkout[product_options][redirect_url]=${encodeURIComponent(successUrl)}`;
+        //     window.location.href = fullCheckoutUrl;
+        //   }
+        //   return
+        // }
 
         if (!websites || websites.length === 0) {
           if (mounted) {
@@ -106,7 +110,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         setCheckingAuth(false)
         setAuthPassed(true)
         
-        // Load keywords directly from API (non-blocking)
+        // Load competitor keywords directly from APIs (non-blocking) and
+        // then attach them to the correct website record.
         if (predataResult?.competitors && Array.isArray(predataResult.competitors) && predataResult.competitors.length > 0) {
           // Fire and forget - don't await, let it run in background
           (async () => {
@@ -165,19 +170,76 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               
               console.log(`✅ [Background] Step 1 Complete: Found most visited page: ${mostVisitedPageUrl}`)
               console.log(`   Traffic ETV: ${firstPage.metrics?.organic?.etv || 'N/A'}`)
+
+              // Resolve which website these keywords belong to.
+              // Prefer the website whose URL matches pre_data.website, else fallback
+              // to the most recently created website for this user.
+              let targetWebsiteId: string | null = null
+              try {
+                const normalizedClientUrl = normalizeUrl(predataResult.website || null)
+                const { data: userWebsites, error: websitesError } = await supabase
+                  .from('websites')
+                  .select('id, url, created_at')
+                  .eq('user_id', user.id)
+                  .order('created_at', { ascending: false })
+
+                if (websitesError) {
+                  console.error('❌ [Background] Error fetching websites for keyword save:', websitesError)
+                } else if (userWebsites && userWebsites.length > 0) {
+                  if (normalizedClientUrl) {
+                    const matched = userWebsites.find((w: any) => w.url === normalizedClientUrl)
+                    targetWebsiteId = matched?.id || userWebsites[0].id
+                  } else {
+                    targetWebsiteId = userWebsites[0].id
+                  }
+                } else {
+                  console.warn('⚠️ [Background] No websites found for user when saving keywords, creating one automatically...')
+                  if (normalizedClientUrl) {
+                    try {
+                      const { data: created, error: createErr } = await supabase
+                        .from('websites')
+                        .insert([
+                          {
+                            url: normalizedClientUrl,
+                            topic: 'General',
+                            user_id: user.id,
+                            keywords: {},
+                          },
+                        ])
+                        .select('id')
+                        .single()
+
+                      if (createErr) {
+                        console.error('❌ [Background] Failed to auto-create website:', createErr)
+                      } else if (created?.id) {
+                        targetWebsiteId = created.id
+                        console.log('✅ [Background] Auto-created website for user:', created.id)
+                      }
+                    } catch (createUnexpected) {
+                      console.error('❌ [Background] Unexpected error auto-creating website:', createUnexpected)
+                    }
+                  } else {
+                    console.warn('⚠️ [Background] Cannot auto-create website – pre_data.website is empty')
+                  }
+                }
+              } catch (resolveErr) {
+                console.error('❌ [Background] Error resolving website for keyword save:', resolveErr)
+              }
               
-              // STEP 2: Call extract-keywords API
+              // STEP 2: Call extract-keywords API (it will persist keywords when websiteId is provided)
               console.log('📊 [Background] Step 2: Extracting keywords from most visited page...')
               
               const keywordsResponse = await fetch('/api/extract-keywords', {
                 method: 'POST',
                 headers: {
-                  'Content-Type': 'application/json'
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${token}`,
                 },
                 body: JSON.stringify({
                   url: mostVisitedPageUrl,
-                  limit: 100
-                })
+                  limit: 100,
+                  websiteId: targetWebsiteId || undefined,
+                }),
               })
               
               if (!keywordsResponse.ok) {
@@ -202,89 +264,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 keywordsData.keywords.forEach((kw: any, index: number) => {
                   console.log(`  ${index + 1}. "${kw.keyword}" - Frequency: ${kw.frequency}`)
                 })
-              }
-              
-              // STEP 3: Save keywords to database
-              if (keywordsData.keywords && keywordsData.keywords.length > 0) {
-                console.log('💾 [Background] Step 3: Saving keywords to database...')
-                
-                try {
-                  // Get user's website from database
-                  const { data: websites, error: websitesError } = await supabase
-                    .from('websites')
-                    .select('id, keywords')
-                    .eq('user_id', user.id)
-                    .order('created_at', { ascending: false })
-                    .limit(1)
-                    .maybeSingle()
-                  
-                  if (websitesError) {
-                    console.error('❌ [Background] Error fetching website:', websitesError)
-                    return
-                  }
-                  
-                  if (!websites?.id) {
-                    console.error('❌ [Background] No website found for user')
-                    return
-                  }
-                  
-                  // Get existing keywords structure
-                  const existingPayload = websites.keywords || {}
-                  const existingList: any[] = Array.isArray(existingPayload?.keywords)
-                    ? existingPayload.keywords
-                    : []
-                  
-                  // Merge & dedupe by keyword text (case-insensitive)
-                  const keywordMap = new Map<string, any>()
-                  
-                  // Add existing keywords
-                  existingList.forEach((k) => {
-                    const key = String(k.keyword || k || "").toLowerCase()
-                    if (key) keywordMap.set(key, k)
-                  })
-                  
-                  // Add/update new keywords
-                  keywordsData.keywords.forEach((kw: any) => {
-                    const key = String(kw.keyword || "").toLowerCase()
-                    if (key) {
-                      const existing = keywordMap.get(key) || {}
-                      keywordMap.set(key, {
-                        ...existing,
-                        keyword: kw.keyword,
-                        frequency: kw.frequency,
-                        is_target_keyword: true,
-                        post_status: existing.post_status || "No Plan",
-                      })
-                    }
-                  })
-                  
-                  const mergedList = Array.from(keywordMap.values())
-                  const newPayload = {
-                    ...existingPayload,
-                    keywords: mergedList,
-                    analysis_metadata: {
-                      ...existingPayload.analysis_metadata,
-                      total_keywords: mergedList.length,
-                      analyzed_at: new Date().toISOString(),
-                    },
-                  }
-                  
-                  // Update in Supabase
-                  const { error: updateErr } = await supabase
-                    .from('websites')
-                    .update({ keywords: newPayload })
-                    .eq('id', websites.id)
-                  
-                  if (updateErr) {
-                    console.error('❌ [Background] Failed to save keywords to database:', updateErr)
-                  } else {
-                    console.log(`✅ [Background] Step 3 Complete: Saved ${mergedList.length} keywords to database`)
-                    console.log(`   - New keywords added: ${keywordsData.keywords.length}`)
-                    console.log(`   - Total keywords in DB: ${mergedList.length}`)
-                  }
-                } catch (saveError) {
-                  console.error('❌ [Background] Error saving keywords:', saveError)
-                }
               }
             } catch (apiError) {
               console.error('❌ [Background] Error in keywords flow:', apiError)

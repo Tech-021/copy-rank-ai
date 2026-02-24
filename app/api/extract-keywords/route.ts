@@ -2,6 +2,7 @@ export const runtime = "nodejs";
 export const maxDuration = 300;
 
 import { NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 import { hybridScraper } from "@/app/api/scraper/route";
 
 // In-memory cache for keyword extraction results
@@ -100,12 +101,22 @@ async function extractKeywords(text: string, limit: number = 20): Promise<Array<
 interface ExtractKeywordsRequest {
   url: string;
   limit?: number; // Default: 20, max: 200
+  websiteId?: string; // Optional: when provided (and authorized), keywords will be persisted for this website
 }
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+const supabaseAdmin =
+  supabaseUrl && supabaseServiceKey
+    ? createClient(supabaseUrl, supabaseServiceKey)
+    : null;
 
 export async function POST(request: Request) {
   try {
     const body: ExtractKeywordsRequest = await request.json();
-    const { url, limit = 20 } = body;
+    const { url, limit = 20, websiteId } = body;
 
     // Validate input
     if (!url) {
@@ -185,6 +196,109 @@ export async function POST(request: Request) {
     console.log(`📊 Content length: ${combinedText.length} characters`);
     console.log(`📋 Sample keywords (first 10):`, keywords.slice(0, 10).map(k => `"${k.keyword}" (${k.frequency})`).join(", "));
 
+    // Optionally persist keywords to the websites table when called
+    // from an authenticated dashboard flow and a websiteId is provided.
+    if (
+      websiteId &&
+      supabaseAdmin &&
+      supabaseUrl &&
+      supabaseAnonKey &&
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    ) {
+      try {
+        const authHeader = request.headers.get("authorization");
+        if (authHeader && authHeader.startsWith("Bearer ")) {
+          const token = authHeader.substring(7);
+
+          const supabaseUser = createClient(supabaseUrl, supabaseAnonKey, {
+            global: {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            },
+          });
+
+          const {
+            data: { user },
+            error: userError,
+          } = await supabaseUser.auth.getUser();
+
+          if (!userError && user && user.id) {
+            // Load website and ensure it belongs to the authenticated user
+            const { data: siteData, error: siteErr } = await supabaseAdmin
+              .from("websites")
+              .select("id, user_id, keywords")
+              .eq("id", websiteId)
+              .maybeSingle();
+
+            if (!siteErr && siteData && siteData.user_id === user.id) {
+              const existingPayload = (siteData as any)?.keywords || {};
+              const existingList: any[] = Array.isArray(existingPayload?.keywords)
+                ? existingPayload.keywords
+                : [];
+
+              const map = new Map<string, any>();
+
+              // Keep existing keywords
+              existingList.forEach((k) => {
+                const key = String(k?.keyword || k || "").toLowerCase();
+                if (!key) return;
+                map.set(key, k);
+              });
+
+              // Merge in newly extracted keywords
+              keywords.forEach((kw) => {
+                const rawText = kw?.keyword;
+                if (!rawText) return;
+                const key = String(rawText).toLowerCase();
+                if (!key) return;
+
+                const existing = map.get(key) || {};
+                map.set(key, {
+                  ...existing,
+                  keyword: rawText,
+                  frequency: kw.frequency ?? existing.frequency ?? 1,
+                  is_target_keyword: existing.is_target_keyword ?? true,
+                  post_status: existing.post_status || "No Plan",
+                });
+              });
+
+              const mergedList = Array.from(map.values());
+
+              const newPayload = {
+                ...existingPayload,
+                keywords: mergedList,
+                analysis_metadata: {
+                  ...existingPayload.analysis_metadata,
+                  total_keywords: mergedList.length,
+                  analyzed_at: new Date().toISOString(),
+                },
+              };
+
+              const { error: updateErr } = await supabaseAdmin
+                .from("websites")
+                .update({ keywords: newPayload })
+                .eq("id", websiteId);
+
+              if (updateErr) {
+                console.error(
+                  "extract-keywords: Failed to persist keywords for website",
+                  websiteId,
+                  updateErr
+                );
+              } else {
+                console.log(
+                  `✅ extract-keywords: Persisted ${mergedList.length} keywords for website ${websiteId}`
+                );
+              }
+            }
+          }
+        }
+      } catch (persistErr) {
+        console.error("extract-keywords: Error while persisting keywords:", persistErr);
+      }
+    }
+
     // Prepare response
     const responseData = {
       success: true,
@@ -194,7 +308,9 @@ export async function POST(request: Request) {
       contentLength: combinedText.length,
       keywordCount: keywords.length,
       keywords: keywords,
-      contentPreview: combinedText.substring(0, 500) + (combinedText.length > 500 ? "..." : "")
+      contentPreview:
+        combinedText.substring(0, 500) +
+        (combinedText.length > 500 ? "..." : ""),
     };
     
     // Store in cache
