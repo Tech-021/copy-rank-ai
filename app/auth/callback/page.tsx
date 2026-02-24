@@ -81,14 +81,9 @@ export default function AuthCallbackPage() {
             console.warn('Could not upsert users row (non-fatal):', err);
           }
           
-          // Check if this is a new user (created_at is very recent)
-          const createdAt = new Date(session.user?.created_at || '');
-          const now = new Date();
-          const diffMinutes = (now.getTime() - createdAt.getTime()) / (1000 * 60);
-          const isNewSignup = diffMinutes < 5; // New signup if created within last 5 minutes
-          
-          if (isNewSignup && email && userId) {
-            // VALIDATE PREDATA BEFORE ALLOWING SIGNUP
+          // ALWAYS try pre_data validation + POST /api/predata/claim
+          // (if pre_data exists; if not, it just logs and continues)
+          if (email && userId) {
             try {
               const predataResponse = await fetch(`/api/predata?email=${encodeURIComponent(email)}`);
               const predataResult = await predataResponse.json();
@@ -172,30 +167,15 @@ export default function AuthCallbackPage() {
               router.replace(`/auth/onboarding-required?error=general&email=${encodeURIComponent(email)}`);
               return;
             }
-            
-            // New user - for now skip payment checkout and go directly to dashboard
-            // If you want to re-enable LemonSqueezy later, restore the code below:
-            //
-            // const checkoutUrl = process.env.NEXT_PUBLIC_LEMONSQUEEZY_CHECKOUT_URL_30 || 'https://copyrank.lemonsqueezy.com/buy/1e25810b-38ba-4de5-a753-c06514cb9e91';
-            // const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
-            // const successUrl = `${baseUrl}/payment/callback?next=/dashboard`;
-            // const fullCheckoutUrl = `${checkoutUrl}?checkout[email]=${encodeURIComponent(email)}&checkout[custom][user_id]=${encodeURIComponent(userId)}&checkout[product_options][redirect_url]=${encodeURIComponent(successUrl)}`;
-            // window.location.href = fullCheckoutUrl;
-            toast.showToast({
-              title: "Successfully signed in!",
-              description: "Welcome to your dashboard.",
-              type: "success",
-            });
-            router.replace("/dashboard");
-          } else {
-            // Existing user - go to dashboard
-            toast.showToast({ 
-              title: "Successfully signed in!", 
-              description: "Welcome back!", 
-              type: "success" 
-            })
-            router.replace("/dashboard")
           }
+          
+          // After that, always go to dashboard
+          toast.showToast({
+            title: "Successfully signed in!",
+            description: "Welcome to your dashboard.",
+            type: "success",
+          });
+          router.replace("/dashboard");
         } else {
           toast.showToast({ 
             title: "Authentication incomplete", 

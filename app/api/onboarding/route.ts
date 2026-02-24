@@ -491,21 +491,6 @@ export async function POST(request: Request) {
       `📊 Total before deduplication: ${allKeywords.length} competitor + ${targetKeywordData.length} target = ${allMergedKeywords.length} total`
     );
 
-    // If no keywords found, add default keywords for the topic
-    if (allMergedKeywords.length === 0 && clientTopic !== "General") {
-      console.warn("⚠️ No keywords found from APIs, adding default keywords for topic");
-      const defaultKeywords = [
-        { keyword: `${clientTopic}`, search_volume: 1000, difficulty: 30, cpc: 0.5, competition: 0.3 },
-        { keyword: `${clientTopic} tips`, search_volume: 500, difficulty: 25, cpc: 0.4, competition: 0.2 },
-        { keyword: `best ${clientTopic}`, search_volume: 450, difficulty: 35, cpc: 0.6, competition: 0.4 },
-        { keyword: `${clientTopic} guide`, search_volume: 400, difficulty: 28, cpc: 0.5, competition: 0.3 },
-        { keyword: `${clientTopic} tutorial`, search_volume: 350, difficulty: 27, cpc: 0.45, competition: 0.25 },
-        { keyword: `learn ${clientTopic}`, search_volume: 300, difficulty: 26, cpc: 0.4, competition: 0.2 },
-      ];
-      allMergedKeywords.push(...defaultKeywords);
-      console.log(`✅ Added ${defaultKeywords.length} default keywords`);
-    }
-
     // Remove duplicate keywords (by keyword text, case-insensitive)
     const uniqueKeywords = allMergedKeywords.filter(
       (keyword, index, self) =>
