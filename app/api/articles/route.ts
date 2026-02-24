@@ -122,13 +122,13 @@ export async function GET(request: Request) {
 
     console.log('Articles API: subscription result:', userData, 'error:', subError);
 
-    if (!userData?.subscribe) {
-      console.log('Articles API: Subscription required - rejecting request');
-      return NextResponse.json(
-        { error: "Subscription required" },
-        { status: 403 }
-      );
-    }
+    // if (!userData?.subscribe) {
+    //   console.log('Articles API: Subscription required - rejecting request');
+    //   return NextResponse.json(
+    //     { error: "Subscription required" },
+    //     { status: 403 }
+    //   );
+    // }
 
     const { searchParams } = new URL(request.url);
     const websiteId = searchParams.get("websiteId");
@@ -244,7 +244,8 @@ export async function GET(request: Request) {
       articles: transformedArticles,
     });
   } catch (error) {
-    console.error("Error fetching articles:", error);
+
+    console.log("Error fetching articles:", error);
     return NextResponse.json(
       { error: "Failed to fetch articles" },
       { status: 500 }
