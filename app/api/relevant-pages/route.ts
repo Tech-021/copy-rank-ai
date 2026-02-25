@@ -266,6 +266,7 @@ function formatResponse(
     };
   }
 
+  
   const pages = result.items.map((item: any, index: number) => ({
     position: index + 1,
     // Include page_address - this is the key field from DataForSEO
