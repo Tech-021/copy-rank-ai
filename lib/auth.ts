@@ -59,6 +59,7 @@ export async function signOut(): Promise<AuthReturn> {
   }
 }
 
+
 export async function getUser(): Promise<AuthReturn> {
   try {
     const res: any = await supabase.auth.getUser()
