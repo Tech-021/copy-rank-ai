@@ -7,6 +7,19 @@ import { getUser, signOut } from "@/lib/auth"
 import { supabase } from "@/lib/client"
 import { useToast } from "@/components/ui/toast"
 
+// Match onboarding's normalizeUrl logic so we can find the correct website row
+function normalizeUrl(websiteUrl: string | null | undefined): string | null {
+  if (!websiteUrl) return null
+
+  const cleanDomain = websiteUrl
+    .trim()
+    .replace(/^(https?:\/\/)?(www\.)?/, "")
+    .split("/")[0]
+
+  if (!cleanDomain) return null
+  return `https://www.${cleanDomain}`
+}
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const toast = useToast()
@@ -23,7 +36,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         // First, check session directly from Supabase to avoid transient nulls
         const { data: sessionData } = await supabase.auth.getSession()
         const session = (sessionData as any)?.session ?? null
-
         if (!session) {
           if (mounted) {
             setCheckingAuth(false)
@@ -31,7 +43,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           }
           return
         }
-
         // If we have a session, fetch user details
         const { data: user } = await getUser()
         if (!user?.id) {
@@ -41,42 +52,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           }
           return
         }
-
         if (!mounted) return
-
-        // FIRST: Check if user needs onboarding (pre_data check)
-        console.log('Dashboard layout: Checking pre_data for user:', user.email)
-        const { data: predataResult } = await supabase
-          .from('pre_data')
-          .select('*')
-          .eq('email', user.email)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle()
-
-        console.log('Dashboard layout: predataResult:', predataResult)
-
-        // Determine if user needs onboarding
-        const needsOnboarding = !predataResult || (() => {
-          const predata = predataResult
-          const hasWebsite = predata.website && predata.website.trim() !== ''
-          const hasCompetitors = Array.isArray(predata.competitors) && predata.competitors.length > 0
-          const hasKeywords = Array.isArray(predata.keywords) && predata.keywords.length > 0
-          console.log('Dashboard layout: hasWebsite:', hasWebsite, 'hasCompetitors:', hasCompetitors, 'hasKeywords:', hasKeywords)
-          return !hasWebsite || (!hasCompetitors && !hasKeywords)
-        })()
-
-        console.log('Dashboard layout: needsOnboarding:', needsOnboarding)
-
-        if (needsOnboarding) {
-          console.log('Dashboard layout: User needs onboarding, redirecting from dashboard')
-          if (mounted) {
-            setCheckingAuth(false)
-            router.replace('/auth/onboarding-required')
-          }
-          return
-        }
-
         // Check subscription status - redirect to LemonSqueezy if not subscribed
         console.log('Dashboard layout: Checking subscription for user:', user.id);
         const { data: userData, error: subError } = await supabase
@@ -84,7 +60,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           .select('subscribe')
           .eq('id', user.id)
           .single();
-
         console.log('Dashboard layout: subscription result:', userData, 'error:', subError);
 
         // if (!userData?.subscribe) {
@@ -100,6 +75,28 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         //   return
         // }
 
+        if (!websites || websites.length === 0) {
+          if (mounted) {
+            setCheckingAuth(false)
+            router.replace(`/onboarding?error=no_website&email=${encodeURIComponent(user.email || "")}`)
+          }
+          return
+        }
+
+        const hasCompetitors = websites.some((site: any) => {
+          const competitorsFromKeywords = Array.isArray(site?.keywords?.competitors)
+            ? site.keywords.competitors
+            : []
+          return competitorsFromKeywords.length > 0
+        })
+
+        if (!hasCompetitors) {
+          if (mounted) {
+            setCheckingAuth(false)
+            router.replace(`/onboarding?error=no_data&email=${encodeURIComponent(user.email || "")}`)
+          }
+          return
+        }
         setUserEmail(user.email || "")
         const avatar =
           user.user_metadata?.avatar_url ||

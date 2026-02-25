@@ -452,14 +452,14 @@ export function KeywordsTab({
         return {
           id: kw.id || undefined,
           keyword: String(text),
-          search_volume: Number(kw.search_volume ?? 0),
+          search_volume: Number(kw.searchVolume ?? kw.search_volume ?? 0),
           difficulty: Number(kw.difficulty ?? 0),
           cpc: Number(kw.cpc ?? 0),
           competition: Number(kw.competition ?? 0),
           is_target_keyword: !!kw.is_target_keyword,
           post_status: kw.post_status || "No Plan",
-          traffic_potential:
-            kw.traffic_potential ||
+          trafficPotential:
+            kw.trafficPotential ||
             (kw.search_volume
               ? `${Math.round(Number(kw.search_volume) * 0.1)}+/mo`
               : "—"),
@@ -516,6 +516,8 @@ export function KeywordsTab({
         }
 
         // 0.5) Cheap DB version check: if unchanged, don't re-render / don't show spinner
+        // Commented out until migration adds keywords_updated_at column
+        /*
         if (!forceRefresh) {
           const { data: versionRow, error: versionErr } = await supabase
             .from("websites")
@@ -575,18 +577,19 @@ export function KeywordsTab({
             // Else: DB changed or cache not trusted → continue to full DB load below.
           }
         }
+        */
 
         if (isCurrent()) setError(null);
 
         // 1) Load from DB first (fast)
-        // Backward-compatible select: keywords_updated_at may not exist until migration runs
+        // Load basic data first, then try to get keywords_updated_at separately for compatibility
         let singleSite: any = null;
         {
           const { data, error: siteErr } = await supabase
             .from("websites")
-            .select("id, url, topic, keywords, keywords_updated_at")
+            .select("id, url, topic, keywords")
             .eq("id", requestWebsiteId)
-            .single();
+            .maybeSingle();
 
           if (siteErr) {
             const msg = siteErr.message || "Failed to load website";
@@ -629,9 +632,10 @@ export function KeywordsTab({
             } else {
               throw new Error(msg);
             }
-          } else {
-            singleSite = data;
+          } catch (err) {
+            // Column doesn't exist yet, ignore
           }
+          */
         }
         if (!singleSite) throw new Error("Website not found");
 
@@ -1470,7 +1474,7 @@ export function KeywordsTab({
       <div className="flex lg:flex-row flex-col items-start gap-4 lg:gap-0 lg:items-center justify-between">
         <div>
           <h2 className="text-2xl text-white font-medium">Keywords</h2>
-          <p className="text-sm text-[#ffffff3b] mt-1">
+          <p className="text-sm text-[#ffffffb3] mt-1">
             Track the keywords driving your traffic
           </p>
         </div>
@@ -1759,7 +1763,7 @@ export function KeywordsTab({
                 const difficultyColor = getDifficultyColor(kw.difficulty);
                 const competitionText = getCompetitionText(kw.competition);
                 const competitionColor = getCompetitionColor(kw.competition);
-                const trafficText = kw.traffic_potential || "—";
+                const trafficText = kw.trafficPotential || "—";
                 return (
                   <tr
                     key={`${kw.keyword}-${index}`}

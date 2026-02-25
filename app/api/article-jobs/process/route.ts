@@ -11,6 +11,7 @@ export const maxDuration = 800; // Vercel Pro plan limit
 // Process function (shared between GET and POST)
 async function processJobs() {
   try {
+    console.log('Article job processor invoked');
     // Process only 1 job at a time to stay under timeout limit
     const maxJobs = 1;
 
@@ -59,6 +60,7 @@ async function processJobs() {
     }
 
     if (!jobs || jobs.length === 0) {
+      console.log('No pending jobs found (job fetch returned 0)');
       return NextResponse.json({
         success: true,
         message: "No pending jobs found",
