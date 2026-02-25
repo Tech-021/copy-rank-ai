@@ -9,7 +9,8 @@ export default function LoginRoute() {
   return (
     <LoginPage
       onLoginSuccess={(email) => {
-        router.push("/paywall")
+        // router.push("/paywall")
+        router.push("/dashboard")
       }}
       onBackToLanding={() => {
         router.push("/")
