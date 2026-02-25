@@ -619,23 +619,11 @@ export function KeywordsTab({
               return;
             }
 
-            // If the column doesn't exist yet, retry without it.
-            if (/keywords_updated_at/i.test(msg) && /column/i.test(msg)) {
-              const { data: retryData, error: retryErr } = await supabase
-                .from("websites")
-                .select("id, url, topic, keywords")
-                .eq("id", requestWebsiteId)
-                .single();
-              if (retryErr)
-                throw new Error(retryErr.message || "Failed to load website");
-              singleSite = retryData;
-            } else {
-              throw new Error(msg);
-            }
-          } catch (err) {
-            // Column doesn't exist yet, ignore
+            // If some other error occurred, surface it.
+            throw new Error(msg);
           }
-          */
+
+          singleSite = data;
         }
         if (!singleSite) throw new Error("Website not found");
 
