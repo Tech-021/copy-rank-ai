@@ -33,14 +33,42 @@ interface CompetitorResult {
 }
 
 /**
- * Get the correct base URL for internal API calls
- * Uses localhost in development, otherwise uses NEXT_PUBLIC_SITE_URL
+ * Get the correct base URL for internal API calls.
+ *
+ * - In production (Vercel), prefer the actual request host (works with custom domains).
+ * - In development, fall back to localhost.
+ * - If anything is missing, fall back to NEXT_PUBLIC_SITE_URL or localhost.
  */
-function getInternalBaseUrl(): string {
+function getInternalBaseUrl(req?: Request): string {
+  try {
+    if (req) {
+      const url = new URL(req.url);
+      const proto =
+        req.headers.get("x-forwarded-proto") ??
+        url.protocol.replace(":", "") ??
+        "https";
+      const host =
+        req.headers.get("x-forwarded-host") ??
+        req.headers.get("host") ??
+        url.host;
+
+      if (host) {
+        return `${proto}://${host}`;
+      }
+    }
+  } catch {
+    // Ignore and fall through to env-based fallbacks
+  }
+
+  if (process.env.NEXT_PUBLIC_SITE_URL) {
+    return process.env.NEXT_PUBLIC_SITE_URL;
+  }
+
   if (process.env.NODE_ENV === "development") {
     return "http://localhost:3000";
   }
-  return process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+
+  return "http://localhost:3000";
 }
 
 /**
@@ -409,7 +437,7 @@ export async function POST(request: Request) {
     const competitorResults: CompetitorResult[] = [];
     const allKeywords: any[] = [];
 
-    const baseUrl = getInternalBaseUrl();
+    const baseUrl = getInternalBaseUrl(request);
     const keywordLimit = 100;
 
     if (normalizedCompetitors.length > 0) {
@@ -612,7 +640,7 @@ export async function POST(request: Request) {
     // STEP 6: Enqueue articles for generation
     console.log("\n🚀 Step 6: Enqueueing articles for generation...");
 
-    const jobBaseUrl = getInternalBaseUrl();
+    const jobBaseUrl = getInternalBaseUrl(request);
 
     // Enqueue all articles as jobs - wait for response to ensure jobs are created
     // The enqueue endpoint will enforce package limits automatically

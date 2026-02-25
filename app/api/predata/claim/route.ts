@@ -5,7 +5,35 @@ const supabaseAdmin = process.env.SUPABASE_SERVICE_ROLE_KEY && process.env.NEXT_
   ? createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
   : null;
 
-const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+function getInternalBaseUrl(req: Request): string {
+  try {
+    const url = new URL(req.url);
+    const proto =
+      req.headers.get("x-forwarded-proto") ??
+      url.protocol.replace(":", "") ??
+      "https";
+    const host =
+      req.headers.get("x-forwarded-host") ??
+      req.headers.get("host") ??
+      url.host;
+
+    if (host) {
+      return `${proto}://${host}`;
+    }
+  } catch {
+    // fall through to env-based fallbacks
+  }
+
+  if (process.env.NEXT_PUBLIC_SITE_URL) {
+    return process.env.NEXT_PUBLIC_SITE_URL;
+  }
+
+  if (process.env.NODE_ENV === "development") {
+    return "http://localhost:3000";
+  }
+
+  return "http://localhost:3000";
+}
 
 // POST /api/predata/claim
 // body: { email?: string, ids?: string[], userId: string }
@@ -24,6 +52,8 @@ export async function POST(req: Request) {
     }
 
     if (!supabaseAdmin) return NextResponse.json({ success: false, error: "no-db" }, { status: 500 });
+
+    const baseUrl = getInternalBaseUrl(req);
 
     // Fetch rows to claim
     let query = supabaseAdmin.from("pre_data").select("*").eq("processed", false);
@@ -58,15 +88,23 @@ export async function POST(req: Request) {
           onboardingHeaders['Authorization'] = authHeader;
         }
 
-        const onboardingResp = await fetch(`${BASE_URL}/api/onboarding`, {
-          method: "POST",
-          headers: onboardingHeaders,
-          body: JSON.stringify(onboardingPayload),
-        }).catch(e => ({ ok: false, error: String(e) }));
+        let onboardingResult: any = { success: false, error: "onboarding_call_failed" };
+        try {
+          const onboardingResp = await fetch(`${baseUrl}/api/onboarding`, {
+            method: "POST",
+            headers: onboardingHeaders,
+            body: JSON.stringify(onboardingPayload),
+          });
 
-        const onboardingResult = onboardingResp.ok
-          ? await onboardingResp.json().catch(() => ({ success: false, error: "parse_error" }))
-          : { success: false, error: "onboarding_call_failed" };
+          if (onboardingResp.ok) {
+            onboardingResult = await onboardingResp.json().catch(() => ({
+              success: false,
+              error: "parse_error",
+            }));
+          }
+        } catch (e) {
+          onboardingResult = { success: false, error: String(e) };
+        }
 
         // Mark row as processed
         await supabaseAdmin
