@@ -350,6 +350,22 @@ export async function POST(request: Request) {
 
     const body: OnboardingRequest = await request.json();
 
+    // #region agent log
+    fetch('http://127.0.0.1:7244/ingest/8d9350cf-ecef-4c96-9482-a2a235a433e1',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        id:`log_${Date.now()}_onboarding_start`,
+        runId:'onboarding-debug',
+        hypothesisId:'H4',
+        location:'api/onboarding/route.ts:start',
+        message:'Onboarding POST received',
+        data:{ hasClientDomain: !!body.clientDomain, competitorsCount: Array.isArray(body.competitors) ? body.competitors.length : (body.competitors ? 1 : 0) },
+        timestamp:Date.now()
+      })
+    }).catch(()=>{});
+    // #endregion agent log
+
     const { clientDomain, competitors, targetKeywords, userId, isQuickAdd } = body;
 
     // Verify that the userId matches the authenticated user
@@ -606,10 +622,31 @@ export async function POST(request: Request) {
 
       if (existing) {
         console.log(
-          "ℹ️ Website already exists for user, reusing existing record",
+          "ℹ️ Website already exists for user, updating existing record",
           existing.id
         );
-        savedWebsite = existing;
+
+        const { data: updated, error: updateErr } = await supabase
+          .from("websites")
+          .update({
+            // Always keep URL normalized to latest value
+            url: normalizedClientDomain,
+            topic: clientTopic,
+            keywords: insertData.keywords,
+            competitors: insertData.competitors,
+            total_competitors: insertData.total_competitors,
+          })
+          .eq("id", existing.id)
+          .select()
+          .single();
+
+        if (updateErr) {
+          console.error("❌ Database error on update:", updateErr);
+          throw new Error("Failed to update website keywords");
+        }
+
+        savedWebsite = updated;
+        console.log("✅ Successfully updated website", savedWebsite.id);
       } else {
         const { data: inserted, error: dbError } = await supabase
           .from("websites")

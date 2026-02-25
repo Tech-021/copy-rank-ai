@@ -70,6 +70,10 @@ interface Keyword {
   is_target_keyword?: boolean;
   post_status?: "Live" | "Draft" | "No Plan";
   traffic_potential?: string;
+  // Extra metadata for relevant-page keywords
+  source?: string;
+  page_url?: string;
+  page_title?: string;
 }
 
 interface Website {
@@ -459,6 +463,10 @@ export function KeywordsTab({
             (kw.search_volume
               ? `${Math.round(Number(kw.search_volume) * 0.1)}+/mo`
               : "—"),
+          // Preserve source + page metadata if present (for relevant-page keywords)
+          source: kw.source,
+          page_url: kw.page_url,
+          page_title: kw.page_title,
         };
       };
 
@@ -484,7 +492,21 @@ export function KeywordsTab({
         const cached = !forceRefresh
           ? readKeywordsCache(requestWebsiteId)
           : null;
-        if (cached) {
+
+        // Only trust cache if it contains relevant-page keywords (source === "relevant_page")
+        const cachedHasRelevantPageKeywords =
+          !!cached &&
+          Array.isArray(cached.keywords) &&
+          cached.keywords.length > 0 &&
+          cached.keywords.every(
+            (k: any) =>
+              k &&
+              (k as any).source === "relevant_page" &&
+              typeof (k as any).keyword === "string" &&
+              ((k as any).page_url || (k as any).page_title)
+          );
+
+        if (cached && cachedHasRelevantPageKeywords) {
           if (isCurrent()) {
             setWebsiteData({
               website: cached.website,
@@ -517,9 +539,11 @@ export function KeywordsTab({
             const dbUpdatedAt: string | null =
               (versionRow as any)?.keywords_updated_at ?? null;
             const cachedUpdatedAt: string | null =
-              cached?.keywordsUpdatedAt ?? null;
+              cachedHasRelevantPageKeywords && cached
+                ? cached.keywordsUpdatedAt ?? null
+                : null;
             if (
-              cached &&
+              cachedHasRelevantPageKeywords &&
               dbUpdatedAt &&
               cachedUpdatedAt &&
               dbUpdatedAt === cachedUpdatedAt
@@ -528,7 +552,7 @@ export function KeywordsTab({
             }
 
             // DB changed and we had cache => show spinner for refresh
-            if (cached) {
+            if (cachedHasRelevantPageKeywords && cached) {
               if (isCurrent()) setLoading(true);
             }
           }
@@ -581,8 +605,20 @@ export function KeywordsTab({
           .map(normalizeKeyword)
           .filter(Boolean) as Keyword[];
 
-        // If we already have stored keywords and we're not forcing refresh, stop here.
-        if (storedKeywords.length > 0 && !forceRefresh) {
+        // Detect whether existing keywords are from the new relevant-pages pipeline
+        const allFromRelevantPages =
+          storedKeywords.length > 0 &&
+          storedKeywords.every(
+            (k: any) =>
+              k &&
+              (k as any).source === "relevant_page" &&
+              typeof (k as any).keyword === "string" &&
+              ((k as any).page_url || (k as any).page_title)
+          );
+
+        // If we already have stored keywords from relevant-pages and we're not forcing refresh, stop here.
+        // Otherwise (legacy keywords or empty), fall through to rebuild from /api/relevant-pages-keywords.
+        if (storedKeywords.length > 0 && !forceRefresh && allFromRelevantPages) {
           const nextWebsite = {
             id: singleSite.id,
             url: singleSite.url,
@@ -604,11 +640,13 @@ export function KeywordsTab({
           return;
         }
 
-        // 2) DB is empty: Keywords are only generated during onboarding
-        // DISABLED: Fallback to /api/keyword removed
-        // Keywords now only come from onboarding relevant pages
-        console.log("ℹ️ No keywords in database - keywords are only generated during onboarding");
-        
+        // 2) DB is empty or contains legacy keywords (not from relevant pages).
+        //    In this case, we don't try to generate keywords on the client.
+        //    Keywords are generated during onboarding or via admin tools.
+        console.log(
+          "ℹ️ No valid relevant-page keywords in database yet - showing empty list. Keywords will be generated during onboarding."
+        );
+
         const nextWebsite = {
           id: singleSite.id,
           url: singleSite.url,
@@ -621,27 +659,13 @@ export function KeywordsTab({
           setSelectedKeywords(new Set());
         }
 
-        // Re-read keywords_updated_at so cache has the correct DB version after update
-        let afterUpdatedAt: string | null = null;
-        {
-          const { data: afterVersionRow, error: afterVersionErr } =
-            await supabase
-              .from("websites")
-              .select("keywords_updated_at")
-              .eq("id", requestWebsiteId)
-              .single();
-
-          if (!afterVersionErr) {
-            afterUpdatedAt =
-              (afterVersionRow as any)?.keywords_updated_at ?? null;
-          }
-        }
-
         writeKeywordsCache(requestWebsiteId, {
           website: nextWebsite,
-          keywords: merged,
-          keywordsUpdatedAt: afterUpdatedAt,
+          keywords: [],
+          keywordsUpdatedAt: (singleSite as any).keywords_updated_at ?? null,
         });
+
+        return;
       } catch (err) {
         const message = getErrorMessage(err);
         // Next.js dev overlay sometimes serializes objects as `{}`; log message separately.

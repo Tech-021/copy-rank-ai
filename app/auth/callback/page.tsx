@@ -136,6 +136,22 @@ export default function AuthCallbackPage() {
                   throw new Error("No authentication token available");
                 }
 
+                // #region agent log
+                fetch('http://127.0.0.1:7244/ingest/8d9350cf-ecef-4c96-9482-a2a235a433e1',{
+                  method:'POST',
+                  headers:{'Content-Type':'application/json'},
+                  body:JSON.stringify({
+                    id:`log_${Date.now()}_auth_callback`,
+                    runId:'onboarding-debug',
+                    hypothesisId:'H1',
+                    location:'auth/callback/page.tsx:claim',
+                    message:'Calling /api/predata/claim from auth callback',
+                    data:{ hasEmail: !!email, hasUserId: !!userId },
+                    timestamp:Date.now()
+                  })
+                }).catch(()=>{});
+                // #endregion agent log
+
                 const claimResponse = await fetch('/api/predata/claim', {
                   method: 'POST',
                   headers: { 
