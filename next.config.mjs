@@ -25,6 +25,7 @@ const nextConfig = {
       },
     ],
   },
+  turbopack: {},
   webpack: (config, { isServer, webpack }) => {
     if (isServer) {
       // Add Node.js polyfills for server-side (natural package needs these)

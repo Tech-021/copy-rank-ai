@@ -43,13 +43,13 @@ export default function OnboardingPage() {
           const hasWebsite = predata.website && predata.website.trim() !== ''
           const hasCompetitors = Array.isArray(predata.competitors) && predata.competitors.length > 0
           const hasKeywords = Array.isArray(predata.keywords) && predata.keywords.length > 0
-          return !hasWebsite || !hasCompetitors
+          return !hasWebsite || (!hasCompetitors && !hasKeywords)
         })()
 
         if (needsOnboarding) {
           console.log('User needs onboarding, redirecting to onboarding-required')
           if (mounted) {
-            router.push('/onboarding')
+            router.push('/auth/onboarding-required')
           }
           return
         }

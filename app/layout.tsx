@@ -7,7 +7,6 @@ import "./globals.css"
 import { ToastProvider } from "@/components/ui/toast"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Suspense } from "react"
-import Script from 'next/script'
 
 const geist = Geist({ 
   subsets: ["latin"],
@@ -46,10 +45,6 @@ export default function RootLayout({
           </ToastProvider>
         </ThemeProvider>
         <Analytics />
-        <Script
-          src="https://accounts.google.com/gsi/client"
-          strategy="afterInteractive"
-        />
       </body>
     </html>
   )

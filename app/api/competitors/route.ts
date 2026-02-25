@@ -57,7 +57,7 @@ export async function POST(request: Request) {
     const hasWebsite = predata.website && predata.website.trim() !== '';
     const hasCompetitors = Array.isArray(predata.competitors) && predata.competitors.length > 0;
     const hasKeywords = Array.isArray(predata.keywords) && predata.keywords.length > 0;
-    return !hasWebsite || !hasCompetitors;
+    return !hasWebsite || (!hasCompetitors && !hasKeywords);
   })();
 
   if (needsOnboarding) {

@@ -239,14 +239,17 @@ export async function POST(request: Request) {
 
               const map = new Map<string, any>();
 
-              // Keep existing keywords
+              // IMPORTANT: For this competitor-based flow we only want competitor
+              // keywords, not the original DataForSEO onboarding keywords.
+              // So we keep ONLY entries that are already marked as competitor_extracted.
               existingList.forEach((k) => {
+                if (k?.source !== "competitor_extracted") return;
                 const key = String(k?.keyword || k || "").toLowerCase();
                 if (!key) return;
                 map.set(key, k);
               });
 
-              // Merge in newly extracted keywords
+              // Merge in newly extracted competitor keywords and tag them with a source
               keywords.forEach((kw) => {
                 const rawText = kw?.keyword;
                 if (!rawText) return;
@@ -260,6 +263,7 @@ export async function POST(request: Request) {
                   frequency: kw.frequency ?? existing.frequency ?? 1,
                   is_target_keyword: existing.is_target_keyword ?? true,
                   post_status: existing.post_status || "No Plan",
+                  source: "competitor_extracted",
                 });
               });
 

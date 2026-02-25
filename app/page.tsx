@@ -26,8 +26,10 @@ export default function Home() {
         const { data } = await getUser()
         // data is normalized to the user object (or null)
         const user = data
+        
         if (mounted && user && (user.id || user.email)) {
           setUserEmail(user.email ?? "")
+          
           // Set user avatar from Google OAuth
           const avatar = user.user_metadata?.avatar_url || 
                         user.user_metadata?.picture || 
@@ -35,43 +37,41 @@ export default function Home() {
                         user.identities?.[0]?.identity_data?.picture ||
                         null
           setUserAvatar(avatar)
+          
           console.log("=== HOME PAGE USER DATA ===")
           console.log("Email:", user.email)
           console.log("Avatar:", avatar)
           console.log("User metadata:", user.user_metadata)
           console.log("Identities:", user.identities)
-          // Enforce onboarding before sending to dashboard
-          const { data: websites, error: websitesError } = await supabase
-            .from("websites")
-            .select("id, keywords")
-            .eq("user_id", user.id)
-            .order("created_at", { ascending: false })
 
-          if (websitesError) {
-            console.error("Error loading websites:", websitesError)
-          }
+          // FIRST: Check if user needs onboarding (pre_data check)
+          const { data: predataResult } = await supabase
+            .from('pre_data')
+            .select('*')
+            .eq('email', user.email)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle()
 
-          if (!websites || websites.length === 0) {
-            router.replace(
-              `/onboarding?error=no_website&email=${encodeURIComponent(user.email || "")}`
-            )
+          // Determine if user needs onboarding
+          const needsOnboarding = !predataResult || (() => {
+            const predata = predataResult
+            const hasWebsite = predata.website && predata.website.trim() !== ''
+            const hasCompetitors = Array.isArray(predata.competitors) && predata.competitors.length > 0
+            const hasKeywords = Array.isArray(predata.keywords) && predata.keywords.length > 0
+            return !hasWebsite || (!hasCompetitors && !hasKeywords)
+          })()
+
+          if (needsOnboarding) {
+            console.log('User needs onboarding, redirecting to onboarding-required')
+            if (mounted) {
+              router.push('/auth/onboarding-required')
+            }
             return
           }
 
-          const hasCompetitors = websites.some((site: any) => {
-            const competitorsFromKeywords = Array.isArray(site?.keywords?.competitors)
-              ? site.keywords.competitors
-              : []
-            return competitorsFromKeywords.length > 0
-          })
-
-          if (!hasCompetitors) {
-            router.replace(
-              `/onboarding?error=no_data&email=${encodeURIComponent(user.email || "")}`
-            )
-            return
-          }
-
+          // Allow access to dashboard regardless of subscription status
+          // Subscription checks will be handled within the app for specific features
           if (mounted) {
             setAuthState("dashboard")
           }
@@ -92,13 +92,8 @@ export default function Home() {
         }
       }
     }
+
     check()
-    // async function doLogout() {
-    //   await signOut();
-    //   setAuthState("signup");
-    //   setIsCheckingSubscription(false);
-    // }
-    // doLogout();
     return () => {
       mounted = false
     }

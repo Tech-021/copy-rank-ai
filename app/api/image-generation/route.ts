@@ -10,83 +10,75 @@ const supabaseAdmin = createClient(
 );
 
 export async function POST(req: Request) {
-  // Support internal requests using ARTICLE_PROCESS_SECRET header
-  const internalKey = req.headers.get('x-internal-api-key');
-  const isInternalCall = internalKey && internalKey === process.env.ARTICLE_PROCESS_SECRET;
-
-  if (!isInternalCall) {
-    // Check authentication using JWT token from Authorization header
-    const authHeader = req.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: "Authentication required" },
-        { status: 401 }
-      );
-    }
-
-    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
-
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        global: {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      }
+  // Check authentication using JWT token from Authorization header
+  const authHeader = req.headers.get('authorization');
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return NextResponse.json(
+      { error: "Authentication required" },
+      { status: 401 }
     );
+  }
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+  const token = authHeader.substring(7); // Remove 'Bearer ' prefix
 
-    if (!user || !user.id) {
-      return NextResponse.json(
-        { error: "Authentication required" },
-        { status: 401 }
-      );
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      global: {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
     }
+  );
 
-    // Check if user needs onboarding
-    const { data: predata } = await supabaseAdmin
-      .from('pre_data')
-      .select('*')
-      .eq('email', user.email)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-    const needsOnboarding = !predata || (() => {
-      const hasWebsite = predata.website && predata.website.trim() !== '';
-      const hasCompetitors = Array.isArray(predata.competitors) && predata.competitors.length > 0;
-      const hasKeywords = Array.isArray(predata.keywords) && predata.keywords.length > 0;
-      return !hasWebsite || !hasCompetitors;
-    })();
+  if (!user || !user.id) {
+    return NextResponse.json(
+      { error: "Authentication required" },
+      { status: 401 }
+    );
+  }
 
-    if (needsOnboarding) {
-      return NextResponse.json(
-        { error: "Onboarding required" },
-        { status: 403 }
-      );
-    }
+  // Check if user needs onboarding
+  const { data: predata } = await supabaseAdmin
+    .from('pre_data')
+    .select('*')
+    .eq('email', user.email)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
 
-    // Check subscription status
-    const { data: userData } = await supabaseAdmin
-      .from('users')
-      .select('subscribe')
-      .eq('id', user.id)
-      .single();
+  const needsOnboarding = !predata || (() => {
+    const hasWebsite = predata.website && predata.website.trim() !== '';
+    const hasCompetitors = Array.isArray(predata.competitors) && predata.competitors.length > 0;
+    const hasKeywords = Array.isArray(predata.keywords) && predata.keywords.length > 0;
+    return !hasWebsite || (!hasCompetitors && !hasKeywords);
+  })();
 
-    if (!userData?.subscribe) {
-      return NextResponse.json(
-        { error: "Subscription required" },
-        { status: 403 }
-      );
-    }
-  } else {
-    console.log('Image API: internal request authenticated with process secret');
+  if (needsOnboarding) {
+    return NextResponse.json(
+      { error: "Onboarding required" },
+      { status: 403 }
+    );
+  }
+
+  // Check subscription status
+  const { data: userData } = await supabaseAdmin
+    .from('users')
+    .select('subscribe')
+    .eq('id', user.id)
+    .single();
+
+  if (!userData?.subscribe) {
+    return NextResponse.json(
+      { error: "Subscription required" },
+      { status: 403 }
+    );
   }
   try {
     const body = await req.json();

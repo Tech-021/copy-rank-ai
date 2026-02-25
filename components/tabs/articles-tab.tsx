@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { LoaderChevron } from "@/components/ui/LoaderChevron";
@@ -49,14 +48,12 @@ import {
   Copy,
 } from "lucide-react";
 import { getUser } from "@/lib/auth";
-import { ensureAbsoluteUrl } from "@/lib/urlUtils";
 import { getUserPackage } from "@/lib/articleLimits";
 import { createCheckout } from "@/lib/lemonSqueezy";
 import { supabase } from "@/lib/client";
 import { useToast } from "@/components/ui/toast";
 import Image from "next/image";
 import { CreatePostDialogDashboard } from "@/components/dialog2";
-import { UnifiedPublishButton } from "@/components/unified-publish-button";
 
 interface Article {
   id: string;
@@ -79,14 +76,6 @@ interface Article {
   generatedAt?: string;
   estimatedTraffic?: number;
   generatedImages?: string[];
-  wordpress_post_id?: string;
-  wordpress_url?: string;
-  wordpress_connection_id?: string;
-  last_synced_to_wordpress?: string;
-  framer_item_id?: string;
-  framer_url?: string;
-  framer_connection_id?: string;
-  last_synced_to_framer?: string;
 }
 
 interface AnalyticsData {
@@ -114,11 +103,8 @@ export function ArticlesTab({
   onArticlesUpdate,
   websiteId,
 }: ArticlesTabProps) {
-  const router = useRouter();
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
-  const [articlesError, setArticlesError] = useState<string | null>(null);
-  const [onboardingRequired, setOnboardingRequired] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
   const [newArticleKeyword, setNewArticleKeyword] = useState("");
@@ -185,7 +171,6 @@ export function ArticlesTab({
   useEffect(() => {
     articlesRef.current = articles;
   }, [articles]);
-  
 
   interface Website {
     id: string;
@@ -405,158 +390,6 @@ export function ArticlesTab({
     return `${baseUrl.replace(/\/$/, "")}/articles/${slug}`;
   };
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function manageJobsOnce() {
-      try {
-        if (!currentUser || !selectedWebsiteId) return;
-
-        // Fetch all jobs for this user + site
-        const { data: jobs } = await supabase
-          .from('article_jobs')
-          .select('*')
-          .eq('user_id', currentUser.id)
-          .eq('website_id', selectedWebsiteId)
-          .order('created_at', { ascending: false });
-
-        const pendingJobs = (jobs || []).filter((j: any) => j.status === 'pending');
-        const processingJobs = (jobs || []).filter((j: any) => j.status === 'processing');
-        const completedJobs = (jobs || []).filter((j: any) => j.status === 'completed');
-
-        // Count all jobs created within last 24 hours (regardless of status)
-        const dayAgo = Date.now() - 24 * 60 * 60 * 1000;
-        const createdLast24 = (jobs || []).filter((j: any) => {
-          return j.created_at && new Date(j.created_at).getTime() >= dayAgo;
-        }).length;
-
-        // If daily creation limit reached, do nothing
-        if (createdLast24 >= 5) {
-          console.log('Daily job creation limit reached (5 jobs created in last 24h). Skipping job creation.');
-          return;
-        }
-
-        // If there's any pending job: trigger processing ONCE for that pending job
-        if (pendingJobs.length > 0) {
-          const pending = pendingJobs[0];
-          const key = `triggeredJob:${pending.id}`;
-          if (!sessionStorage.getItem(key)) {
-            console.log('Found pending job, triggering processor once for job', pending.id);
-            const { data: { session } } = await supabase.auth.getSession();
-            const token = session?.access_token;
-            if (token) {
-              try {
-                const res = await fetch('/api/article-jobs/trigger', {
-                  method: 'POST',
-                  headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                  },
-                });
-                const resJson = await res.json().catch(() => null);
-                console.log('Article trigger response:', res.status, resJson);
-                if (!res.ok) {
-                  // show an error to the user for visibility
-                  setArticlesError(resJson?.error || 'Failed to trigger processing.');
-                } else {
-                  // clear any previous error
-                  setArticlesError(null);
-                }
-                sessionStorage.setItem(key, '1');
-              } catch (err) {
-                console.error('Error calling trigger:', err);
-                setArticlesError('Failed to trigger processing.');
-              }
-            }
-          }
-          return;
-        }
-
-        // If any job is currently processing, skip creating a new one to avoid concurrent runs
-        if (processingJobs.length > 0) {
-          console.log('A job is currently processing; skipping creation to avoid concurrent jobs.');
-          return;
-        }
-
-        // No pending or processing jobs - consider creating one if previous completed > 3 minutes or no previous
-        const lastCompleted = completedJobs.length > 0 ? completedJobs[0] : null;
-        const threeMinutesAgo = Date.now() - 3 * 60 * 1000;
-        const shouldCreate = (!lastCompleted) || (lastCompleted && new Date(lastCompleted.completed_at).getTime() <= threeMinutesAgo);
-
-        if (shouldCreate) {
-          // Fetch keywords from website row
-          const { data: websiteData } = await supabase
-            .from('websites')
-            .select('keywords')
-            .eq('id', selectedWebsiteId)
-            .single();
-
-          let siteKeywords: string[] = [];
-          if (websiteData?.keywords?.keywords && Array.isArray(websiteData.keywords.keywords)) {
-            siteKeywords = websiteData.keywords.keywords
-              .map((kw: any) => (typeof kw === 'string' ? kw : kw?.keyword))
-              .filter((k: any) => k && String(k).trim().length > 0)
-              .slice(0, 1) as string[]; // create one job at a time
-          }
-
-          const chosenKeywords = siteKeywords.length > 0 ? siteKeywords : ['content'];
-
-          console.log('Creating job for website', selectedWebsiteId, 'keyword', chosenKeywords[0]);
-
-          const createRes = await fetch('/api/article-jobs/add', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ websiteId: selectedWebsiteId, userId: currentUser.id, keywords: [chosenKeywords[0]], totalArticles: 1 }),
-          });
-
-          if (createRes.ok) {
-            const resJson = await createRes.json().catch(() => null);
-            const newJobId = resJson?.jobs?.[0]?.id;
-            console.log('Created new job:', resJson);
-            if (newJobId) {
-              // Trigger processor once for the created job
-              const { data: { session } } = await supabase.auth.getSession();
-              const token = session?.access_token;
-              if (token) {
-                try {
-                  const res = await fetch('/api/article-jobs/trigger', {
-                    method: 'POST',
-                    headers: {
-                      'Authorization': `Bearer ${token}`,
-                      'Content-Type': 'application/json',
-                    },
-                  });
-                  const resJson = await res.json().catch(() => null);
-                  console.log('Article trigger (after create) response:', res.status, resJson);
-                  if (!res.ok) {
-                    setArticlesError(resJson?.error || 'Failed to trigger processing after job creation.');
-                  } else {
-                    setArticlesError(null);
-                  }
-                  sessionStorage.setItem(`triggeredJob:${newJobId}`, '1');
-                } catch (err) {
-                  console.error('Error calling trigger after create:', err);
-                  setArticlesError('Failed to trigger processing after job creation.');
-                }
-              }
-            }
-          } else {
-            console.error('Failed to create job:', createRes.status);
-          }
-        }
-      } catch (err) {
-        console.error('manageJobs error:', err);
-      }
-    }
-
-    manageJobsOnce();
-    const interval = setInterval(manageJobsOnce, 60 * 1000);
-    return () => {
-      clearInterval(interval);
-      cancelled = true;
-    };
-  }, [currentUser, selectedWebsiteId]);
-
   // Insert generated images between article paragraphs
   // Replace your existing renderContentWithImages function with this:
   function renderContentWithImages(
@@ -718,8 +551,6 @@ export function ArticlesTab({
     }
 
     try {
-      setArticlesError(null);
-      setOnboardingRequired(false);
       const url = siteId
         ? `/api/articles?websiteId=${siteId}&userId=${currentUser.id}`
         : `/api/articles?userId=${currentUser.id}`;
@@ -734,28 +565,6 @@ export function ArticlesTab({
 
       if (!token) {
         console.error('Articles tab fetchArticles: No auth token available');
-        setArticlesError("Authentication required. Please sign in again.");
-        setLoading(false);
-        isFetchingRef.current = false;
-        return;
-      }
-
-      // Check if the user has access to the website
-      if (!siteId) {
-        // If websites are still loading, don't show an error yet — wait until websites are loaded
-        if (loadingWebsites) {
-          setLoading(false);
-          isFetchingRef.current = false;
-          return;
-        }
-
-        // If websites have loaded but none exist, show helpful guidance
-        if ((websites || []).length === 0) {
-          setArticlesError("No websites found. Please add a website to get started.");
-        } else {
-          setArticlesError("Website ID is missing. Please select a valid website.");
-        }
-
         setLoading(false);
         isFetchingRef.current = false;
         return;
@@ -768,17 +577,7 @@ export function ArticlesTab({
         },
       });
       if (!response.ok) {
-        const errorPayload = await response.json().catch(() => null);
-        if (response.status === 403 || errorPayload?.error === "Onboarding required") {
-          if (errorPayload?.error === "Onboarding required" && !onboardingRequired) {
-            setOnboardingRequired(true);
-            setArticlesError("Onboarding required. Please complete the onboarding process by adding your website and competitors.");
-            return;
-          }
-          setArticlesError("Failed to fetch articles. Please try again later.");
-          return;
-        }
-        const errorText = errorPayload?.error || (await response.text().catch(() => ""));
+        const errorText = await response.text();
         throw new Error(
           `Failed to fetch articles: ${response.status} ${errorText}`
         );
@@ -849,9 +648,6 @@ export function ArticlesTab({
       }
     } catch (error) {
       console.error("❌ Error fetching articles:", error);
-      setArticlesError(
-        error instanceof Error ? error.message : "Failed to load articles."
-      );
     } finally {
       isFetchingRef.current = false;
       if (!shouldHydrateFromCache) setLoading(false);
@@ -1423,60 +1219,34 @@ export function ArticlesTab({
     );
   }
 
-  if (articlesError) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center space-y-4 max-w-md">
-          <p className="text-sm text-red-400">{articlesError}</p>
-          <div className="flex items-center justify-center gap-3">
-            <Button variant="outline" onClick={() => fetchArticles()}>
-              Try Again
-            </Button>
-            {onboardingRequired && (
-              <Button onClick={() => router.push("/onboarding")}
-              >
-                Complete Onboarding
-              </Button>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6 ">
       <div>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4 sm:mb-6">
           <div>
-            <p className="text-2xl sm:text-3xl text-white font-medium">
-              Articles & Blog Posts
-            </p>
+            <p className="text-2xl sm:text-3xl text-white font-medium">Articles & Blog Posts</p>
             <p className="text-[#ffffffb3] mt-2 sm:mt-3 text-xs sm:text-sm">
               Create, review, and publish your AI-generated posts.
             </p>
           </div>
           <div className="w-full sm:w-auto">
-            <Select
-              value={selectedWebsiteId || undefined}
-              onValueChange={handleWebsiteChange}
-            >
-              <SelectTrigger className="h-10  bg-[rgba(83,248,112,0.1)]!  rounded-[5px] focus-visible:outline-none focus-visible:ring-0 border-[#0000001a] focus-visible:border-[#0000001a] focus:outline-none cursor-pointer outline-none active:outline-none px-3.5 py-2.5 text-[#53F870]">
-                <SelectValue placeholder="Select your website" />
-              </SelectTrigger>
-              <SelectContent className="cursor-pointer bg-[#142517]! ">
-                {websites.map((website, index) => (
-                  <SelectItem
-                    key={website.id}
-                    value={website.id}
-                    className={`cursor-pointer data-[state=checked]:text-[#53F870] data-[state=checked]:opacity-40 ${index < websites.length - 1 ? "border-b rounded-none border-[#0000001a]" : ""}`}
-                  >
-                    {website.url}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+              <Select value={selectedWebsiteId || undefined} onValueChange={handleWebsiteChange}>
+                <SelectTrigger className="h-10  bg-[rgba(83,248,112,0.1)]!  rounded-[5px] focus-visible:outline-none focus-visible:ring-0 border-[#0000001a] focus-visible:border-[#0000001a] focus:outline-none cursor-pointer outline-none active:outline-none px-3.5 py-2.5 text-[#53F870]">
+                  <SelectValue placeholder="Select your website" />
+                </SelectTrigger>
+                <SelectContent className="cursor-pointer bg-[#142517]! ">
+                  {websites.map((website, index) => (
+                    <SelectItem
+                      key={website.id}
+                      value={website.id}
+                      className={`cursor-pointer data-[state=checked]:text-[#53F870] data-[state=checked]:opacity-40 ${index < websites.length - 1 ? 'border-b rounded-none border-[#0000001a]' : ''}`}
+                    >
+                      {website.url}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
         </div>
 
         {/* Create a Ranking Post Section */}
@@ -1561,107 +1331,90 @@ export function ArticlesTab({
               filteredArticles.map((article) => {
                 const isSelected = selectedArticle?.id === article.id;
                 return (
-                  <div
-                    key={article.id}
-                    onClick={() => {
-                      console.log(
-                        "ArticlesTab: article click ->",
-                        article.id,
-                        "prevSelectedId=",
-                        selectedArticleId,
-                      );
-                      setSelectedArticleId(article.id);
-                      setIsContentExpanded(false);
-                    }}
-                    className={`relative group flex flex-col sm:flex-row gap-3 px-3 sm:px-3 py-3 sm:py-5 rounded-lg cursor-pointer transition-all duration-150 ${
-                      isSelected
-                        ? "z-50 border border-[#53f870] bg-gradient-to-b from-[#081a0f] to-[#07110b] shadow-lg ring-1 ring-[#53f87033] scale-[1.01]"
-                        : "border !border-[#53f8701a] hover:border-[#53f8701a] hover:bg-[#0f1310]"
-                    }`}
-                  >
-                    {/* Thumbnail */}
-                    <img
-                      src={
-                        article.generatedImages?.[0] ||
-                        "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300'%3E%3Crect width='400' height='300' fill='%23e5e7eb'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='18' fill='%239ca3af'%3ENo Image%3C/text%3E%3C/svg%3E"
-                      }
-                      alt={article.title}
-                      className={`w-full sm:w-20 h-48 sm:h-20 rounded object-cover shrink-0 ${isSelected ? "" : "opacity-95"}`}
-                    />
+                <div
+                  key={article.id}
+                  onClick={() => {
+                    console.log("ArticlesTab: article click ->", article.id, "prevSelectedId=", selectedArticleId);
+                    setSelectedArticleId(article.id);
+                    setIsContentExpanded(false);
+                  }}
+                  className={`relative group flex flex-col sm:flex-row gap-3 px-3 sm:px-3 py-3 sm:py-5 rounded-lg cursor-pointer transition-all duration-150 ${
+                    isSelected
+                      ? "z-50 border border-[#53f870] bg-gradient-to-b from-[#081a0f] to-[#07110b] shadow-lg ring-1 ring-[#53f87033] scale-[1.01]"
+                      : "border !border-[#53f8701a] hover:border-[#53f8701a] hover:bg-[#0f1310]"
+                  }`}
+                >
+                  {/* Thumbnail */}
+                  <img
+                    src={article.generatedImages?.[0] || "/article-image.jpg"}
+                    alt={article.title}
+                    className={`w-full sm:w-20 h-48 sm:h-20 rounded object-cover shrink-0 ${isSelected ? '' : 'opacity-95'}`}
+                  />
 
-                    {/* Main Content Column */}
-                    <div className="flex flex-col min-w-0 flex-1">
-                      {/* Title + Meta */}
-                      <div className="flex flex-col sm:flex-row sm:justify-between gap-2">
-                        <div className="min-w-0 flex-1">
-                          <h4
-                            className={`line-clamp-2 text-sm sm:text-sm ${isSelected ? "font-semibold text-white" : "font-medium text-white/80"}`}
-                          >
-                            {article.title}
-                          </h4>
-                          <div
-                            className={`flex items-center gap-1 mt-1 ${isSelected ? "" : "opacity-80"}`}
-                          >
-                            <Image
-                              src="/clock1.png"
-                              height={13}
-                              width={13}
-                              alt="icon"
-                            />
-                            <p
-                              className={`text-xs ${isSelected ? "text-[#ffffffb3]" : "text-[#ffffff66]"}`}
-                            >
-                              {getReadingTime(article.wordCount)}
-                            </p>
-                          </div>
-
-                          <Badge
-                            className={`mt-2 text-[11px] font-medium rounded-full w-fit ${isSelected ? "bg-[#0d0d0d] text-[#58a955] border border-[#58a955]" : "bg-[#0b0b0b] text-[#58a955] border border-[#53f87014] opacity-80"}`}
-                          >
-                            {article.status}
-                          </Badge>
+                  {/* Main Content Column */}
+                  <div className="flex flex-col min-w-0 flex-1">
+                    {/* Title + Meta */}
+                    <div className="flex flex-col sm:flex-row sm:justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <h4 className={`line-clamp-2 text-sm sm:text-sm ${isSelected ? 'font-semibold text-white' : 'font-medium text-white/80'}`}>
+                          {article.title}
+                        </h4>
+                        <div className={`flex items-center gap-1 mt-1 ${isSelected ? '' : 'opacity-80'}`}>
+                          <Image
+                            src="/clock1.png"
+                            height={13}
+                            width={13}
+                            alt="icon"
+                          />
+                          <p className={`text-xs ${isSelected ? 'text-[#ffffffb3]' : 'text-[#ffffff66]'}`}>
+                            {getReadingTime(article.wordCount)}
+                          </p>
                         </div>
 
-                        {/* Edit Button */}
-                        {selectedArticle?.id !== article.id && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="text-[#53f870] hover:text-[#53f870] bg-[#53f8701a] hover:bg-[#53f8701a]! cursor-pointer h-8 w-full sm:w-8 px-[18px] sm:px-2 py-1.5 border-[#53f8701a] shrink-0"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openEditDialog(article);
-                            }}
-                          >
-                            Edit
-                          </Button>
-                        )}
+                        <Badge
+                          className={`mt-2 text-[11px] font-medium rounded-full w-fit ${isSelected ? 'bg-[#0d0d0d] text-[#58a955] border border-[#58a955]' : 'bg-[#0b0b0b] text-[#58a955] border border-[#53f87014] opacity-80'}`}
+                        >
+                          {article.status}
+                        </Badge>
                       </div>
 
-                      {/* Preview (FULL WIDTH, NOT under image) */}
-                      <p
-                        className={`text-xs line-clamp-2 mt-2 ${isSelected ? "text-gray-500" : "text-gray-400"}`}
-                      >
-                        {article.preview}
-                      </p>
+                      {/* Edit Button */}
+                      {selectedArticle?.id !== article.id && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-[#53f870] hover:text-[#53f870] bg-[#53f8701a] hover:bg-[#53f8701a]! cursor-pointer h-8 w-full sm:w-8 px-[18px] sm:px-2 py-1.5 border-[#53f8701a] shrink-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEditDialog(article);
+                          }}
+                        >
+                          Edit
+                        </Button>
+                      )}
+                    </div>
 
-                      {/* Tags */}
-                      <div className="flex gap-2 flex-wrap mt-3">
-                        {article.tags?.slice(0, 5).map((tag) => (
-                          <span
-                            key={tag}
-                            className={`text-[11px] bg-[#0b0b0b] text-[#4fa85a] px-1.5 py-0.5 rounded-2xl border border-[#53f87012] ${isSelected ? "" : "opacity-80"}`}
-                          >
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
+                    {/* Preview (FULL WIDTH, NOT under image) */}
+                    <p className={`text-xs line-clamp-2 mt-2 ${isSelected ? 'text-gray-500' : 'text-gray-400'}`}>
+                      {article.preview}
+                    </p>
+
+                    {/* Tags */}
+                    <div className="flex gap-2 flex-wrap mt-3">
+                      {article.tags?.slice(0, 5).map((tag) => (
+                        <span
+                          key={tag}
+                          className={`text-[11px] bg-[#0b0b0b] text-[#4fa85a] px-1.5 py-0.5 rounded-2xl border border-[#53f87012] ${isSelected ? '' : 'opacity-80'}`}
+                        >
+                          {tag}
+                        </span>
+                      ))}
                     </div>
                   </div>
-                );
+                </div>
+              );
               })
             )}
-
           </div>
 
           {/* Right Side - Edit/Preview Panel */}
@@ -1669,15 +1422,13 @@ export function ArticlesTab({
             <div className="fixed lg:static inset-0 lg:inset-auto z-40 lg:z-auto max-w-full lg:max-w-[640px] bg-gradient-to-b from-[#07120a] to-[#0d0d0d] rounded-2xl lg:border-2 border-[#53f87033] shadow-2xl overflow-hidden flex flex-col">
               {/* Header */}
               <div className="flex items-center justify-between p-3 sm:p-4 border  border-[#53f8701a] shrink-0">
-                <span className="text-xs sm:text-sm text-[#ffffffb3]">
-                  VIEW POST
-                </span>
+                <span className="text-xs sm:text-sm text-[#ffffffb3]">VIEW POST</span>
                 <button
-                  onClick={() => setSelectedArticleId(null)}
-                  className="text-gray-400 hover:text-gray-600 text-xl leading-none font-bold"
-                >
-                  ×
-                </button>
+                    onClick={() => setSelectedArticleId(null)}
+                    className="text-gray-400 hover:text-gray-600 text-xl leading-none font-bold"
+                  >
+                    ×
+                  </button>
               </div>
 
               {/* Scrollable Content */}
@@ -1688,9 +1439,7 @@ export function ArticlesTab({
                     <label className="block text-[10px] text-[#ffffff80]">
                       Title:
                     </label>
-                    <h4 className="text-base sm:text-lg text-white font-normal wrap-break-word">
-                      {selectedArticle.title || ""}
-                    </h4>
+                    <h4 className="text-base sm:text-lg text-white font-normal wrap-break-word">{selectedArticle.title || ""}</h4>
                   </div>
 
                   {/* Keywords */}
@@ -1704,20 +1453,20 @@ export function ArticlesTab({
                         const keywords = Array.isArray(selectedArticle.keyword)
                           ? selectedArticle.keyword
                           : selectedArticle.keyword
-                            ? String(selectedArticle.keyword)
-                                .split(",")
-                                .map((k) => k.trim())
-                                .filter(Boolean)
-                            : [];
+                          ? String(selectedArticle.keyword)
+                              .split(",")
+                              .map((k) => k.trim())
+                              .filter(Boolean)
+                          : [];
                         return keywords.length > 0 ? (
                           keywords.map((keyword, index) => (
-                            <span
-                              key={index}
-                              className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-[#07120a] text-[#53f870cc] border border-[#53f87012] inline-block"
-                            >
-                              {keyword}
-                            </span>
-                          ))
+                              <span
+                                key={index}
+                                className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-[#07120a] text-[#53f870cc] border border-[#53f87012] inline-block"
+                              >
+                                {keyword}
+                              </span>
+                            ))
                         ) : (
                           <span className="text-xs text-gray-500">
                             No keywords
@@ -1816,7 +1565,7 @@ export function ArticlesTab({
                               <button
                                 onClick={() => {
                                   navigator.clipboard.writeText(
-                                    getArticleUrl(selectedArticle.slug!),
+                                    getArticleUrl(selectedArticle.slug!)
                                   );
                                   toast.showToast({
                                     title: "Copied!",
@@ -1842,15 +1591,13 @@ export function ArticlesTab({
                   {/* <h4 className="text-2xl mb-4">{selectedArticle.title}</h4> */}
                   <div
                     className={`text-xs sm:text-sm text-[#ffffffb3] leading-relaxed relative ${
-                      isContentExpanded
-                        ? ""
-                        : "max-h-[300px] sm:max-h-[400px] overflow-hidden"
+                      isContentExpanded ? "" : "max-h-[300px] sm:max-h-[400px] overflow-hidden"
                     }`}
                   >
                     {renderContentWithImages(
                       selectedArticle.content,
                       selectedArticle.generatedImages || [],
-                      3,
+                      3
                     )}
                     {/* {!isContentExpanded && (
                       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-white to-transparent" />
@@ -1869,8 +1616,8 @@ export function ArticlesTab({
               </div>
 
               {/* Footer Actions */}
-              <div className="border-t border-[#53f8701a] p-3 sm:p-4 bg-[#0d0d0d] flex flex-col sm:flex-row gap-2 shrink-0">
-                {/* <Button
+              <div className="border-t border-[#53f8701a] p-3 sm:p-4 bg-[#0d0d0d] flex  sm:flex-row gap-2 shrink-0">
+                <Button
                   className="flex-1 bg-[#53f870] text-black font-medium hover:bg-[#53f870] cursor-pointer h-9 sm:h-10 text-xs sm:text-sm rounded disabled:opacity-60"
                   onClick={handlePublish}
                   disabled={isPublishing}
@@ -1900,48 +1647,7 @@ export function ArticlesTab({
                   ) : (
                     "Publish"
                   )}
-                </Button> */}
-                <UnifiedPublishButton
-                  articleId={selectedArticle.id}
-                  articleTitle={selectedArticle.title}
-                  articleStatus={selectedArticle.status}
-                  framerUrl={selectedArticle.framer_url}
-                  framerLastSynced={selectedArticle.last_synced_to_framer}
-                  wordpressUrl={selectedArticle.wordpress_url}
-                  wordpressLastSynced={selectedArticle.last_synced_to_wordpress}
-                  triggerClassName="flex-1 bg-[#53f870] text-black font-medium hover:bg-[#53f870] cursor-pointer h-9 sm:h-10 text-xs sm:text-sm rounded"
-                  triggerText="Publish"
-                  onPublishSuccess={(url) => {
-                    toast.showToast({
-                      title: "Published",
-                      description: "Published successfully",
-                      type: "success",
-                    });
-                    fetchArticles();
-                  }}
-                />
-
-                {/* Unified Open button: prefer Framer URL, fallback to WordPress */}
-                {(selectedArticle.framer_url || selectedArticle.wordpress_url) && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1 sm:flex-none h-9 sm:h-10 px-2 sm:px-4 flex items-center justify-center sm:justify-start gap-1 sm:gap-2 text-xs sm:text-sm"
-                    onClick={() => {
-                      const raw = selectedArticle.framer_url || selectedArticle.wordpress_url;
-                      let target = ensureAbsoluteUrl(raw) || null;
-                      if (!target) {
-                        const s = String(raw || '').trim().replace(/^\/+/, '');
-                        target = s ? (s.match(/^https?:\/\//i) ? s : `https://${s}`) : 'about:blank';
-                      }
-                      window.open(target, '_blank');
-                    }}
-                  >
-                    <ArrowUpRight className="w-3 sm:w-4 h-3 sm:h-4" />
-                    <span className="hidden sm:inline">Open</span>
-                  </Button>
-                )}
-
+                </Button>
                 {selectedArticle.status === "published" &&
                   selectedArticle.slug && (
                     <Button
@@ -1949,7 +1655,7 @@ export function ArticlesTab({
                       onClick={() =>
                         handleIndexNow(
                           selectedArticle.id,
-                          selectedArticle.slug!,
+                          selectedArticle.slug!
                         )
                       }
                       disabled={indexingArticle === selectedArticle.id}
@@ -1979,14 +1685,12 @@ export function ArticlesTab({
                     </VisuallyHidden>
 
                     <div className="flex flex-col items-center gap-4 py-8 px-6">
-                      <h2 className="text-2xl  text-white">Confirm delete</h2>
+                      <h2 className="text-2xl  text-white">
+                        Confirm delete
+                      </h2>
                       <div className=" flex items-center justify-center">
                         <Image
-                          src={
-                            isDeleteCompletedDialogOpen
-                              ? "/checkfordark.png"
-                              : "/deletedocumentfordark.png"
-                          }
+                          src={isDeleteCompletedDialogOpen ? "/checkfordark.png" : "/deletedocumentfordark.png"}
                           height={60}
                           width={60}
                           alt="delete"
@@ -2004,7 +1708,7 @@ export function ArticlesTab({
                             setIsDeleteDialogOpen(false);
                             await handleDeleteArticle(selectedArticle!.id);
                             setSelectedArticleId(null);
-                            setIsDeleteCompletedDialogOpen(true);
+                              setIsDeleteCompletedDialogOpen(true);
                           }
                         }}
                       >
@@ -2123,7 +1827,7 @@ export function ArticlesTab({
                           currentUser.email,
                           currentUser.user_metadata?.full_name ||
                             currentUser.name,
-                          currentUser.id,
+                          currentUser.id
                         );
                         if (checkout?.url) {
                           // open the checkout in a new tab
@@ -2133,7 +1837,7 @@ export function ArticlesTab({
                           setTimeout(async () => {
                             try {
                               const packageType = await getUserPackage(
-                                currentUser.id,
+                                currentUser.id
                               );
                               setUserPackage(packageType);
                             } catch (e) {
@@ -2142,7 +1846,7 @@ export function ArticlesTab({
                           }, 5000);
                         } else {
                           alert(
-                            "Failed to create checkout session. Please try again.",
+                            "Failed to create checkout session. Please try again."
                           );
                         }
                       } catch (err: any) {
@@ -2182,7 +1886,7 @@ export function ArticlesTab({
                         if (fallbackUrl) {
                           if (
                             confirm(
-                              `${message}\n\nWould you like to open the public checkout URL?`,
+                              `${message}\n\nWould you like to open the public checkout URL?`
                             )
                           ) {
                             window.open(fallbackUrl, "_blank");
@@ -2207,7 +1911,7 @@ export function ArticlesTab({
 
       <Dialog
         open={isEditDialogOpen}
-        onOpenChange={(open) => {
+          onOpenChange={(open) => {
           setIsEditDialogOpen(open);
           if (!open) {
             setSelectedArticleId(null);
@@ -2261,29 +1965,20 @@ export function ArticlesTab({
               {editTab === "basic" && (
                 <div className="space-y-6">
                   <div className="space-y-3">
-                    <label className="text-base font-semibold text-white">
-                      Title
-                    </label>
+                    <label className="text-base font-semibold text-white">Title</label>
                     <Input
                       value={editForm.title}
                       onChange={(e) =>
-                        setEditForm((prev) => ({
-                          ...prev,
-                          title: e.target.value,
-                        }))
+                        setEditForm((prev) => ({ ...prev, title: e.target.value }))
                       }
                       placeholder="Article title"
                       className="h-11 text-base border border-gray-700 bg-gray-950"
                     />
-                    <p className="text-xs text-gray-500">
-                      The main headline of your article
-                    </p>
+                    <p className="text-xs text-gray-500">The main headline of your article</p>
                   </div>
 
                   <div className="space-y-3">
-                    <label className="text-base font-semibold text-white">
-                      Focus Keyword
-                    </label>
+                    <label className="text-base font-semibold text-white">Focus Keyword</label>
                     <Input
                       value={editForm.keyword}
                       onChange={(e) =>
@@ -2295,35 +1990,24 @@ export function ArticlesTab({
                       placeholder="e.g., best SEO tools"
                       className="h-11 text-base border border-gray-700 bg-gray-950"
                     />
-                    <p className="text-xs text-gray-500">
-                      The primary keyword to optimize for
-                    </p>
+                    <p className="text-xs text-gray-500">The primary keyword to optimize for</p>
                   </div>
 
                   <div className="space-y-3">
-                    <label className="text-base font-semibold text-white">
-                      Slug
-                    </label>
+                    <label className="text-base font-semibold text-white">Slug</label>
                     <Input
                       value={editForm.slug}
                       onChange={(e) =>
-                        setEditForm((prev) => ({
-                          ...prev,
-                          slug: e.target.value,
-                        }))
+                        setEditForm((prev) => ({ ...prev, slug: e.target.value }))
                       }
                       placeholder="my-article-slug"
                       className="h-11 text-base border border-gray-700 bg-gray-950"
                     />
-                    <p className="text-xs text-gray-500">
-                      URL-friendly version of your title
-                    </p>
+                    <p className="text-xs text-gray-500">URL-friendly version of your title</p>
                   </div>
 
                   <div className="space-y-3">
-                    <label className="text-base font-semibold text-white">
-                      Preview
-                    </label>
+                    <label className="text-base font-semibold text-white">Preview</label>
                     <textarea
                       className="w-full rounded-md border border-gray-700 bg-gray-950 px-4 py-3 text-base leading-relaxed text-white placeholder:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#53F870] focus-visible:ring-offset-2 focus-visible:ring-offset-black"
                       rows={5}
@@ -2336,9 +2020,7 @@ export function ArticlesTab({
                       }
                       placeholder="Short preview shown in article listings..."
                     />
-                    <p className="text-xs text-gray-500">
-                      Brief summary shown in search results and listings
-                    </p>
+                    <p className="text-xs text-gray-500">Brief summary shown in search results and listings</p>
                   </div>
                 </div>
               )}
@@ -2347,16 +2029,11 @@ export function ArticlesTab({
               {editTab === "seo" && (
                 <div className="space-y-6">
                   <div className="bg-gray-900 border border-gray-800 rounded-lg p-4 mb-4">
-                    <p className="text-sm text-gray-400">
-                      Optimize your article for search engines with these SEO
-                      fields
-                    </p>
+                    <p className="text-sm text-gray-400">Optimize your article for search engines with these SEO fields</p>
                   </div>
 
                   <div className="space-y-3">
-                    <label className="text-base font-semibold text-white">
-                      Meta Title
-                    </label>
+                    <label className="text-base font-semibold text-white">Meta Title</label>
                     <Input
                       value={editForm.metaTitle}
                       onChange={(e) =>
@@ -2369,21 +2046,15 @@ export function ArticlesTab({
                       className="h-11 text-base border border-gray-700 bg-gray-950"
                     />
                     <div className="flex justify-between items-center">
-                      <p className="text-xs text-gray-500">
-                        Displayed in search engine results
-                      </p>
-                      <p
-                        className={`text-xs ${editForm.metaTitle.length > 60 ? "text-red-500" : "text-gray-500"}`}
-                      >
+                      <p className="text-xs text-gray-500">Displayed in search engine results</p>
+                      <p className={`text-xs ${editForm.metaTitle.length > 60 ? "text-red-500" : "text-gray-500"}`}>
                         {editForm.metaTitle.length}/60
                       </p>
                     </div>
                   </div>
 
                   <div className="space-y-3">
-                    <label className="text-base font-semibold text-white">
-                      Meta Description
-                    </label>
+                    <label className="text-base font-semibold text-white">Meta Description</label>
                     <textarea
                       className="w-full rounded-md border border-gray-700 bg-gray-950 px-4 py-3 text-base leading-relaxed text-white placeholder:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#53F870] focus-visible:ring-offset-2 focus-visible:ring-offset-black"
                       rows={4}
@@ -2397,12 +2068,8 @@ export function ArticlesTab({
                       placeholder="Meta description for search results (155-160 chars)"
                     />
                     <div className="flex justify-between items-center">
-                      <p className="text-xs text-gray-500">
-                        Shown below title in search results
-                      </p>
-                      <p
-                        className={`text-xs ${editForm.metaDescription.length > 160 ? "text-red-500" : "text-gray-500"}`}
-                      >
+                      <p className="text-xs text-gray-500">Shown below title in search results</p>
+                      <p className={`text-xs ${editForm.metaDescription.length > 160 ? "text-red-500" : "text-gray-500"}`}>
                         {editForm.metaDescription.length}/160
                       </p>
                     </div>
@@ -2414,30 +2081,20 @@ export function ArticlesTab({
               {editTab === "content" && (
                 <div className="space-y-4">
                   <div className="space-y-3">
-                    <label className="text-base font-semibold text-white">
-                      Content (HTML)
-                    </label>
+                    <label className="text-base font-semibold text-white">Content (HTML)</label>
                     <textarea
                       className="w-full rounded-md border border-gray-700 bg-gray-950 px-4 py-3 text-sm leading-relaxed text-white placeholder:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#53F870] focus-visible:ring-offset-2 focus-visible:ring-offset-black font-mono"
                       rows={14}
                       value={editForm.content}
                       onChange={(e) =>
-                        setEditForm((prev) => ({
-                          ...prev,
-                          content: e.target.value,
-                        }))
+                        setEditForm((prev) => ({ ...prev, content: e.target.value }))
                       }
                       placeholder="&lt;h1&gt;Article title&lt;/h1&gt;&#10;&lt;p&gt;Your content here...&lt;/p&gt;"
                     />
                     <div className="bg-gray-900 border border-gray-800 rounded-lg p-3 space-y-2">
-                      <p className="text-xs font-medium text-gray-300">
-                        HTML Content Tips:
-                      </p>
+                      <p className="text-xs font-medium text-gray-300">HTML Content Tips:</p>
                       <ul className="text-xs text-gray-500 space-y-1 ml-3 list-disc">
-                        <li>
-                          Use proper HTML tags: &lt;h1&gt;, &lt;h2&gt;,
-                          &lt;p&gt;, &lt;ul&gt;, &lt;li&gt;
-                        </li>
+                        <li>Use proper HTML tags: &lt;h1&gt;, &lt;h2&gt;, &lt;p&gt;, &lt;ul&gt;, &lt;li&gt;</li>
                         <li>Ensure all tags are properly closed</li>
                         <li>Avoid inline styles when possible</li>
                       </ul>

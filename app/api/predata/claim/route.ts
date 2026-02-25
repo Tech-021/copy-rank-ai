@@ -58,7 +58,7 @@ export async function POST(req: Request) {
           onboardingHeaders['Authorization'] = authHeader;
         }
 
-        const onboardingResp: any = await fetch(`${BASE_URL}/api/onboarding`, {
+        const onboardingResp = await fetch(`${BASE_URL}/api/onboarding`, {
           method: "POST",
           headers: onboardingHeaders,
           body: JSON.stringify(onboardingPayload),

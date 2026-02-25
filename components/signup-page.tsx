@@ -408,7 +408,7 @@
 
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { signUpWithGoogle } from "../lib/auth";
 import { useToast } from "./ui/toast";
 import { ArrowLeft, Info } from "lucide-react";
@@ -504,52 +504,36 @@ export function SignUpPage({
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const toast = useToast();
-  const googleBtnRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    // Only run if window.google is available
-    if (typeof window !== "undefined" && (window as any).google?.accounts?.id && googleBtnRef.current) {
-      (window as any).google.accounts.id.initialize({
-        client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
-        callback: async (response: any) => {
-          console.log("Google credential response:", response);
-          setGoogleLoading(true);
-          setError("");
-          setMessage("");
-          try {
-            // Use your backend to exchange credential for a session
-            const { data, error } = await signUpWithGoogle(response.credential);
-            setGoogleLoading(false);
-            if (error) {
-              const msg = (error as any).message ?? String(error) ?? "Error signing up with Google";
-              setError(msg);
-              try {
-                toast.showToast({
-                  title: "Google sign up failed",
-                  description: msg,
-                  type: "error",
-                });
-              } catch {}
-              return;
-            }
-            if (data?.session || data?.user) {
-              const email = data.user?.email || data.session?.user?.email || "";
-              if (email) onSignUpSuccess(email);
-            }
-          } catch (e) {
-            setError("Google sign up failed");
-            setGoogleLoading(false);
-          }
-        },
-        ux_mode: "popup",
-        auto_select: false,
-      });
-      (window as any).google.accounts.id.renderButton(
-        googleBtnRef.current,
-        { theme: "outline", size: "large", width: 280 }
-      );
+  const handleGoogleSignUp = async () => {
+    setGoogleLoading(true);
+    setError("");
+    setMessage("");
+
+    // Note: Validation is now done in the auth callback against the predata table
+    const { data, error } = await signUpWithGoogle();
+    setGoogleLoading(false);
+
+    if (error) {
+      const msg =
+        (error as any).message ?? String(error) ?? "Error signing up with Google";
+      setError(msg);
+      try {
+        toast.showToast({
+          title: "Google sign up failed",
+          description: msg,
+          type: "error",
+        });
+      } catch {}
+      return;
     }
-  }, [onSignUpSuccess, toast]);
+
+    // OAuth redirects to callback, which will handle predata validation
+    if (data?.session || data?.user) {
+      const email = data.user?.email || data.session?.user?.email || "";
+      if (email) onSignUpSuccess(email);
+    }
+  };
 
   return (
     <div className="h-screen w-screen flex overflow-hidden bg-black">
@@ -606,9 +590,19 @@ export function SignUpPage({
               </div>
             )}
 
-            {/* Google Sign Up (Google-rendered button) */}
-            <div className="space-y-4 flex flex-col items-center">
-              <div ref={googleBtnRef} id="googleSignInBtn" className="w-full flex justify-center"></div>
+            {/* Google Sign Up */}
+            <div className="space-y-4">
+              <button
+                onClick={handleGoogleSignUp}
+                disabled={googleLoading}
+                className="cursor-pointer  bg-[#5AFF78] rounded-lg py-3.5 px-6 w-full flex items-center justify-center gap-3 hover:bg-gray-50 transition-all shadow-sm hover:shadow disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Image src="/google.png" width={24} height={24} alt="Google" />
+                <span className="text-gray-700 font-medium text-[15px]">
+                  {googleLoading ? "Signing up..." : "Sign up with Google"}
+                </span>
+              </button>
+
               <p className="text-gray-400 text-[13px] text-center leading-relaxed px-4">
                 By continuing, you agree to our Terms of Service and Privacy Policy
               </p>
