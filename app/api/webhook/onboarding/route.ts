@@ -45,6 +45,8 @@ export async function POST(req: Request) {
     const rawText = await req.text();
     const payloadBuffer = Buffer.from(rawText, "utf-8");
 
+    console.log("\n[Webhook/Onboarding] Received request");
+
     /* ----------------------------------------------------
        2️⃣ VERIFY FRAMER SIGNATURE (required)
     ---------------------------------------------------- */
@@ -60,6 +62,10 @@ export async function POST(req: Request) {
     }
 
     if (!signature || !submissionId) {
+      console.warn(
+        "[Webhook/Onboarding] Missing signature headers",
+        { hasSignature: !!signature, hasSubmissionId: !!submissionId }
+      );
       return NextResponse.json(
         { success: false, error: "Missing Framer signature headers" },
         { status: 401 }
@@ -127,6 +133,10 @@ export async function POST(req: Request) {
        5️⃣ VALIDATION
     ---------------------------------------------------- */
     if (!email || !website) {
+      console.warn("[Webhook/Onboarding] Missing required fields", {
+        hasEmail: !!email,
+        hasWebsite: !!website,
+      });
       return NextResponse.json(
         { success: false, error: "missing email or website" },
         { status: 400 }
@@ -148,6 +158,9 @@ export async function POST(req: Request) {
        7️⃣ INSERT INTO SUPABASE
     ---------------------------------------------------- */
     if (!supabaseAdmin) {
+      console.warn(
+        "[Webhook/Onboarding] Supabase admin not configured, skipping DB insert"
+      );
       return NextResponse.json(
         { success: true, received: row, note: "db-disabled" },
         { status: 200 }
@@ -161,6 +174,10 @@ export async function POST(req: Request) {
       .single();
 
     if (error) {
+      console.error("[Webhook/Onboarding] Error inserting into pre_data", {
+        message: error.message,
+        code: (error as any).code,
+      });
       return NextResponse.json(
         { success: false, error: error.message },
         { status: 500 }
@@ -170,12 +187,23 @@ export async function POST(req: Request) {
     /* ----------------------------------------------------
        8️⃣ SUCCESS RESPONSE
     ---------------------------------------------------- */
+    console.log("[Webhook/Onboarding] Successfully saved pre_data row", {
+      id: data.id,
+      email: data.email,
+      website: data.website,
+      competitorsCount: Array.isArray(data.competitors)
+        ? data.competitors.length
+        : 0,
+      keywordsCount: Array.isArray(data.keywords) ? data.keywords.length : 0,
+    });
+
     return NextResponse.json(
       { success: true, data },
       { status: 200 }
     );
 
   } catch (err: any) {
+    console.error("[Webhook/Onboarding] Unhandled error", err);
     return NextResponse.json(
       { success: false, error: "server_error", detail: String(err) },
       { status: 500 }
