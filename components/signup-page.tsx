@@ -580,7 +580,7 @@ export function SignUpPage({
             {/* Header */}
             <div className="mb-8">
               <h2 className="text-[32px] font-bold text-white mb-3">
-                Create your free Account
+                Create your free Accountsssssss
               </h2>
               <p className="text-gray-400 text-[14px] leading-relaxed">
                 Join for free to see what drives your competitors' SEO traffic,
