@@ -488,7 +488,7 @@ export function KeywordsTab({
       try {
         if (isCurrent()) setError(null);
 
-        // 0) Render instantly from session cache (no spinner)
+        // 0) Read session cache (but don't render from it yet to avoid flashing stale data)
         const cached = !forceRefresh
           ? readKeywordsCache(requestWebsiteId)
           : null;
@@ -506,25 +506,13 @@ export function KeywordsTab({
               ((k as any).page_url || (k as any).page_title)
           );
 
-        if (cached && cachedHasRelevantPageKeywords) {
-          if (isCurrent()) {
-            setWebsiteData({
-              website: cached.website,
-              keywords: cached.keywords,
-            });
-            setKeywords(cached.keywords);
-            setSelectedKeywords(new Set());
-            setLoading(false);
-          }
-        } else {
-          // No cache => keep existing behavior (spinner while first loading)
-          if (isCurrent()) {
-            // Avoid showing stale keywords from the previous website while loading the new one.
-            setWebsiteData(null);
-            setKeywords([]);
-            setSelectedKeywords(new Set());
-            setLoading(true);
-          }
+        // Always start with a clean loading state; we'll render from cache later
+        // (after verifying DB version) to avoid showing old → new flicker.
+        if (isCurrent()) {
+          setWebsiteData(null);
+          setKeywords([]);
+          setSelectedKeywords(new Set());
+          setLoading(true);
         }
 
         // 0.5) Cheap DB version check: if unchanged, don't re-render / don't show spinner
@@ -535,26 +523,56 @@ export function KeywordsTab({
             .eq("id", requestWebsiteId)
             .single();
 
-          if (!versionErr) {
+          if (versionErr) {
+            const msg = versionErr.message || "";
+            // Same stale-id error as the main query: handle gracefully
+            if (/cannot coerce the result to a single json object/i.test(msg)) {
+              console.warn(
+                "KeywordsTab: version check failed due to missing website id, clearing selection",
+                { requestWebsiteId }
+              );
+              if (isCurrent()) {
+                try {
+                  localStorage.removeItem(selectedWebsiteStorageKey);
+                } catch {
+                  // ignore
+                }
+                setSelectedWebsiteId(null);
+                setWebsiteData(null);
+                setKeywords([]);
+                setSelectedKeywords(new Set());
+                setLoading(false);
+              }
+              return;
+            }
+          } else {
             const dbUpdatedAt: string | null =
               (versionRow as any)?.keywords_updated_at ?? null;
             const cachedUpdatedAt: string | null =
               cachedHasRelevantPageKeywords && cached
                 ? cached.keywordsUpdatedAt ?? null
                 : null;
+
+            // If DB version matches cache and cache is trusted, render from cache once and stop.
             if (
               cachedHasRelevantPageKeywords &&
+              cached &&
               dbUpdatedAt &&
               cachedUpdatedAt &&
               dbUpdatedAt === cachedUpdatedAt
             ) {
+              if (isCurrent()) {
+                setWebsiteData({
+                  website: cached.website,
+                  keywords: cached.keywords,
+                });
+                setKeywords(cached.keywords);
+                setSelectedKeywords(new Set());
+                setLoading(false);
+              }
               return;
             }
-
-            // DB changed and we had cache => show spinner for refresh
-            if (cachedHasRelevantPageKeywords && cached) {
-              if (isCurrent()) setLoading(true);
-            }
+            // Else: DB changed or cache not trusted → continue to full DB load below.
           }
         }
 
@@ -572,6 +590,32 @@ export function KeywordsTab({
 
           if (siteErr) {
             const msg = siteErr.message || "Failed to load website";
+
+            // Handle stale/invalid website id gracefully instead of throwing
+            // Supabase returns "Cannot coerce the result to a single JSON object"
+            // when .single() is used but no row matches.
+            if (/cannot coerce the result to a single json object/i.test(msg)) {
+              console.warn(
+                "KeywordsTab: stale or missing website id, clearing selection",
+                { requestWebsiteId }
+              );
+
+              if (isCurrent()) {
+                try {
+                  localStorage.removeItem(selectedWebsiteStorageKey);
+                } catch {
+                  // ignore storage errors
+                }
+                setSelectedWebsiteId(null);
+                setWebsiteData(null);
+                setKeywords([]);
+                setSelectedKeywords(new Set());
+                setLoading(false);
+              }
+
+              return;
+            }
+
             // If the column doesn't exist yet, retry without it.
             if (/keywords_updated_at/i.test(msg) && /column/i.test(msg)) {
               const { data: retryData, error: retryErr } = await supabase
@@ -668,9 +712,7 @@ export function KeywordsTab({
         return;
       } catch (err) {
         const message = getErrorMessage(err);
-        // Next.js dev overlay sometimes serializes objects as `{}`; log message separately.
-        console.error("Error fetching keywords:", message);
-        console.error(err);
+     
         if (isCurrent()) setError(message);
       } finally {
         // Only the latest request may change the loading state.
