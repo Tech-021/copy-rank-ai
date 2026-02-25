@@ -256,6 +256,7 @@ async function generateArticlesAutomatically(
     console.log(
       `✅ Extracted ${keywordStrings.length} keywords for article generation`
     );
+    
 
     // Construct the base URL for internal API calls
     // In production, use the actual domain, in development use localhost
