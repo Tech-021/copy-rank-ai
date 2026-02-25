@@ -4,12 +4,15 @@ type AuthReturn = { data: any; error: any }
 
 // Helper function to get the correct base URL for both development and production
 const getBaseUrl = () => {
+  // Always prefer explicit env var — ensures production builds redirect to production URL
+  if (process.env.NEXT_PUBLIC_SITE_URL) {
+    return process.env.NEXT_PUBLIC_SITE_URL
+  }
+  // Client-side fallback: use current origin (works for local dev)
   if (typeof window !== 'undefined') {
-    // Client-side: use current origin
     return window.location.origin
   }
-  // Server-side: use environment variable or default to production URL
-  return process.env.NEXT_PUBLIC_SITE_URL || 'v0-topic-detection-app.vercel.app'
+  return 'https://copyrank.ai'
 }
 
 export async function signUp(email: string, password: string): Promise<AuthReturn> {
