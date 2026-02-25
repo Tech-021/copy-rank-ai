@@ -25,6 +25,22 @@ export async function POST(req: Request) {
 
     if (!supabaseAdmin) return NextResponse.json({ success: false, error: "no-db" }, { status: 500 });
 
+    // #region agent log
+    fetch('http://127.0.0.1:7244/ingest/8d9350cf-ecef-4c96-9482-a2a235a433e1',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        id:`log_${Date.now()}_predata_claim_start`,
+        runId:'onboarding-debug',
+        hypothesisId:'H2',
+        location:'api/predata/claim/route.ts:start',
+        message:'predata/claim POST received',
+        data:{ hasEmail: !!email, hasIds: !!(ids && ids.length), hasUserId: !!userId },
+        timestamp:Date.now()
+      })
+    }).catch(()=>{});
+    // #endregion agent log
+
     // Fetch rows to claim
     let query = supabaseAdmin.from("pre_data").select("*").eq("processed", false);
     if (ids && ids.length > 0) {
@@ -67,6 +83,22 @@ export async function POST(req: Request) {
         const onboardingResult = onboardingResp.ok
           ? await onboardingResp.json().catch(() => ({ success: false, error: "parse_error" }))
           : { success: false, error: "onboarding_call_failed" };
+
+        // #region agent log
+        fetch('http://127.0.0.1:7244/ingest/8d9350cf-ecef-4c96-9482-a2a235a433e1',{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({
+            id:`log_${Date.now()}_predata_claim_onboarding`,
+            runId:'onboarding-debug',
+            hypothesisId:'H3',
+            location:'api/predata/claim/route.ts:onboarding',
+            message:'Onboarding call finished for pre_data row',
+            data:{ website: row.website, ok: onboardingResp.ok, onboardingSuccess: onboardingResult.success },
+            timestamp:Date.now()
+          })
+        }).catch(()=>{});
+        // #endregion agent log
 
         // Mark row as processed
         await supabaseAdmin

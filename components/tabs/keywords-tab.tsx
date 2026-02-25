@@ -69,12 +69,11 @@ interface Keyword {
   selected?: boolean;
   is_target_keyword?: boolean;
   post_status?: "Live" | "Draft" | "No Plan";
-  trafficPotential?: string;
-  lowTopVol?: number;
-  highTopVol?: number;
-  mainIntent?: string;
-  firstDomainSERP?: string | null;
-  backlinks?: number;
+  traffic_potential?: string;
+  // Extra metadata for relevant-page keywords
+  source?: string;
+  page_url?: string;
+  page_title?: string;
 }
 
 interface Website {
@@ -464,11 +463,10 @@ export function KeywordsTab({
             (kw.search_volume
               ? `${Math.round(Number(kw.search_volume) * 0.1)}+/mo`
               : "—"),
-          lowTopVol: Number(kw.lowTopVol ?? 0),
-          highTopVol: Number(kw.highTopVol ?? 0),
-          mainIntent: kw.mainIntent || "unknown",
-          firstDomainSERP: kw.firstDomainSERP || null,
-          backlinks: Number(kw.backlinks ?? 0),
+          // Preserve source + page metadata if present (for relevant-page keywords)
+          source: kw.source,
+          page_url: kw.page_url,
+          page_title: kw.page_title,
         };
       };
 
@@ -490,63 +488,93 @@ export function KeywordsTab({
       try {
         if (isCurrent()) setError(null);
 
-        // 0) Render instantly from session cache (no spinner)
+        // 0) Read session cache (but don't render from it yet to avoid flashing stale data)
         const cached = !forceRefresh
           ? readKeywordsCache(requestWebsiteId)
           : null;
-        if (cached) {
-          if (isCurrent()) {
-            setWebsiteData({
-              website: cached.website,
-              keywords: cached.keywords,
-            });
-            setKeywords(cached.keywords);
-            setSelectedKeywords(new Set());
-            setLoading(false);
-          }
-        } else {
-          // No cache => keep existing behavior (spinner while first loading)
-          if (isCurrent()) {
-            // Avoid showing stale keywords from the previous website while loading the new one.
-            setWebsiteData(null);
-            setKeywords([]);
-            setSelectedKeywords(new Set());
-            setLoading(true);
-          }
+
+        // Only trust cache if it contains relevant-page keywords (source === "relevant_page")
+        const cachedHasRelevantPageKeywords =
+          !!cached &&
+          Array.isArray(cached.keywords) &&
+          cached.keywords.length > 0 &&
+          cached.keywords.every(
+            (k: any) =>
+              k &&
+              (k as any).source === "relevant_page" &&
+              typeof (k as any).keyword === "string" &&
+              ((k as any).page_url || (k as any).page_title)
+          );
+
+        // Always start with a clean loading state; we'll render from cache later
+        // (after verifying DB version) to avoid showing old → new flicker.
+        if (isCurrent()) {
+          setWebsiteData(null);
+          setKeywords([]);
+          setSelectedKeywords(new Set());
+          setLoading(true);
         }
 
         // 0.5) Cheap DB version check: if unchanged, don't re-render / don't show spinner
         // Commented out until migration adds keywords_updated_at column
         /*
         if (!forceRefresh) {
-          try {
-            const { data: versionRow, error: versionErr } = await supabase
-              .from("websites")
-              .select("keywords_updated_at")
-              .eq("id", requestWebsiteId)
-              .single();
+          const { data: versionRow, error: versionErr } = await supabase
+            .from("websites")
+            .select("keywords_updated_at")
+            .eq("id", requestWebsiteId)
+            .single();
 
-            if (!versionErr && versionRow) {
-              const dbUpdatedAt: string | null =
-                (versionRow as any)?.keywords_updated_at ?? null;
-              const cachedUpdatedAt: string | null =
-                cached?.keywordsUpdatedAt ?? null;
-              if (
-                cached &&
-                dbUpdatedAt &&
-                cachedUpdatedAt &&
-                dbUpdatedAt === cachedUpdatedAt
-              ) {
-                return;
+          if (versionErr) {
+            const msg = versionErr.message || "";
+            // Same stale-id error as the main query: handle gracefully
+            if (/cannot coerce the result to a single json object/i.test(msg)) {
+              console.warn(
+                "KeywordsTab: version check failed due to missing website id, clearing selection",
+                { requestWebsiteId }
+              );
+              if (isCurrent()) {
+                try {
+                  localStorage.removeItem(selectedWebsiteStorageKey);
+                } catch {
+                  // ignore
+                }
+                setSelectedWebsiteId(null);
+                setWebsiteData(null);
+                setKeywords([]);
+                setSelectedKeywords(new Set());
+                setLoading(false);
               }
-
-              // DB changed and we had cache => show spinner for refresh
-              if (cached) {
-                if (isCurrent()) setLoading(true);
-              }
+              return;
             }
-          } catch (err) {
-            // Column doesn't exist yet, proceed with normal loading
+          } else {
+            const dbUpdatedAt: string | null =
+              (versionRow as any)?.keywords_updated_at ?? null;
+            const cachedUpdatedAt: string | null =
+              cachedHasRelevantPageKeywords && cached
+                ? cached.keywordsUpdatedAt ?? null
+                : null;
+
+            // If DB version matches cache and cache is trusted, render from cache once and stop.
+            if (
+              cachedHasRelevantPageKeywords &&
+              cached &&
+              dbUpdatedAt &&
+              cachedUpdatedAt &&
+              dbUpdatedAt === cachedUpdatedAt
+            ) {
+              if (isCurrent()) {
+                setWebsiteData({
+                  website: cached.website,
+                  keywords: cached.keywords,
+                });
+                setKeywords(cached.keywords);
+                setSelectedKeywords(new Set());
+                setLoading(false);
+              }
+              return;
+            }
+            // Else: DB changed or cache not trusted → continue to full DB load below.
           }
         }
         */
@@ -564,30 +592,38 @@ export function KeywordsTab({
             .maybeSingle();
 
           if (siteErr) {
-            throw new Error(siteErr.message || "Failed to load website");
-          }
-          if (!data) {
-            throw new Error("Website not found");
-          }
-          
-          singleSite = data;
-          
-          // Try to get keywords_updated_at if the column exists
-          // Commented out until migration adds the column
-          /*
-          try {
-            const { data: versionData } = await supabase
-              .from("websites")
-              .select("keywords_updated_at")
-              .eq("id", requestWebsiteId)
-              .single();
-            if (versionData) {
-              singleSite.keywords_updated_at = (versionData as any).keywords_updated_at;
+            const msg = siteErr.message || "Failed to load website";
+
+            // Handle stale/invalid website id gracefully instead of throwing
+            // Supabase returns "Cannot coerce the result to a single JSON object"
+            // when .single() is used but no row matches.
+            if (/cannot coerce the result to a single json object/i.test(msg)) {
+              console.warn(
+                "KeywordsTab: stale or missing website id, clearing selection",
+                { requestWebsiteId }
+              );
+
+              if (isCurrent()) {
+                try {
+                  localStorage.removeItem(selectedWebsiteStorageKey);
+                } catch {
+                  // ignore storage errors
+                }
+                setSelectedWebsiteId(null);
+                setWebsiteData(null);
+                setKeywords([]);
+                setSelectedKeywords(new Set());
+                setLoading(false);
+              }
+
+              return;
             }
-          } catch (err) {
-            // Column doesn't exist yet, ignore
+
+            // If some other error occurred, surface it.
+            throw new Error(msg);
           }
-          */
+
+          singleSite = data;
         }
         if (!singleSite) throw new Error("Website not found");
 
@@ -605,8 +641,20 @@ export function KeywordsTab({
           .map(normalizeKeyword)
           .filter(Boolean) as Keyword[];
 
-        // If we already have stored keywords and we're not forcing refresh, stop here.
-        if (storedKeywords.length > 0 && !forceRefresh) {
+        // Detect whether existing keywords are from the new relevant-pages pipeline
+        const allFromRelevantPages =
+          storedKeywords.length > 0 &&
+          storedKeywords.every(
+            (k: any) =>
+              k &&
+              (k as any).source === "relevant_page" &&
+              typeof (k as any).keyword === "string" &&
+              ((k as any).page_url || (k as any).page_title)
+          );
+
+        // If we already have stored keywords from relevant-pages and we're not forcing refresh, stop here.
+        // Otherwise (legacy keywords or empty), fall through to rebuild from /api/relevant-pages-keywords.
+        if (storedKeywords.length > 0 && !forceRefresh && allFromRelevantPages) {
           const nextWebsite = {
             id: singleSite.id,
             url: singleSite.url,
@@ -628,90 +676,12 @@ export function KeywordsTab({
           return;
         }
 
-        // 2) DB is empty (or forced): call slow API once, then persist into DB
-        const { data: { session } } = await supabase.auth.getSession();
-        const token = session?.access_token;
-
-        if (!token) {
-          throw new Error("No auth token available");
-        }
-
-        const response = await fetch(`/api/keyword`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            'Authorization': `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            topic: singleSite.topic || "General",
-            websiteUrl: singleSite.url || "",
-            includeCompetitors: true,
-            maxVolume: 10000,
-            minVolume: 50,
-            maxDifficulty: 100,
-            limit: 100,
-          }),
-        });
-
-        const apiData = await response.json();
-        if (!response.ok || !apiData.success) {
-          throw new Error(
-            apiData.error || "Failed to fetch keywords from DataForSEO"
-          );
-        }
-
-        const primaryKeywords: Keyword[] = Array.isArray(apiData.keywords)
-          ? (apiData.keywords
-              .map(normalizeKeyword)
-              .filter(Boolean) as Keyword[])
-          : [];
-
-        const competitorKeywords: Keyword[] = Array.isArray(apiData.competitors)
-          ? (apiData.competitors
-              .flatMap((comp: any) => comp?.keywords || [])
-              .map(normalizeKeyword)
-              .filter(Boolean) as Keyword[])
-          : [];
-
-        // Keep any stored target keywords (if present)
-        const storedTargets = storedKeywords.filter((k) => k.is_target_keyword);
-
-        const mergedMap = new Map<string, Keyword>();
-        [...primaryKeywords, ...competitorKeywords, ...storedTargets].forEach(
-          (kw) => {
-            const key = String(kw.keyword).toLowerCase();
-            if (!mergedMap.has(key)) mergedMap.set(key, kw);
-          }
+        // 2) DB is empty or contains legacy keywords (not from relevant pages).
+        //    In this case, we don't try to generate keywords on the client.
+        //    Keywords are generated during onboarding or via admin tools.
+        console.log(
+          "ℹ️ No valid relevant-page keywords in database yet - showing empty list. Keywords will be generated during onboarding."
         );
-
-        const merged = Array.from(mergedMap.values());
-
-        const existingPayload =
-          siteKeywords &&
-          typeof siteKeywords === "object" &&
-          !Array.isArray(siteKeywords)
-            ? siteKeywords
-            : {};
-
-        const newPayload = {
-          ...existingPayload,
-          keywords: merged,
-          competitors: apiData.competitors || existingPayload.competitors || [],
-          analysis_metadata: {
-            ...(existingPayload.analysis_metadata || {}),
-            analyzed_at: new Date().toISOString(),
-            total_keywords: merged.length,
-          },
-        };
-
-        const { error: updateErr } = await supabase
-          .from("websites")
-          .update({ keywords: newPayload })
-          .eq("id", requestWebsiteId);
-
-        if (updateErr) {
-          console.error("Failed to persist refreshed keywords:", updateErr);
-        }
 
         const nextWebsite = {
           id: singleSite.id,
@@ -720,42 +690,21 @@ export function KeywordsTab({
         };
 
         if (isCurrent()) {
-          setWebsiteData({ website: nextWebsite, keywords: merged });
-          setKeywords(merged);
+          setWebsiteData({ website: nextWebsite, keywords: [] });
+          setKeywords([]);
           setSelectedKeywords(new Set());
         }
 
-        // Re-read keywords_updated_at so cache has the correct DB version after update
-        // Commented out until migration adds the column
-        let afterUpdatedAt: string | null = null;
-        /*
-        try {
-          const { data: afterVersionRow, error: afterVersionErr } =
-            await supabase
-              .from("websites")
-              .select("keywords_updated_at")
-              .eq("id", requestWebsiteId)
-              .single();
-
-          if (!afterVersionErr && afterVersionRow) {
-            afterUpdatedAt =
-              (afterVersionRow as any)?.keywords_updated_at ?? null;
-          }
-        } catch (err) {
-          // Column doesn't exist yet, ignore
-        }
-        */
-
         writeKeywordsCache(requestWebsiteId, {
           website: nextWebsite,
-          keywords: merged,
-          keywordsUpdatedAt: afterUpdatedAt,
+          keywords: [],
+          keywordsUpdatedAt: (singleSite as any).keywords_updated_at ?? null,
         });
+
+        return;
       } catch (err) {
         const message = getErrorMessage(err);
-        // Next.js dev overlay sometimes serializes objects as `{}`; log message separately.
-        console.error("Error fetching keywords:", message);
-        console.error(err);
+     
         if (isCurrent()) setError(message);
       } finally {
         // Only the latest request may change the loading state.
