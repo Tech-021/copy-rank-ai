@@ -105,7 +105,26 @@ async function processCompetitorWithRelevantPages(
       };
     }
 
-    const topPage = relevantJson.pages[0];
+    // Pages are already sorted by highest Estimated Traffic Value (ETV) from relevant-pages API.
+    // Skip the homepage (pathname = "/" or empty) and pick the highest-traffic SUB-PAGE.
+    // This avoids scraping homepages that are JS-heavy or block crawlers (e.g. chatgpt.com).
+    const isHomepage = (url: string): boolean => {
+      try {
+        const parsed = new URL(url);
+        const path = parsed.pathname;
+        // Treat "/", "", or paths with no real depth as homepage
+        return !path || path === "/" || path === "";
+      } catch {
+        return false; // if URL is invalid, don't skip it
+      }
+    };
+
+    // Pick highest-traffic non-homepage page; fall back to pages[0] if none found
+    const topPage =
+      relevantJson.pages.find((p: any) => {
+        const url = p.page_address || p.url || p.page || "";
+        return url && !isHomepage(url);
+      }) || relevantJson.pages[0];
 
     // Get page URL - check multiple possible fields
     const pageUrl = topPage.page_address || topPage.url || topPage.page;
@@ -122,12 +141,14 @@ async function processCompetitorWithRelevantPages(
       };
     }
 
-    console.log(`   ✅ Step 1 Complete: Found ${relevantJson.pages.length} relevant pages`);
+    const selectedIsHomepage = isHomepage(pageUrl);
+    console.log(`   ✅ Step 1 Complete: Found ${relevantJson.pages.length} relevant pages (sorted by ETV)`);
     console.log(
-      `   🔗 Using top relevant page: ${pageUrl}`
+      `   🔗 Selected page: ${pageUrl} ${selectedIsHomepage ? "⚠️ (homepage – no sub-page found)" : "✅ (sub-page)"}`
     );
+    console.log(`   📊 Page ETV: ${topPage.metrics?.organic?.etv ?? "N/A"}`);
     console.log(`   📄 Page title: ${pageTitle}`);
-    console.log(`\n   Step 2: Calling /api/extract-keywords on the top page...`);
+    console.log(`\n   Step 2: Calling /api/extract-keywords on selected page...`);
 
     const extractRes = await fetch(`${baseUrl}/api/extract-keywords`, {
       method: "POST",
