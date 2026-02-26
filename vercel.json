@@ -6,6 +6,18 @@
     }
   ],
   "functions": {
+    "app/api/scraper/route.js": {
+      "maxDuration": 300,
+      "memory": 1024
+    },
+    "app/api/extract-keywords/route.js": {
+      "maxDuration": 300,
+      "memory": 1024
+    },
+    "app/api/onboarding/route.js": {
+      "maxDuration": 300,
+      "memory": 1024
+    },
     "app/api/**/route.js": {
       "maxDuration": 300
     },

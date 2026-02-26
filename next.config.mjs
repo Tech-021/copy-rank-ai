@@ -3,6 +3,7 @@ const require = createRequire(import.meta.url);
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  serverExternalPackages: ['@sparticuz/chromium', 'puppeteer-core'],
   eslint: {
     ignoreDuringBuilds: true,
   },
