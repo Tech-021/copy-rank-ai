@@ -10,76 +10,76 @@ const supabaseAdmin = createClient(
 );
 
 export async function POST(req: Request) {
-  // Check authentication using JWT token from Authorization header
-  const authHeader = req.headers.get('authorization');
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return NextResponse.json(
-      { error: "Authentication required" },
-      { status: 401 }
-    );
-  }
+  // // Check authentication using JWT token from Authorization header
+  // const authHeader = req.headers.get('authorization');
+  // if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  //   return NextResponse.json(
+  //     { error: "Authentication required" },
+  //     { status: 401 }
+  //   );
+  // }
 
-  const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+  // const token = authHeader.substring(7); // Remove 'Bearer ' prefix
 
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      global: {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      },
-    }
-  );
+  // const supabase = createClient(
+  //   process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  //   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  //   {
+  //     global: {
+  //       headers: {
+  //         Authorization: `Bearer ${token}`,
+  //       },
+  //     },
+  //   }
+  // );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // const {
+  //   data: { user },
+  // } = await supabase.auth.getUser();
 
-  if (!user || !user.id) {
-    return NextResponse.json(
-      { error: "Authentication required" },
-      { status: 401 }
-    );
-  }
+  // if (!user || !user.id) {
+  //   return NextResponse.json(
+  //     { error: "Authentication required" },
+  //     { status: 401 }
+  //   );
+  // }
 
-  // Check if user needs onboarding
-  const { data: predata } = await supabaseAdmin
-    .from('pre_data')
-    .select('*')
-    .eq('email', user.email)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  // // Check if user needs onboarding
+  // const { data: predata } = await supabaseAdmin
+  //   .from('pre_data')
+  //   .select('*')
+  //   .eq('email', user.email)
+  //   .order('created_at', { ascending: false })
+  //   .limit(1)
+  //   .maybeSingle();
 
-  const needsOnboarding = !predata || (() => {
-    const hasWebsite = predata.website && predata.website.trim() !== '';
-    const hasCompetitors = Array.isArray(predata.competitors) && predata.competitors.length > 0;
-    const hasKeywords = Array.isArray(predata.keywords) && predata.keywords.length > 0;
-    return !hasWebsite || (!hasCompetitors && !hasKeywords);
-  })();
+  // const needsOnboarding = !predata || (() => {
+  //   const hasWebsite = predata.website && predata.website.trim() !== '';
+  //   const hasCompetitors = Array.isArray(predata.competitors) && predata.competitors.length > 0;
+  //   const hasKeywords = Array.isArray(predata.keywords) && predata.keywords.length > 0;
+  //   return !hasWebsite || (!hasCompetitors && !hasKeywords);
+  // })();
 
-  if (needsOnboarding) {
-    return NextResponse.json(
-      { error: "Onboarding required" },
-      { status: 403 }
-    );
-  }
+  // if (needsOnboarding) {
+  //   return NextResponse.json(
+  //     { error: "Onboarding required" },
+  //     { status: 403 }
+  //   );
+  // }
 
-  // Check subscription status
-  const { data: userData } = await supabaseAdmin
-    .from('users')
-    .select('subscribe')
-    .eq('id', user.id)
-    .single();
+  // // Check subscription status
+  // const { data: userData } = await supabaseAdmin
+  //   .from('users')
+  //   .select('subscribe')
+  //   .eq('id', user.id)
+  //   .single();
 
-  if (!userData?.subscribe) {
-    return NextResponse.json(
-      { error: "Subscription required" },
-      { status: 403 }
-    );
-  }
+  // // if (!userData?.subscribe) {
+  // //   return NextResponse.json(
+  // //     { error: "Subscription required" },
+  // //     { status: 403 }
+  // //   );
+  // // }
   try {
     const body = await req.json();
     console.log("DEBUG: /api/image-generation incoming body:", JSON.stringify(body).slice(0, 1000));

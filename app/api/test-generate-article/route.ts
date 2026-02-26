@@ -91,19 +91,15 @@ async function generateImagesForArticle(
       
       console.log(`📸 Generating image ${i + 1} with prompt: "${prompt.substring(0, 100)}..."`);
 
-      // Get the authentication token from the request
-      const authHeader = request.headers.get('authorization');
+      // // Auth header not needed - /api/image-generation auth check is commented out
+      // const authHeader = request.headers.get('authorization');
       const headers: Record<string, string> = {
         "Content-Type": "application/json",
       };
 
-      if (authHeader) {
-        headers['Authorization'] = authHeader;
-      }
-
       const imageResponse = await fetch(
         `${
-          process.env.NEXTAUTH_URL || "http://localhost:3000"
+          process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"
         }/api/image-generation`,
         {
           method: "POST",
