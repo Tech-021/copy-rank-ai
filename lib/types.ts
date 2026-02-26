@@ -20,4 +20,5 @@ export interface ScrapeResult {
   twitter?: Record<string, string>;
   links?: { text: string; href: string }[];
   images?: { src: string; alt: string }[];
+  
 }
