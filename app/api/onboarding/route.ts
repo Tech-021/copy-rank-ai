@@ -7,8 +7,8 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { hybridScraper } from "@/app/api/scraper/route";
 import { analyzeWithQwen } from "@/lib/qwen";
-// Removed fetchKeywordOverview - keywords now only come from relevant pages
-import { getUserArticleLimit } from '@/lib/articleLimits';
+import { fetchSearchVolumeForKeywords } from "@/lib/dataforseo";
+import { getUserArticleLimit } from "@/lib/articleLimits";
 
 // Initialize Supabase client
 const supabase = createClient(
@@ -191,6 +191,8 @@ async function processCompetitorWithRelevantPages(
       };
     }
 
+    // rawKeywords come from on-page frequency; we'll enrich them with
+    // real search volume from DataForSEO when possible.
     const rawKeywords = extractJson.keywords;
 
     console.log(
@@ -200,19 +202,61 @@ async function processCompetitorWithRelevantPages(
     console.log(`   🔑 Sample keywords (first 5):`, rawKeywords.slice(0, 5).map((k: any) => k.keyword).join(", "));
     console.log(`   ✅ CONFIRMED: Keywords extracted from relevant page URL (via /api/relevant-pages → /api/extract-keywords)`);
 
-    // Map extract-keywords result into the same shape used by the rest of the app
-    // ONLY keywords from relevant pages - no other sources
+    // Enrich scraped keywords with real search volume from DataForSEO where possible.
+    // 1) Take the top N by on-page frequency to limit API cost.
+    const sortedByFreq = [...rawKeywords]
+      .filter((k: any) => k?.keyword)
+      .sort((a: any, b: any) => (b.frequency || 0) - (a.frequency || 0));
+
+    // Use up to the top 100 scraped keywords per competitor for volume lookup.
+    const maxOverviewKeywords = 100;
+    const candidateKeywords = sortedByFreq
+      .slice(0, maxOverviewKeywords)
+      .map((k: any) => String(k.keyword || "").trim())
+      .filter((kw: string) => kw.length > 0);
+
+    let overviewByKeyword = new Map<string, number>();
+
+    if (candidateKeywords.length > 0) {
+      try {
+        const overview = await fetchSearchVolumeForKeywords(candidateKeywords);
+        overviewByKeyword = new Map(
+          overview.map((item) => [item.keyword.toLowerCase(), item.search_volume || 0])
+        );
+        console.log(
+          `   ✅ Enriched ${overviewByKeyword.size} scraped keywords with DataForSEO search_volume (google/search_volume/live)`
+        );
+      } catch (err) {
+        console.warn(
+          `   ⚠️ DataForSEO search_volume enrichment failed for competitor ${competitorUrl}:`,
+          err instanceof Error ? err.message : err
+        );
+      }
+    }
+
+    // Map extract-keywords result into the same shape used by the rest of the app.
+    // Prefer real search_volume from DataForSEO; fall back to frequency when missing.
     const transformedKeywords = rawKeywords
-      .map((k: any) => ({
-        keyword: String(k.keyword || "").trim(),
-        search_volume: k.frequency || 0, // use frequency as "volume" surrogate
-        difficulty: null,
-        cpc: null,
-        competition: null,
-        source: "relevant_page", // Mark as coming from relevant pages
-        page_url: pageUrl, // Store source page URL for reference
-      }))
-      .filter((k: any) => k.keyword && k.keyword.length > 0);
+      .map((k: any) => {
+        const keyword = String(k.keyword || "").trim();
+        if (!keyword) return null;
+
+        const lower = keyword.toLowerCase();
+        const enrichedVolume = overviewByKeyword.get(lower);
+
+        return {
+          keyword,
+          search_volume: typeof enrichedVolume === "number" && enrichedVolume > 0
+            ? enrichedVolume
+            : k.frequency || 0,
+          difficulty: null,
+          cpc: null,
+          competition: null,
+          source: "relevant_page", // Mark as coming from relevant pages
+          page_url: pageUrl, // Store source page URL for reference
+        };
+      })
+      .filter((k: any) => k && k.keyword && k.keyword.length > 0);
     
     console.log(`   ✅ Transformed ${transformedKeywords.length} keywords with source: "relevant_page"`);
 
@@ -536,7 +580,7 @@ export async function POST(request: Request) {
     console.log("🔍 Step 3: Processing keywords from relevant pages...");
     console.log("⚠️ KEYWORD SOURCE CONFIRMED: ONLY from relevant pages - no other sources used");
     console.log("   ✅ All keywords came from: /api/relevant-pages → /api/extract-keywords");
-    console.log("   ❌ NO target keywords, NO fallback keywords, NO DataForSEO direct API");
+    console.log("   ❌ NO target keywords, NO fallback keywords (DataForSEO is used only to add search volume to scraped keywords)");
     console.log("=".repeat(80));
 
     // Only use competitor keywords from relevant pages (no target keywords, no fallbacks)

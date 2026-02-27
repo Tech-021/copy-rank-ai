@@ -216,6 +216,125 @@ export async function fetchKeywordsFromDataForSEO(
   return uniqueKeywords;
 }
 
+// Fetch search volume for a specific list of keywords using the
+// /v3/keywords_data/google/search_volume/live endpoint.
+// This is used to enrich already-scraped keywords (e.g. from competitor pages)
+// with real search_volume so we can sort by volume.
+export async function fetchSearchVolumeForKeywords(
+  keywords: string[]
+): Promise<KeywordData[]> {
+  const apiLogin = process.env.DATAFORSEO_API_LOGIN;
+  const apiPassword = process.env.DATAFORSEO_API_PASSWORD;
+
+  if (!apiLogin || !apiPassword) {
+    throw new Error("DataForSEO API credentials are missing");
+  }
+
+  const auth = Buffer.from(`${apiLogin}:${apiPassword}`).toString("base64");
+
+  const cleaned = Array.from(
+    new Set(
+      (keywords || [])
+        .map((k) => (k || "").trim())
+        .filter((k) => k.length > 0)
+    )
+  );
+
+  if (cleaned.length === 0) {
+    return [];
+  }
+
+  const response = await fetch(
+    "https://api.dataforseo.com/v3/keywords_data/google/search_volume/live",
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Basic ${auth}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify([
+        {
+          keywords: cleaned,
+          language: "en",
+          location: 2840, // United States
+          limit: cleaned.length,
+        },
+      ]),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      `DataForSEO search_volume request failed with status ${response.status}`
+    );
+  }
+
+  const data = await response.json();
+
+  if (data.status_code !== 20000) {
+    throw new Error(
+      `DataForSEO search_volume API error: ${data.status_message || data.status_code}`
+    );
+  }
+
+  const items = parseApiResponse(data, "search_volume");
+
+  const mapped: KeywordData[] = items
+    .map((item: any) => {
+      if (!item) return null;
+
+      if (typeof item === "string") {
+        return {
+          keyword: item,
+          search_volume: 0,
+          difficulty: 0,
+          cpc: 0,
+          competition: 0,
+        } as KeywordData;
+      }
+
+      const keyword = item.keyword || item.key;
+      if (!keyword) return null;
+
+      const search_volume =
+        item.search_volume || item.monthly_searches?.[0]?.search_volume || 0;
+      const difficulty = item.difficulty || item.keyword_difficulty || 0;
+      const cpc = item.cpc || item.cost_per_click || 0;
+
+      let competitionRaw =
+        item.competition ||
+        item.competition_level ||
+        item.competition_rate ||
+        0.5;
+      const competition =
+        typeof competitionRaw === "number" && competitionRaw > 1
+          ? competitionRaw / 100
+          : competitionRaw;
+
+      return {
+        keyword,
+        search_volume,
+        difficulty,
+        cpc,
+        competition,
+        low_top_vol: item.low_top_vol,
+        high_top_vol: item.high_top_vol,
+      } as KeywordData;
+    })
+    .filter((k: KeywordData | null) => !!k) as KeywordData[];
+
+  // Deduplicate by keyword (case-insensitive)
+  const uniqueByKeyword = mapped.filter(
+    (kw, index, self) =>
+      index ===
+      self.findIndex(
+        (k) => k.keyword.toLowerCase() === kw.keyword.toLowerCase()
+      )
+  );
+
+  return uniqueByKeyword;
+}
+
 // Generate seed phrases for fallback when API returns nothing
 function generateSeedPhrases(topic: string): string[] {
   const base = topic.trim();
