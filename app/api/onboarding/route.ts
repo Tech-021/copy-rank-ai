@@ -7,7 +7,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { hybridScraper } from "@/app/api/scraper/route";
 import { analyzeWithQwen } from "@/lib/qwen";
-import { fetchSearchVolumeForKeywords, KeywordData } from "@/lib/dataforseo";
+import { fetchSearchVolumeForKeywords, fetchBulkKeywordDifficulty, KeywordData } from "@/lib/dataforseo";
 import { getUserArticleLimit } from "@/lib/articleLimits";
 
 // Initialize Supabase client
@@ -216,20 +216,38 @@ async function processCompetitorWithRelevantPages(
       .filter((kw: string) => kw.length > 0);
 
     let overviewByKeyword = new Map<string, KeywordData>();
+    let difficultyByKeyword = new Map<string, number>();
 
     if (candidateKeywords.length > 0) {
-      try {
-        const overview = await fetchSearchVolumeForKeywords(candidateKeywords);
+      // Fetch search volume + competition in parallel with bulk keyword difficulty
+      const [volumeResults, difficultyResults] = await Promise.allSettled([
+        fetchSearchVolumeForKeywords(candidateKeywords),
+        fetchBulkKeywordDifficulty(candidateKeywords),
+      ]);
+
+      if (volumeResults.status === "fulfilled") {
         overviewByKeyword = new Map(
-          overview.map((item) => [item.keyword.toLowerCase(), item])
+          volumeResults.value.map((item) => [item.keyword.toLowerCase(), item])
         );
         console.log(
-          `   ✅ Enriched ${overviewByKeyword.size} scraped keywords with DataForSEO data (search_volume, difficulty, competition)`
+          `   ✅ Enriched ${overviewByKeyword.size} keywords with search_volume + competition`
         );
-      } catch (err) {
+      } else {
         console.warn(
-          `   ⚠️ DataForSEO enrichment failed for competitor ${competitorUrl}:`,
-          err instanceof Error ? err.message : err
+          `   ⚠️ search_volume fetch failed for ${competitorUrl}:`,
+          volumeResults.reason instanceof Error ? volumeResults.reason.message : volumeResults.reason
+        );
+      }
+
+      if (difficultyResults.status === "fulfilled") {
+        difficultyByKeyword = difficultyResults.value;
+        console.log(
+          `   ✅ Got real difficulty scores for ${difficultyByKeyword.size} keywords`
+        );
+      } else {
+        console.warn(
+          `   ⚠️ bulk_keyword_difficulty fetch failed for ${competitorUrl}:`,
+          difficultyResults.reason instanceof Error ? difficultyResults.reason.message : difficultyResults.reason
         );
       }
     }
@@ -243,13 +261,17 @@ async function processCompetitorWithRelevantPages(
 
         const lower = keyword.toLowerCase();
         const enriched = overviewByKeyword.get(lower);
+        // Use real difficulty from bulk_keyword_difficulty/live; fall back to null if unavailable
+        const realDifficulty = difficultyByKeyword.has(lower)
+          ? difficultyByKeyword.get(lower)!
+          : (enriched?.difficulty ?? null);
 
         return {
           keyword,
           search_volume: enriched && enriched.search_volume > 0
             ? enriched.search_volume
             : k.frequency || 0,
-          difficulty: enriched?.difficulty ?? null,
+          difficulty: realDifficulty,
           cpc: enriched?.cpc ?? null,
           competition: enriched?.competition ?? null,
           source: "relevant_page", // Mark as coming from relevant pages
@@ -613,9 +635,8 @@ export async function POST(request: Request) {
       `✅ Merged ${allMergedKeywords.length} total keywords → ${uniqueKeywords.length} unique keywords`
     );
 
-    // STEP 4: Filter for low-competition keywords with ≥100 search volume/month, then sort
+    // STEP 4: Filter for keywords with ≥100 search volume/month, then sort
     const MIN_SEARCH_VOLUME = 100;   // Minimum monthly searches
-    const MAX_DIFFICULTY    = 40;    // Keyword difficulty ≤ 40  → low competition
     const MAX_COMPETITION   = 0.5;   // Competition index ≤ 0.5 → low competition (0–1 scale)
 
     const filteredKeywords = uniqueKeywords.filter((kw: any) => {
@@ -623,18 +644,17 @@ export async function POST(request: Request) {
       const volume = kw.search_volume || 0;
       if (volume < MIN_SEARCH_VOLUME) return false;
 
-      // Competition check — if data is available, enforce thresholds.
+      // Competition check — if data is available, enforce threshold.
       // If null (no DataForSEO data), let the keyword through (benefit of the doubt).
-      const difficultyOk  = kw.difficulty   == null || kw.difficulty   <= MAX_DIFFICULTY;
-      const competitionOk = kw.competition  == null || kw.competition  <= MAX_COMPETITION;
+      // NOTE: difficulty is NOT filtered — it is only shown as a label in the dashboard.
+      const competitionOk = kw.competition == null || kw.competition <= MAX_COMPETITION;
 
-      return difficultyOk && competitionOk;
+      return competitionOk;
     });
 
-    console.log(`\n🔍 Low-competition filter applied:`);
+    console.log(`\n🔍 Volume + competition filter applied:`);
     console.log(`   Total unique keywords: ${uniqueKeywords.length}`);
     console.log(`   Min search volume:     ${MIN_SEARCH_VOLUME}/month`);
-    console.log(`   Max keyword difficulty: ${MAX_DIFFICULTY}`);
     console.log(`   Max competition index:  ${MAX_COMPETITION}`);
     console.log(`   ✅ Keywords passing filter: ${filteredKeywords.length}`);
 
@@ -661,7 +681,7 @@ export async function POST(request: Request) {
     console.log(`   ✅ SOURCE: 100% from competitor relevant pages (via /api/relevant-pages → /api/extract-keywords)`);
     console.log(`   ✅ All keywords have source: "relevant_page"`);
     console.log(`   ✅ All keywords have page_url pointing to the extracted page`);
-    console.log(`   ✅ Filtered for search_volume ≥ ${MIN_SEARCH_VOLUME}/month, difficulty ≤ ${MAX_DIFFICULTY}, competition ≤ ${MAX_COMPETITION}`);
+    console.log(`   ✅ Filtered for search_volume ≥ ${MIN_SEARCH_VOLUME}/month, competition ≤ ${MAX_COMPETITION} (difficulty shown as label only, not filtered)`);
     console.log("=".repeat(80));
 
     // STEP 5: Save to database
@@ -838,3 +858,4 @@ export async function POST(request: Request) {
     );
   }
 }
+

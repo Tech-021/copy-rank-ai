@@ -925,14 +925,16 @@ export function KeywordsTab({
     }
   };
 
-  const getDifficultyColor = (difficulty: number) => {
+  const getDifficultyColor = (difficulty: number | null | undefined) => {
+    if (difficulty == null || difficulty === 0) return "bg-gray-100 text-gray-400 border-gray-200";
     if (difficulty <= 40) return "bg-green-100 text-green-700 border-green-200";
     else if (difficulty <= 70)
       return "bg-yellow-100 text-yellow-700 border-yellow-200";
     else return "bg-red-100 text-red-700 border-red-200";
   };
 
-  const getDifficultyText = (difficulty: number) => {
+  const getDifficultyText = (difficulty: number | null | undefined) => {
+    if (difficulty == null || difficulty === 0) return "—";
     if (difficulty <= 40) return "Low";
     else if (difficulty <= 70) return "Medium";
     else return "High";

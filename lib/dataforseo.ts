@@ -128,8 +128,8 @@ export async function fetchKeywordsFromDataForSEO(
       } else {
         console.log(`⚠️ ${endpoint.name} returned no items`);
       }
-    } catch (error) {
-      console.log(`❌ ${endpoint.name} error:`, error.message);
+    } catch (error: any) {
+      console.log(`❌ ${endpoint.name} error:`, error?.message || error);
       // Continue to next endpoint
     }
   }
@@ -207,7 +207,7 @@ export async function fetchKeywordsFromDataForSEO(
 
       console.log(`✅ Fallback produced ${uniqueFallback.length} keywords`);
       return uniqueFallback;
-    } catch (err) {
+    } catch (err: any) {
       console.log(`❌ DataForSEO fallback error:`, err?.message || err);
       throw new Error("All DataForSEO API endpoints failed to return keyword data");
     }
@@ -527,6 +527,87 @@ export function filterKeywords(
   return filtered
     .sort((a, b) => (b.search_volume || 0) - (a.search_volume || 0)) // Sort by volume (highest first)
     .slice(0, 100);
+}
+
+// Fetch bulk keyword difficulty scores using dataforseo_labs/google/bulk_keyword_difficulty/live
+// Returns a Map of keyword (lowercase) → difficulty score (0-100)
+export async function fetchBulkKeywordDifficulty(
+  keywords: string[]
+): Promise<Map<string, number>> {
+  const apiLogin = process.env.DATAFORSEO_API_LOGIN;
+  const apiPassword = process.env.DATAFORSEO_API_PASSWORD;
+
+  if (!apiLogin || !apiPassword) {
+    throw new Error("DataForSEO API credentials are missing");
+  }
+
+  const difficultyMap = new Map<string, number>();
+
+  const cleaned = Array.from(
+    new Set(
+      (keywords || [])
+        .map((k) => (k || "").trim())
+        .filter((k) => k.length > 0)
+    )
+  );
+
+  if (cleaned.length === 0) return difficultyMap;
+
+  const auth = Buffer.from(`${apiLogin}:${apiPassword}`).toString("base64");
+
+  // DataForSEO allows max 1000 keywords per request
+  const BATCH_SIZE = 1000;
+  const batches: string[][] = [];
+  for (let i = 0; i < cleaned.length; i += BATCH_SIZE) {
+    batches.push(cleaned.slice(i, i + BATCH_SIZE));
+  }
+
+  for (const batch of batches) {
+    try {
+      const response = await fetch(
+        "https://api.dataforseo.com/v3/dataforseo_labs/google/bulk_keyword_difficulty/live",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Basic ${auth}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify([
+            {
+              keywords: batch,
+              language_name: "English",
+              location_code: 2840, // United States
+            },
+          ]),
+        }
+      );
+
+      if (!response.ok) {
+        console.warn(`⚠️ bulk_keyword_difficulty request failed: ${response.status}`);
+        continue;
+      }
+
+      const data = await response.json();
+
+      if (data.status_code !== 20000) {
+        console.warn(`⚠️ bulk_keyword_difficulty API error: ${data.status_message}`);
+        continue;
+      }
+
+      const items: any[] = data.tasks?.[0]?.result?.[0]?.items || [];
+      for (const item of items) {
+        if (item?.keyword && typeof item.keyword_difficulty === "number") {
+          difficultyMap.set(item.keyword.toLowerCase(), item.keyword_difficulty);
+        }
+      }
+
+      console.log(`✅ bulk_keyword_difficulty: got difficulty for ${difficultyMap.size} keywords`);
+    } catch (err: any) {
+      console.warn(`⚠️ bulk_keyword_difficulty error:`, err?.message || err);
+    }
+  }
+
+  return difficultyMap;
 }
 
 // Fetch keyword overview data for target keywords
