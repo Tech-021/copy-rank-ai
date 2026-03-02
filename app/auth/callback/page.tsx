@@ -23,11 +23,11 @@ export default function AuthCallbackPage() {
                              searchParams.has('code') || 
                              searchParams.has('error')
 
-        // if (!hasAuthParams) {
-        //   console.warn('No auth parameters found in URL')
-        //   router.replace("/paywall")
-        //   return
-        // }
+        if (!hasAuthParams) {
+          console.warn('No auth parameters found in URL')
+          router.replace("/paywall")
+          return
+        }
 
         let result: any = null
 
@@ -81,9 +81,14 @@ export default function AuthCallbackPage() {
             console.warn('Could not upsert users row (non-fatal):', err);
           }
           
-          // ALWAYS try pre_data validation + POST /api/predata/claim
-          // (if pre_data exists; if not, it just logs and continues)
-          if (email && userId) {
+          // Check if this is a new user (created_at is very recent)
+          const createdAt = new Date(session.user?.created_at || '');
+          const now = new Date();
+          const diffMinutes = (now.getTime() - createdAt.getTime()) / (1000 * 60);
+          const isNewSignup = diffMinutes < 5; // New signup if created within last 5 minutes
+          
+          if (isNewSignup && email && userId) {
+            // VALIDATE PREDATA BEFORE ALLOWING SIGNUP
             try {
               const predataResponse = await fetch(`/api/predata?email=${encodeURIComponent(email)}`);
               const predataResult = await predataResponse.json();
@@ -136,22 +141,6 @@ export default function AuthCallbackPage() {
                   throw new Error("No authentication token available");
                 }
 
-                // #region agent log
-                fetch('http://127.0.0.1:7244/ingest/8d9350cf-ecef-4c96-9482-a2a235a433e1',{
-                  method:'POST',
-                  headers:{'Content-Type':'application/json'},
-                  body:JSON.stringify({
-                    id:`log_${Date.now()}_auth_callback`,
-                    runId:'onboarding-debug',
-                    hypothesisId:'H1',
-                    location:'auth/callback/page.tsx:claim',
-                    message:'Calling /api/predata/claim from auth callback',
-                    data:{ hasEmail: !!email, hasUserId: !!userId },
-                    timestamp:Date.now()
-                  })
-                }).catch(()=>{});
-                // #endregion agent log
-
                 const claimResponse = await fetch('/api/predata/claim', {
                   method: 'POST',
                   headers: { 
@@ -178,20 +167,27 @@ export default function AuthCallbackPage() {
               
             } catch (validationError) {
               console.error("Predata validation error:", validationError);
-          
+
               // Keep user signed in but redirect to onboarding page
               router.replace(`/auth/onboarding-required?error=general&email=${encodeURIComponent(email)}`);
               return;
             }
+            
+            // New user - skip paywall and go to checkout
+            const checkoutUrl = process.env.NEXT_PUBLIC_LEMONSQUEEZY_CHECKOUT_URL_30 || 'https://copyrank.lemonsqueezy.com/buy/1e25810b-38ba-4de5-a753-c06514cb9e91';
+            const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
+            const successUrl = `${baseUrl}/payment/callback?next=/dashboard`;
+            const fullCheckoutUrl = `${checkoutUrl}?checkout[email]=${encodeURIComponent(email)}&checkout[custom][user_id]=${encodeURIComponent(userId)}&checkout[product_options][redirect_url]=${encodeURIComponent(successUrl)}`;
+            window.location.href = fullCheckoutUrl;
+          } else {
+            // Existing user - go to dashboard
+            toast.showToast({ 
+              title: "Successfully signed in!", 
+              description: "Welcome back!", 
+              type: "success" 
+            })
+            router.replace("/dashboard")
           }
-          
-          // After that, always go to dashboard
-          toast.showToast({
-            title: "Successfully signed in!",
-            description: "Welcome to your dashboard.",
-            type: "success",
-          });
-          router.replace("/dashboard");
         } else {
           toast.showToast({ 
             title: "Authentication incomplete", 
