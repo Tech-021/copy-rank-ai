@@ -1,26 +1,38 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-// Supabase admin client – used only to read articles table
+// Supabase admin client – used to read articles and user settings
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-function getWpBaseUrl() {
-  const base = process.env.WP_API_URL;
+type WordpressConfig = {
+  baseUrl?: string | null;
+  username?: string | null;
+  appPassword?: string | null;
+};
+
+function getWpBaseUrl(config?: WordpressConfig) {
+  const base = (config?.baseUrl || process.env.WP_API_URL || "").trim();
   if (!base) {
-    throw new Error("WP_API_URL is not configured");
+    throw new Error("No WordPress base URL configured for this user");
   }
   return base.replace(/\/$/, "");
 }
 
-function getWpAuthHeader() {
-  const username = process.env.WP_API_USER;
-  const password = process.env.WP_API_APP_PASSWORD;
+function getWpAuthHeader(config?: WordpressConfig) {
+  const username = (config?.username || process.env.WP_API_USER || "").trim();
+  const password = (
+    config?.appPassword ||
+    process.env.WP_API_APP_PASSWORD ||
+    ""
+  ).trim();
 
   if (!username || !password) {
-    throw new Error("WP_API_USER or WP_API_APP_PASSWORD is not configured");
+    throw new Error(
+      "No WordPress credentials configured for this user (username/app password missing)"
+    );
   }
 
   const token = Buffer.from(`${username}:${password}`).toString("base64");
@@ -76,17 +88,25 @@ export async function POST(request: Request) {
     }
 
     // 3) Load article from Supabase and ensure it belongs to the current user
+    console.log("WP publish: incoming articleId", articleId, "userId", user.id);
     const { data: article, error: articleError } = await supabaseAdmin
       .from("articles")
-      .select(
-        "id, user_id, title, content, meta_title, meta_description, preview"
-      )
+      // select all columns; we'll pick what we need in code
+      .select("*")
       .eq("id", articleId)
       .single();
 
     if (articleError || !article) {
+      console.warn("WP publish: article lookup failed", {
+        articleId,
+        userId: user.id,
+        error: articleError,
+      });
       return NextResponse.json(
-        { error: "Article not found" },
+        {
+          error: "Article not found",
+          details: articleError?.message ?? null,
+        },
         { status: 404 }
       );
     }
@@ -98,9 +118,158 @@ export async function POST(request: Request) {
       );
     }
 
-    // 4) Prepare and send WordPress request
-    const wpBase = getWpBaseUrl();
-    const wpAuth = getWpAuthHeader();
+    // 4) Load per-user WordPress settings (fallback to global env if missing)
+    let wpConfig: WordpressConfig | undefined;
+    try {
+      const { data: settingsRow } = await supabaseAdmin
+        .from("user_settings")
+        .select("settings")
+        .eq("user_id", user.id)
+        // website_id is NULL for global per-user settings
+        .is("website_id", null)
+        .maybeSingle();
+
+      const s = (settingsRow as any)?.settings || {};
+      if (
+        s &&
+        (s.wordpressSiteUrl || s.wordpressUsername || s.wordpressAppPassword)
+      ) {
+        wpConfig = {
+          baseUrl: s.wordpressSiteUrl,
+          username: s.wordpressUsername,
+          appPassword: s.wordpressAppPassword,
+        };
+      }
+    } catch (err) {
+      console.warn("Failed to load per-user WordPress settings", err);
+    }
+
+    // 5) Collect any generated image URLs from article
+    const rawImages =
+      (article as any).generatedImages ??
+      (article as any).generated_images ??
+      (article as any).generated_images_urls ??
+      (article as any).generated_images_url ??
+      (article as any).images ??
+      null;
+
+    let imageUrls: string[] = [];
+    if (Array.isArray(rawImages)) {
+      imageUrls = rawImages.filter((u) => typeof u === "string" && u.length > 0);
+    } else if (typeof rawImages === "string" && rawImages.trim().length > 0) {
+      try {
+        const parsed = JSON.parse(rawImages);
+        if (Array.isArray(parsed)) {
+          imageUrls = parsed.filter(
+            (u) => typeof u === "string" && u.length > 0
+          );
+        } else {
+          imageUrls = [rawImages];
+        }
+      } catch {
+        imageUrls = [rawImages];
+      }
+    }
+
+    const uploadedMediaIds: number[] = [];
+    const uploadedMediaUrls: string[] = [];
+
+    // 6) Upload up to 3 images to WordPress media library
+    for (let i = 0; i < Math.min(imageUrls.length, 3); i++) {
+      const url = imageUrls[i];
+      try {
+        const imgRes = await fetch(url);
+        if (!imgRes.ok) {
+          console.warn("Failed to fetch article image", {
+            url,
+            status: imgRes.status,
+          });
+          continue;
+        }
+
+        const contentType =
+          imgRes.headers.get("content-type") || "image/jpeg";
+        const extension = contentType.includes("png")
+          ? "png"
+          : contentType.includes("webp")
+          ? "webp"
+          : "jpg";
+
+        const arrayBuffer = await imgRes.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+
+        const filenameBase =
+          (article as any).slug ||
+          (article.title as string | undefined) ||
+          "image";
+
+        const safeBase = filenameBase
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/(^-|-$)/g, "")
+          .substring(0, 40);
+
+        const filename = `${safeBase || "image"}-${i + 1}.${extension}`;
+
+        const mediaRes = await fetch(`${getWpBaseUrl(wpConfig)}/media`, {
+          method: "POST",
+          headers: {
+            Authorization: getWpAuthHeader(wpConfig),
+            "Content-Type": contentType,
+            "Content-Disposition": `attachment; filename="${filename}"`,
+          },
+          body: buffer,
+        });
+
+        const mediaText = await mediaRes.text();
+        let mediaJson: any = null;
+        try {
+          mediaJson = JSON.parse(mediaText);
+        } catch {
+          // ignore parse error; we'll log below if needed
+        }
+
+        if (!mediaRes.ok) {
+          console.warn("Failed to upload image to WordPress", {
+            url,
+            status: mediaRes.status,
+            body: mediaText,
+          });
+          continue;
+        }
+
+        if (mediaJson?.id && mediaJson?.source_url) {
+          uploadedMediaIds.push(mediaJson.id);
+          uploadedMediaUrls.push(mediaJson.source_url);
+        }
+      } catch (err) {
+        console.warn("Error while uploading image to WordPress", {
+          url,
+          error: err,
+        });
+      }
+    }
+
+    // 7) Build final content HTML: original content plus appended images using WP URLs (if any)
+    let finalContent: string =
+      article.content ||
+      `<p>${article.preview || "Content not available."}</p>`;
+
+    if (uploadedMediaUrls.length > 0) {
+      const imagesHtml = uploadedMediaUrls
+        .map(
+          (src, index) =>
+            `<p><img src="${src}" alt="${(article.title as string) || "image"} ${
+              index + 1
+            }" /></p>`
+        )
+        .join("");
+      finalContent += imagesHtml;
+    }
+
+    // 8) Prepare and send WordPress post request
+    const wpBase = getWpBaseUrl(wpConfig);
+    const wpAuth = getWpAuthHeader(wpConfig);
 
     const wpResponse = await fetch(`${wpBase}/posts`, {
       method: "POST",
@@ -110,10 +279,9 @@ export async function POST(request: Request) {
       },
       body: JSON.stringify({
         title: article.meta_title || article.title || "Untitled article",
-        content:
-          article.content ||
-          `<p>${article.preview || "Content not available."}</p>`,
+        content: finalContent,
         status: "draft", // keep as draft in WordPress; publishing is a separate flow
+        ...(uploadedMediaIds[0] && { featured_media: uploadedMediaIds[0] }),
       }),
     });
 
@@ -136,7 +304,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // 5) Return WordPress info (no status changes / no IndexNow)
+    // 9) Return WordPress info (no status changes / no IndexNow)
     return NextResponse.json({
       success: true,
       wpPostId: wpJson?.id,
