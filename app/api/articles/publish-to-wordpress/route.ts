@@ -174,17 +174,18 @@ export async function POST(request: Request) {
     const uploadedMediaIds: number[] = [];
     const uploadedMediaUrls: string[] = [];
 
-    // 6) Upload up to 3 images to WordPress media library
-    for (let i = 0; i < Math.min(imageUrls.length, 3); i++) {
-      const url = imageUrls[i];
-      try {
+    // 6) Upload up to 3 images to WordPress media library (in parallel)
+    const imagesToUpload = imageUrls.slice(0, 3);
+
+    const uploadResults = await Promise.allSettled(
+      imagesToUpload.map(async (url, index) => {
         const imgRes = await fetch(url);
         if (!imgRes.ok) {
           console.warn("Failed to fetch article image", {
             url,
             status: imgRes.status,
           });
-          continue;
+          return null;
         }
 
         const contentType =
@@ -209,7 +210,7 @@ export async function POST(request: Request) {
           .replace(/(^-|-$)/g, "")
           .substring(0, 40);
 
-        const filename = `${safeBase || "image"}-${i + 1}.${extension}`;
+        const filename = `${safeBase || "image"}-${index + 1}.${extension}`;
 
         const mediaRes = await fetch(`${getWpBaseUrl(wpConfig)}/media`, {
           method: "POST",
@@ -235,20 +236,28 @@ export async function POST(request: Request) {
             status: mediaRes.status,
             body: mediaText,
           });
-          continue;
+          return null;
         }
 
         if (mediaJson?.id && mediaJson?.source_url) {
-          uploadedMediaIds.push(mediaJson.id);
-          uploadedMediaUrls.push(mediaJson.source_url);
+          return {
+            id: mediaJson.id as number,
+            url: mediaJson.source_url as string,
+          };
         }
-      } catch (err) {
-        console.warn("Error while uploading image to WordPress", {
-          url,
-          error: err,
-        });
+
+        return null;
+      })
+    );
+
+    uploadResults.forEach((result) => {
+      if (result.status === "fulfilled" && result.value) {
+        uploadedMediaIds.push(result.value.id);
+        uploadedMediaUrls.push(result.value.url);
+      } else if (result.status === "rejected") {
+        console.warn("Image upload promise rejected", result.reason);
       }
-    }
+    });
 
     // 7) Build final content HTML: original content plus appended images using WP URLs (if any)
     let finalContent: string =
