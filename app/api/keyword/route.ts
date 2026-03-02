@@ -22,12 +22,10 @@ interface KeywordRequest {
 }
 
 // Internal function to call your competitor API
-async function fetchCompetitors(domain: string, limit: number = 10) {
+async function fetchCompetitors(domain: string, limit: number = 10, authHeader?: string | null) {
   try {
     console.log(`🔍 [COMPETITOR] Fetching competitors for domain: ${domain}`);
     
-    // Get the authentication token from the request
-    const authHeader = request.headers.get('authorization');
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
@@ -36,7 +34,11 @@ async function fetchCompetitors(domain: string, limit: number = 10) {
       headers['Authorization'] = authHeader;
     }
 
-    const response = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/competitors`, {
+    const baseUrl =
+      process.env.NEXT_PUBLIC_SITE_URL ||
+      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+
+    const response = await fetch(`${baseUrl}/api/competitors`, {
       method: 'POST',
       headers,
       body: JSON.stringify({
@@ -175,7 +177,7 @@ export async function POST(request: Request) {
     // Fetch keywords and competitors in parallel if requested
     const [rawKeywords, competitors] = await Promise.all([
       fetchKeywordsFromDataForSEO(topic),
-      (includeCompetitors && domain) ? fetchCompetitors(domain, 8) : Promise.resolve([])
+      (includeCompetitors && domain) ? fetchCompetitors(domain, 8, authHeader) : Promise.resolve([])
     ]);
     
     console.log(`📊 Raw keywords from DataForSEO: ${rawKeywords.length}`);

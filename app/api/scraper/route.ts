@@ -7,8 +7,6 @@ import { analyzeWithQwen } from "@/lib/qwen";
 import { scrapeWithCheerio } from "@/lib/cheerioScraper";
 import type { ScrapeResult } from "@/lib/types";
 
-// ✅ Global startup log (shows at cold start)
-console.log("🚀 Scraper route initialized.");
 
 // Helper: choose dev vs prod puppeteer implementation
 async function loadPuppeteerScraper() {
