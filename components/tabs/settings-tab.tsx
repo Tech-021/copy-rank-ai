@@ -78,6 +78,10 @@ export function SettingsTab() {
     notifyCompetitorScan: true,
     notifyWeeklyReport: false,
     notifyKeywordSynced: true,
+    // WordPress connection (per-user) – optional
+    wordpressSiteUrl: "",
+    wordpressUsername: "",
+    wordpressAppPassword: "",
   });
 
   // Notification option definitions
@@ -673,6 +677,77 @@ export function SettingsTab() {
                 <Plus />
               </Button>
               <span className="ml-3 text-[#ffffffb3]">Connect Website</span>
+            </div>
+
+            {/* WordPress connection (per-user) */}
+            <div className="border border-gray-800 w-full sm:max-w-[654px] p-3 sm:p-4 rounded-[10px] space-y-3 mt-4">
+              <h4 className="text-xs sm:text-sm font-medium text-white">
+                WordPress Publishing
+              </h4>
+              <p className="text-xs sm:text-sm text-gray-500">
+                Connect your own WordPress site. We recommend using an{" "}
+                <span className="font-medium text-gray-300">
+                  Application Password
+                </span>{" "}
+                for the user that will publish posts.
+              </p>
+
+              <div className="space-y-2 mt-2">
+                <label className="block text-xs text-gray-400">
+                  WordPress REST API URL
+                </label>
+                <Input
+                  placeholder="https://yourblog.com/wp-json/wp/v2"
+                  className="h-9 bg-transparent border-gray-700 text-xs sm:text-sm"
+                  value={settings.wordpressSiteUrl}
+                  onChange={(e) =>
+                    handleSettingChange("wordpressSiteUrl", e.target.value)
+                  }
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-xs text-gray-400">
+                  WordPress Username
+                </label>
+                <Input
+                  placeholder="your-wp-username"
+                  className="h-9 bg-transparent border-gray-700 text-xs sm:text-sm"
+                  value={settings.wordpressUsername}
+                  onChange={(e) =>
+                    handleSettingChange("wordpressUsername", e.target.value)
+                  }
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-xs text-gray-400">
+                  WordPress Application Password
+                </label>
+                <Input
+                  type="password"
+                  placeholder="Application password generated in WordPress"
+                  className="h-9 bg-transparent border-gray-700 text-xs sm:text-sm"
+                  value={settings.wordpressAppPassword}
+                  onChange={(e) =>
+                    handleSettingChange("wordpressAppPassword", e.target.value)
+                  }
+                />
+                <p className="text-[10px] text-gray-500">
+                  We store this securely in your account settings and use it
+                  only when you click &quot;Publish on WordPress&quot;.
+                </p>
+              </div>
+
+              <div className="flex justify-end">
+                <Button
+                  className="h-8 sm:h-9 bg-green-600 hover:bg-green-700 cursor-pointer text-white border-transparent text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={() => handleSaveSettings()}
+                  disabled={!isDirty}
+                >
+                  Save WordPress settings
+                </Button>
+              </div>
             </div>
           </div>
         )}
