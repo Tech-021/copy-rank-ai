@@ -152,7 +152,7 @@ export function Dashboard({
               >
                 Dashboard
               </Link>
-              <Link
+              {/* <Link
                 href="/dashboard/keywords"
                 className={`cursor-pointer px-6.5 py-3.5 text-[13px] font-medium transition-colors whitespace-nowrap rounded-full
     ${
@@ -163,7 +163,7 @@ export function Dashboard({
   `}
               >
                 Keywords
-              </Link>
+              </Link> */}
               {/* NEW: Competitors Tab */}
               <Link
                 href="/dashboard/competitors"
