@@ -92,29 +92,26 @@ export async function POST(request: Request) {
       );
     }
 
-    // 4) Load per-user Framer settings
+    // 4) Load per-user Framer settings from dedicated credentials table
     let framerConfig: FramerConfig | undefined;
     try {
-      const { data: settingsRow } = await supabaseAdmin
-        .from("user_settings")
-        .select("settings")
+      const { data: credRow, error: credError } = await supabaseAdmin
+        .from("framer_credentials")
+        .select("project_url, api_key, collection_id")
         .eq("user_id", user.id)
         .is("website_id", null)
         .maybeSingle();
 
-      const s = (settingsRow as any)?.settings || {};
-      if (
-        s &&
-        (s.framerProjectUrl || s.framerApiKey || s.framerCollectionId)
-      ) {
+      if (!credError && credRow) {
+        const c = credRow as any;
         framerConfig = {
-          projectUrl: s.framerProjectUrl,
-          apiKey: s.framerApiKey,
-          collectionId: s.framerCollectionId,
+          projectUrl: c.project_url,
+          apiKey: c.api_key,
+          collectionId: c.collection_id,
         };
       }
     } catch (err) {
-      console.warn("Failed to load per-user Framer settings", err);
+      console.warn("Failed to load per-user Framer credentials", err);
     }
 
     if (
@@ -140,21 +137,52 @@ export async function POST(request: Request) {
       framerConfig.apiKey
     );
 
-    // Try to resolve the collection either by ID or name
+    // Try to resolve the collection either by ID or name (user-friendly)
     let collection: any = null;
     try {
-      if (typeof (framer as any).getCollection === "function") {
-        collection = await (framer as any).getCollection(
-          framerConfig.collectionId
+      const hasGetCollections = typeof (framer as any).getCollections === "function";
+      const hasGetCollection = typeof (framer as any).getCollection === "function";
+
+      let allCollections: any[] = [];
+
+      if (hasGetCollections) {
+        allCollections = await (framer as any).getCollections();
+        console.log(
+          "Framer publish: available collections",
+          allCollections.map((c: any) => ({
+            id: c.id,
+            name: c.name,
+            slug: (c as any).slug,
+          }))
         );
-      } else if (typeof (framer as any).getCollections === "function") {
-        const collections = await (framer as any).getCollections();
-        collection =
-          collections.find(
-            (c: any) =>
-              c.id === framerConfig!.collectionId ||
-              c.name === framerConfig!.collectionId
-          ) || null;
+      }
+
+      console.log(
+        "Framer publish: resolving collection with id/name",
+        framerConfig.collectionId
+      );
+
+      const targetRaw = framerConfig.collectionId;
+      if (targetRaw && allCollections.length > 0) {
+        const target = String(targetRaw).toLowerCase();
+        const meta =
+          allCollections.find((c: any) => {
+            const id = String(c.id ?? "").toLowerCase();
+            const name = String(c.name ?? "").toLowerCase();
+            const slug = String((c as any).slug ?? "").toLowerCase();
+            return id === target || name === target || slug === target;
+          }) || null;
+
+        if (meta && hasGetCollection && meta.id) {
+          // Resolve to a managed collection by its ID (recommended)
+          collection = await (framer as any).getCollection(meta.id);
+        } else {
+          // Fall back to using the meta object directly if it exposes addItems/createItem
+          collection = meta;
+        }
+      } else if (targetRaw && hasGetCollection) {
+        // Fallback: older API with no getCollections – treat the value as the ID
+        collection = await (framer as any).getCollection(targetRaw);
       }
     } catch (err) {
       console.error("Framer publish: error resolving collection", err);
@@ -180,6 +208,15 @@ export async function POST(request: Request) {
       } else if (Array.isArray((collection as any).fields)) {
         fields = (collection as any).fields;
       }
+      console.log(
+        "Framer publish: collection fields",
+        fields.map((f: any) => ({
+          id: f.id,
+          name: f.name,
+          slug: (f as any).slug,
+          type: f.type,
+        }))
+      );
     } catch (err) {
       console.warn("Framer publish: failed to load collection fields", err);
     }
@@ -198,12 +235,20 @@ export async function POST(request: Request) {
     const excerptField = findField(["excerpt", "summary"]);
     const contentField = findField(["content", "body", "article"]);
 
-    if (!titleField || !slugField || !contentField) {
+    console.log("Framer publish: resolved field mapping", {
+      hasTitle: !!titleField,
+      hasSlug: !!slugField,
+      hasExcerpt: !!excerptField,
+      hasContent: !!contentField,
+    });
+
+    // Only require title + content; slug/excerpt are optional.
+    if (!titleField || !contentField) {
       return NextResponse.json(
         {
           error: "Framer collection fields not compatible",
           details:
-            "Expected fields named/slugged like title, slug, content (and optional excerpt). Please adjust your Framer CMS or configure a more specific mapping.",
+            "Expected fields named/slugged like title and content (slug and excerpt are optional). Please adjust your Framer CMS or configure a more specific mapping.",
         },
         { status: 400 }
       );
@@ -238,32 +283,34 @@ export async function POST(request: Request) {
       };
     }
 
-    const itemId = String((article as any).id);
+    // Let Framer assign the internal item ID; we only provide a slug.
     const itemSlug =
       (article as any).slug ||
-      String((article as any).id).slice(0, 12);
+      String((article as any).id).slice(0, 48);
 
     // 8) Create a new item in the Framer collection
     console.log("Framer publish: creating CMS item", {
-      itemId,
       itemSlug,
       fieldKeys: Object.keys(fieldData),
     });
 
-    if (typeof (collection as any).addItems === "function") {
+    const hasCreateItem = typeof (collection as any).createItem === "function";
+    const hasAddItems = typeof (collection as any).addItems === "function";
+
+    if (hasCreateItem) {
+      // Preferred: explicit single-item creation
+      await (collection as any).createItem({
+        slug: itemSlug,
+        fieldData,
+      });
+    } else if (hasAddItems) {
+      // Fallback: batch creation without specifying IDs
       await (collection as any).addItems([
         {
-          id: itemId,
           slug: itemSlug,
           fieldData,
         },
       ]);
-    } else if (typeof (collection as any).createItem === "function") {
-      await (collection as any).createItem({
-        id: itemId,
-        slug: itemSlug,
-        fieldData,
-      });
     } else {
       return NextResponse.json(
         {
@@ -277,7 +324,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      framerItemId: itemId,
       framerSlug: itemSlug,
     });
   } catch (error) {

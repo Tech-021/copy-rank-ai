@@ -118,30 +118,26 @@ export async function POST(request: Request) {
       );
     }
 
-    // 4) Load per-user WordPress settings (fallback to global env if missing)
+    // 4) Load per-user WordPress settings from dedicated credentials table
     let wpConfig: WordpressConfig | undefined;
     try {
-      const { data: settingsRow } = await supabaseAdmin
-        .from("user_settings")
-        .select("settings")
+      const { data: credRow, error: credError } = await supabaseAdmin
+        .from("wordpress_credentials")
+        .select("rest_api_url, username, app_password")
         .eq("user_id", user.id)
-        // website_id is NULL for global per-user settings
         .is("website_id", null)
         .maybeSingle();
 
-      const s = (settingsRow as any)?.settings || {};
-      if (
-        s &&
-        (s.wordpressSiteUrl || s.wordpressUsername || s.wordpressAppPassword)
-      ) {
+      if (!credError && credRow) {
+        const c = credRow as any;
         wpConfig = {
-          baseUrl: s.wordpressSiteUrl,
-          username: s.wordpressUsername,
-          appPassword: s.wordpressAppPassword,
+          baseUrl: c.rest_api_url,
+          username: c.username,
+          appPassword: c.app_password,
         };
       }
     } catch (err) {
-      console.warn("Failed to load per-user WordPress settings", err);
+      console.warn("Failed to load per-user WordPress credentials", err);
     }
 
     // 5) Collect any generated image URLs from article
