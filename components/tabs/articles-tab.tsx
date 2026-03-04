@@ -134,6 +134,11 @@ export function ArticlesTab({
   const [isPublishingToWordpress, setIsPublishingToWordpress] = useState(false);
   const [isPublishingToFramer, setIsPublishingToFramer] = useState(false);
   const [indexingArticle, setIndexingArticle] = useState<string | null>(null);
+  const [isPublishDialogOpen, setIsPublishDialogOpen] = useState(false);
+  const [publishToSite, setPublishToSite] = useState(true);
+  const [publishToWordpressChecked, setPublishToWordpressChecked] =
+    useState(false);
+  const [publishToFramerChecked, setPublishToFramerChecked] = useState(false);
   const toast = useToast();
   const [editForm, setEditForm] = useState({
     title: "",
@@ -809,6 +814,12 @@ export function ArticlesTab({
   useEffect(() => {
     console.log("ArticlesTab: selectedArticle changed ->", selectedArticleId, selectedArticle?.title ?? null);
   }, [selectedArticleId, selectedArticle]);
+
+  useEffect(() => {
+    if (!selectedArticle && isPublishDialogOpen) {
+      setIsPublishDialogOpen(false);
+    }
+  }, [selectedArticle, isPublishDialogOpen]);
 
   useEffect(() => {
     if (!currentUser) return;
@@ -1735,48 +1746,12 @@ export function ArticlesTab({
               <div className="border-t border-[#53f8701a] p-3 sm:p-4 bg-[#0d0d0d] flex sm:flex-row gap-2 shrink-0">
                 <Button
                   className="flex-1 bg-[#53f870] text-black font-medium hover:bg-[#53f870] cursor-pointer h-9 sm:h-10 text-xs sm:text-sm rounded disabled:opacity-60"
-                  onClick={handlePublish}
-                  disabled={isPublishing}
+                  onClick={() => setIsPublishDialogOpen(true)}
+                  disabled={
+                    isPublishing || isPublishingToWordpress || isPublishingToFramer
+                  }
                 >
-                  {isPublishing ? (
-                    publishSuccess ? (
-                      <div className="flex items-center justify-center gap-2">
-                        <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={3}
-                            d="M5 13l4 4L19 7"
-                          />
-                        </svg>
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-center gap-2">
-                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      </div>
-                    )
-                  ) : (
-                    "Publish"
-                  )}
-                </Button>
-                <Button
-                  className="flex-1 bg-[#101110] hover:bg-[#101110] text-[#ffffffd3] hover:text-[#ffffffd3]! cursor-pointer h-9 sm:h-10 text-xs sm:text-sm rounded border border-[#53f87033] disabled:opacity-60"
-                  onClick={handlePublishToWordpress}
-                  disabled={isPublishingToWordpress}
-                >
-                  {isPublishingToWordpress ? "Publishing..." : "Publish on WordPress"}
-                </Button>
-                <Button
-                  className="flex-1 bg-[#101110] hover:bg-[#101110] text-[#ffffffd3] hover:text-[#ffffffd3]! cursor-pointer h-9 sm:h-10 text-xs sm:text-sm rounded border border-[#53f87033] disabled:opacity-60"
-                  onClick={handlePublishToFramer}
-                  disabled={isPublishingToFramer}
-                >
-                  {isPublishingToFramer ? "Publishing..." : "Publish on Framer"}
+                  Publish
                 </Button>
                 {selectedArticle.status === "published" &&
                   selectedArticle.slug && (
@@ -1858,6 +1833,139 @@ export function ArticlesTab({
           )}
         </div>
       </div>
+
+      {/* Multi-destination publish dialog */}
+      {selectedArticle && (
+        <Dialog open={isPublishDialogOpen} onOpenChange={setIsPublishDialogOpen}>
+          <DialogContent className="sm:max-w-[620px] bg-[#050805] text-white border border-[#53f87033]">
+            <DialogHeader>
+              <DialogTitle className="text-lg sm:text-xl">
+                Publish &quot;
+                {selectedArticle.title?.length > 60
+                  ? `${selectedArticle.title.slice(0, 57)}...`
+                  : selectedArticle.title || "Article"}
+                &quot;
+              </DialogTitle>
+              <DialogDescription className="text-xs sm:text-sm text-[#ffffff99]">
+                Choose which platforms to publish to. Your existing publish
+                actions and APIs will be used.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="mt-4 space-y-3">
+              {/* Publish to Site */}
+              <div className="flex items-start justify-between gap-3 rounded-lg border border-[#53f8701a] bg-[#050805] px-4 py-3">
+                <div>
+                  <p className="text-sm font-medium text-white">Publish to Site</p>
+                  <p className="mt-1 text-xs text-[#ffffff80]">
+                    Mark this article as published on your site.
+                  </p>
+                </div>
+                <input
+                  type="checkbox"
+                  className="mt-1 h-4 w-4 cursor-pointer accent-[#53f870]"
+                  checked={publishToSite}
+                  onChange={(e) => setPublishToSite(e.target.checked)}
+                />
+              </div>
+
+              {/* WordPress */}
+              <div className="flex items-start justify-between gap-3 rounded-lg border border-[#53f8701a] bg-[#050805] px-4 py-3">
+                <div>
+                  <p className="text-sm font-medium text-white">WordPress</p>
+                  <p className="mt-1 text-xs text-[#ffffff80]">
+                    Create a draft post via your connected WordPress REST API.
+                  </p>
+                </div>
+                <input
+                  type="checkbox"
+                  className="mt-1 h-4 w-4 cursor-pointer accent-[#53f870]"
+                  checked={publishToWordpressChecked}
+                  onChange={(e) =>
+                    setPublishToWordpressChecked(e.target.checked)
+                  }
+                />
+              </div>
+
+              {/* Framer */}
+              <div className="flex items-start justify-between gap-3 rounded-lg border border-[#53f8701a] bg-[#050805] px-4 py-3">
+                <div>
+                  <p className="text-sm font-medium text-white">Framer</p>
+                  <p className="mt-1 text-xs text-[#ffffff80]">
+                    Send this article to your Framer CMS collection.
+                  </p>
+                </div>
+                <input
+                  type="checkbox"
+                  className="mt-1 h-4 w-4 cursor-pointer accent-[#53f870]"
+                  checked={publishToFramerChecked}
+                  onChange={(e) =>
+                    setPublishToFramerChecked(e.target.checked)
+                  }
+                />
+              </div>
+
+              {/* Webflow placeholder */}
+              <div className="flex items-start justify-between gap-3 rounded-lg border border-[#53f87014] bg-[#050805] px-4 py-3 opacity-60">
+                <div>
+                  <p className="text-sm font-medium text-white">
+                    Webflow (coming soon)
+                  </p>
+                  <p className="mt-1 text-xs text-[#ffffff80]">
+                    Webflow publishing will be available in a future update.
+                  </p>
+                </div>
+                <input
+                  type="checkbox"
+                  disabled
+                  className="mt-1 h-4 w-4 cursor-not-allowed"
+                />
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end gap-3">
+              <Button
+                variant="ghost"
+                className="h-9 px-4 text-xs sm:text-sm text-[#ffffffcc]"
+                onClick={() => setIsPublishDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="h-9 px-6 bg-[#53f870] text-black font-medium hover:bg-[#53f870] text-xs sm:text-sm"
+                disabled={
+                  (!publishToSite &&
+                    !publishToWordpressChecked &&
+                    !publishToFramerChecked) ||
+                  isPublishing ||
+                  isPublishingToWordpress ||
+                  isPublishingToFramer
+                }
+                onClick={async () => {
+                  if (!selectedArticle) return;
+
+                  try {
+                    if (publishToSite) {
+                      await handlePublish();
+                    }
+                    if (publishToWordpressChecked) {
+                      await handlePublishToWordpress();
+                    }
+                    if (publishToFramerChecked) {
+                      await handlePublishToFramer();
+                    }
+                    setIsPublishDialogOpen(false);
+                  } catch (err) {
+                    console.error("Error during multi-destination publish:", err);
+                  }
+                }}
+              >
+                Publish
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* {userPackage === "free" && (
         <Card className="border-blue-200 bg-linear-to-r from-blue-50 to-indigo-50">
