@@ -132,6 +132,7 @@ export function ArticlesTab({
   const [isPublishing, setIsPublishing] = useState(false);
   const [publishSuccess, setPublishSuccess] = useState(false);
   const [isPublishingToWordpress, setIsPublishingToWordpress] = useState(false);
+  const [isPublishingToFramer, setIsPublishingToFramer] = useState(false);
   const [indexingArticle, setIndexingArticle] = useState<string | null>(null);
   const toast = useToast();
   const [editForm, setEditForm] = useState({
@@ -380,6 +381,63 @@ export function ArticlesTab({
       });
     } finally {
       setIsPublishingToWordpress(false);
+    }
+  };
+
+  const handlePublishToFramer = async () => {
+    if (!selectedArticle || !currentUser) return;
+
+    setIsPublishingToFramer(true);
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const token = session?.access_token;
+
+      if (!token) {
+        console.error("No auth token available for Framer publish");
+        toast.showToast({
+          title: "Not signed in",
+          description: "Please sign in again and try publishing.",
+          type: "error",
+        });
+        return;
+      }
+
+      const res = await fetch("/api/articles/publish-to-framer", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ articleId: selectedArticle.id }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        console.error("Framer publish failed:", data);
+        throw new Error(data.error || "Failed to publish to Framer");
+      }
+
+      toast.showToast({
+        title: "Sent to Framer",
+        description:
+          "Article was created in your Framer CMS collection as a new item.",
+        type: "success",
+      });
+    } catch (error) {
+      console.error("Error publishing to Framer:", error);
+      toast.showToast({
+        title: "Publish failed",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Unable to publish article to Framer.",
+        type: "error",
+      });
+    } finally {
+      setIsPublishingToFramer(false);
     }
   };
   const handlePublish = async () => {
@@ -1712,6 +1770,13 @@ export function ArticlesTab({
                   disabled={isPublishingToWordpress}
                 >
                   {isPublishingToWordpress ? "Publishing..." : "Publish on WordPress"}
+                </Button>
+                <Button
+                  className="flex-1 bg-[#101110] hover:bg-[#101110] text-[#ffffffd3] hover:text-[#ffffffd3]! cursor-pointer h-9 sm:h-10 text-xs sm:text-sm rounded border border-[#53f87033] disabled:opacity-60"
+                  onClick={handlePublishToFramer}
+                  disabled={isPublishingToFramer}
+                >
+                  {isPublishingToFramer ? "Publishing..." : "Publish on Framer"}
                 </Button>
                 {selectedArticle.status === "published" &&
                   selectedArticle.slug && (

@@ -52,6 +52,7 @@
     "crypto-browserify": "^3.12.1",
     "date-fns": "4.1.0",
     "embla-carousel-react": "8.5.1",
+    "framer-api": "^0.1.1",
     "framer-motion": "^12.23.24",
     "input-otp": "1.4.1",
     "lucide-react": "^0.454.0",
@@ -89,6 +90,7 @@
     "typescript": "^5"
   }
 }
+
 
 
 

@@ -82,6 +82,10 @@ export function SettingsTab() {
     wordpressSiteUrl: "",
     wordpressUsername: "",
     wordpressAppPassword: "",
+    // Framer connection (per-user) – optional
+    framerProjectUrl: "",
+    framerApiKey: "",
+    framerCollectionId: "",
   });
 
   // Notification option definitions
@@ -342,10 +346,15 @@ export function SettingsTab() {
     }
   };
 
-  const handleSaveSettings = async (websiteId?: string | null) => {
+  const handleSaveSettings = async (
+    websiteId?: string | null,
+    partialSettings?: Record<string, any>
+  ) => {
     try {
       const body = {
-        settings,
+        // If partialSettings is provided, only send those keys to the API.
+        // Otherwise fall back to sending the full settings object.
+        settings: partialSettings ?? settings,
         websiteId: websiteId || null,
         userId: currentUser?.id ?? null,
       };
@@ -604,7 +613,23 @@ export function SettingsTab() {
               <div className="flex items-center gap-3">
                 <Button
                   className="h-8 sm:h-9 bg-green-600 hover:bg-green-700 cursor-pointer text-white border-transparent text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                  onClick={() => handleSaveSettings()}
+                  onClick={() =>
+                    handleSaveSettings(undefined, {
+                      autoPublish: settings.autoPublish,
+                      publishingTime: settings.publishingTime,
+                      publishingFrequency: settings.publishingFrequency,
+                      queueSize: settings.queueSize,
+                      defaultLanguage: settings.defaultLanguage,
+                      writingTone: settings.writingTone,
+                      postLength: settings.postLength,
+                      seoLevel: settings.seoLevel,
+                      notifyPostPublished: settings.notifyPostPublished,
+                      notifyDraftGenerated: settings.notifyDraftGenerated,
+                      notifyCompetitorScan: settings.notifyCompetitorScan,
+                      notifyWeeklyReport: settings.notifyWeeklyReport,
+                      notifyKeywordSynced: settings.notifyKeywordSynced,
+                    })
+                  }
                   disabled={!isDirty}
                 >
                   Save changes
@@ -742,10 +767,91 @@ export function SettingsTab() {
               <div className="flex justify-end">
                 <Button
                   className="h-8 sm:h-9 bg-green-600 hover:bg-green-700 cursor-pointer text-white border-transparent text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                  onClick={() => handleSaveSettings()}
+                  onClick={() =>
+                    handleSaveSettings(undefined, {
+                      wordpressSiteUrl: settings.wordpressSiteUrl,
+                      wordpressUsername: settings.wordpressUsername,
+                      wordpressAppPassword: settings.wordpressAppPassword,
+                    })
+                  }
                   disabled={!isDirty}
                 >
                   Save WordPress settings
+                </Button>
+              </div>
+            </div>
+
+            {/* Framer connection (per-user) */}
+            <div className="border border-gray-800 w-full sm:max-w-[654px] p-3 sm:p-4 rounded-[10px] space-y-3 mt-4">
+              <h4 className="text-xs sm:text-sm font-medium text-white">
+                Framer Publishing
+              </h4>
+              <p className="text-xs sm:text-sm text-gray-500">
+                Connect your Framer project so CopyRank can push blog posts into
+                your Framer CMS collection. Use a project-specific Framer API key.
+              </p>
+
+              <div className="space-y-2 mt-2">
+                <label className="block text-xs text-gray-400">
+                  Framer Project URL
+                </label>
+                <Input
+                  placeholder="https://framer.com/projects/your-project"
+                  className="h-9 bg-transparent border-gray-700 text-xs sm:text-sm"
+                  value={settings.framerProjectUrl}
+                  onChange={(e) =>
+                    handleSettingChange("framerProjectUrl", e.target.value)
+                  }
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-xs text-gray-400">
+                  Framer API Key
+                </label>
+                <Input
+                  type="password"
+                  placeholder="Paste your Framer API key"
+                  className="h-9 bg-transparent border-gray-700 text-xs sm:text-sm"
+                  value={settings.framerApiKey}
+                  onChange={(e) =>
+                    handleSettingChange("framerApiKey", e.target.value)
+                  }
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-xs text-gray-400">
+                  Framer Collection ID or Name
+                </label>
+                <Input
+                  placeholder="e.g. Blog Posts"
+                  className="h-9 bg-transparent border-gray-700 text-xs sm:text-sm"
+                  value={settings.framerCollectionId}
+                  onChange={(e) =>
+                    handleSettingChange("framerCollectionId", e.target.value)
+                  }
+                />
+                <p className="text-[10px] text-gray-500">
+                  This should match the CMS collection that powers your blog in
+                  Framer. New items will be created there when you click
+                  &quot;Publish on Framer&quot;.
+                </p>
+              </div>
+
+              <div className="flex justify-end">
+                <Button
+                  className="h-8 sm:h-9 bg-green-600 hover:bg-green-700 cursor-pointer text-white border-transparent text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={() =>
+                    handleSaveSettings(undefined, {
+                      framerProjectUrl: settings.framerProjectUrl,
+                      framerApiKey: settings.framerApiKey,
+                      framerCollectionId: settings.framerCollectionId,
+                    })
+                  }
+                  disabled={!isDirty}
+                >
+                  Save Framer settings
                 </Button>
               </div>
             </div>
