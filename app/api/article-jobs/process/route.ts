@@ -42,6 +42,25 @@ async function processJobs() {
         );
     }
 
+    // ✅ Daily limit guard — only 1 article per day
+    const startOfToday = new Date();
+    startOfToday.setUTCHours(0, 0, 0, 0);
+
+    const { data: todayCompleted } = await supabase
+      .from("article_jobs")
+      .select("id")
+      .eq("status", "completed")
+      .gte("completed_at", startOfToday.toISOString());
+
+    if (todayCompleted && todayCompleted.length > 0) {
+      console.log(`✅ Daily limit reached: ${todayCompleted.length} article(s) already generated today.`);
+      return NextResponse.json({
+        success: true,
+        message: "Daily article limit reached (1 per day). Try again tomorrow.",
+        processed: 0,
+      });
+    }
+
     // Fetch one pending job
     const { data: jobs, error: fetchError } = await supabase
       .from("article_jobs")

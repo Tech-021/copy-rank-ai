@@ -2,23 +2,11 @@
   "crons": [
     {
       "path": "/api/article-jobs/process",
-      "schedule": "* * * * *"
+      "schedule": "0 9 * * *"
     }
   ],
   "functions": {
-    "app/api/scraper/route.js": {
-      "maxDuration": 300
-    },
-    "app/api/extract-keywords/route.js": {
-      "maxDuration": 300
-    },
-    "app/api/onboarding/route.js": {
-      "maxDuration": 300
-    },
     "app/api/**/route.js": {
-      "maxDuration": 300
-    },
-    "app/api/**/route.ts": {
       "maxDuration": 300
     }
   }
