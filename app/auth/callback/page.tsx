@@ -179,6 +179,7 @@ export default function AuthCallbackPage() {
             const successUrl = `${baseUrl}/payment/callback?next=/dashboard`;
             const fullCheckoutUrl = `${checkoutUrl}?checkout[email]=${encodeURIComponent(email)}&checkout[custom][user_id]=${encodeURIComponent(userId)}&checkout[product_options][redirect_url]=${encodeURIComponent(successUrl)}`;
             window.location.href = fullCheckoutUrl;
+            
           } else {
             // Existing user - go to dashboard
             toast.showToast({ 
