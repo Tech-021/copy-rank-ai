@@ -454,6 +454,8 @@ export function SettingsTab() {
   const tabs = [
     { id: "publishing", label: "Publishing" },
     { id: "connections", label: "Connections" },
+    { id: "wordpress", label: "WordPress" },
+    { id: "framer", label: "Framer" },
     { id: "account", label: "Account" },
     { id: "billing", label: "Billing & Plan" },
   ];
@@ -659,7 +661,7 @@ export function SettingsTab() {
                 Connections
               </h3>
               <p className="text-xs sm:text-sm text-gray-500">
-                Choose where your posts should be published
+                Manage the sites that CopyRank can publish to.
               </p>
             </div>
 
@@ -668,191 +670,309 @@ export function SettingsTab() {
                 Connected Websites
               </h4>
               <div className="space-y-2">
-              {connectedWebsitesLoading ? (
-                <div className="flex items-center justify-center py-6">
-                  <LoaderChevron />
-                </div>
-              ) : connectedWebsites.length === 0 ? (
-                <div className="px-3 py-2 text-xs text-gray-500">
-                  No websites connected yet.
-                </div>
-              ) : (
-                connectedWebsites.map((site) => (
-                  <div
-                    key={site.id}
-                    className="flex items-center justify-between gap-2 p-2 sm:p-3 bg-transparent rounded"
-                  >
-                    <span className="text-xs sm:text-sm text-gray-500">
-                      {site.domain}
-                    </span>
-                    <span
-                      className={`text-xs font-medium ${
-                        site.status === "Active" ? "text-green-600" : "text-gray-500"
-                      }`}
-                    >
-                      {site.status}
-                    </span>
+                {connectedWebsitesLoading ? (
+                  <div className="flex items-center justify-center py-6">
+                    <LoaderChevron />
                   </div>
-                ))
-              )}
-            </div>
-              <Button
-                className="mt-4 h-9 text-[#5baf57] border-[#d0d0d0] bg-[#53f8701a] cursor-pointer hover:bg-[#53f8701a]"
-              >
+                ) : connectedWebsites.length === 0 ? (
+                  <div className="px-3 py-2 text-xs text-gray-500">
+                    No websites connected yet.
+                  </div>
+                ) : (
+                  connectedWebsites.map((site) => (
+                    <div
+                      key={site.id}
+                      className="flex items-center justify-between gap-2 p-2 sm:p-3 bg-transparent rounded"
+                    >
+                      <span className="text-xs sm:text-sm text-gray-500">
+                        {site.domain}
+                      </span>
+                      <span
+                        className={`text-xs font-medium ${
+                          site.status === "Active"
+                            ? "text-green-600"
+                            : "text-gray-500"
+                        }`}
+                      >
+                        {site.status}
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
+              <Button className="mt-4 h-9 text-[#5baf57] border-[#d0d0d0] bg-[#53f8701a] cursor-pointer hover:bg-[#53f8701a]">
                 <Plus />
               </Button>
               <span className="ml-3 text-[#ffffffb3]">Connect Website</span>
             </div>
+          </div>
+        )}
 
-            {/* WordPress connection (per-user) */}
-            <div className="border border-gray-800 w-full sm:max-w-[654px] p-3 sm:p-4 rounded-[10px] space-y-3 mt-4">
-              <h4 className="text-xs sm:text-sm font-medium text-white">
-                WordPress Publishing
-              </h4>
-              <p className="text-xs sm:text-sm text-gray-500">
-                Connect your own WordPress site. We recommend using an{" "}
-                <span className="font-medium text-gray-300">
-                  Application Password
-                </span>{" "}
-                for the user that will publish posts.
-              </p>
-
-              <div className="space-y-2 mt-2">
-                <label className="block text-xs text-gray-400">
-                  WordPress REST API URL
-                </label>
-                <Input
-                  placeholder="https://yourblog.com/wp-json/wp/v2"
-                  className="h-9 bg-transparent border-gray-700 text-xs sm:text-sm"
-                  value={settings.wordpressSiteUrl}
-                  onChange={(e) =>
-                    handleSettingChange("wordpressSiteUrl", e.target.value)
-                  }
-                />
+        {/* WordPress integration tab */}
+        {activeTab === "wordpress" && (
+          <div className="border border-gray-800 rounded-lg p-4 sm:p-6 space-y-6">
+            <div className="border border-gray-800 w-full sm:max-w-[720px] rounded-[10px] p-4 sm:p-6 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                  <h3 className="text-sm sm:text-base font-medium text-white mb-1">
+                    WordPress Integration
+                  </h3>
+                  <p className="text-xs sm:text-sm text-gray-500">
+                    Connect your WordPress site to publish articles directly
+                    from this platform.
+                  </p>
+                </div>
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button className="h-9 px-4 bg-[#2563eb] hover:bg-[#1d4ed8] text-xs sm:text-sm text-white cursor-pointer">
+                      Connect WordPress
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Connect WordPress</DialogTitle>
+                      <DialogDescription>
+                        Provide your WordPress REST API URL, username and
+                        application password. These credentials will be used
+                        when you click &quot;Publish on WordPress&quot;.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-3 mt-2">
+                      <div className="space-y-1">
+                        <label className="block text-xs text-gray-500">
+                          WordPress REST API URL
+                        </label>
+                        <Input
+                          placeholder="https://yourblog.com/wp-json/wp/v2"
+                          value={settings.wordpressSiteUrl}
+                          onChange={(e) =>
+                            handleSettingChange(
+                              "wordpressSiteUrl",
+                              e.target.value
+                            )
+                          }
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="block text-xs text-gray-500">
+                          WordPress Username
+                        </label>
+                        <Input
+                          placeholder="your-wp-username"
+                          value={settings.wordpressUsername}
+                          onChange={(e) =>
+                            handleSettingChange(
+                              "wordpressUsername",
+                              e.target.value
+                            )
+                          }
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="block text-xs text-gray-500">
+                          WordPress Application Password
+                        </label>
+                        <Input
+                          type="password"
+                          placeholder="Application password generated in WordPress"
+                          value={settings.wordpressAppPassword}
+                          onChange={(e) =>
+                            handleSettingChange(
+                              "wordpressAppPassword",
+                              e.target.value
+                            )
+                          }
+                        />
+                      </div>
+                    </div>
+                    <div className="flex justify-end gap-2 mt-4">
+                      <Button
+                        className="h-8 px-4 bg-green-600 hover:bg-green-700 text-xs sm:text-sm text-white cursor-pointer"
+                        onClick={() =>
+                          handleSaveSettings(undefined, {
+                            wordpressSiteUrl: settings.wordpressSiteUrl,
+                            wordpressUsername: settings.wordpressUsername,
+                            wordpressAppPassword: settings.wordpressAppPassword,
+                          })
+                        }
+                        disabled={
+                          !settings.wordpressSiteUrl ||
+                          !settings.wordpressUsername ||
+                          !settings.wordpressAppPassword
+                        }
+                      >
+                        Save
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </div>
 
-              <div className="space-y-2">
-                <label className="block text-xs text-gray-400">
-                  WordPress Username
-                </label>
-                <Input
-                  placeholder="your-wp-username"
-                  className="h-9 bg-transparent border-gray-700 text-xs sm:text-sm"
-                  value={settings.wordpressUsername}
-                  onChange={(e) =>
-                    handleSettingChange("wordpressUsername", e.target.value)
-                  }
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-xs text-gray-400">
-                  WordPress Application Password
-                </label>
-                <Input
-                  type="password"
-                  placeholder="Application password generated in WordPress"
-                  className="h-9 bg-transparent border-gray-700 text-xs sm:text-sm"
-                  value={settings.wordpressAppPassword}
-                  onChange={(e) =>
-                    handleSettingChange("wordpressAppPassword", e.target.value)
-                  }
-                />
-                <p className="text-[10px] text-gray-500">
-                  We store this securely in your account settings and use it
-                  only when you click &quot;Publish on WordPress&quot;.
-                </p>
-              </div>
-
-              <div className="flex justify-end">
-                <Button
-                  className="h-8 sm:h-9 bg-green-600 hover:bg-green-700 cursor-pointer text-white border-transparent text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                  onClick={() =>
-                    handleSaveSettings(undefined, {
-                      wordpressSiteUrl: settings.wordpressSiteUrl,
-                      wordpressUsername: settings.wordpressUsername,
-                      wordpressAppPassword: settings.wordpressAppPassword,
-                    })
-                  }
-                  disabled={!isDirty}
-                >
-                  Save WordPress settings
-                </Button>
+              <div className="pt-2 border-t border-gray-800 mt-2 space-y-2">
+                <h4 className="text-xs sm:text-sm font-medium text-white">
+                  How it works
+                </h4>
+                <ul className="space-y-2 text-xs sm:text-sm text-gray-400 list-disc list-inside">
+                  <li>Connect your WordPress.com site using API credentials.</li>
+                  <li>
+                    Publish articles directly from the Articles tab with one
+                    click.
+                  </li>
+                  <li>Choose to publish immediately or save as draft.</li>
+                  <li>
+                    Featured images are automatically uploaded from your
+                    generated images.
+                  </li>
+                  <li>
+                    All credentials are encrypted and stored securely in your
+                    account.
+                  </li>
+                </ul>
               </div>
             </div>
+          </div>
+        )}
 
-            {/* Framer connection (per-user) */}
-            <div className="border border-gray-800 w-full sm:max-w-[654px] p-3 sm:p-4 rounded-[10px] space-y-3 mt-4">
-              <h4 className="text-xs sm:text-sm font-medium text-white">
-                Framer Publishing
-              </h4>
-              <p className="text-xs sm:text-sm text-gray-500">
-                Connect your Framer project so CopyRank can push blog posts into
-                your Framer CMS collection. Use a project-specific Framer API key.
-              </p>
-
-              <div className="space-y-2 mt-2">
-                <label className="block text-xs text-gray-400">
-                  Framer Project URL
-                </label>
-                <Input
-                  placeholder="https://framer.com/projects/your-project"
-                  className="h-9 bg-transparent border-gray-700 text-xs sm:text-sm"
-                  value={settings.framerProjectUrl}
-                  onChange={(e) =>
-                    handleSettingChange("framerProjectUrl", e.target.value)
-                  }
-                />
+        {/* Framer integration tab */}
+        {activeTab === "framer" && (
+          <div className="border border-gray-800 rounded-lg p-4 sm:p-6 space-y-6">
+            <div className="border border-gray-800 w-full sm:max-w-[720px] rounded-[10px] p-4 sm:p-6 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                  <h3 className="text-sm sm:text-base font-medium text-white mb-1">
+                    Framer Integration
+                  </h3>
+                  <p className="text-xs sm:text-sm text-gray-500">
+                    Connect your Framer projects to publish articles as pages.
+                  </p>
+                </div>
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button className="h-9 px-4 bg-[#6366f1] hover:bg-[#4f46e5] text-xs sm:text-sm text-white cursor-pointer">
+                      + Add connection
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Add Framer Connection</DialogTitle>
+                      <DialogDescription>
+                        Provide your Framer project URL and a project-scoped
+                        Server API key.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-3 mt-2">
+                      <div className="space-y-1">
+                        <label className="block text-xs text-gray-500">
+                          Project URL
+                        </label>
+                        <Input
+                          placeholder="https://framer.com/projects/your-project"
+                          value={settings.framerProjectUrl}
+                          onChange={(e) =>
+                            handleSettingChange(
+                              "framerProjectUrl",
+                              e.target.value
+                            )
+                          }
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="block text-xs text-gray-500">
+                          Server API Key
+                        </label>
+                        <Input
+                          type="password"
+                          placeholder="Paste your Framer Server API key"
+                          value={settings.framerApiKey}
+                          onChange={(e) =>
+                            handleSettingChange("framerApiKey", e.target.value)
+                          }
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="block text-xs text-gray-500">
+                          Collection ID or Name
+                        </label>
+                        <Input
+                          placeholder="e.g. blog or cms_XXXX"
+                          value={settings.framerCollectionId}
+                          onChange={(e) =>
+                            handleSettingChange(
+                              "framerCollectionId",
+                              e.target.value
+                            )
+                          }
+                        />
+                      </div>
+                      <div className="flex items-center gap-2 pt-1">
+                        <input
+                          type="checkbox"
+                          disabled
+                          className="h-3 w-3 rounded border-gray-600 bg-transparent"
+                        />
+                        <span className="text-[11px] text-gray-500">
+                          Make default (first connection is used automatically)
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex justify-end gap-2 mt-4">
+                      <Button
+                        className="h-8 px-4 bg-green-600 hover:bg-green-700 text-xs sm:text-sm text-white cursor-pointer"
+                        onClick={() =>
+                          handleSaveSettings(undefined, {
+                            framerProjectUrl: settings.framerProjectUrl,
+                            framerApiKey: settings.framerApiKey,
+                            framerCollectionId: settings.framerCollectionId,
+                          })
+                        }
+                        disabled={
+                          !settings.framerProjectUrl ||
+                          !settings.framerApiKey ||
+                          !settings.framerCollectionId
+                        }
+                      >
+                        Add
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </div>
 
-              <div className="space-y-2">
-                <label className="block text-xs text-gray-400">
-                  Framer API Key
-                </label>
-                <Input
-                  type="password"
-                  placeholder="Paste your Framer API key"
-                  className="h-9 bg-transparent border-gray-700 text-xs sm:text-sm"
-                  value={settings.framerApiKey}
-                  onChange={(e) =>
-                    handleSettingChange("framerApiKey", e.target.value)
-                  }
-                />
-              </div>
+              <div className="pt-2 border-t border-gray-800 mt-2 space-y-2">
+                {settings.framerProjectUrl ? (
+                  <p className="text-xs sm:text-sm text-gray-500">
+                    Default connection:{" "}
+                    <span className="text-gray-200">
+                      {settings.framerProjectUrl}
+                    </span>
+                  </p>
+                ) : (
+                  <p className="text-xs sm:text-sm text-gray-500">
+                    No Framer connections yet. Add one to enable project
+                    publishing.
+                  </p>
+                )}
 
-              <div className="space-y-2">
-                <label className="block text-xs text-gray-400">
-                  Framer Collection ID or Name
-                </label>
-                <Input
-                  placeholder="e.g. Blog Posts"
-                  className="h-9 bg-transparent border-gray-700 text-xs sm:text-sm"
-                  value={settings.framerCollectionId}
-                  onChange={(e) =>
-                    handleSettingChange("framerCollectionId", e.target.value)
-                  }
-                />
-                <p className="text-[10px] text-gray-500">
-                  This should match the CMS collection that powers your blog in
-                  Framer. New items will be created there when you click
-                  &quot;Publish on Framer&quot;.
-                </p>
-              </div>
-
-              <div className="flex justify-end">
-                <Button
-                  className="h-8 sm:h-9 bg-green-600 hover:bg-green-700 cursor-pointer text-white border-transparent text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                  onClick={() =>
-                    handleSaveSettings(undefined, {
-                      framerProjectUrl: settings.framerProjectUrl,
-                      framerApiKey: settings.framerApiKey,
-                      framerCollectionId: settings.framerCollectionId,
-                    })
-                  }
-                  disabled={!isDirty}
-                >
-                  Save Framer settings
-                </Button>
+                <h4 className="text-xs sm:text-sm font-medium text-white mt-3">
+                  How it works
+                </h4>
+                <ul className="space-y-2 text-xs sm:text-sm text-gray-400 list-disc list-inside">
+                  <li>
+                    Add one or more Framer project connections (project URL +
+                    Server API key).
+                  </li>
+                  <li>
+                    Mark one connection as default — it will be used automatically
+                    when publishing.
+                  </li>
+                  <li>
+                    Keys are encrypted and never exposed to other users.
+                  </li>
+                  <li>
+                    Test a connection by publishing a single article to your CMS
+                    collection.
+                  </li>
+                </ul>
               </div>
             </div>
           </div>
