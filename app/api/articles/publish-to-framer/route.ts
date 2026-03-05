@@ -288,30 +288,11 @@ export async function POST(request: Request) {
       (article as any).slug ||
       String((article as any).id).slice(0, 48);
 
-    // 8) Create a new item in the Framer collection
-    console.log("Framer publish: creating CMS item", {
-      itemSlug,
-      fieldKeys: Object.keys(fieldData),
-    });
-
+    // 8) Create a new item in the Framer collection with a unique slug
     const hasCreateItem = typeof (collection as any).createItem === "function";
     const hasAddItems = typeof (collection as any).addItems === "function";
 
-    if (hasCreateItem) {
-      // Preferred: explicit single-item creation
-      await (collection as any).createItem({
-        slug: itemSlug,
-        fieldData,
-      });
-    } else if (hasAddItems) {
-      // Fallback: batch creation without specifying IDs
-      await (collection as any).addItems([
-        {
-          slug: itemSlug,
-          fieldData,
-        },
-      ]);
-    } else {
+    if (!hasCreateItem && !hasAddItems) {
       return NextResponse.json(
         {
           error: "Framer collection is not writable",
@@ -322,9 +303,56 @@ export async function POST(request: Request) {
       );
     }
 
+    const maxSlugAttempts = 5;
+    let finalSlug = itemSlug;
+
+    for (let attempt = 0; attempt < maxSlugAttempts; attempt++) {
+      const slugToTry =
+        attempt === 0 ? itemSlug : `${itemSlug}-${attempt + 1}`;
+
+      console.log("Framer publish: creating CMS item", {
+        itemSlug: slugToTry,
+        fieldKeys: Object.keys(fieldData),
+      });
+
+      try {
+        if (hasCreateItem) {
+          // Preferred: explicit single-item creation
+          await (collection as any).createItem({
+            slug: slugToTry,
+            fieldData,
+          });
+        } else if (hasAddItems) {
+          // Fallback: batch creation without specifying IDs
+          await (collection as any).addItems([
+            {
+              slug: slugToTry,
+              fieldData,
+            },
+          ]);
+        }
+
+        finalSlug = slugToTry;
+        break;
+      } catch (err: any) {
+        const message = String(err?.message || "");
+        if (message.includes("Duplicate slug")) {
+          console.warn(
+            "Framer publish: duplicate slug, trying next suffix",
+            slugToTry
+          );
+          if (attempt === maxSlugAttempts - 1) {
+            throw err;
+          }
+          continue;
+        }
+        throw err;
+      }
+    }
+
     return NextResponse.json({
       success: true,
-      framerSlug: itemSlug,
+      framerSlug: finalSlug,
     });
   } catch (error) {
     console.error("Error publishing article to Framer:", error);
