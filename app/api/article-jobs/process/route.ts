@@ -42,25 +42,6 @@ async function processJobs() {
         );
     }
 
-    // ✅ Daily limit guard — only 1 article per day
-    const startOfToday = new Date();
-    startOfToday.setUTCHours(0, 0, 0, 0);
-
-    const { data: todayCompleted } = await supabase
-      .from("article_jobs")
-      .select("id")
-      .eq("status", "completed")
-      .gte("completed_at", startOfToday.toISOString());
-
-    if (todayCompleted && todayCompleted.length > 0) {
-      console.log(`✅ Daily limit reached: ${todayCompleted.length} article(s) already generated today.`);
-      return NextResponse.json({
-        success: true,
-        message: "Daily article limit reached (1 per day). Try again tomorrow.",
-        processed: 0,
-      });
-    }
-
     // Fetch one pending job
     const { data: jobs, error: fetchError } = await supabase
       .from("article_jobs")
@@ -87,8 +68,31 @@ async function processJobs() {
 
     const job = jobs[0];
     console.log(
-      `📋 Found job ${job.id} - Article ${job.article_number}/${job.total_articles}`
+      `📋 Found job ${job.id} for user ${job.user_id} - Article ${job.article_number}/${job.total_articles}`
     );
+
+    // ✅ Daily limit guard — 1 article per user per day
+    const startOfToday = new Date();
+    startOfToday.setUTCHours(0, 0, 0, 0);
+
+    const { data: userTodayCompleted } = await supabase
+      .from("article_jobs")
+      .select("id")
+      .eq("status", "completed")
+      .eq("user_id", job.user_id)
+      .gte("completed_at", startOfToday.toISOString());
+
+    if (userTodayCompleted && userTodayCompleted.length > 0) {
+      console.log(
+        `✅ Daily user limit reached for user ${job.user_id}: ${userTodayCompleted.length} article(s) already generated today.`
+      );
+      return NextResponse.json({
+        success: true,
+        message:
+          "Daily article limit reached for this user (1 per day). Try again tomorrow.",
+        processed: 0,
+      });
+    }
 
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 
