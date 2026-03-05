@@ -13,6 +13,8 @@ async function processJobs() {
   try {
     // Process only 1 job at a time to stay under timeout limit
     const maxJobs = 1;
+    // But fetch a small batch so we can skip users who've hit their daily limit
+    const maxJobsToFetch = 10;
 
     console.log(`🔄 Processing up to ${maxJobs} article job...`);
 
@@ -42,13 +44,13 @@ async function processJobs() {
         );
     }
 
-    // Fetch one pending job
+    // Fetch a small batch of pending jobs (we'll pick the first eligible one)
     const { data: jobs, error: fetchError } = await supabase
       .from("article_jobs")
       .select("*")
       .eq("status", "pending")
       .order("created_at", { ascending: true })
-      .limit(maxJobs);
+      .limit(maxJobsToFetch);
 
     if (fetchError) {
       console.error("Error fetching jobs:", fetchError);
@@ -66,33 +68,41 @@ async function processJobs() {
       });
     }
 
-    const job = jobs[0];
-    console.log(
-      `📋 Found job ${job.id} for user ${job.user_id} - Article ${job.article_number}/${job.total_articles}`
-    );
-
     // ✅ Daily limit guard — 1 article per user per day
     const startOfToday = new Date();
     startOfToday.setUTCHours(0, 0, 0, 0);
 
-    const { data: userTodayCompleted } = await supabase
-      .from("article_jobs")
-      .select("id")
-      .eq("status", "completed")
-      .eq("user_id", job.user_id)
-      .gte("completed_at", startOfToday.toISOString());
+    // Find the first job whose user has not yet hit today's limit
+    let job = null as any;
+    for (const candidate of jobs) {
+      const { data: userTodayCompleted } = await supabase
+        .from("article_jobs")
+        .select("id")
+        .eq("status", "completed")
+        .eq("user_id", candidate.user_id)
+        .gte("completed_at", startOfToday.toISOString());
 
-    if (userTodayCompleted && userTodayCompleted.length > 0) {
+      if (!userTodayCompleted || userTodayCompleted.length === 0) {
+        job = candidate;
+        break;
+      }
+    }
+
+    if (!job) {
       console.log(
-        `✅ Daily user limit reached for user ${job.user_id}: ${userTodayCompleted.length} article(s) already generated today.`
+        "✅ Daily user limits reached for all users with pending jobs. Nothing to process right now."
       );
       return NextResponse.json({
         success: true,
         message:
-          "Daily article limit reached for this user (1 per day). Try again tomorrow.",
+          "Daily article limit reached for all users with pending jobs. Try again tomorrow.",
         processed: 0,
       });
     }
+
+    console.log(
+      `📋 Selected job ${job.id} for user ${job.user_id} - Article ${job.article_number}/${job.total_articles}`
+    );
 
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 
