@@ -1932,7 +1932,7 @@ export function ArticlesTab({
                 Cancel
               </Button>
               <Button
-                className="h-9 px-6 bg-[#53f870] text-black font-medium hover:bg-[#53f870] text-xs sm:text-sm"
+                className="cursor-pointer h-9 px-6 bg-[#53f870] text-black font-medium hover:bg-[#53f870] text-xs sm:text-sm"
                 disabled={
                   (!publishToSite &&
                     !publishToWordpressChecked &&
@@ -2036,7 +2036,7 @@ export function ArticlesTab({
                   </Select>
                 </div>
 
-                <div className="flex gap-2 justify-end">
+                <div className="cursor-pointer flex gap-2 justify-end">
                   <Button
                     variant="ghost"
                     onClick={() => setIsPlanDialogOpen(false)}
