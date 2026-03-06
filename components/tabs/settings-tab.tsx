@@ -131,6 +131,25 @@ export function SettingsTab() {
   });
   const [passwordMessage, setPasswordMessage] = useState("");
 
+  // Dialog state for integration connect modals
+  const [isWordpressDialogOpen, setIsWordpressDialogOpen] = useState(false);
+  const [isFramerDialogOpen, setIsFramerDialogOpen] = useState(false);
+
+  // Draft values used only inside the connect dialogs so that
+  // fields appear empty each time the dialog opens, without
+  // wiping the saved settings until the user clicks Save.
+  const [wordpressDraft, setWordpressDraft] = useState({
+    siteUrl: "",
+    username: "",
+    appPassword: "",
+  });
+
+  const [framerDraft, setFramerDraft] = useState({
+    projectUrl: "",
+    apiKey: "",
+    collectionId: "",
+  });
+
   useEffect(() => {
     const getCurrentUser = async () => {
       const { data: user } = await getUser();
@@ -349,7 +368,7 @@ export function SettingsTab() {
   const handleSaveSettings = async (
     websiteId?: string | null,
     partialSettings?: Record<string, any>
-  ) => {
+  ): Promise<boolean> => {
     try {
       const body = {
         // If partialSettings is provided, only send those keys to the API.
@@ -373,7 +392,7 @@ export function SettingsTab() {
         setSaveSuccess(true);
         setTimeout(() => setSaveSuccess(false), 3000);
         setIsDirty(false);
-        return;
+        return true;
       }
       const data = await res.json().catch(() => ({}));
       throw new Error(data?.error || "Failed to save");
@@ -392,12 +411,14 @@ export function SettingsTab() {
         setIsDirty(false);
         setSaveSuccess(true);
         setTimeout(() => setSaveSuccess(false), 3000);
+        return true;
       } catch {
         toast.showToast({
           title: "Save failed",
           description: err?.message || "Could not save settings",
           type: "error",
         });
+        return false;
       }
     }
   };
@@ -722,7 +743,20 @@ export function SettingsTab() {
                     from this platform.
                   </p>
                 </div>
-                <Dialog>
+                <Dialog
+                  open={isWordpressDialogOpen}
+                  onOpenChange={(open) => {
+                    setIsWordpressDialogOpen(open);
+                    if (open) {
+                      // Always start with empty fields when the dialog opens
+                      setWordpressDraft({
+                        siteUrl: "",
+                        username: "",
+                        appPassword: "",
+                      });
+                    }
+                  }}
+                >
                   <DialogTrigger asChild>
                     <Button className="h-9 px-4 bg-[#2563eb] hover:bg-[#1d4ed8] text-xs sm:text-sm text-white cursor-pointer">
                       Connect WordPress
@@ -744,12 +778,12 @@ export function SettingsTab() {
                         </label>
                         <Input
                           placeholder="https://yourblog.com/wp-json/wp/v2"
-                          value={settings.wordpressSiteUrl}
+                          value={wordpressDraft.siteUrl}
                           onChange={(e) =>
-                            handleSettingChange(
-                              "wordpressSiteUrl",
-                              e.target.value
-                            )
+                            setWordpressDraft((prev) => ({
+                              ...prev,
+                              siteUrl: e.target.value,
+                            }))
                           }
                         />
                       </div>
@@ -759,12 +793,12 @@ export function SettingsTab() {
                         </label>
                         <Input
                           placeholder="your-wp-username"
-                          value={settings.wordpressUsername}
+                          value={wordpressDraft.username}
                           onChange={(e) =>
-                            handleSettingChange(
-                              "wordpressUsername",
-                              e.target.value
-                            )
+                            setWordpressDraft((prev) => ({
+                              ...prev,
+                              username: e.target.value,
+                            }))
                           }
                         />
                       </div>
@@ -775,12 +809,12 @@ export function SettingsTab() {
                         <Input
                           type="password"
                           placeholder="Application password generated in WordPress"
-                          value={settings.wordpressAppPassword}
+                          value={wordpressDraft.appPassword}
                           onChange={(e) =>
-                            handleSettingChange(
-                              "wordpressAppPassword",
-                              e.target.value
-                            )
+                            setWordpressDraft((prev) => ({
+                              ...prev,
+                              appPassword: e.target.value,
+                            }))
                           }
                         />
                       </div>
@@ -788,17 +822,33 @@ export function SettingsTab() {
                     <div className="flex justify-end gap-2 mt-4">
                       <Button
                         className="h-8 px-4 bg-green-600 hover:bg-green-700 text-xs sm:text-sm text-white cursor-pointer"
-                        onClick={() =>
-                          handleSaveSettings(undefined, {
-                            wordpressSiteUrl: settings.wordpressSiteUrl,
-                            wordpressUsername: settings.wordpressUsername,
-                            wordpressAppPassword: settings.wordpressAppPassword,
-                          })
-                        }
+                        onClick={async () => {
+                          const ok = await handleSaveSettings(undefined, {
+                            wordpressSiteUrl: wordpressDraft.siteUrl,
+                            wordpressUsername: wordpressDraft.username,
+                            wordpressAppPassword: wordpressDraft.appPassword,
+                          });
+                          if (ok) {
+                            // Reflect latest saved values in main settings
+                            setSettings((prev) => ({
+                              ...prev,
+                              wordpressSiteUrl: wordpressDraft.siteUrl,
+                              wordpressUsername: wordpressDraft.username,
+                              wordpressAppPassword: wordpressDraft.appPassword,
+                            }));
+                            // Clear dialog fields and close
+                            setWordpressDraft({
+                              siteUrl: "",
+                              username: "",
+                              appPassword: "",
+                            });
+                            setIsWordpressDialogOpen(false);
+                          }
+                        }}
                         disabled={
-                          !settings.wordpressSiteUrl ||
-                          !settings.wordpressUsername ||
-                          !settings.wordpressAppPassword
+                          !wordpressDraft.siteUrl ||
+                          !wordpressDraft.username ||
+                          !wordpressDraft.appPassword
                         }
                       >
                         Save
@@ -846,7 +896,20 @@ export function SettingsTab() {
                     Connect your Framer projects to publish articles as pages.
                   </p>
                 </div>
-                <Dialog>
+                <Dialog
+                  open={isFramerDialogOpen}
+                  onOpenChange={(open) => {
+                    setIsFramerDialogOpen(open);
+                    if (open) {
+                      // Always start with empty fields when the dialog opens
+                      setFramerDraft({
+                        projectUrl: "",
+                        apiKey: "",
+                        collectionId: "",
+                      });
+                    }
+                  }}
+                >
                   <DialogTrigger asChild>
                     <Button className="h-9 px-4 bg-[#6366f1] hover:bg-[#4f46e5] text-xs sm:text-sm text-white cursor-pointer">
                       + Add connection
@@ -867,12 +930,12 @@ export function SettingsTab() {
                         </label>
                         <Input
                           placeholder="https://framer.com/projects/your-project"
-                          value={settings.framerProjectUrl}
+                          value={framerDraft.projectUrl}
                           onChange={(e) =>
-                            handleSettingChange(
-                              "framerProjectUrl",
-                              e.target.value
-                            )
+                            setFramerDraft((prev) => ({
+                              ...prev,
+                              projectUrl: e.target.value,
+                            }))
                           }
                         />
                       </div>
@@ -883,9 +946,12 @@ export function SettingsTab() {
                         <Input
                           type="password"
                           placeholder="Paste your Framer Server API key"
-                          value={settings.framerApiKey}
+                          value={framerDraft.apiKey}
                           onChange={(e) =>
-                            handleSettingChange("framerApiKey", e.target.value)
+                            setFramerDraft((prev) => ({
+                              ...prev,
+                              apiKey: e.target.value,
+                            }))
                           }
                         />
                       </div>
@@ -895,12 +961,12 @@ export function SettingsTab() {
                         </label>
                         <Input
                           placeholder="e.g. blog or cms_XXXX"
-                          value={settings.framerCollectionId}
+                          value={framerDraft.collectionId}
                           onChange={(e) =>
-                            handleSettingChange(
-                              "framerCollectionId",
-                              e.target.value
-                            )
+                            setFramerDraft((prev) => ({
+                              ...prev,
+                              collectionId: e.target.value,
+                            }))
                           }
                         />
                       </div>
@@ -908,17 +974,33 @@ export function SettingsTab() {
                     <div className="flex justify-end gap-2 mt-4">
                       <Button
                         className="cursor-pointer h-8 px-4 bg-green-600 hover:bg-green-700 text-xs sm:text-sm text-white"
-                        onClick={() =>
-                          handleSaveSettings(undefined, {
-                            framerProjectUrl: settings.framerProjectUrl,
-                            framerApiKey: settings.framerApiKey,
-                            framerCollectionId: settings.framerCollectionId,
-                          })
-                        }
+                        onClick={async () => {
+                          const ok = await handleSaveSettings(undefined, {
+                            framerProjectUrl: framerDraft.projectUrl,
+                            framerApiKey: framerDraft.apiKey,
+                            framerCollectionId: framerDraft.collectionId,
+                          });
+                          if (ok) {
+                            // Reflect latest saved values in main settings
+                            setSettings((prev) => ({
+                              ...prev,
+                              framerProjectUrl: framerDraft.projectUrl,
+                              framerApiKey: framerDraft.apiKey,
+                              framerCollectionId: framerDraft.collectionId,
+                            }));
+                            // Clear dialog fields and close
+                            setFramerDraft({
+                              projectUrl: "",
+                              apiKey: "",
+                              collectionId: "",
+                            });
+                            setIsFramerDialogOpen(false);
+                          }
+                        }}
                         disabled={
-                          !settings.framerProjectUrl ||
-                          !settings.framerApiKey ||
-                          !settings.framerCollectionId
+                          !framerDraft.projectUrl ||
+                          !framerDraft.apiKey ||
+                          !framerDraft.collectionId
                         }
                       >
                         Add
