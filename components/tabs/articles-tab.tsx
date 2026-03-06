@@ -1960,7 +1960,14 @@ export function ArticlesTab({
                   }
                 }}
               >
-                Publish
+                {isPublishing || isPublishingToWordpress || isPublishingToFramer ? (
+                  <span className="flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Publishing...
+                  </span>
+                ) : (
+                  "Publish"
+                )}
               </Button>
             </div>
           </DialogContent>
