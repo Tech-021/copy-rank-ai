@@ -700,7 +700,7 @@ export function SettingsTab() {
                   ))
                 )}
               </div>
-              <Button className="mt-4 h-9 text-[#5baf57] border-[#d0d0d0] bg-[#53f8701a] cursor-pointer hover:bg-[#53f8701a]">
+              <Button className="cursor-pointer mt-4 h-9 text-[#5baf57] border-[#d0d0d0] bg-[#53f8701a] cursor-pointer hover:bg-[#53f8701a]">
                 <Plus />
               </Button>
               <span className="ml-3 text-[#ffffffb3]">Connect Website</span>
@@ -904,20 +904,10 @@ export function SettingsTab() {
                           }
                         />
                       </div>
-                      <div className="flex items-center gap-2 pt-1">
-                        <input
-                          type="checkbox"
-                          disabled
-                          className="h-3 w-3 rounded border-gray-600 bg-transparent"
-                        />
-                        <span className="text-[11px] text-gray-500">
-                          Make default (first connection is used automatically)
-                        </span>
-                      </div>
                     </div>
                     <div className="flex justify-end gap-2 mt-4">
                       <Button
-                        className="h-8 px-4 bg-green-600 hover:bg-green-700 text-xs sm:text-sm text-white cursor-pointer"
+                        className="cursor-pointer h-8 px-4 bg-green-600 hover:bg-green-700 text-xs sm:text-sm text-white"
                         onClick={() =>
                           handleSaveSettings(undefined, {
                             framerProjectUrl: settings.framerProjectUrl,
@@ -1193,7 +1183,7 @@ export function SettingsTab() {
                     <>
                       <Button
                         variant="outline"
-                        className="h-8 sm:h-9 border-gray-200 bg-white text-xs sm:text-sm"
+                        className="cursor-pointer h-8 sm:h-9 border-gray-200 bg-white text-xs sm:text-sm"
                         onClick={() => setIsPlanDialogOpen(true)}
                       >
                         Upgrade Plan
@@ -1248,7 +1238,7 @@ export function SettingsTab() {
                               </Select>
                             </div>
 
-                            <div className="flex gap-2 justify-end">
+                            <div className="cursor-pointer flex gap-2 justify-end">
                               <Button
                                 variant="ghost"
                                 onClick={() => setIsPlanDialogOpen(false)}

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import crypto from "crypto";
 
 // Use a server-side Supabase client with the service role key for API routes
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -8,6 +9,55 @@ if (!supabaseUrl || !supabaseServiceRoleKey) {
   console.warn("Supabase server env missing for user settings route");
 }
 const supabase = createClient(supabaseUrl || "", supabaseServiceRoleKey || "");
+
+// Simple AES-256-GCM helpers for encrypting sensitive credentials (API keys, passwords).
+// If CREDENTIALS_ENCRYPTION_KEY is not set, values are stored as plain text.
+const CREDENTIALS_ENCRYPTION_KEY = process.env.CREDENTIALS_ENCRYPTION_KEY || "";
+const hasEncryptionKey = Boolean(CREDENTIALS_ENCRYPTION_KEY);
+const encryptionKeyBuffer = hasEncryptionKey
+  ? crypto.createHash("sha256").update(CREDENTIALS_ENCRYPTION_KEY).digest()
+  : null;
+
+function encryptSecret(value: string | null | undefined): string | null {
+  if (!value) return null;
+  if (!encryptionKeyBuffer) return value;
+  try {
+    const iv = crypto.randomBytes(12);
+    const cipher = crypto.createCipheriv("aes-256-gcm", encryptionKeyBuffer, iv);
+    const encrypted = Buffer.concat([
+      cipher.update(value, "utf8"),
+      cipher.final(),
+    ]);
+    const tag = cipher.getAuthTag();
+    return Buffer.concat([iv, tag, encrypted]).toString("base64");
+  } catch {
+    // If encryption fails for any reason, fall back to storing plain text
+    return value;
+  }
+}
+
+function decryptSecret(value: string | null | undefined): string | null {
+  if (!value) return null;
+  if (!encryptionKeyBuffer) return value;
+  try {
+    const data = Buffer.from(value, "base64");
+    if (data.length < 12 + 16) return value;
+    const iv = data.subarray(0, 12);
+    const tag = data.subarray(12, 28);
+    const text = data.subarray(28);
+    const decipher = crypto.createDecipheriv(
+      "aes-256-gcm",
+      encryptionKeyBuffer,
+      iv
+    );
+    decipher.setAuthTag(tag);
+    const decrypted = Buffer.concat([decipher.update(text), decipher.final()]);
+    return decrypted.toString("utf8");
+  } catch {
+    // If decryption fails, assume the value is plain text
+    return value;
+  }
+}
 
 // GET /api/user/settings?userId=...&websiteId=...
 export async function GET(req: Request) {
@@ -74,10 +124,18 @@ export async function GET(req: Request) {
         ]);
 
         if (!wpRes.error && wpRes.data) {
-          wpSettings = wpRes.data;
+          wpSettings = {
+            rest_api_url: wpRes.data.rest_api_url,
+            username: decryptSecret(wpRes.data.username),
+            app_password: decryptSecret(wpRes.data.app_password),
+          };
         }
         if (!frRes.error && frRes.data) {
-          framerSettings = frRes.data;
+          framerSettings = {
+            project_url: frRes.data.project_url,
+            api_key: decryptSecret(frRes.data.api_key),
+            collection_id: frRes.data.collection_id,
+          };
         }
       } catch (e) {
         console.warn(
@@ -245,8 +303,8 @@ export async function PATCH(req: Request) {
                 user_id: userId,
                 website_id: null,
                 rest_api_url: wordpressSiteUrl ?? null,
-                username: wordpressUsername ?? null,
-                app_password: wordpressAppPassword ?? null,
+                username: encryptSecret(wordpressUsername ?? null),
+                app_password: encryptSecret(wordpressAppPassword ?? null),
               };
 
               if (existing?.id) {
@@ -283,7 +341,7 @@ export async function PATCH(req: Request) {
                 user_id: userId,
                 website_id: null,
                 project_url: framerProjectUrl ?? null,
-                api_key: framerApiKey ?? null,
+                api_key: encryptSecret(framerApiKey ?? null),
                 collection_id: framerCollectionId ?? null,
               };
 
@@ -342,4 +400,5 @@ export async function PATCH(req: Request) {
   }
 }
 
-export const runtime = "edge";
+// Use the Node.js runtime so we can rely on the Node crypto module
+export const runtime = "nodejs";

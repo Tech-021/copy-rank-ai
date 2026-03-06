@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import crypto from "crypto";
 
 // Supabase admin client – used to read articles and user settings
 const supabaseAdmin = createClient(
@@ -12,6 +13,35 @@ type WordpressConfig = {
   username?: string | null;
   appPassword?: string | null;
 };
+
+// Decrypt credentials stored with AES-256-GCM (same helper as in user settings).
+const CREDENTIALS_ENCRYPTION_KEY = process.env.CREDENTIALS_ENCRYPTION_KEY || "";
+const hasEncryptionKey = Boolean(CREDENTIALS_ENCRYPTION_KEY);
+const encryptionKeyBuffer = hasEncryptionKey
+  ? crypto.createHash("sha256").update(CREDENTIALS_ENCRYPTION_KEY).digest()
+  : null;
+
+function decryptSecret(value: string | null | undefined): string | null {
+  if (!value) return null;
+  if (!encryptionKeyBuffer) return value;
+  try {
+    const data = Buffer.from(value, "base64");
+    if (data.length < 12 + 16) return value;
+    const iv = data.subarray(0, 12);
+    const tag = data.subarray(12, 28);
+    const text = data.subarray(28);
+    const decipher = crypto.createDecipheriv(
+      "aes-256-gcm",
+      encryptionKeyBuffer,
+      iv
+    );
+    decipher.setAuthTag(tag);
+    const decrypted = Buffer.concat([decipher.update(text), decipher.final()]);
+    return decrypted.toString("utf8");
+  } catch {
+    return value;
+  }
+}
 
 function getWpBaseUrl(config?: WordpressConfig) {
   const base = (config?.baseUrl || process.env.WP_API_URL || "").trim();
@@ -132,8 +162,8 @@ export async function POST(request: Request) {
         const c = credRow as any;
         wpConfig = {
           baseUrl: c.rest_api_url,
-          username: c.username,
-          appPassword: c.app_password,
+          username: decryptSecret(c.username),
+          appPassword: decryptSecret(c.app_password),
         };
       }
     } catch (err) {
