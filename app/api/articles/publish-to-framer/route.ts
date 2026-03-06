@@ -254,7 +254,54 @@ export async function POST(request: Request) {
       );
     }
 
-    // 7) Build fieldData for Framer CMS item
+    // 7) Collect any generated image URLs from the article
+    const rawImages =
+      (article as any).generatedImages ??
+      (article as any).generated_images ??
+      (article as any).generated_images_urls ??
+      (article as any).generated_images_url ??
+      (article as any).images ??
+      null;
+
+    let imageUrls: string[] = [];
+    if (Array.isArray(rawImages)) {
+      imageUrls = rawImages.filter(
+        (u) => typeof u === "string" && u.length > 0
+      );
+    } else if (typeof rawImages === "string" && rawImages.trim().length > 0) {
+      try {
+        const parsed = JSON.parse(rawImages);
+        if (Array.isArray(parsed)) {
+          imageUrls = parsed.filter(
+            (u) => typeof u === "string" && u.length > 0
+          );
+        } else {
+          imageUrls = [rawImages];
+        }
+      } catch {
+        imageUrls = [rawImages];
+      }
+    }
+
+    // Build final HTML content, including inline <img> tags for any images
+    let finalContent: string =
+      (article as any).content ||
+      `<p>${(article as any).preview || "Content not available."}</p>`;
+
+    if (imageUrls.length > 0) {
+      const imagesHtml = imageUrls
+        .slice(0, 3)
+        .map(
+          (src, index) =>
+            `<p><img src="${src}" alt="${(article as any).title || "image"} ${
+              index + 1
+            }" /></p>`
+        )
+        .join("");
+      finalContent += imagesHtml;
+    }
+
+    // 8) Build fieldData for Framer CMS item
     const fieldData: Record<string, any> = {};
     const setStringField = (field: any, value: string | null | undefined) => {
       if (!field || !field.id || !value) return;
@@ -276,9 +323,7 @@ export async function POST(request: Request) {
     if (contentField && contentField.id) {
       fieldData[contentField.id] = {
         type: "formattedText",
-        value:
-          (article as any).content ||
-          `<p>${(article as any).preview || "Content not available."}</p>`,
+        value: finalContent,
         contentType: "html",
       };
     }
