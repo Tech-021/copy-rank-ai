@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { connect } from "framer-api";
+import crypto from "crypto";
 
 // Supabase admin client – used to read articles and user settings
 const supabaseAdmin = createClient(
@@ -13,6 +14,35 @@ type FramerConfig = {
   apiKey?: string | null;
   collectionId?: string | null;
 };
+
+// Decrypt API keys stored with AES-256-GCM (same helper as in user settings).
+const CREDENTIALS_ENCRYPTION_KEY = process.env.CREDENTIALS_ENCRYPTION_KEY || "";
+const hasEncryptionKey = Boolean(CREDENTIALS_ENCRYPTION_KEY);
+const encryptionKeyBuffer = hasEncryptionKey
+  ? crypto.createHash("sha256").update(CREDENTIALS_ENCRYPTION_KEY).digest()
+  : null;
+
+function decryptSecret(value: string | null | undefined): string | null {
+  if (!value) return null;
+  if (!encryptionKeyBuffer) return value;
+  try {
+    const data = Buffer.from(value, "base64");
+    if (data.length < 12 + 16) return value;
+    const iv = data.subarray(0, 12);
+    const tag = data.subarray(12, 28);
+    const text = data.subarray(28);
+    const decipher = crypto.createDecipheriv(
+      "aes-256-gcm",
+      encryptionKeyBuffer,
+      iv
+    );
+    decipher.setAuthTag(tag);
+    const decrypted = Buffer.concat([decipher.update(text), decipher.final()]);
+    return decrypted.toString("utf8");
+  } catch {
+    return value;
+  }
+}
 
 export async function POST(request: Request) {
   try {
@@ -106,7 +136,7 @@ export async function POST(request: Request) {
         const c = credRow as any;
         framerConfig = {
           projectUrl: c.project_url,
-          apiKey: c.api_key,
+          apiKey: decryptSecret(c.api_key),
           collectionId: c.collection_id,
         };
       }
@@ -254,7 +284,54 @@ export async function POST(request: Request) {
       );
     }
 
-    // 7) Build fieldData for Framer CMS item
+    // 7) Collect any generated image URLs from the article
+    const rawImages =
+      (article as any).generatedImages ??
+      (article as any).generated_images ??
+      (article as any).generated_images_urls ??
+      (article as any).generated_images_url ??
+      (article as any).images ??
+      null;
+
+    let imageUrls: string[] = [];
+    if (Array.isArray(rawImages)) {
+      imageUrls = rawImages.filter(
+        (u) => typeof u === "string" && u.length > 0
+      );
+    } else if (typeof rawImages === "string" && rawImages.trim().length > 0) {
+      try {
+        const parsed = JSON.parse(rawImages);
+        if (Array.isArray(parsed)) {
+          imageUrls = parsed.filter(
+            (u) => typeof u === "string" && u.length > 0
+          );
+        } else {
+          imageUrls = [rawImages];
+        }
+      } catch {
+        imageUrls = [rawImages];
+      }
+    }
+
+    // Build final HTML content, including inline <img> tags for any images
+    let finalContent: string =
+      (article as any).content ||
+      `<p>${(article as any).preview || "Content not available."}</p>`;
+
+    if (imageUrls.length > 0) {
+      const imagesHtml = imageUrls
+        .slice(0, 3)
+        .map(
+          (src, index) =>
+            `<p><img src="${src}" alt="${(article as any).title || "image"} ${
+              index + 1
+            }" /></p>`
+        )
+        .join("");
+      finalContent += imagesHtml;
+    }
+
+    // 8) Build fieldData for Framer CMS item
     const fieldData: Record<string, any> = {};
     const setStringField = (field: any, value: string | null | undefined) => {
       if (!field || !field.id || !value) return;
@@ -276,9 +353,7 @@ export async function POST(request: Request) {
     if (contentField && contentField.id) {
       fieldData[contentField.id] = {
         type: "formattedText",
-        value:
-          (article as any).content ||
-          `<p>${(article as any).preview || "Content not available."}</p>`,
+        value: finalContent,
         contentType: "html",
       };
     }
