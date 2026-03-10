@@ -32,7 +32,7 @@ import Image from "next/image";
 import { useToast } from "@/components/ui/toast";
 
 export function SettingsTab() {
-  const [activeTab, setActiveTab] = useState("wordpress");
+  const [activeTab, setActiveTab] = useState("publishing");
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [userPackage, setUserPackage] = useState<
     "free" | "pro" | "premium" | null
@@ -473,7 +473,7 @@ export function SettingsTab() {
   }
 
   const tabs = [
-    // { id: "publishing", label: "Publishing" },
+    { id: "publishing", label: "Publishing" },
     { id: "connections", label: "Connections" },
     { id: "wordpress", label: "WordPress" },
     { id: "framer", label: "Framer" },
@@ -527,10 +527,10 @@ export function SettingsTab() {
             {/* Auto-publish Posts */}
             <div className="border border-gray-800 w-full sm:max-w-[654px] rounded-[10px]">
               <div className="space-y-2">
-                <label className="text-xs sm:text-sm font-medium p-2 sm:p-3 text-white">
+                <label className="text-xs sm:text-sm font-medium px-4 py-2 sm:px-5 sm:py-3 text-white">
                   Auto-publish posts
                 </label>
-                <div className="flex items-center justify-between gap-3 p-2 sm:p-3">
+                <div className="flex items-center justify-between gap-3 px-4 py-2 sm:px-5 sm:py-3">
                   <p className="text-xs text-gray-500 flex-1">
                     When turned on, new posts will be published automatically
                     after generation
@@ -550,13 +550,13 @@ export function SettingsTab() {
 
               {/* Publishing Schedule */}
               <div className="space-y-2">
-                <label className="text-xs sm:text-sm font-medium p-2 sm:p-3 text-white">
+                <label className="text-xs sm:text-sm font-medium px-4 py-2 sm:px-5 sm:py-3 text-white">
                   Publishing Schedule
                 </label>
-                <p className="text-xs text-gray-500 p-2 sm:p-3 mb-3">
+                <p className="text-xs text-gray-500 px-4 py-1 sm:px-5 sm:py-2 mb-3">
                   Posts will be published based on your selected schedule
                 </p>
-                <div className="flex px-2 sm:px-3">
+                <div className="flex px-4 sm:px-5">
                   <Select
                     value={settings.publishingFrequency}
                     onValueChange={(value) =>
@@ -600,10 +600,10 @@ export function SettingsTab() {
               <div className="py-2 sm:py-3 space-y-2">
                 <div className="border border-gray-800" />
 
-                <label className="text-xs sm:text-sm font-medium p-2 sm:p-3 text-white">
+                <label className="text-xs sm:text-sm font-medium px-4 py-2 sm:px-5 sm:py-3 text-white">
                   Queue size
                 </label>
-                <p className="text-xs text-gray-500 p-2 sm:p-3 mb-3">
+                <p className="text-xs text-gray-500 px-4 py-1 sm:px-5 sm:py-2 mb-3">
                   Only this number of ready posts will be kept in the publishing
                   queue at a time
                 </p>
