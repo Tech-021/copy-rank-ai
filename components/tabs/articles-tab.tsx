@@ -1449,10 +1449,13 @@ export function ArticlesTab({
         {/* Main Layout - Articles + Preview */}
         <div className="flex flex-col lg:flex-row gap-6 h-auto lg:overflow-visible">
           {/* Left Side - Articles List */}
-          <div className="space-y-4 lg:pr-2 w-full lg:w-auto">
-            {filteredArticles.length === 0 ? (
-              <div className="text-center py-12 text-gray-400">
-                <p className="text-sm">No articles found</p>
+          <div className="space-y-8 lg:pr-2 w-full lg:w-auto">
+            {loading || filteredArticles.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 gap-3 text-gray-400">
+                <LoaderChevron />
+                <p className="text-xs">
+                  Preparing your first articles. This can take a few minutes.
+                </p>
               </div>
             ) : (
               filteredArticles.map((article) => {

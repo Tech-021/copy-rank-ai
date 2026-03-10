@@ -1355,13 +1355,12 @@ export function AnalyzeTab({
       )}
 
       <div className="space-y-3 md:w-2/5 w-full border px-2 py-2 rounded-xl overflow-y-auto min-w-0">
-        {loadingArticles ? (
-          <div className="text-center flex items-center justify-center py-12">
+        {loadingArticles || articles.length === 0 ? (
+          <div className="text-center flex flex-col items-center justify-center py-12 gap-3">
             <LoaderChevron />
-          </div>
-        ) : articles.length === 0 ? (
-          <div className="text-center py-12 text-gray-400">
-            <p className="text-sm">No articles found</p>
+            <p className="text-xs text-gray-400 ">
+              Preparing your first articles. This can take a few minutes.
+            </p>
           </div>
         ) : (
           articles.map((article) => (
