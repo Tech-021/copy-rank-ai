@@ -1377,7 +1377,7 @@ export function ArticlesTab({
         </div>
 
         {/* Create a Ranking Post Section */}
-        <Card className="border-[#53f8701a] shadow-none bg-transparent">
+        {/* <Card className="border-[#53f8701a] shadow-none bg-transparent">
           <CardContent className="">
             <div className="">
               <Button
@@ -1394,7 +1394,7 @@ export function ArticlesTab({
               </p>
             </div>
           </CardContent>
-        </Card>
+        </Card> */}
         <CreatePostDialogDashboard
           open={openPostDialog}
           onOpenChange={setOpenPostDialog}

@@ -32,7 +32,7 @@ import Image from "next/image";
 import { useToast } from "@/components/ui/toast";
 
 export function SettingsTab() {
-  const [activeTab, setActiveTab] = useState("publishing");
+  const [activeTab, setActiveTab] = useState("wordpress");
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [userPackage, setUserPackage] = useState<
     "free" | "pro" | "premium" | null
@@ -473,7 +473,7 @@ export function SettingsTab() {
   }
 
   const tabs = [
-    { id: "publishing", label: "Publishing" },
+    // { id: "publishing", label: "Publishing" },
     { id: "connections", label: "Connections" },
     { id: "wordpress", label: "WordPress" },
     { id: "framer", label: "Framer" },
