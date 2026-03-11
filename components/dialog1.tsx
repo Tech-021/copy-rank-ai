@@ -8,6 +8,7 @@ import { useToast } from "./ui/toast";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/client";
 import { Button } from "./ui/button";
+import { ErrorDialog } from "./ErrorDialog";
 
 interface WebsiteDialogProps {
   open: boolean;
@@ -18,6 +19,8 @@ interface WebsiteDialogProps {
 export function WebsiteDialog({ open, onOpenChange, onSuccess }: WebsiteDialogProps) {
   const [websiteName, setWebsiteName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [errorDialogOpen, setErrorDialogOpen] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const toast = useToast();
   const router = useRouter();
 
@@ -71,7 +74,13 @@ export function WebsiteDialog({ open, onOpenChange, onSuccess }: WebsiteDialogPr
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        throw new Error(data.error || 'Failed to add website');
+        const message =
+          data?.message ||
+          data?.error ||
+          "We couldn’t analyze this website. It may be blocking our crawler or temporarily unavailable.";
+        setErrorMessage(message);
+        setErrorDialogOpen(true);
+        throw new Error(message);
       }
 
       toast.showToast({
@@ -102,11 +111,12 @@ export function WebsiteDialog({ open, onOpenChange, onSuccess }: WebsiteDialogPr
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-[#101110]">
-        <VisuallyHidden>
-          <DialogTitle></DialogTitle>
-        </VisuallyHidden>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="bg-[#101110]">
+          <VisuallyHidden>
+            <DialogTitle></DialogTitle>
+          </VisuallyHidden>
         <div className="flex flex-col gap-10 my-2.5">
           <div className="flex flex-col gap-[30px]">
             <div className="flex flex-col items-center justify-center">
@@ -152,7 +162,18 @@ export function WebsiteDialog({ open, onOpenChange, onSuccess }: WebsiteDialogPr
           <div>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+
+      <ErrorDialog
+        open={errorDialogOpen}
+        onOpenChange={setErrorDialogOpen}
+        title="We couldn’t analyze this website"
+        message={
+          errorMessage ||
+          "Something went wrong while trying to read your site. It may be blocking our crawler or temporarily unavailable. Please try again, or use a different website URL."
+        }
+      />
+    </>
   );
 }
