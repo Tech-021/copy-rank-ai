@@ -106,8 +106,8 @@ async function processCompetitorWithRelevantPages(
     }
 
     // Pages are already sorted by highest Estimated Traffic Value (ETV) from relevant-pages API.
-    // Skip the homepage (pathname = "/" or empty) and pick the highest-traffic SUB-PAGE.
-    // This avoids scraping homepages that are JS-heavy or block crawlers (e.g. chatgpt.com).
+    // We will try multiple candidate pages (Cheerio → Puppeteer inside /api/extract-keywords)
+    // until one successfully produces keywords. This makes us resilient to 403s or JS-heavy pages.
     const isHomepage = (url: string): boolean => {
       try {
         const parsed = new URL(url);
@@ -119,88 +119,117 @@ async function processCompetitorWithRelevantPages(
       }
     };
 
-    // Pick highest-traffic non-homepage page; fall back to pages[0] if none found
-    const topPage =
-      relevantJson.pages.find((p: any) => {
-        const url = p.page_address || p.url || p.page || "";
-        return url && !isHomepage(url);
-      }) || relevantJson.pages[0];
+    // Try multiple high-ETV pages until one yields keywords
+    const MAX_PAGES_TO_TRY = 5;
+    const candidatePages: any[] = (relevantJson.pages || [])
+      .filter((p: any) => p && (p.page_address || p.url || p.page))
+      .slice(0, MAX_PAGES_TO_TRY);
 
-    // Get page URL - check multiple possible fields
-    const pageUrl = topPage.page_address || topPage.url || topPage.page;
-    const pageTitle = topPage.title || relevantJson.target || competitorUrl;
-
-    if (!pageUrl) {
-      console.error(`❌ [Onboarding] No page URL found in top page for ${competitorUrl}:`, topPage);
+    if (candidatePages.length === 0) {
+      console.error(`❌ [Onboarding] No valid page URLs found in relevant-pages response for ${competitorUrl}`);
       return {
         domain: competitorUrl,
-        topic: pageTitle,
+        topic: "Unknown",
         keywords: [],
         success: false,
-        error: "No page URL found in relevant pages response",
+        error: "No valid page URLs found in relevant pages response",
       };
     }
 
-    const selectedIsHomepage = isHomepage(pageUrl);
-    console.log(`   ✅ Step 1 Complete: Found ${relevantJson.pages.length} relevant pages (sorted by ETV)`);
     console.log(
-      `   🔗 Selected page: ${pageUrl} ${selectedIsHomepage ? "⚠️ (homepage – no sub-page found)" : "✅ (sub-page)"}`
+      `   ✅ Step 1 Complete: Found ${relevantJson.pages.length} relevant pages (sorted by ETV), ` +
+      `trying up to ${candidatePages.length} pages for scraping`
     );
-    console.log(`   📊 Page ETV: ${topPage.metrics?.organic?.etv ?? "N/A"}`);
-    console.log(`   📄 Page title: ${pageTitle}`);
-    console.log(`\n   Step 2: Calling /api/extract-keywords on selected page...`);
 
-    const extractRes = await fetch(`${baseUrl}/api/extract-keywords`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        url: pageUrl,
-        limit: keywordLimit,
-      }),
-    });
+    let successfulPage: any | null = null;
+    let pageUrl: string | null = null;
+    let pageTitle: string = relevantJson.target || competitorUrl;
+    let rawKeywords: any[] = [];
 
-    if (!extractRes.ok) {
-      const text = await extractRes.text().catch(() => "");
+    for (let idx = 0; idx < candidatePages.length; idx++) {
+      const p = candidatePages[idx];
+      const candidateUrl = p.page_address || p.url || p.page;
+      if (!candidateUrl) continue;
+
+      const selectedIsHomepage = isHomepage(candidateUrl);
+      console.log(
+        `\n   🔗 Trying page ${idx + 1}/${candidatePages.length}: ${candidateUrl} ` +
+          `${selectedIsHomepage ? "⚠️ (homepage)" : "✅ (sub-page)"}`
+      );
+      console.log(`   📊 Page ETV: ${p.metrics?.organic?.etv ?? "N/A"}`);
+
+      const extractRes = await fetch(`${baseUrl}/api/extract-keywords`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          url: candidateUrl,
+          limit: keywordLimit,
+        }),
+      });
+
+      if (!extractRes.ok) {
+        const text = await extractRes.text().catch(() => "");
+        console.error(
+          `❌ [Onboarding] extract-keywords failed for ${candidateUrl}:`,
+          extractRes.status,
+          text
+        );
+        continue; // try next page
+      }
+
+      const extractJson: any = await extractRes.json();
+
+      // Verify extract-keywords response
+      if (!extractJson.success || !Array.isArray(extractJson.keywords)) {
+        console.error(
+          `❌ [Onboarding] Invalid extract-keywords response for ${candidateUrl}:`,
+          extractJson
+        );
+        continue; // try next page
+      }
+
+      rawKeywords = extractJson.keywords || [];
+
+      if (!rawKeywords.length) {
+        console.warn(
+          `⚠️ [Onboarding] extract-keywords returned 0 keywords for ${candidateUrl}, trying next page if available`
+        );
+        continue; // try next page
+      }
+
+      // Success: we have keywords from this page
+      successfulPage = p;
+      pageUrl = candidateUrl;
+      pageTitle = p.title || relevantJson.target || competitorUrl;
+
+      console.log(
+        `✅ [Onboarding] Got ${rawKeywords.length} keywords from extract-keywords for ${competitorUrl}`
+      );
+      console.log(`   📄 Source page: ${pageUrl}`);
+      console.log(
+        `   🔑 Sample keywords (first 5):`,
+        rawKeywords.slice(0, 5).map((k: any) => k.keyword).join(", ")
+      );
+      console.log(
+        `   ✅ CONFIRMED: Keywords extracted from relevant page URL (via /api/relevant-pages → /api/extract-keywords)`
+      );
+      break;
+    }
+
+    if (!successfulPage || !pageUrl || !rawKeywords.length) {
       console.error(
-        `❌ [Onboarding] extract-keywords failed for ${pageUrl}:`,
-        extractRes.status,
-        text
+        `❌ [Onboarding] All candidate pages failed to produce keywords for ${competitorUrl}`
       );
       return {
         domain: competitorUrl,
-        topic: pageTitle,
+        topic: "Unknown",
         keywords: [],
         success: false,
-        error: `extract-keywords failed with status ${extractRes.status}`,
+        error: "All candidate pages failed to produce keywords",
       };
     }
-
-    const extractJson: any = await extractRes.json();
-    
-    // Verify extract-keywords response
-    if (!extractJson.success || !Array.isArray(extractJson.keywords)) {
-      console.error(`❌ [Onboarding] Invalid extract-keywords response for ${pageUrl}:`, extractJson);
-      return {
-        domain: competitorUrl,
-        topic: pageTitle,
-        keywords: [],
-        success: false,
-        error: "Invalid extract-keywords response",
-      };
-    }
-
-    // rawKeywords come from on-page frequency; we'll enrich them with
-    // real search volume from DataForSEO when possible.
-    const rawKeywords = extractJson.keywords;
-
-    console.log(
-      `✅ [Onboarding] Got ${rawKeywords.length} keywords from extract-keywords for ${competitorUrl}`
-    );
-    console.log(`   📄 Source page: ${pageUrl}`);
-    console.log(`   🔑 Sample keywords (first 5):`, rawKeywords.slice(0, 5).map((k: any) => k.keyword).join(", "));
-    console.log(`   ✅ CONFIRMED: Keywords extracted from relevant page URL (via /api/relevant-pages → /api/extract-keywords)`);
 
     // Enrich scraped keywords with real search volume from DataForSEO where possible.
     // 1) Take the top N by on-page frequency to limit API cost.
