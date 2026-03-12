@@ -676,8 +676,36 @@ export async function POST(request: Request) {
       console.log(`   ✅ Fallback result: ${finalKeywords.length} keywords (volume ≥ ${MIN_SEARCH_VOLUME})`);
     }
 
+    // FINAL CLEANUP: remove obviously junk / too-generic keywords
+    const hardBlacklist = new Set([
+      "download",
+      "word",
+      "people",
+      "page",
+      "person",
+      "feet",
+      "trail",
+      "full",
+      "high",
+      "ll",
+      "isn",
+    ]);
+
+    const cleanedFinalKeywords = finalKeywords.filter((kw: any) => {
+      const k = String(kw.keyword || "").trim().toLowerCase();
+
+      if (!k) return false;
+      if (hardBlacklist.has(k)) return false;
+
+      // Drop super-short single words (like "ll", "isn")
+      if (!k.includes(" ") && k.length < 4) return false;
+
+      return true;
+    });
+
     console.log("\n" + "=".repeat(80));
-    console.log(`✅ Final keyword count: ${finalKeywords.length}`);
+    console.log(`✅ Final keyword count before cleanup: ${finalKeywords.length}`);
+    console.log(`✅ Final keyword count after cleanup:  ${cleanedFinalKeywords.length}`);
     console.log(`   ✅ SOURCE: 100% from competitor relevant pages (via /api/relevant-pages → /api/extract-keywords)`);
     console.log(`   ✅ All keywords have source: "relevant_page"`);
     console.log(`   ✅ All keywords have page_url pointing to the extracted page`);
@@ -687,7 +715,7 @@ export async function POST(request: Request) {
     // STEP 5: Save to database
     console.log("\n" + "=".repeat(80));
     console.log("💾 Step 5: Saving keywords to database...");
-    console.log(`   📊 Saving ${finalKeywords.length} keywords to websites.keywords column`);
+    console.log(`   📊 Saving ${cleanedFinalKeywords.length} keywords to websites.keywords column`);
     console.log(`   ✅ All keywords have source: "relevant_page" (from /api/relevant-pages → /api/extract-keywords)`);
     console.log("=".repeat(80));
 
@@ -705,7 +733,7 @@ export async function POST(request: Request) {
       url: normalizedClientDomain, // Use normalized URL
       topic: clientTopic,
       keywords: {
-        keywords: finalKeywords,
+        keywords: cleanedFinalKeywords,
         competitors: competitorsData, // Save competitor data here
         analysis_metadata: {
           analyzed_at: new Date().toISOString(),
@@ -808,7 +836,7 @@ export async function POST(request: Request) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          keywords: finalKeywords,
+          keywords: cleanedFinalKeywords,
           websiteId: savedWebsite.id,
           userId: userId,
           totalArticles: userLimit // Use package limit instead of hardcoded 30
@@ -836,7 +864,7 @@ export async function POST(request: Request) {
       clientDomain: normalizedClientDomain, // Return normalized URL
       clientTopic,
       totalKeywords: finalKeywords.length,
-      keywords: finalKeywords,
+      keywords: cleanedFinalKeywords,
       competitorResults: competitorResults.map((c) => ({
         domain: c.domain,
         topic: c.topic,
