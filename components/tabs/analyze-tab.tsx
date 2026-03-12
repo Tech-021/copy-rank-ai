@@ -790,8 +790,8 @@ export function AnalyzeTab({
 
       const res = await fetch(url, {
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
       });
       if (!res.ok) throw new Error("Failed to fetch articles");
@@ -820,6 +820,7 @@ export function AnalyzeTab({
         });
 
         setArticles(normalizedArticles);
+        await fetchAnalytics(user.id, selectedWebsiteId);
       }
     } catch (err) {
       console.error("Error fetching articles:", err);
