@@ -397,16 +397,49 @@ export async function POST(request: Request) {
         ? `\n\nIMPORTANT: This is article ${articleNumber} of ${totalArticles}. Create a UNIQUE variation with a different angle, perspective, or approach. Use different examples, structure, and content flow. Avoid repeating previous article variations.`
         : "";
 
-const prompt = `You are an expert SEO content strategist and writer.
+    // Fetch website context (URL + topic) to ground the article in the actual domain/niche
+    let siteUrl = "the client website";
+    let siteTopic = selectedKeyword as string;
 
-Your task: Write a **high-performing SEO article** on the topic:
+    if (websiteId) {
+      try {
+        const { data: website, error: websiteError } = await supabase
+          .from("websites")
+          .select("url, topic")
+          .eq("id", websiteId)
+          .maybeSingle();
+
+        if (websiteError) {
+          console.warn("⚠️ Failed to fetch website context for article generation:", websiteError);
+        } else if (website) {
+          if ((website as any).url) {
+            siteUrl = (website as any).url;
+          }
+          if ((website as any).topic) {
+            siteTopic = (website as any).topic;
+          }
+        }
+      } catch (e) {
+        console.warn("⚠️ Exception while fetching website context for article generation:", e);
+      }
+    }
+
+    const prompt = `You are an expert SEO content strategist and writer.
+
+Website context:
+→ Domain URL: ${siteUrl}
+→ Website topic / niche: ${siteTopic}
+
+Your task: Write a **high-performing SEO article** that is DIRECTLY and OBVIOUSLY relevant to this website's niche and audience.
+
+Main SEO topic:
 → ${selectedKeyword}
 
 Target reader:
-→ General web audience interested in ${selectedKeyword}
+→ Ideal visitors of ${siteUrl}, interested in ${siteTopic} and specifically searching for ${selectedKeyword}
 
 Business goal:
-→ Comprehensive guide that drives organic traffic and positions the site as an authority
+→ Create a comprehensive guide that drives organic traffic and positions ${siteUrl} as an authority in "${siteTopic}" for searches related to "${selectedKeyword}"
 
 Primary keyword:
 → "${selectedKeyword}"
@@ -424,16 +457,21 @@ Writing style:
     : ""
 }
 
+ABSOLUTE RELEVANCE RULES:
+- The article MUST make sense for a website about "${siteTopic}" hosted at ${siteUrl}.
+- If the keyword is very broad or generic (like "download", "page", "people"), you MUST reinterpret it into a long-tail, niche-relevant angle that fits ${siteTopic} and the services or content such a site would offer.
+- Do NOT write about topics that are unrelated to "${siteTopic}", even if they loosely match the keyword wording.
+
 ---
 
-## THINK FIRST (SEARCH INTENT + ANGLE)
+## THINK FIRST (SEARCH INTENT + ANGLE + DOMAIN FIT)
 
 Before writing, apply these principles:
 
-- Determine the **dominant search intent** for "${selectedKeyword}" (informational, commercial investigation, etc.).
-- Select the best **content type** (guide, how-to, comparison, checklist).
-- Choose the main **content angle** (for beginners, step-by-step, 2025 updated, practical framework).
-- Align structure, depth, and examples to **fully satisfy** that intent.
+- Determine the **dominant search intent** for "${selectedKeyword}" (informational, commercial investigation, etc.) in the context of "${siteTopic}".
+- Select the best **content type** (guide, how-to, comparison, checklist) for a visitor on ${siteUrl}.
+- Choose the main **content angle** (for beginners, step-by-step, 2025 updated, practical framework) that fits the niche "${siteTopic}".
+- Align structure, depth, and examples to **fully satisfy** that intent while clearly positioning ${siteUrl} as a relevant, trustworthy resource.
 - Cover all key subtopics competitors usually hit for this keyword.
 
 Do not show this reasoning, just apply it in the article.
@@ -734,10 +772,11 @@ Just output the finished article. No explanations, just the content.${variationI
       console.log("🖼️ Images generated:", generatedImages.length);
     }
 
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXTAUTH_URL;
-    if (siteUrl && savedArticle.slug) {
-      const articleUrl = buildArticleUrl(siteUrl, savedArticle.slug);
-      await pingIndexNow([articleUrl], siteUrl);
+    const baseSiteUrl =
+      process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXTAUTH_URL;
+    if (baseSiteUrl && savedArticle.slug) {
+      const articleUrl = buildArticleUrl(baseSiteUrl, savedArticle.slug);
+      await pingIndexNow([articleUrl], baseSiteUrl);
     } else {
       console.warn("⚠️ Skipping IndexNow ping: site URL or slug missing");
     }
