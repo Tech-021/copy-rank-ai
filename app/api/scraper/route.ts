@@ -4,40 +4,144 @@ export const maxDuration = 300;
 
 import { NextResponse } from "next/server";
 import { analyzeWithQwen } from "@/lib/qwen";
-import { scrapeWithCheerio } from "@/lib/cheerioScraper";
 import type { ScrapeResult } from "@/lib/types";
 
+// Optional external scraper endpoint (Cheerio + Puppeteer running on a dedicated server)
+const EXTERNAL_SCRAPER_URL =
+  process.env.EXTERNAL_SCRAPER_URL ||
+  "http://192.241.141.21:7000/api/scrape";
 
-// Helper: choose dev vs prod puppeteer implementation
-async function loadPuppeteerScraper() {
-  const isProd =
-    process.env.NODE_ENV === "production" ||
-    process.env.VERCEL_ENV === "production";
-  if (isProd) {
-    return (await import("@/lib/puppeteerScraper_prod")).scrapeWithPuppeteer;
-  } else {
-    return (await import("@/lib/puppeteerScraper_dev")).scrapeWithPuppeteer;
+async function scrapeWithExternalService(
+  url: string
+): Promise<ScrapeResult | null> {
+  try {
+    console.log(
+      `🌐 [externalScraper] Calling external scraper at ${EXTERNAL_SCRAPER_URL} for: ${url}`
+    );
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 120000); // 120s safety timeout
+
+    const res = await fetch(EXTERNAL_SCRAPER_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      // The external API expects { urls: string | string[], limit: number }
+      body: JSON.stringify({ urls: url, limit: 100 }),
+      signal: controller.signal,
+    }).catch((e) => {
+      console.error(
+        "❌ [externalScraper] Network/abort error calling external scraper:",
+        e
+      );
+      throw e;
+    });
+
+    clearTimeout(timeout);
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      console.error(
+        "❌ [externalScraper] External scraper returned non-OK status:",
+        res.status,
+        text
+      );
+      return null;
+    }
+
+    let json: any;
+    try {
+      json = await res.json();
+    } catch (e) {
+      console.error(
+        "❌ [externalScraper] Failed to parse JSON from external scraper:",
+        e
+      );
+      return null;
+    }
+
+    if (!json.success || !json.data) {
+      console.error(
+        "❌ [externalScraper] success=false or data missing:",
+        json
+      );
+      return null;
+    }
+
+    const data = json.data;
+    const maxPage = data.maxTrafficPage || {};
+
+    // Build a mainText based on contentPreview and keywords to give Qwen context
+    const keywordString = (data.keywords || [])
+      .map((k: any) => `${k.keyword} (${k.frequency})`)
+      .join(", ");
+
+    const mainText =
+      (data.contentPreview || "") +
+      (keywordString ? `\n\nKeywords: ${keywordString}` : "");
+
+    const title = maxPage.title || "";
+    const metaDescription = maxPage.description || "";
+    const canonical = maxPage.url || "";
+
+    const wordCount =
+      typeof maxPage.contentLength === "number"
+        ? maxPage.contentLength
+        : mainText.split(/\s+/).filter(Boolean).length;
+
+    const scrapingMethod = maxPage.scrapingMethod || "";
+    const source: ScrapeResult["source"] =
+      scrapingMethod === "PUPPETEER" ? "puppeteer" : "cheerio";
+
+    const result: ScrapeResult = {
+      title,
+      metaDescription,
+      headings: "",
+      navLinks: "",
+      mainText,
+      schemaData: [],
+      wordCount,
+      source,
+      status: res.status,
+      canonical,
+      lang: undefined,
+      charset: undefined,
+      author: undefined,
+      robots: undefined,
+      openGraph: {},
+      twitter: {},
+      links: [],
+      images: [],
+    };
+
+    console.log(
+      `✅ [externalScraper] Successfully scraped via external service (${result.wordCount} words, source=${result.source})`
+    );
+    return result;
+  } catch (error) {
+    console.error(
+      "💥 [externalScraper] Unexpected error while calling external scraper:",
+      error
+    );
+    return null;
   }
 }
 
-// Unified scraper
+// Unified scraper – now always uses the external scraper service
 export async function hybridScraper(url: string): Promise<ScrapeResult | null> {
   console.log(`🔍 [hybridScraper] Starting scrape for: ${url}`);
 
-  let result = await scrapeWithCheerio(url);
-  console.log("🧩 Cheerio scrape result:", result ? "OK" : "NULL");
+  const result = await scrapeWithExternalService(url);
 
-  // Optimized: Only use Puppeteer if Cheerio completely fails or has very low content
-  // Reduced threshold from 50 to 30 words to prefer faster Cheerio scraping
-  if (!result || result.wordCount < 30) {
-    console.log("⚠️ Low content (<30 words) or failed, switching to Puppeteer...");
-    const scrapeWithPuppeteer = await loadPuppeteerScraper();
-    result = await scrapeWithPuppeteer(url);
-  } else {
-    console.log(`✅ Cheerio scrape successful (${result.wordCount} words), skipping Puppeteer for speed.`);
+  if (!result) {
+    console.error("❌ [hybridScraper] External scraper failed.");
+    return null;
   }
 
-  console.log("📦 Final scrape result:", !!result ? "Success" : "Failed");
+  console.log(
+    `📦 [hybridScraper] Using result from external scraper (${result.wordCount} words, source=${result.source})`
+  );
   return result;
 }
 
